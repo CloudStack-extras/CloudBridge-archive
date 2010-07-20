@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This file was auto-generated from WSDL -->
+<!-- by the Apache Axis2 version: 1.5.1  Built on : Oct 19, 2009 (10:59:00 EDT) -->
+<serviceGroup>
+    <service name="AmazonEC2" class="com.cloud.bridge.lifecycle.ServiceEngineLifecycle">
+        <messageReceivers>
+            <messageReceiver mep="http://www.w3.org/ns/wsdl/in-out" class="com.amazon.ec2.AmazonEC2MessageReceiverInOut"/>
+        </messageReceivers>
+        <parameter name="ServiceClass">com.cloud.bridge.service.EC2SoapService</parameter>
+        <parameter name="useOriginalwsdl">true</parameter>
+        <parameter name="modifyUserWSDLPortAddress">true</parameter>
+        <operation name="UnmonitorInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>UnmonitorInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/UnmonitorInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateSecurityGroup" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateSecurityGroup</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateSecurityGroupResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateImage" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateImage</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateImageResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeRegions" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeRegions</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeRegionsResponse</outputActionMapping>
+        </operation>
+        <operation name="RegisterImage" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>RegisterImage</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/RegisterImageResponse</outputActionMapping>
+        </operation>
+        <operation name="RevokeSecurityGroupIngress" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>RevokeSecurityGroupIngress</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/RevokeSecurityGroupIngressResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateSpotDatafeedSubscription" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateSpotDatafeedSubscription</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateSpotDatafeedSubscriptionResponse</outputActionMapping>
+        </operation>
+        <operation name="DetachVolume" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DetachVolume</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DetachVolumeResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeImageAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeImageAttribute</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeImageAttributeResponse</outputActionMapping>
+        </operation>
+        <operation name="StartInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>StartInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/StartInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateDhcpOptions" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateDhcpOptions</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateDhcpOptionsResponse</outputActionMapping>
+        </operation>
+        <operation name="BundleInstance" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>BundleInstance</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/BundleInstanceResponse</outputActionMapping>
+        </operation>
+        <operation name="ReleaseAddress" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>ReleaseAddress</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/ReleaseAddressResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteVpnConnection" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteVpnConnection</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteVpnConnectionResponse</outputActionMapping>
+        </operation>
+        <operation name="ResetSnapshotAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>ResetSnapshotAttribute</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/ResetSnapshotAttributeResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeDhcpOptions" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeDhcpOptions</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeDhcpOptionsResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeSnapshots" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeSnapshots</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeSnapshotsResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeVpnConnections" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeVpnConnections</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeVpnConnectionsResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeSpotInstanceRequests" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeSpotInstanceRequests</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeSpotInstanceRequestsResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateVolume" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateVolume</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateVolumeResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeSubnets" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeSubnets</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeSubnetsResponse</outputActionMapping>
+        </operation>
+        <operation name="StopInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>StopInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/StopInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeKeyPairs" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeKeyPairs</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeKeyPairsResponse</outputActionMapping>
+        </operation>
+        <operation name="CancelSpotInstanceRequests" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CancelSpotInstanceRequests</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CancelSpotInstanceRequestsResponse</outputActionMapping>
+        </operation>
+        <operation name="ModifyInstanceAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>ModifyInstanceAttribute</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/ModifyInstanceAttributeResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateVpc" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateVpc</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateVpcResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateKeyPair" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateKeyPair</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateKeyPairResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteSecurityGroup" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteSecurityGroup</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteSecurityGroupResponse</outputActionMapping>
+        </operation>
+        <operation name="TerminateInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>TerminateInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/TerminateInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="DetachVpnGateway" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DetachVpnGateway</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DetachVpnGatewayResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteSpotDatafeedSubscription" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteSpotDatafeedSubscription</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteSpotDatafeedSubscriptionResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteVpc" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteVpc</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteVpcResponse</outputActionMapping>
+        </operation>
+        <operation name="AttachVpnGateway" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>AttachVpnGateway</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/AttachVpnGatewayResponse</outputActionMapping>
+        </operation>
+        <operation name="MonitorInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>MonitorInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/MonitorInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateVpnGateway" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateVpnGateway</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateVpnGatewayResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteKeyPair" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteKeyPair</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteKeyPairResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeAddresses" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeAddresses</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeAddressesResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteCustomerGateway" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteCustomerGateway</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteCustomerGatewayResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeImages" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeImages</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeImagesResponse</outputActionMapping>
+        </operation>
+        <operation name="DeregisterImage" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeregisterImage</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeregisterImageResponse</outputActionMapping>
+        </operation>
+        <operation name="CancelBundleTask" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CancelBundleTask</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CancelBundleTaskResponse</outputActionMapping>
+        </operation>
+        <operation name="RequestSpotInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>RequestSpotInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/RequestSpotInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeSnapshotAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeSnapshotAttribute</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeSnapshotAttributeResponse</outputActionMapping>
+        </operation>
+        <operation name="GetPasswordData" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>GetPasswordData</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/GetPasswordDataResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeSpotPriceHistory" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeSpotPriceHistory</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeSpotPriceHistoryResponse</outputActionMapping>
+        </operation>
+        <operation name="AllocateAddress" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>AllocateAddress</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/AllocateAddressResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeSecurityGroups" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeSecurityGroups</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeSecurityGroupsResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateCustomerGateway" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateCustomerGateway</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateCustomerGatewayResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteVpnGateway" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteVpnGateway</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteVpnGatewayResponse</outputActionMapping>
+        </operation>
+        <operation name="ResetImageAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>ResetImageAttribute</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/ResetImageAttributeResponse</outputActionMapping>
+        </operation>
+        <operation name="RebootInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>RebootInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/RebootInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeVolumes" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeVolumes</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeVolumesResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteDhcpOptions" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteDhcpOptions</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteDhcpOptionsResponse</outputActionMapping>
+        </operation>
+        <operation name="ModifySnapshotAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>ModifySnapshotAttribute</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/ModifySnapshotAttributeResponse</outputActionMapping>
+        </operation>
+        <operation name="RunInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>RunInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/RunInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateSubnet" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateSubnet</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateSubnetResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteSnapshot" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteSnapshot</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteSnapshotResponse</outputActionMapping>
+        </operation>
+        <operation name="AssociateAddress" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>AssociateAddress</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/AssociateAddressResponse</outputActionMapping>
+        </operation>
+        <operation name="AssociateDhcpOptions" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>AssociateDhcpOptions</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/AssociateDhcpOptionsResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteSubnet" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteSubnet</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteSubnetResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeVpcs" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeVpcs</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeVpcsResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeInstanceAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeInstanceAttribute</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeInstanceAttributeResponse</outputActionMapping>
+        </operation>
+        <operation name="ConfirmProductInstance" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>ConfirmProductInstance</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/ConfirmProductInstanceResponse</outputActionMapping>
+        </operation>
+        <operation name="GetConsoleOutput" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>GetConsoleOutput</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/GetConsoleOutputResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeSpotDatafeedSubscription" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeSpotDatafeedSubscription</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeSpotDatafeedSubscriptionResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeCustomerGateways" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeCustomerGateways</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeCustomerGatewaysResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeReservedInstancesOfferings" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeReservedInstancesOfferings</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeReservedInstancesOfferingsResponse</outputActionMapping>
+        </operation>
+        <operation name="DisassociateAddress" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DisassociateAddress</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DisassociateAddressResponse</outputActionMapping>
+        </operation>
+        <operation name="ResetInstanceAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>ResetInstanceAttribute</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/ResetInstanceAttributeResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateVpnConnection" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateVpnConnection</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateVpnConnectionResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeReservedInstances" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeReservedInstances</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeReservedInstancesResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeBundleTasks" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeBundleTasks</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeBundleTasksResponse</outputActionMapping>
+        </operation>
+        <operation name="PurchaseReservedInstancesOffering" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>PurchaseReservedInstancesOffering</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/PurchaseReservedInstancesOfferingResponse</outputActionMapping>
+        </operation>
+        <operation name="AuthorizeSecurityGroupIngress" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>AuthorizeSecurityGroupIngress</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/AuthorizeSecurityGroupIngressResponse</outputActionMapping>
+        </operation>
+        <operation name="AttachVolume" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>AttachVolume</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/AttachVolumeResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteVolume" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DeleteVolume</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DeleteVolumeResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateSnapshot" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>CreateSnapshot</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/CreateSnapshotResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeAvailabilityZones" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeAvailabilityZones</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeAvailabilityZonesResponse</outputActionMapping>
+        </operation>
+        <operation name="ModifyImageAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>ModifyImageAttribute</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/ModifyImageAttributeResponse</outputActionMapping>
+        </operation>
+        <operation name="DescribeVpnGateways" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2009-11-30/">
+            <actionMapping>DescribeVpnGateways</actionMapping>
+            <outputActionMapping>http://ec2.amazonaws.com/doc/2009-11-30/AmazonEC2PortType/DescribeVpnGatewaysResponse</outputActionMapping>
+        </operation>
+        
+        <!-- required to support WS-Security -->
+        <module ref="cloud-auth-ec2"/>
+        <module ref="rampart"/>
+        <module ref="addressing"/>
+        
+        <wsp:Policy wsu:Id="SigOnly"
+                xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+                xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy">
+        <wsp:ExactlyOne>
+            <wsp:All>
+                <sp:AsymmetricBinding xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+                    <wsp:Policy>
+                        <sp:InitiatorToken>
+                            <wsp:Policy>
+                                <sp:X509Token sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/AlwaysToRecipient">
+                                    <wsp:Policy>
+                                        <sp:RequireDerivedKeys/>
+                                        <sp:WssX509V3Token10/>
+                                    </wsp:Policy>
+                                </sp:X509Token>
+                            </wsp:Policy>
+                        </sp:InitiatorToken>
+                        <sp:RecipientToken>
+                            <wsp:Policy>
+                                <sp:X509Token sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/Never">
+                                    <wsp:Policy>
+                                        <sp:RequireDerivedKeys/>
+                                        <sp:WssX509V3Token10/>
+                                    </wsp:Policy>
+                                </sp:X509Token>
+                            </wsp:Policy>
+                        </sp:RecipientToken>
+                        <sp:AlgorithmSuite>
+                            <wsp:Policy>
+                                <sp:TripleDesRsa15/>
+                            </wsp:Policy>
+                        </sp:AlgorithmSuite>
+                        <sp:Layout>
+                            <wsp:Policy>
+                                <sp:Strict/>
+                            </wsp:Policy>
+                        </sp:Layout>
+                        <sp:IncludeTimestamp/>
+                        <sp:OnlySignEntireHeadersAndBody/>
+                    </wsp:Policy>
+                </sp:AsymmetricBinding>
+                <sp:Wss10 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+                    <wsp:Policy>
+                        <sp:MustSupportRefKeyIdentifier/>
+                        <sp:MustSupportRefIssuerSerial/>
+                    </wsp:Policy>
+                </sp:Wss10>
+                <sp:SignedParts xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+                    <sp:Body/>
+                </sp:SignedParts>
+
+                <ramp:RampartConfig xmlns:ramp="http://ws.apache.org/rampart/policy">
+                    <ramp:user>service</ramp:user>
+                    <ramp:encryptionUser>client</ramp:encryptionUser>
+                    <ramp:passwordCallbackClass>com.cloud.bridge.service.PWCBHandler</ramp:passwordCallbackClass>
+
+                    <ramp:signatureCrypto>
+                        <ramp:crypto provider="org.apache.ws.security.components.crypto.Merlin">
+                            <ramp:property name="org.apache.ws.security.crypto.merlin.keystore.type">JKS</ramp:property>
+                            <ramp:property name="org.apache.ws.security.crypto.merlin.file">xes.keystore</ramp:property>
+                            <ramp:property name="org.apache.ws.security.crypto.merlin.keystore.password">apache
+                            </ramp:property>
+                        </ramp:crypto>
+                    </ramp:signatureCrypto>
+                </ramp:RampartConfig>
+
+            </wsp:All>
+        </wsp:ExactlyOne>
+    </wsp:Policy>
+        
+    </service>
+</serviceGroup>

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+	<class name="com.cloud.gate.model.MHost" table="mhost"  lazy="true">
+   		<id name="id" type="long" column="ID" >
+   			<generator class="native" />
+  		</id>
+
+  		<property name="host">
+     		<column name="Host" />
+  		</property>
+  		
+  		<property name="hostKey">
+     		<column name="MHostKey" />
+  		</property>
+
+  		<property name="version">
+     		<column name="Version" />
+  		</property>
+  		
+  		<property name="lastHeartbeatTime" type="com.cloud.gate.persist.GMTDateTimeUserType">
+     		<column name="LastHeartbeatTime" />
+  		</property>
+  		
+		<set name="localSHosts" inverse="true" lazy="true" cascade="all-delete-orphan">
+			<key column="MHostID" />
+			<one-to-many class="com.cloud.gate.model.SHost" />
+		</set>
+  		
+		<set name="mounts" inverse="true" lazy="true" cascade="all-delete-orphan">
+			<key column="MHostID" />
+			<one-to-many class="com.cloud.gate.model.MHostMount" />
+		</set>  		
+ 	</class>
+</hibernate-mapping>
+

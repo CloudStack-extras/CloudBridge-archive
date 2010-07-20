@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+	<class name="com.cloud.gate.model.MHostMount" table="mhost_mount"  lazy="true">
+   		<id name="id" type="long" column="ID" >
+   			<generator class="native" />
+  		</id>
+
+  		<property name="mountPath">
+     		<column name="MountPath" />
+  		</property>
+  		
+  		<property name="lastMountTime" type="com.cloud.gate.persist.GMTDateTimeUserType">
+     		<column name="LastMountTime" />
+  		</property>
+  		
+  		<many-to-one name="mhost" column="MHostID" 
+  			class="com.cloud.gate.model.MHost"
+  			cascade="none" 
+  		/>
+  		<many-to-one name="shost" column="SHostID" 
+  			class="com.cloud.gate.model.SHost"
+  			cascade="none" 
+  		/>
+ 	</class>
+</hibernate-mapping>
+

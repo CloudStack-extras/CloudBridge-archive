@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2008 Cloud.com, Inc. All Rights Reserved -->
+
+<project name="build-root" default="help" basedir=".">
+    <description></description>
+
+	<target name="help">
+		<echo level="info" message="Ant Build File for Cloud.com" />
+		<echo level="info" message="Type 'ant -projecthelp' to get a list of targets and their descriptions." />
+	</target>
+
+	<dirname property="base.dir" file="${ant.file.build-root}" />
+	<property name="build.dir" location="${base.dir}" />
+	<property name="target.dir" location="${base.dir}/target" />
+	<property name="classes.dir" location="${target.dir}/classes" />
+	<property name="jar.dir" location="${target.dir}/jar" />
+	<property name="dep.cache.dir" location="${target.dir}/dep-cache" />
+	<property name="debug" value="true" />
+	<property name="debuglevel" value="lines,vars" />
+	
+  	<macrodef name="compile-java">
+    	<attribute name="top.dir" description="Top Directory of the source.  We will add src to this to get the source code." />
+    	<attribute name="jar.name" description="Name of the jar file" />
+    	<attribute name="classpath" description="class path to use" />
+    	<element name="include-files" optional="true" />
+    	<element name="exclude-files" optional="true" />
+    
+    	<sequential>
+
+      		<mkdir dir="${classes.dir}/@{jar.name}" />
+        
+      		<depend srcdir="@{top.dir}/src" destdir="${classes.dir}/@{jar.name}" cache="${dep.cache.dir}" />
+        
+      		<javac srcdir="@{top.dir}/src" debug="${debug}" debuglevel="${debuglevel}" deprecation="${deprecation}" destdir="${classes.dir}/@{jar.name}" source="${source.compat.version}" target="${target.compat.version}" includeantruntime="false" compiler="javac1.6">
+        		<!-- compilerarg line="-processor com.vmops.annotation.LocalProcessor -processorpath ${base.dir}/tools/src -Xlint:all"/ -->
+        		<!-- compilerarg line="-processor com.vmops.utils.LocalProcessor -processorpath ${base.dir}/utils/src -Xlint:all"/ -->
+        		<compilerarg line="-Xlint:all"/>
+        		<classpath refid="@{classpath}" />
+        		<exclude-files/>
+      		</javac>
+    		
+      		<jar jarfile="${jar.dir}/@{jar.name}" basedir="${classes.dir}/@{jar.name}">
+        		<manifest>
+          			<attribute name="Class-Path" value="" />
+          			<attribute name="Built-By" value="${built.by}" />
+          			<attribute name="Specification-Title" value="VMOps Cloud Stack" />
+          			<attribute name="Specification-Version" value="${impl.version}" />
+          			<attribute name="Specification-Vendor" value="${company.name}" />
+          			<attribute name="Implementation-Title" value="@{jar.name}" />
+          			<attribute name="Implementation-Version" value="${impl.version}" />
+          			<attribute name="Implementation-Vendor" value="${company.name}" />
+        		</manifest>
+        		<include-files/>
+      		</jar>
+    	</sequential>
+  	</macrodef>
+	  
+  	<macrodef name="clean-java">
+    	<attribute name="top.dir" description="Top Directory of the source.  We will add src to this to get the source code."/>
+    	<attribute name="jar.name" description="Name of the jar file"/>
+    
+    	<sequential>
+      		<local name="compile.java.bin.dir"/>
+      		<property name="compile.java.bin.dir" location="${classes.dir}/@{jar.name}" />
+      		<rmdir dir="${compile.java.bin.dir}"/>
+      		<rm file="${jar.dir}/@{jar.name}"/>
+    	</sequential>
+  	</macrodef>
+	
+    <import file="build-cloud-bridge.xml" optional="true" />
+</project>
+
+
