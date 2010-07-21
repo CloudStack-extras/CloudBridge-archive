@@ -4,7 +4,7 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's EC2 API Implementation Guide</H1>
-7/19/2010
+7/21/2010
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#conf">1. Configuration Parameters</A></LI>
@@ -19,6 +19,7 @@ Several configuration parameters are required to make Cloud.com's EC2 service wo
 The following parameters are defined in the file:</BR> &lt;install directory>"/apache-tomcat-6.0.18/conf/ec2-service.properties":
 <pre>
 managementServer=192.168.154.36
+cloudAPIPort=8080
 WSDLVersion=2009-11-30
 keystore=xes.keystore
 keystorePass=apache
@@ -52,6 +53,8 @@ pollInterval6=100
 </pre>
 <I>managementServer</I> - FQDN or IP address of a Cloud.com management server.   This is the address that
 the EC2 service makes Cloud.com REST API calls against.</BR>
+<I>cloudAPIPort</I> - The TCP port that the CloudStack, User API is running on.   If this property is not defined,
+then no port is used by the EC2 service when it queries the CloudStack.</BR>
 <I>WSDLVersion</I> - The string that defines the WSDL used by the SOAP API which the REST API also implements.
 This string is compared to the "Version=" parameter on each and every authorized REST request.</BR>
 <I>keystore</I> - The file name of the keystore used by EC2 which must be placed at the directory:

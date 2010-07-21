@@ -63,6 +63,7 @@ public class EC2Engine {
     protected final static Logger logger = Logger.getLogger(EC2Engine.class);
     private DocumentBuilderFactory dbf = null;
     private String managementServer    = null;
+	private String cloudAPIPort        = null;
     private OfferingBundle M1Small     = null;
     private OfferingBundle M1Large     = null;
     private OfferingBundle M1Xlarge    = null;
@@ -108,6 +109,7 @@ public class EC2Engine {
     			logger.warn("Unable to read properties file: " + propertiesFile.getAbsolutePath(), e);
     		}
    	        managementServer = EC2Prop.getProperty( "managementServer" );
+			cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
    	        
    	        try {
    	            pollInterval1  = Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
@@ -172,7 +174,7 @@ public class EC2Engine {
         	String signature = calculateRFC2104HMAC( sigOver.toString().toLowerCase(), secretKey );
 
           	StringBuffer apiCommand = new StringBuffer();
-            apiCommand.append( getServerURL(false));
+            apiCommand.append( getServerURL());
             apiCommand.append( "command=listAccounts" );
             apiCommand.append( "&apikey=" ).append( safeURLencode( accessKey ));
             apiCommand.append( "&signature=" ).append( safeURLencode( signature ));
@@ -1863,7 +1865,7 @@ public class EC2Engine {
 		UserContext ctx = UserContext.current();
 		if ( null != ctx ) {
        	     StringBuffer apiCommand = new StringBuffer();
-             apiCommand.append( getServerURL(false));
+             apiCommand.append( getServerURL());
              apiCommand.append( query );
              apiCommand.append( "&apikey=" ).append( safeURLencode( ctx.getAccessKey()));
              apiCommand.append( "&signature=" ).append( safeURLencode( signature ));
@@ -1948,10 +1950,10 @@ public class EC2Engine {
 	    return URLEncoder.encode( param, "UTF-8" ).replaceAll( "\\+", "%20" );
 	}
 	
-	private String getServerURL( boolean admin ) {
+	private String getServerURL() {
 		
-		if ( admin ) 
-			 return new String( "http://" + managementServer + ":8096/client/api?" );
-		else return new String( "http://" + managementServer + ":8080/client/api?" );
+		if ( null == cloudAPIPort ) 
+			 return new String( "http://" + managementServer + "/client/api?" );
+		else return new String( "http://" + managementServer + ":" + cloudAPIPort + "/client/api?" );
 	}
 }
