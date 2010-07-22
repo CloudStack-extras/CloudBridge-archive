@@ -1,0 +1,19 @@
+<HTML>
+<BODY>
+Save the cert into Cloud's EC2 Service:
+<P>
+<FORM name="setcert" action="http://localhost:8080/gate/rest/AmazonEC2" method="get">
+<input type="hidden" name="Action" value="SetCertificate"/>
+<input type="hidden" name="AWSAccessKeyId" value="XXy5jVzYfHCt2MyJd7YVFGl7DfFPIOKyi8n09lG6Bv1IpW-OXEhw2ako5ji1hyr88oxnf9CCU_KIyf2X6rgJ3g" />
+<input type="hidden" name="SignatureMethod" value="HmacSHA1" />
+<input type="hidden" name="SignatureVersion" value="2" />
+<input type="hidden" name="Expires" value="2010-10-15T10:10:10Z" />
+<input type="hidden" name="Timestamp" value="2010-10-15T10:10:10Z" />
+<input type="hidden" name="Version" value="2009-11-30" />
+<input type="hidden" name="Signature" value="wrong" />
+<TEXTAREA name="cert" cols=100 rows=20></TEXTAREA>
+<P>
+<input type="submit" value="Submit" />
+</FORM>
+</BODY>
+</HTML>

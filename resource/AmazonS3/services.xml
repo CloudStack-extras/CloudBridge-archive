@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This file was auto-generated from WSDL -->
+<!-- by the Apache Axis2 version: 1.5.1  Built on : Oct 19, 2009 (10:59:00 EDT) -->
+<serviceGroup>
+    <service name="AmazonS3" class="com.cloud.bridge.lifecycle.ServiceEngineLifecycle">
+        <!--
+        <module ref="cloud-auth-s3"/>
+        -->
+        <messageReceivers>
+            <messageReceiver mep="http://www.w3.org/ns/wsdl/in-out" class="com.amazon.s3.AmazonS3MessageReceiverInOut"/>
+        </messageReceivers>
+        <parameter name="ServiceClass">com.cloud.bridge.service.S3SoapService</parameter>
+        <parameter name="useOriginalwsdl">true</parameter>
+        <parameter name="modifyUserWSDLPortAddress">true</parameter>
+        <operation name="GetBucketLoggingStatus" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetBucketLoggingStatusRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetBucketLoggingStatusResponse</outputActionMapping>
+        </operation>
+        <operation name="CopyObject" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/CopyObjectRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/CopyObjectResponse</outputActionMapping>
+        </operation>
+        <operation name="GetBucketAccessControlPolicy" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetBucketAccessControlPolicyRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetBucketAccessControlPolicyResponse</outputActionMapping>
+        </operation>
+        <operation name="ListBucket" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/ListBucketRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/ListBucketResponse</outputActionMapping>
+        </operation>
+        <operation name="PutObject" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/PutObjectRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/PutObjectResponse</outputActionMapping>
+        </operation>
+        <operation name="CreateBucket" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/CreateBucketRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/CreateBucketResponse</outputActionMapping>
+        </operation>
+        <operation name="ListAllMyBuckets" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/ListAllMyBucketsRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/ListAllMyBucketsResponse</outputActionMapping>
+        </operation>
+        <operation name="GetObject" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetObjectRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetObjectResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteBucket" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/DeleteBucketRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/DeleteBucketResponse</outputActionMapping>
+        </operation>
+        <operation name="SetBucketLoggingStatus" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/SetBucketLoggingStatusRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/SetBucketLoggingStatusResponse</outputActionMapping>
+        </operation>
+        <operation name="GetObjectAccessControlPolicy" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetObjectAccessControlPolicyRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetObjectAccessControlPolicyResponse</outputActionMapping>
+        </operation>
+        <operation name="DeleteObject" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/DeleteObjectRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/DeleteObjectResponse</outputActionMapping>
+        </operation>
+        <operation name="SetBucketAccessControlPolicy" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/SetBucketAccessControlPolicyRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/SetBucketAccessControlPolicyResponse</outputActionMapping>
+        </operation>
+        <operation name="SetObjectAccessControlPolicy" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/SetObjectAccessControlPolicyRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/SetObjectAccessControlPolicyResponse</outputActionMapping>
+        </operation>
+        <operation name="PutObjectInline" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/PutObjectInlineRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/PutObjectInlineResponse</outputActionMapping>
+        </operation>
+        <operation name="GetObjectExtended" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://s3.amazonaws.com/doc/2006-03-01/">
+            <actionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetObjectExtendedRequest</actionMapping>
+            <outputActionMapping>http://s3.amazonaws.com/doc/2006-03-01/AmazonS3/GetObjectExtendedResponse</outputActionMapping>
+        </operation>
+    </service>
+</serviceGroup>
