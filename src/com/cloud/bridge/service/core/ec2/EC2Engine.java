@@ -174,11 +174,7 @@ public class EC2Engine {
         	String signature = calculateRFC2104HMAC( sigOver.toString().toLowerCase(), secretKey );
 
           	StringBuffer apiCommand = new StringBuffer();
-<<<<<<< HEAD
             apiCommand.append( getServerURL());
-=======
-            apiCommand.append( getServerURL(false));
->>>>>>> b2792f24c6fc1ad80122cf3b634306d6d4cc757d
             apiCommand.append( "command=listAccounts" );
             apiCommand.append( "&apikey=" ).append( safeURLencode( accessKey ));
             apiCommand.append( "&signature=" ).append( safeURLencode( signature ));
@@ -1869,11 +1865,7 @@ public class EC2Engine {
 		UserContext ctx = UserContext.current();
 		if ( null != ctx ) {
        	     StringBuffer apiCommand = new StringBuffer();
-<<<<<<< HEAD
              apiCommand.append( getServerURL());
-=======
-             apiCommand.append( getServerURL(false));
->>>>>>> b2792f24c6fc1ad80122cf3b634306d6d4cc757d
              apiCommand.append( query );
              apiCommand.append( "&apikey=" ).append( safeURLencode( ctx.getAccessKey()));
              apiCommand.append( "&signature=" ).append( safeURLencode( signature ));

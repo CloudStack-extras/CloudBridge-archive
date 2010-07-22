@@ -2,7 +2,7 @@
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping>
-	<class name="com.cloud.gate.model.SHost" table="shost"  lazy="true">
+	<class name="com.cloud.bridge.model.SHost" table="shost"  lazy="true">
    		<id name="id" type="long" column="ID" >
    			<generator class="native" />
   		</id>
@@ -24,18 +24,18 @@
   		</property>
   		
   		<many-to-one name="mhost" column="MHostID" 
-  			class="com.cloud.gate.model.MHost"
+  			class="com.cloud.bridge.model.MHost"
   			cascade="none" 
   		/>
   		
 		<set name="buckets" inverse="true" lazy="true" cascade="all-delete-orphan">
 			<key column="SHostID" />
-			<one-to-many class="com.cloud.gate.model.SBucket" />
+			<one-to-many class="com.cloud.bridge.model.SBucket" />
 		</set>
 		
 		<set name="mounts" inverse="true" lazy="true" cascade="all-delete-orphan">
 			<key column="SHostID" />
-			<one-to-many class="com.cloud.gate.model.MHostMount" />
+			<one-to-many class="com.cloud.bridge.model.MHostMount" />
 		</set>  		
  	</class>
 </hibernate-mapping>

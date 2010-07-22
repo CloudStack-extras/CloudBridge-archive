@@ -2,7 +2,7 @@
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping>
-	<class name="com.cloud.gate.model.SBucket" table="sbucket"  lazy="true">
+	<class name="com.cloud.bridge.model.SBucket" table="sbucket"  lazy="true">
    		<id name="id" type="long" column="ID" >
    			<generator class="native" />
   		</id>
@@ -15,18 +15,18 @@
      		<column name="OwnerCanonicalId" />
   		</property>
   		
-  		<property name="createTime" type="com.cloud.gate.persist.GMTDateTimeUserType">
+  		<property name="createTime" type="com.cloud.bridge.persist.GMTDateTimeUserType">
      		<column name="CreateTime" />
   		</property>
   		
   		<many-to-one name="shost" column="SHostID" 
-  			class="com.cloud.gate.model.SHost"
+  			class="com.cloud.bridge.model.SHost"
   			cascade="none" 
   		/>
   		
 		<set name="objectsInBucket" inverse="true" lazy="true" cascade="all-delete-orphan">
 			<key column="SBucketID" />
-			<one-to-many class="com.cloud.gate.model.SObject" />
+			<one-to-many class="com.cloud.bridge.model.SObject" />
 		</set>  		
   		
  	</class>

@@ -2,7 +2,7 @@
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping>
-	<class name="com.cloud.gate.model.SObjectItem" table="sobject_item"  lazy="true">
+	<class name="com.cloud.bridge.model.SObjectItem" table="sobject_item"  lazy="true">
    		<id name="id" type="long" column="ID" >
    			<generator class="native" />
   		</id>
@@ -23,20 +23,20 @@
      		<column name="StoredSize" />
   		</property>
   		
-  		<property name="createTime" type="com.cloud.gate.persist.GMTDateTimeUserType">
+  		<property name="createTime" type="com.cloud.bridge.persist.GMTDateTimeUserType">
      		<column name="CreateTime" />
   		</property>
   		
-  		<property name="lastModifiedTime" type="com.cloud.gate.persist.GMTDateTimeUserType">
+  		<property name="lastModifiedTime" type="com.cloud.bridge.persist.GMTDateTimeUserType">
      		<column name="LastModifiedTime" />
   		</property>
   		
-  		<property name="lastAccessTime" type="com.cloud.gate.persist.GMTDateTimeUserType">
+  		<property name="lastAccessTime" type="com.cloud.bridge.persist.GMTDateTimeUserType">
      		<column name="LastAccessTime" />
   		</property>
   		
   		<many-to-one name="theObject" column="SObjectID" 
-  			class="com.cloud.gate.model.SObject"
+  			class="com.cloud.bridge.model.SObject"
   			cascade="none" 
   		/>
  	</class>

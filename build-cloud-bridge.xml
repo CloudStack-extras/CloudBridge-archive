@@ -306,13 +306,9 @@
         		<include name="crypto.properties"/>
         		<include name="xes.keystore"/>
       		</fileset>
-<<<<<<< HEAD
     	</copy>
   		
   		<delete file="${deploy.dir}/webapps/bridge/WEB-INF/lib/dom4j-1.6.1.jar" />
-=======
-    	</copy>  
->>>>>>> b2792f24c6fc1ad80122cf3b634306d6d4cc757d
   	</target>
 	
 	<target name="codegen-server-s3">

@@ -2,7 +2,7 @@
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping>
-	<class name="com.cloud.gate.model.SAcl" table="acl" lazy="true">
+	<class name="com.cloud.bridge.model.SAcl" table="acl" lazy="true">
    		<id name="id" type="long" column="ID" >
    			<generator class="native" />
   		</id>
@@ -25,10 +25,10 @@
   		<property name="grantOrder">
      		<column name="GrantOrder" />
   		</property>
-  		<property name="createTime" type="com.cloud.gate.persist.GMTDateTimeUserType">
+  		<property name="createTime" type="com.cloud.bridge.persist.GMTDateTimeUserType">
      		<column name="CreateTime" />
   		</property>
-  		<property name="lastModifiedTime" type="com.cloud.gate.persist.GMTDateTimeUserType">
+  		<property name="lastModifiedTime" type="com.cloud.bridge.persist.GMTDateTimeUserType">
      		<column name="LastModifiedTime" />
   		</property>
  	</class>

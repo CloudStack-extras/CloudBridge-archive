@@ -2,7 +2,7 @@
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping>
-	<class name="com.cloud.gate.model.MHostMount" table="mhost_mount"  lazy="true">
+	<class name="com.cloud.bridge.model.MHostMount" table="mhost_mount"  lazy="true">
    		<id name="id" type="long" column="ID" >
    			<generator class="native" />
   		</id>
@@ -11,16 +11,16 @@
      		<column name="MountPath" />
   		</property>
   		
-  		<property name="lastMountTime" type="com.cloud.gate.persist.GMTDateTimeUserType">
+  		<property name="lastMountTime" type="com.cloud.bridge.persist.GMTDateTimeUserType">
      		<column name="LastMountTime" />
   		</property>
   		
   		<many-to-one name="mhost" column="MHostID" 
-  			class="com.cloud.gate.model.MHost"
+  			class="com.cloud.bridge.model.MHost"
   			cascade="none" 
   		/>
   		<many-to-one name="shost" column="SHostID" 
-  			class="com.cloud.gate.model.SHost"
+  			class="com.cloud.bridge.model.SHost"
   			cascade="none" 
   		/>
  	</class>

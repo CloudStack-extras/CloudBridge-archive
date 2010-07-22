@@ -2,7 +2,7 @@
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping>
-	<class name="com.cloud.gate.model.SMeta" table="meta"  lazy="true">
+	<class name="com.cloud.bridge.model.SMeta" table="meta"  lazy="true">
    		<id name="id" type="long" column="ID" >
    			<generator class="native" />
   		</id>

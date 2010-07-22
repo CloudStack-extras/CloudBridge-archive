@@ -17,6 +17,7 @@
  */
 package com.cloud.bridge.service;
 
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -64,14 +65,14 @@ public class ServiceProvider {
     private Properties properties;
     private boolean useSubDomain = false;			// use DNS sub domain for bucket name
     
-    //private S3Engine engine;
+    private S3Engine engine;
     private EC2Engine EC2_engine;
     
     protected ServiceProvider() {
     	// register service implementation object
-    	//engine = new S3Engine();
+    	engine = new S3Engine();
     	EC2_engine = new EC2Engine();
-    	//serviceMap.put(AmazonS3SkeletonInterface.class, new S3SoapServiceImpl(engine));
+    	serviceMap.put(AmazonS3SkeletonInterface.class, new S3SoapServiceImpl(engine));
     	serviceMap.put(AmazonEC2SkeletonInterface.class, new EC2SoapServiceImpl(EC2_engine));
     }
     
@@ -80,11 +81,11 @@ public class ServiceProvider {
     		instance = new ServiceProvider();
     		try {
     			instance.initialize();
-    			//PersistContext.commitTransaction();
+    			PersistContext.commitTransaction();
     		} catch(Throwable e) {
     			logger.error("Unexpected exception " + e.getMessage(), e);
     		} finally {
-    			//PersistContext.closeSession();
+    			PersistContext.closeSession();
     		}
     	}
     	return instance;
@@ -99,7 +100,7 @@ public class ServiceProvider {
     }
     
     public S3Engine getS3Engine() {
-    	return null;  //engine;
+    	return engine;
     }
     
     public EC2Engine getEC2Engine() {
@@ -157,7 +158,7 @@ public class ServiceProvider {
     	setupHost(hostKey, host);
     	
     	// we will commit and start a new transaction to allow host info be flushed to DB
-    	//PersistContext.flush();
+    	PersistContext.flush();
 
     	String localStorageRoot = properties.getProperty("storage.root");
     	if(localStorageRoot != null)
@@ -197,11 +198,11 @@ public class ServiceProvider {
 					MHostDao mhostDao = new MHostDao();
 					mhost.setLastHeartbeatTime(DateHelper.currentGMTTime());
 					mhostDao.update(mhost);
-					//PersistContext.commitTransaction();
+					PersistContext.commitTransaction();
 				} catch(Throwable e){
 					logger.error("Unexpected exception " + e.getMessage(), e);
 				} finally {
-					//PersistContext.closeSession();
+					PersistContext.closeSession();
 				}
 			}
     	};
@@ -232,7 +233,7 @@ public class ServiceProvider {
 			shost.setHostType(SHost.STORAGE_HOST_TYPE_LOCAL);
 			shost.setHost(NetHelper.getHostName());
 			shost.setExportRoot(storageRoot);
-			//PersistContext.getSession().save(shost);
+			PersistContext.getSession().save(shost);
 		}
 	}
     
@@ -251,7 +252,7 @@ public class ServiceProvider {
                     Object[] args) throws Throwable {
                 	  try {
                 		  Object result = method.invoke(serviceObject, args);
-                		  //PersistContext.commitTransaction();
+                		  PersistContext.commitTransaction();
                 		  return result;
                 	  } catch(Throwable e) {
                 		  // log the exception to help debugging
@@ -260,7 +261,7 @@ public class ServiceProvider {
                 		  // rethrow the exception to Axis
                 		  throw e;
                 	  } finally {
-                		  //PersistContext.closeSession();
+                		  PersistContext.closeSession();
                 	  }
                   }
               });
