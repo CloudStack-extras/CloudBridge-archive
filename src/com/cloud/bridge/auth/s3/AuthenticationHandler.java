@@ -25,9 +25,13 @@ import org.apache.axis2.description.HandlerDescription;
 import org.apache.axis2.description.Parameter;
 import org.apache.commons.codec.binary.Base64;
 
+import com.cloud.bridge.model.UserCredentials;
+import com.cloud.bridge.persist.dao.UserCredentialsDao;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.SignatureException;
+import java.sql.SQLException;
 
 
 public class AuthenticationHandler implements Handler {
@@ -90,7 +94,7 @@ public class AuthenticationHandler implements Handler {
     	 {  SOAPEnvelope soapEnvelope = msgContext.getEnvelope();
             SOAPBody     soapBody     = soapEnvelope.getBody();
             String       xmlBody      = soapBody.toString();
-            //logger.debug( "xmlrequest: " + xmlBody );
+            logger.debug( "xmlrequest: " + xmlBody );
          
             // -> if it is anonymous request, then no access key should exist?
             int start = xmlBody.indexOf( "AWSAccessKeyId>" );
@@ -98,7 +102,7 @@ public class AuthenticationHandler implements Handler {
             temp = xmlBody.substring( start+15 );
             int end   = temp.indexOf( "</" );
             accessKey = temp.substring( 0, end );
-            //logger.debug( "accesskey " + accessKey );
+            logger.debug( "accesskey " + accessKey );
             
             // -> what if we cannot find the user's key?
             if (null != (secretKey = lookupSecretKey( accessKey )))
@@ -107,7 +111,7 @@ public class AuthenticationHandler implements Handler {
                 if ( null != (operation = soapBody.getFirstElementLocalName()))
                      operation = operation.trim();
                 else operation = "";
-                //logger.debug( "operation " + operation );
+                logger.debug( "operation " + operation );
  
                 start = xmlBody.indexOf( "Timestamp>" );
                 if ( -1 < start )
@@ -115,7 +119,7 @@ public class AuthenticationHandler implements Handler {
                     temp = xmlBody.substring( start+10 );
                     end  = temp.indexOf( "</" );
                     timestamp = temp.substring( 0, end );
-                    //logger.debug( "timestamp " + timestamp );
+                    logger.debug( "timestamp " + timestamp );
                 }
                 else timestamp = "";
         
@@ -125,7 +129,7 @@ public class AuthenticationHandler implements Handler {
                     temp = xmlBody.substring( start+10 );
                     end  = temp.indexOf( "</" );
                     msgSig = temp.substring( 0, end );
-                    //logger.debug( "signature " + msgSig );
+                    logger.debug( "signature " + msgSig );
                 }
                 else msgSig = "";
 
@@ -148,19 +152,15 @@ public class AuthenticationHandler implements Handler {
     		 throw new AxisFault( "Unknown AWSAccessKeyId: [" + accessKey + "]", "Client.InvalidAccessKeyId" );
     	}
     	
-    	// TODO until we get the user's secret key we comment out the real test
     	// -> signature calculated properly but failed to match?
      	logger.debug( "Signature test, [" + msgSig + "] [" + calSig + "] over [" + signString + "]" );
-        /*
         if ( !msgSig.equals( calSig ))
         {
      	     logger.error( "Signature mismatch, [" + msgSig + "] [" + calSig + "] over [" + signString + "]" );
-    	 	  throw new AxisFault( "Authentication signature mismatch on AccessKey: [" + accessKey + "] [" + operation + "]",
+    	 	 throw new AxisFault( "Authentication signature mismatch on AccessKey: [" + accessKey + "] [" + operation + "]",
                                   "Client.SignatureDoesNotMatch" );
         } 
         else return InvocationResponse.CONTINUE;
-    	*/
-        return InvocationResponse.CONTINUE;
      }
 
      
@@ -210,8 +210,15 @@ public class AuthenticationHandler implements Handler {
       * @return the secret key or null of no matching user found
       */
      private String lookupSecretKey( String accessKey )
+	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
      {
-    	 return new String( "ABCDEFG1234567890" );
+ 	    UserCredentialsDao credentialDao = new UserCredentialsDao();
+	    UserCredentials cloudKeys = credentialDao.getByAccessKey( accessKey ); 
+	    if ( null == cloudKeys ) {
+	    	 logger.debug( accessKey + " is not defined in the S3 service - call SetUserKeys" );
+	         return null; 
+	    }
+		else return cloudKeys.getSecretKey(); 
      }
 
 	 @Override

@@ -3,9 +3,9 @@
 <!-- by the Apache Axis2 version: 1.5.1  Built on : Oct 19, 2009 (10:59:00 EDT) -->
 <serviceGroup>
     <service name="AmazonS3" class="com.cloud.bridge.lifecycle.ServiceEngineLifecycle">
-        <!--
+       
         <module ref="cloud-auth-s3"/>
-        -->
+       
         <messageReceivers>
             <messageReceiver mep="http://www.w3.org/ns/wsdl/in-out" class="com.amazon.s3.AmazonS3MessageReceiverInOut"/>
         </messageReceivers>

@@ -499,14 +499,12 @@
                 <order phase="OperationInPhase"/>
             </handler>
         </phase>
-        <!-- remove when want to test auth
-  	    <phase name="s3authentication">
+   	    <phase name="s3authentication">
 		      <handler name="InFlowS3Auth"
                      class="com.cloud.bridge.auth.s3.AuthenticationHandler">
                     <order phase="s3authentication"/>
               </handler>
         </phase>
-        -->
         <phase name="soapmonitorPhase"/>
     </phaseOrder>
     <phaseOrder type="OutFlow">
