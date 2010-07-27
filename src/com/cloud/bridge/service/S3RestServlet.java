@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.SignatureException;
+import java.sql.SQLException;
 import java.util.Enumeration;
 
 import javax.servlet.http.HttpServlet;
@@ -49,6 +50,7 @@ import com.cloud.bridge.service.core.s3.S3PutObjectResponse;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.MultiPartDimeInputStream;
 import com.cloud.bridge.util.RestAuth;
+import com.cloud.bridge.util.S3SoapAuth;
 
 /**
  * @author Kelven Yang
@@ -116,9 +118,9 @@ public class S3RestServlet extends HttpServlet {
         }
     }
     
-    private void authenticateRequest(HttpServletRequest request) {
-    	RestAuth auth          = new RestAuth(ServiceProvider.getInstance().getUseSubDomain());
-    	
+    private void authenticateRequest(HttpServletRequest request) 
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
+    	RestAuth auth          = new RestAuth(ServiceProvider.getInstance().getUseSubDomain()); 	
     	String   AWSAccessKey  = null;
     	String   signature     = null;
     	String   authorization = null;
@@ -164,8 +166,7 @@ public class S3RestServlet extends HttpServlet {
 		
     	try {
 			if (auth.verifySignature( request.getMethod(), info.getSecretKey(), signature )) {
-				UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), info.getCanonicalUserId(), 
-					info.getDescription());
+				UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), info.getCanonicalUserId(), info.getDescription());
 				return;
 			}
 		} catch (SignatureException e) {
@@ -285,8 +286,11 @@ public class S3RestServlet extends HttpServlet {
             	putRequest.setData( is );
             }
 
-            // ToDo: need to do SOAP level auth here, on failure return the SOAP fault
-    		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
+            // -> need to do SOAP level auth here, on failure return the SOAP fault
+            String AWSAccessKey = putRequest.getAccessKey();
+    		UserInfo info = ServiceProvider.getInstance().getUserInfo(AWSAccessKey);
+        	S3SoapAuth.verifySignature( putRequest.getSignature(), "PutObject", putRequest.getRawTimestamp(), AWSAccessKey, info.getSecretKey());   	
+            UserContext.current().initContext( AWSAccessKey, info.getSecretKey(), AWSAccessKey, "S3 DIME request" );
             putResponse = engine.handleRequest( putRequest );
             
             StringBuffer xml = new StringBuffer();
@@ -316,7 +320,7 @@ public class S3RestServlet extends HttpServlet {
     
     /**
      * Convert the SOAP XML we extract from the DIME message into our local object.
-     * Here Axis2 is not paring the SOAP for us.   I tried to use the Amazon PutObject
+     * Here Axis2 is not parsing the SOAP for us.   I tried to use the Amazon PutObject
      * parser but it keep throwing exceptions.
      * 
      * @param putObjectInline

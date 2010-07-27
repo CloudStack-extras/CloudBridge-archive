@@ -121,7 +121,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	public GetBucketAccessControlPolicyResponse getBucketAccessControlPolicy(
 		GetBucketAccessControlPolicy getBucketAccessControlPolicy) {
 		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toGetBucketAccessControlPolicyResponse(engine.handleRequest(
 			toEngineGetBucketAccessControlPolicyRequest(getBucketAccessControlPolicy)));
     }
@@ -160,7 +159,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	
 	public ListBucketResponse listBucket (ListBucket listBucket) {
 		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toListBucketResponse(engine.handleRequest(toEngineListBucketRequest(listBucket)));
     }
 	
@@ -236,8 +234,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
     }
  
 	public CreateBucketResponse createBucket (CreateBucket createBucket) {
-		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toCreateBucketResponse(engine.handleRequest(toEngineCreateBucketRequest(createBucket)));
     }
 	
@@ -259,8 +255,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	}
  
 	public ListAllMyBucketsResponse listAllMyBuckets (ListAllMyBuckets listAllMyBuckets) {
-		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toListAllMyBucketsResponse(engine.handleRequest(toEngineListAllMyBucketsRequest(listAllMyBuckets)));
     }
 	
@@ -300,8 +294,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	}
 	
 	public DeleteBucketResponse deleteBucket(DeleteBucket deleteBucket) {
-		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toDeleteBucketResponse(engine.handleRequest(toEngineDeleteBucketRequest(deleteBucket)));
     }
 	
@@ -324,14 +316,10 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	}
      
 	public GetObjectResponse getObject(com.amazon.s3.GetObject getObject) {
-		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toGetObjectResponse(engine.handleRequest(toEngineGetObjectRequest(getObject)));
     }
 	
 	public GetObjectExtendedResponse getObjectExtended(GetObjectExtended getObjectExtended) {
-		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toGetObjectExtendedResponse(engine.handleRequest(toEngineGetObjectRequest(getObjectExtended)));
     }
 	
@@ -411,8 +399,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
  
 	public GetObjectAccessControlPolicyResponse getObjectAccessControlPolicy(
 		GetObjectAccessControlPolicy getObjectAccessControlPolicy) {
-		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toGetObjectAccessControlPolicyResponse(engine.handleRequest(
 			toEngineGetObjectAccessControlPolicyRequest(getObjectAccessControlPolicy)));
     }
@@ -449,8 +435,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	}
      
 	public DeleteObjectResponse deleteObject (DeleteObject deleteObject) {
-		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toDeleteObjectResponse(engine.handleRequest(toEngineDeleteObjectRequest(deleteObject)));
     }
 	
@@ -490,8 +474,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
     }
  
 	public PutObjectInlineResponse putObjectInline (PutObjectInline putObjectInline) {
-		// after authentication, we should setup user context
-		UserContext.current().initContext("TODO", "TODO", "TODO", "TODO");
 		return toPutObjectInlineResponse(engine.handleRequest(toEnginePutObjectInlineRequest(putObjectInline)));
     }
 	

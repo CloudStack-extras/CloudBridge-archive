@@ -26,6 +26,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.InetAddress;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -39,9 +40,11 @@ import com.amazon.s3.AmazonS3SkeletonInterface;
 import com.amazon.ec2.AmazonEC2SkeletonInterface;
 import com.cloud.bridge.model.MHost;
 import com.cloud.bridge.model.SHost;
+import com.cloud.bridge.model.UserCredentials;
 import com.cloud.bridge.persist.PersistContext;
 import com.cloud.bridge.persist.dao.MHostDao;
 import com.cloud.bridge.persist.dao.SHostDao;
+import com.cloud.bridge.persist.dao.UserCredentialsDao;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.s3.S3Engine;
 import com.cloud.bridge.service.exception.ConfigurationException;
@@ -115,14 +118,23 @@ public class ServiceProvider {
     	return properties;
     }
     
-    public UserInfo getUserInfo(String accessKey) {
-    	// TODO integrate with Cloud.com authentcation service
+    public UserInfo getUserInfo(String accessKey) 
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
     	UserInfo info = new UserInfo();
-    	info.setAccessKey(accessKey);
-    	info.setSecretKey(accessKey);
-    	info.setCanonicalUserId(accessKey);
-    	info.setDescription("TODO");
-    	return info;
+    	
+	    UserCredentialsDao credentialDao = new UserCredentialsDao();
+	    UserCredentials cloudKeys = credentialDao.getByAccessKey( accessKey ); 
+	    if ( null == cloudKeys ) {
+	    	 logger.debug( accessKey + " is not defined in the S3 service - call SetUserKeys" );
+	         return null; 
+	    }
+		else 
+	    {  	 info.setAccessKey( accessKey );
+    	     info.setSecretKey( cloudKeys.getSecretKey());
+    	     info.setCanonicalUserId(accessKey);
+    	     info.setDescription( "S3 REST request" );
+    	     return info;
+	    }
     }
     
     protected void initialize() {

@@ -15,6 +15,8 @@
  */
 package com.cloud.bridge.auth.s3;
 
+import java.sql.SQLException;
+
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPBody;
 import org.apache.log4j.Logger;
@@ -23,15 +25,11 @@ import org.apache.axis2.engine.Handler;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.description.HandlerDescription; 
 import org.apache.axis2.description.Parameter;
-import org.apache.commons.codec.binary.Base64;
 
 import com.cloud.bridge.model.UserCredentials;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.security.SignatureException;
-import java.sql.SQLException;
+import com.cloud.bridge.service.UserContext;
+import com.cloud.bridge.util.S3SoapAuth;
 
 
 public class AuthenticationHandler implements Handler {
@@ -78,13 +76,11 @@ public class AuthenticationHandler implements Handler {
       * Special case: need to deal with anonymous requests where no AWSAccessKeyId is
       * given.   In this case just pass the request on.
       */
-     public InvocationResponse invoke(MessageContext msgContext) throws AxisFault 
+     public InvocationResponse invoke(MessageContext msgContext) throws AxisFault  
      {
     	 String accessKey  = null;
     	 String operation  = null;
     	 String msgSig     = null;
-    	 String calSig     = null;
-    	 String signString = null;
     	 String timestamp  = null;
     	 String secretKey  = null;
     	 String temp       = null;
@@ -132,10 +128,6 @@ public class AuthenticationHandler implements Handler {
                     //logger.debug( "signature " + msgSig );
                 }
                 else msgSig = "";
-
-                // -> calculate RFC 2104 HMAC-SHA1 digest over the constructed string
-                signString = "AmazonS3" + operation + timestamp;
-                calSig     = calculateRFC2104HMAC( signString, secretKey );
             }
     	}
     	catch( Exception e )
@@ -152,15 +144,10 @@ public class AuthenticationHandler implements Handler {
     		 throw new AxisFault( "Unknown AWSAccessKeyId: [" + accessKey + "]", "Client.InvalidAccessKeyId" );
     	}
     	
-    	// -> signature calculated properly but failed to match?
-     	//logger.debug( "Signature test, [" + msgSig + "] [" + calSig + "] over [" + signString + "]" );
-        if ( !msgSig.equals( calSig ))
-        {
-     	     logger.error( "Signature mismatch, [" + msgSig + "] [" + calSig + "] over [" + signString + "]" );
-    	 	 throw new AxisFault( "Authentication signature mismatch on AccessKey: [" + accessKey + "] [" + operation + "]",
-                                  "Client.SignatureDoesNotMatch" );
-        } 
-        else return InvocationResponse.CONTINUE;
+        // -> for SOAP requests the Cloud API keys are sent here and only here
+    	S3SoapAuth.verifySignature( msgSig, operation, timestamp, accessKey, secretKey );   	
+        UserContext.current().initContext( accessKey, secretKey, accessKey, "S3 SOAP request" );
+        return InvocationResponse.CONTINUE;
      }
 
      
@@ -176,35 +163,7 @@ public class AuthenticationHandler implements Handler {
      }
      
      /**
-      * Create a signature by the following method:
-      *     new String( Base64( SHA1( key, byte array )))
-      * 
-      * @param signIt    - the data to generate a keyed HMAC over
-      * @param secretKey - the user's unique key for the HMAC operation
-      * @return String   - the recalculated string
-      * @throws SignatureException
-      */
-     private String calculateRFC2104HMAC( String signIt, String secretKey )
-         throws SignatureException
-     {
-    	 String result = null;
-    	 try
-    	 { 	 SecretKeySpec key = new SecretKeySpec( secretKey.getBytes(), "HmacSHA1" );
-    	     Mac hmacSha1 = Mac.getInstance( "HmacSHA1" );
-    	     hmacSha1.init( key ); 
-             byte [] rawHmac = hmacSha1.doFinal( signIt.getBytes());
-             result = new String( Base64.encodeBase64( rawHmac ));
-    	 }
-    	 catch( Exception e )
-    	 {
-    		 throw new SignatureException( "Failed to generate keyed HMAC on soap request: " + e.getMessage());
-    	 }
-    	 return result.trim();
-     }
-     
-     /**
-      * TODO: Given the user's access key, then obtain his secret key in the user database.
-      * For now this is just a stub to be implemented later.
+      * Given the user's access key, then obtain his secret key in the user database.
       * 
       * @param accessKey - a unique string allocated for each registered user
       * @return the secret key or null of no matching user found
