@@ -284,6 +284,22 @@
                                 </resource>
 
                                 <resource>
+                                <directory>src/com/cloud/bridge/auth/s3</directory>
+                                <targetPath>WEB-INF/modules/cloud-auth-s3/META-INF</targetPath>
+                                <includes>
+                                <include>module.xml</include>
+                                </includes>
+                                </resource>
+
+                                <resource>
+                                <directory>src/com/cloud/bridge/auth/ec2</directory>
+                                <targetPath>WEB-INF/modules/cloud-auth-ec2/META-INF</targetPath>
+                                <includes>
+                                <include>module.xml</include>
+                                </includes>
+                                </resource>
+
+                                <resource>
                                 <directory>resource/Axis2</directory>
                                 <targetPath>WEB-INF/conf</targetPath>
                                 <includes>
