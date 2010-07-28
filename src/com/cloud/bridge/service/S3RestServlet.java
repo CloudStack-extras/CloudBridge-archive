@@ -31,7 +31,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.bind.*;
 
-import org.apache.axiom.soap.SOAPFaultReason;
 import org.apache.axis2.AxisFault;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
@@ -173,21 +172,29 @@ public class S3RestServlet extends HttpServlet {
 			}
 			
 			// -> just for testing
-			UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), info.getCanonicalUserId(), info.getDescription());
-            return;
+			//UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), info.getCanonicalUserId(), info.getDescription());
+            //return;
 		} catch (SignatureException e) {
 			throw new PermissionDeniedException(e);
 		} catch (UnsupportedEncodingException e) {
 			throw new PermissionDeniedException(e);
 		}
-		//throw new PermissionDeniedException("Invalid signature");
+		throw new PermissionDeniedException("Invalid signature");
     }
     
     private ServletAction routeRequest(HttpServletRequest request) {
     	// Simple URL routing for S3 REST calls.
     	String pathInfo = request.getPathInfo();
     	if(ServiceProvider.getInstance().getUseSubDomain()) {
-    		String host = request.getHeader("Host");
+        	String serviceEndpoint = ServiceProvider.getInstance().getServiceEndpoint();
+    		String host            = request.getHeader("Host");
+    		
+    		// -> a request of "/" on the service endpoint means do a list all my buckets command
+    		if (serviceEndpoint.equalsIgnoreCase( host )) {
+    			request.setAttribute(S3Constants.BUCKET_ATTR_KEY, "/");
+    			return new S3BucketAction();
+    		}
+    		
     		int endPos = host.indexOf('.');
     		if(endPos > 0)
     			request.setAttribute(S3Constants.BUCKET_ATTR_KEY, host.substring(0, endPos));

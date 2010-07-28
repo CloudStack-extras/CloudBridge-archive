@@ -63,11 +63,11 @@ public class ServiceProvider {
     private static ServiceProvider instance;
     
     private Map<Class<?>, Object> serviceMap = new HashMap<Class<?>, Object>();
-    private Timer timer = new Timer();;
+    private Timer timer = new Timer();
     private MHost mhost;
     private Properties properties;
     private boolean useSubDomain = false;			// use DNS sub domain for bucket name
-    
+    private String serviceEndpoint = null;
     private S3Engine engine;
     private EC2Engine EC2_engine;
     
@@ -112,6 +112,10 @@ public class ServiceProvider {
 
     public boolean getUseSubDomain() {
     	return useSubDomain;
+    }
+    
+    public String getServiceEndpoint() {
+    	return serviceEndpoint;
     }
     
     public Properties getStartupProperties() {
@@ -166,6 +170,9 @@ public class ServiceProvider {
     		((String)properties.get("bucket.dns")).equalsIgnoreCase("true")) {
     		useSubDomain = true;
     	}
+    	
+    	serviceEndpoint = (String)properties.get("serviceEndpoint");
+ 
     	
     	setupHost(hostKey, host);
     	

@@ -15,6 +15,8 @@
  */
 package com.cloud.bridge.service;
 
+import java.util.Calendar;
+
 import org.apache.log4j.Logger;
 
 import com.amazon.s3.AccessControlList;
@@ -266,28 +268,28 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return request;
 	}
 	
-	private ListAllMyBucketsResponse toListAllMyBucketsResponse(S3ListAllMyBucketsResponse engineResponse) {
+	public static ListAllMyBucketsResponse toListAllMyBucketsResponse(S3ListAllMyBucketsResponse engineResponse) {
 		ListAllMyBucketsResponse response = new ListAllMyBucketsResponse();
 		ListAllMyBucketsResult result = new ListAllMyBucketsResult();
+		ListAllMyBucketsEntry[] entries = null;
 		
 		S3CanonicalUser ownerEngine = engineResponse.getOwner();
 		CanonicalUser owner = new CanonicalUser();
 		owner.setID(ownerEngine.getID());
 		owner.setDisplayName(ownerEngine.getDisplayName());
 		result.setOwner(owner);
-		
 		S3ListAllMyBucketsEntry[] engineEntries = engineResponse.getBuckets();
-		if(engineEntries != null) {
-			ListAllMyBucketsEntry[] entries = new ListAllMyBucketsEntry[engineEntries.length];
+		if (engineEntries != null) { 
+			entries = new ListAllMyBucketsEntry[engineEntries.length];
 			for(int i = 0; i < engineEntries.length; i++) {
 				entries[i] = new ListAllMyBucketsEntry();
 				entries[i].setName(engineEntries[i].getName());
 				entries[i].setCreationDate(engineEntries[i].getCreationDate());
 			}
-			
+
 			ListAllMyBucketsList list = new ListAllMyBucketsList();
-			list.setBucket(entries);
-			result.setBuckets(list);
+		    list.setBucket(entries);
+		    result.setBuckets(list);
 		}
 		response.setListAllMyBucketsResponse(result);
 		return response;

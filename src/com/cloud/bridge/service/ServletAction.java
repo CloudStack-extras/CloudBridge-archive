@@ -19,10 +19,11 @@ import java.io.IOException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.stream.XMLStreamException;
 
 /**
  * @author Kelven Yang
  */
 public interface ServletAction {
-	void execute(HttpServletRequest request, HttpServletResponse response) throws IOException;
+	void execute(HttpServletRequest request, HttpServletResponse response) throws IOException, XMLStreamException;
 }

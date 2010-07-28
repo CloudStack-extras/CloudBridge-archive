@@ -17,20 +17,34 @@ package com.cloud.bridge.service.controller.s3;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Calendar;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+import javax.xml.namespace.QName;
 
+import org.apache.axiom.om.OMAbstractFactory;
+import org.apache.axiom.om.OMFactory;
+import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
 
+import com.amazon.s3.ListAllMyBucketsResponse;
 import com.cloud.bridge.service.S3Constants;
 import com.cloud.bridge.service.S3RestServlet;
+import com.cloud.bridge.service.S3SoapServiceImpl;
 import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.ServletAction;
+import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.s3.S3CreateBucketConfiguration;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
 import com.cloud.bridge.service.core.s3.S3CreateBucketResponse;
 import com.cloud.bridge.service.core.s3.S3DeleteBucketRequest;
+import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsRequest;
+import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsResponse;
 import com.cloud.bridge.service.core.s3.S3ListBucketRequest;
 import com.cloud.bridge.service.core.s3.S3ListBucketResponse;
 import com.cloud.bridge.service.core.s3.S3Response;
@@ -47,7 +61,11 @@ import com.cloud.bridge.util.XSerializerXmlAdapter;
 public class S3BucketAction implements ServletAction {
     protected final static Logger logger = Logger.getLogger(S3BucketAction.class);
     
-	public void execute(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	private OMFactory factory = OMAbstractFactory.getOMFactory();
+	private XMLOutputFactory xmlOutFactory = XMLOutputFactory.newInstance();
+    
+	public void execute(HttpServletRequest request, HttpServletResponse response) 
+	    throws IOException, XMLStreamException {
 		String method = request.getMethod(); 
 		if(method.equalsIgnoreCase("PUT")) {
 			String queryString = request.getQueryString();
@@ -83,7 +101,10 @@ public class S3BucketAction implements ServletAction {
 				}
 			}
 			
-			executeGetBucket(request, response);
+			String bucketAtr = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+            if ( bucketAtr.equals( "/" ))
+            	 executeGetAllBuckets(request, response);
+            else executeGetBucket(request, response);
 			return;
 		} else if(method.equalsIgnoreCase("DELETE")) {
 			executeDeleteBucket(request, response);
@@ -93,6 +114,33 @@ public class S3BucketAction implements ServletAction {
 		}
 	}
 	
+	public void executeGetAllBuckets(HttpServletRequest request, HttpServletResponse response) 
+	    throws IOException, XMLStreamException {
+		Calendar cal = Calendar.getInstance();
+		cal.set( 1970, 1, 1 ); 
+		S3ListAllMyBucketsRequest engineRequest = new S3ListAllMyBucketsRequest();
+		engineRequest.setAccessKey(UserContext.current().getAccessKey());
+		engineRequest.setRequestTimestamp( cal );
+		engineRequest.setSignature( "" );
+
+		S3ListAllMyBucketsResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);
+		
+		// -> serialize using the apache's Axiom classes
+		ListAllMyBucketsResponse allBuckets = S3SoapServiceImpl.toListAllMyBucketsResponse( engineResponse );
+
+		OutputStream os = response.getOutputStream();
+		response.setStatus(200);	
+	    response.setContentType("text/xml; charset=UTF-8");
+		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
+		String documentStart = new String( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" );
+		os.write( documentStart.getBytes());
+		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
+        allBuckets.serialize( new QName( "http://s3.amazonaws.com/doc/2006-03-01/", "ListAllMyBucketsResponse", "ns1" ), factory, MTOMWriter );
+        xmlWriter.flush();
+        xmlWriter.close();
+        os.close();
+	}
+
 	public void executeGetBucket(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		S3ListBucketRequest engineRequest = new S3ListBucketRequest();
 		engineRequest.setBucketName((String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY));
