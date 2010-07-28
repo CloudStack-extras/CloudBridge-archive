@@ -63,7 +63,7 @@ public class EC2Engine {
     protected final static Logger logger = Logger.getLogger(EC2Engine.class);
     private DocumentBuilderFactory dbf = null;
     private String managementServer    = null;
-	private String cloudAPIPort        = null;
+    private String cloudAPIPort        = null;
     private OfferingBundle M1Small     = null;
     private OfferingBundle M1Large     = null;
     private OfferingBundle M1Xlarge    = null;
@@ -81,6 +81,9 @@ public class EC2Engine {
     private int pollInterval4 = 1000;  // for: createSnapshot
     private int pollInterval5 = 100;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume 
     private int pollInterval6 = 100;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
+    private int CLOUD_STACK_VERSION_2_0 = 200;
+    private int CLOUD_STACK_VERSION_2_1 = 210;
+    private int cloudStackVersion;
    
     
     public EC2Engine() {
@@ -109,7 +112,7 @@ public class EC2Engine {
     			logger.warn("Unable to read properties file: " + propertiesFile.getAbsolutePath(), e);
     		}
    	        managementServer = EC2Prop.getProperty( "managementServer" );
-			cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
+		cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
    	        
    	        try {
    	            pollInterval1  = Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
@@ -150,12 +153,31 @@ public class EC2Engine {
             CC14xlarge.setDiskOfferingId(    EC2Prop.getProperty( "cc1.4xlarge.diskId", null ));
             CC14xlarge.setServiceOfferingId( EC2Prop.getProperty( "cc1.4xlarge.serviceId", null ));
             
-            
+            cloudStackVersion = getCloudStackVersion(EC2Prop);
     	} 
        	else logger.error( "ec2-service.properties not found" );
 	}
     
-    /**
+    private int getCloudStackVersion(Properties prop) {
+    	String versionProp = prop.getProperty( "cloudstackVersion", null );
+    	if(versionProp!=null){
+    		if(versionProp.equals("2.0")){
+    			return CLOUD_STACK_VERSION_2_0;
+    		}
+    		else if(versionProp.equals("2.0.0")){
+    			return CLOUD_STACK_VERSION_2_0;
+    		}
+    		else if(versionProp.equals("2.1.0")){
+    			return CLOUD_STACK_VERSION_2_1;
+    		}
+    		else if(versionProp.equals("2.1.0")){
+    			return CLOUD_STACK_VERSION_2_1;
+    		}
+    	}
+    	return CLOUD_STACK_VERSION_2_0;
+	}
+
+	/**
      * We have to generate the URL explicity here because we are using the given inputs as the 
      * Cloud API keys.  Make sure the account represented by the two parameters exists by performing
      * a harmless operation.   If the parameters are bogus then the signature generated will be
@@ -962,26 +984,32 @@ public class EC2Engine {
      */
     private int calculateAllowedInstances() 
         throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException {
-	    NodeList match      = null;
-	    Node     item       = null;
-	    int      maxAllowed = -1;
-	
- 		// -> get the user limits on instances
-     	String   query     = new String( "command=listResourceLimits&resourceType=0" );
- 		Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listResourceLimits", true );
- 		    
-  		match = cloudResp.getElementsByTagName( "max" ); 
-	    if ( 0 < match.getLength()) {
-	    	 item = match.item(0);
-    	     maxAllowed = Integer.parseInt( item.getFirstChild().getNodeValue());
-    	     if (-1 == maxAllowed) return -1;   // no limit
-	        
-	         // -> how many instances has the user already created?
-    	     EC2DescribeInstancesResponse existingVMS = listVirtualMachines( null );
-    	     EC2Instance[] vmsList = existingVMS.getInstanceSet();
-    	     return (maxAllowed - vmsList.length);
-	    }
-	    else return 0;
+	    
+    	if(cloudStackVersion >= CLOUD_STACK_VERSION_2_1){
+	    	NodeList match      = null;
+		    Node     item       = null;
+		    int      maxAllowed = -1;
+		
+	 		// -> get the user limits on instances
+	     	String   query     = new String( "command=listResourceLimits&resourceType=0" );
+	 		Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listResourceLimits", true );
+	 		    
+	  		match = cloudResp.getElementsByTagName( "max" ); 
+		    if ( 0 < match.getLength()) {
+		    	 item = match.item(0);
+	    	     maxAllowed = Integer.parseInt( item.getFirstChild().getNodeValue());
+	    	     if (-1 == maxAllowed) return -1;   // no limit
+		        
+		         // -> how many instances has the user already created?
+	    	     EC2DescribeInstancesResponse existingVMS = listVirtualMachines( null );
+	    	     EC2Instance[] vmsList = existingVMS.getInstanceSet();
+	    	     return (maxAllowed - vmsList.length);
+		    }
+		    else return 0;    	
+    	}
+    	else{
+    		return -1;
+    	}
  	}
    
     /**
@@ -1951,9 +1979,8 @@ public class EC2Engine {
 	}
 	
 	private String getServerURL() {
-		
 		if ( null == cloudAPIPort ) 
-			 return new String( "http://" + managementServer + "/client/api?" );
+			return new String( "http://" + managementServer + "/client/api?" );
 		else return new String( "http://" + managementServer + ":" + cloudAPIPort + "/client/api?" );
 	}
 }
