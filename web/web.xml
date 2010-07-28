@@ -22,7 +22,13 @@
 <!DOCTYPE web-app PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN" "http://java.sun.com/dtd/web-app_2_3.dtd">
 
 <web-app>
-    <display-name>Apache-Axis2</display-name>
+    <display-name>CloudBridge</display-name>
+    <servlet>
+        <servlet-name>EC2MainServlet</servlet-name>
+        <display-name>EC2 Main Servlet</display-name>
+        <servlet-class>com.cloud.bridge.service.EC2MainServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
     <servlet>
         <servlet-name>AxisServlet</servlet-name>
         <display-name>Apache-Axis Servlet</display-name>
@@ -37,7 +43,7 @@
         <!--<param-name>axis2.repository.url</param-name>-->
         <!--<param-value>http://localhost/myrepo</param-value>-->
         <!--</init-param>-->
-        <load-on-startup>1</load-on-startup>
+        <load-on-startup>2</load-on-startup>
     </servlet>
     <servlet>
         <servlet-name>AxisAdminServlet</servlet-name>
@@ -59,7 +65,16 @@
         <display-name>Cloud.com Bridge EC2 Service REST Servlet</display-name>
         <servlet-class>com.cloud.bridge.service.EC2RestServlet</servlet-class>
     </servlet>
-    
+
+     <servlet-mapping>
+	<servlet-name>EC2MainServlet</servlet-name>
+	<url-pattern>/</url-pattern>
+     </servlet-mapping>
+     <servlet-mapping>
+        <servlet-name>EC2MainServlet</servlet-name>
+        <url-pattern>/*</url-pattern>
+     </servlet-mapping>
+ 
     <servlet-mapping>
         <servlet-name>CloudBridgeS3Servlet</servlet-name>
         <url-pattern>/rest/AmazonS3</url-pattern>
