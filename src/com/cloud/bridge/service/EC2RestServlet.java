@@ -113,6 +113,8 @@ public class EC2RestServlet extends HttpServlet {
 	private String pathToKeystore   = null;
 	private String keystorePassword = null;
 	private String wsdlVersion      = null;
+	
+	boolean debug=true;
 
     
 	/**
@@ -140,7 +142,9 @@ public class EC2RestServlet extends HttpServlet {
 	       String installedPath = System.getenv("CATALINA_HOME");
 	       if (installedPath == null) installedPath = System.getenv("CATALINA_BASE");
 	       if (installedPath == null) installedPath = System.getProperty("catalina.home");
-	       pathToKeystore = new String( installedPath + File.separator + "webapps" + File.separator + "gate" + File.separator + "WEB-INF" + File.separator + "classes" + File.separator + keystore );
+	       String webappPath = config.getServletContext().getRealPath("/");
+	       //pathToKeystore = new String( installedPath + File.separator + "webapps" + File.separator + webappName + File.separator + "WEB-INF" + File.separator + "classes" + File.separator + keystore );
+	       pathToKeystore = new String( webappPath + "WEB-INF" + File.separator + "classes" + File.separator + keystore );
        }
     }
 	
@@ -153,6 +157,17 @@ public class EC2RestServlet extends HttpServlet {
     }
 
     protected void doGetOrPost(HttpServletRequest request, HttpServletResponse response) {
+    	
+    	if(debug){
+    		System.out.println("EC2RestServlet.doGetOrPost: javax.servlet.forward.request_uri: "+request.getAttribute("javax.servlet.forward.request_uri"));
+    		System.out.println("EC2RestServlet.doGetOrPost: javax.servlet.forward.context_path: "+request.getAttribute("javax.servlet.forward.context_path"));
+    		System.out.println("EC2RestServlet.doGetOrPost: javax.servlet.forward.servlet_path: "+request.getAttribute("javax.servlet.forward.servlet_path"));
+    		System.out.println("EC2RestServlet.doGetOrPost: javax.servlet.forward.path_info: "+request.getAttribute("javax.servlet.forward.path_info"));
+    		System.out.println("EC2RestServlet.doGetOrPost: javax.servlet.forward.query_string: "+request.getAttribute("javax.servlet.forward.query_string"));
+    		
+    	}
+    	
+    	
     	String action = request.getParameter( "Action" );
     	logRequest(request);
     	
@@ -1231,7 +1246,13 @@ public class EC2RestServlet extends HttpServlet {
 		//  -> getting the query-string in this way maintains its URL encoding
 	   	EC2RestAuth restAuth = new EC2RestAuth();
     	restAuth.setHostHeader( request.getHeader( "Host" ));
-    	restAuth.setHTTPRequestURI( request.getRequestURI());
+    	String requestUri = request.getRequestURI();
+    	//If forwarded from another basepath:
+    	String forwardedPath = (String) request.getAttribute("javax.servlet.forward.request_uri");
+    	if(forwardedPath!=null){
+    		requestUri=forwardedPath;
+    	}
+    	restAuth.setHTTPRequestURI( requestUri);
     	restAuth.setQueryString( request.getQueryString());
     	
 		if ( restAuth.verifySignature( request.getMethod(), cloudSecretKey, signature, sigMethod )) {
