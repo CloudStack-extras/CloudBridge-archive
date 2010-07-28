@@ -163,4 +163,35 @@ public class UserCredentialsDao {
 		if (null != conn) conn.close();
 		conn = null;
 	}
+
+	public static void preCheckTableExistence() {
+		UserCredentialsDao dao = new UserCredentialsDao();
+		try {
+			dao.checkTableExistence();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void checkTableExistence() throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
+	    openConnection();
+	
+	    try {
+	        PreparedStatement statement = conn.prepareStatement ( "SELECT * FROM usercredentials " );
+	        statement.executeQuery();
+	        ResultSet rs = statement.getResultSet ();
+	        if (rs.next()) {
+	        	return;
+	        }
+	        return;
+
+	    } catch(Exception e) {
+	    	Statement statement = conn.createStatement();
+	    	statement.execute( "create table usercredentials(id integer auto_increment primary key, AccessKey varchar(1000), SecretKey varchar(1000), CertUniqueId varchar(1000))" );
+	    	statement.close();
+	    }
+	    finally{
+	    	closeConnection();
+	    }
+	}
 }
