@@ -18,12 +18,47 @@ package com.cloud.bridge.util;
 import java.io.File;
 import java.net.URL;
 
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
+
+import org.apache.axis2.context.MessageContext;
+import org.apache.axis2.transport.http.HTTPConstants;
+
+
 /**
- * @author Kelven Yang
+ h* @author Kelven Yang
  */
 public class ConfigurationHelper {
+	
+	private static String configPath;
+	
+	public static void preConfigureConfigPathFromServletContext(ServletContext context){
+    	String servletConficPath = context.getRealPath("/");
+    	preSetConfigPath(servletConficPath + File.separator + "WEB-INF" + File.separator + "classes");
+	}
+	
+	public static void preSetConfigPath(String path){
+		configPath=path;
+	}
+	
 	public static File findConfigurationFile(String name) {
-        String newPath = "conf" + (name.startsWith(File.separator) ? "" : "/") + name;
+
+	if(configPath!=null){
+    	File file = new File(configPath + File.separator + name);
+        if (file.exists()) {
+        	return file;
+        }
+	}
+	ServletContext context = getServletContext();
+	if(context!=null){
+		String newPath = context.getRealPath("/");
+        	File file = new File(newPath + File.separator + "WEB-INF" + File.separator + "classes" + File.separator + name);
+	        if (file.exists()) {
+			return file;
+		}
+
+	}
+	String newPath = "conf" + (name.startsWith(File.separator) ? "" : "/") + name;
         URL url = ClassLoader.getSystemResource(newPath);
         if (url != null) {
             return new File(url.getFile());
@@ -49,4 +84,21 @@ public class ConfigurationHelper {
         }
         return file;
 	}
+
+	public static ServletContext getServletContext()
+	{
+		try{
+			MessageContext mc = MessageContext.getCurrentMessageContext();
+			if(mc!=null){
+				return (ServletContext) mc.getProperty(HTTPConstants.MC_HTTP_SERVLETCONTEXT);
+			}
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+
+
 }
