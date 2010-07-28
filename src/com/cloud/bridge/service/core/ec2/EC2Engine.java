@@ -174,7 +174,7 @@ public class EC2Engine {
     			return CLOUD_STACK_VERSION_2_1;
     		}
     	}
-    	return CLOUD_STACK_VERSION_2_0;
+    	return CLOUD_STACK_VERSION_2_1;
 	}
 
 	/**
