@@ -1,1 +1,4 @@
 target
+src/com/cloud/bridge/service/core/ec2/EC2Address.java
+src/com/cloud/bridge/service/core/ec2/EC2DescribeAddresses.java
+src/com/cloud/bridge/service/core/ec2/EC2DescribeAddressesResponse.java
