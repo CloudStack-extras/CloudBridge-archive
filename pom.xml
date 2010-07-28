@@ -2,7 +2,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.cloud</groupId>
-  <artifactId>cbtest</artifactId>
+  <artifactId>bridge</artifactId>
   <packaging>war</packaging>
   <version>1.0-SNAPSHOT</version>
   <name>CloudBridge Webapp</name>
@@ -241,23 +241,74 @@
 
   </dependencies>
   <build>
-    <finalName>ec2</finalName>
+    <finalName>bridge</finalName>
     <sourceDirectory>src</sourceDirectory>
     <plugins>
 	    <plugin>
 	      <artifactId>maven-compiler-plugin</artifactId>
 	      <configuration>
-	        <source>1.5</source>
-	        <target>1.5</target>
+	        <source>1.6</source>
+	        <target>1.6</target>
 	      </configuration>
 	    </plugin>
 		<plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>tomcat-maven-plugin</artifactId>
         <configuration>
-                <warDirectory>target/ec2</warDirectory>
+                <warDirectory>target/bridge</warDirectory>
+		<warSourceDirectory>target/bridge</warSourceDirectory>
         </configuration>
 		</plugin>
+	<plugin>
+		<groupId>org.apache.maven.plugins</groupId>
+		<artifactId>maven-war-plugin</artifactId>
+		<!--version>2.0</version-->
+		<configuration>
+			<webXml>${basedir}/web/web.xml</webXml>
+          		<webResources>
+				<!-- this is relative to the pom.xml directory -->
+                                <resource>
+                                <directory>resource/AmazonEC2</directory>
+                                <targetPath>WEB-INF/services/AmazonEC2/META-INF</targetPath>
+                                <includes>
+                                <include>**/**</include>
+                                </includes>
+                                </resource>
+
+                                <resource>
+                                <directory>resource/AmazonS3</directory>
+                                <targetPath>WEB-INF/services/AmazonS3/META-INF</targetPath>
+                                <includes>
+                                <include>**/**</include>
+                                </includes>
+                                </resource>
+
+                                <resource>
+                                <directory>resource/Axis2</directory>
+                                <targetPath>WEB-INF/conf</targetPath>
+                                <includes>
+                                <include>**/**</include>
+                                </includes>
+                                </resource>
+
+                                <resource>
+                                <directory>modules</directory>
+                                <targetPath>WEB-INF/modules</targetPath>
+                                <includes>
+                                <include>**/**</include>
+                                </includes>
+                                </resource>
+
+				<resource>
+				<directory>conf</directory>
+				<targetPath>WEB-INF/classes</targetPath>
+				<includes>
+				<include>**/**</include>	
+				</includes>
+				</resource>
+          		</webResources>
+		</configuration>
+	</plugin>
 	</plugins>
   </build>
 </project>
