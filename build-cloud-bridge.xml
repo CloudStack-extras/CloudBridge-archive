@@ -24,6 +24,7 @@
 	<!-- directories for build and distribution -->
   	<property name="dist.dir" location="${base.dir}/dist" />
   	<property name="build.dir" location="${base.dir}/" />
+  	<property name="buildnumber.dir" location="${build.dir}/" />
   	<property name="target.dir" location="${base.dir}/target" />
   	<property name="classes.dir" location="${target.dir}/classes" />
   	<property name="jar.dir" location="${target.dir}/jar" />
@@ -74,7 +75,7 @@
 		<echo level="info" message="builder: ${builder.id}" />
 	
 		<!-- set build.number property, stored in eponymous file -->
-		<buildnumber file="${build.dir}/build.number" />
+		<buildnumber file="${buildnumber.dir}/build.number" />
 		<condition property="impl.version" value="${version}.${build.number}" else="${version}">
 	  		<and>
 	   			<isset property="update.build.number"/>

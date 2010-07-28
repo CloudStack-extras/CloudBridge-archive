@@ -109,3 +109,36 @@ def showconfig(conf):
 				Utils.pprint("BLUE","     %s"%v)
 			continue
 		Utils.pprint("BLUE","  %s:	%s"%(key,val))
+
+def runant(tsk):
+	environ = dict(os.environ)
+	environ["CATALINA_HOME"] = tsk.env.TOMCATHOME
+	environ["AXIS2_HOME"] = "."
+	if tsk.generator.env.DISTRO == "Windows":
+		stanzas = [
+			"ant",
+			"-Dcloud-bridge.classpath=\"%s\""%(tsk.env.CLASSPATH.replace(os.pathsep,",")),
+		]
+	else:
+		stanzas = [
+			'ant',
+			"-Dcloud-bridge.classpath=%s"%(tsk.env.CLASSPATH.replace(os.pathsep,",")),
+		]
+	stanzas += tsk.generator.antargs + tsk.generator.anttgts
+	return Utils.exec_command(" ".join(stanzas),cwd=tsk.generator.bld.srcnode.abspath(),env=environ,log=True,shell=False)
+Utils.runant = runant
+
+def relpath(path, start="."):
+    if not path: raise ValueError("no path specified")
+
+    start_list = os.path.abspath(start).split(sep)
+    path_list = os.path.abspath(path).split(sep)
+
+    # Work out how much of the filepath is shared by start and path.
+    i = len(os.path.commonprefix([start_list, path_list]))
+
+    rel_list = [pardir] * (len(start_list)-i) + path_list[i:]
+    if not rel_list:
+        return curdir
+    return os.path.join(*rel_list)
+Utils.relpath = relpath
