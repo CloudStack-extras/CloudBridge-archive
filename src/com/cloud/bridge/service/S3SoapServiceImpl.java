@@ -138,7 +138,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return request;
 	}
 	
-	private GetBucketAccessControlPolicyResponse toGetBucketAccessControlPolicyResponse(S3AccessControlPolicy policy) {
+	public static GetBucketAccessControlPolicyResponse toGetBucketAccessControlPolicyResponse(S3AccessControlPolicy policy) {
 		GetBucketAccessControlPolicyResponse response = new GetBucketAccessControlPolicyResponse();
 		response.setGetBucketAccessControlPolicyResponse(toAccessControlPolicy(policy));
 		return response;
@@ -179,7 +179,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return request;
 	}
 	
-	private ListBucketResponse toListBucketResponse(S3ListBucketResponse engineResponse) {
+	public static ListBucketResponse toListBucketResponse(S3ListBucketResponse engineResponse) {
 		ListBucketResponse response = new ListBucketResponse();
 		ListBucketResult result = new ListBucketResult();
 		result.setName(engineResponse.getBucketName());
@@ -195,7 +195,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return response;
 	}
 	
-	private PrefixEntry[] toPrefixEntry(S3ListBucketPrefixEntry[] engineEntries) {
+	private static PrefixEntry[] toPrefixEntry(S3ListBucketPrefixEntry[] engineEntries) {
 		if(engineEntries != null) {
 			PrefixEntry[] entries = new PrefixEntry[engineEntries.length];
 			for(int i = 0; i < engineEntries.length; i++) {
@@ -208,7 +208,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return null;
 	}
 	
-	private ListEntry[] toListEntry(S3ListBucketObjectEntry[] engineEntries) {
+	private static ListEntry[] toListEntry(S3ListBucketObjectEntry[] engineEntries) {
 		if(engineEntries != null) {
 			ListEntry[] entries = new ListEntry[engineEntries.length];
 			for(int i = 0; i < engineEntries.length; i++) {
@@ -423,7 +423,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return response;
 	}
 	
-	private AccessControlPolicy toAccessControlPolicy(S3AccessControlPolicy enginePolicy) {
+	private static AccessControlPolicy toAccessControlPolicy(S3AccessControlPolicy enginePolicy) {
 		AccessControlPolicy policy = new AccessControlPolicy();
 		CanonicalUser owner = new CanonicalUser();
 		owner.setID(enginePolicy.getOwner().getID());
@@ -547,7 +547,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return engineAcl;
 	}
 	
-	private Grant[] toGrants(S3Grant[] engineGrants) {
+	private static Grant[] toGrants(S3Grant[] engineGrants) {
 		if(engineGrants != null) {
 			Grant[] grants = new Grant[engineGrants.length];
 			for(int i = 0; i < engineGrants.length; i++) {
