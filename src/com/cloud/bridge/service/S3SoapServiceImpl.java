@@ -94,6 +94,7 @@ import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3PutObjectInlineRequest;
 import com.cloud.bridge.service.core.s3.S3PutObjectInlineResponse;
 import com.cloud.bridge.service.core.s3.S3Response;
+import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3SetObjectAccessControlPolicyRequest;
 import com.cloud.bridge.service.exception.InternalErrorException;
 
@@ -144,17 +145,15 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return response;
 	}
  
-	public SetBucketAccessControlPolicyResponse setBucketAccessControlPolicy(
-          SetBucketAccessControlPolicy setBucketAccessControlPolicy) {
-		
-		S3SetObjectAccessControlPolicyRequest request = new S3SetObjectAccessControlPolicyRequest();
+	public SetBucketAccessControlPolicyResponse setBucketAccessControlPolicy(SetBucketAccessControlPolicy setBucketAccessControlPolicy) {
+		S3SetBucketAccessControlPolicyRequest request = new S3SetBucketAccessControlPolicyRequest();
 		request.setAccessKey(setBucketAccessControlPolicy.getAWSAccessKeyId());
 		request.setRequestTimestamp(setBucketAccessControlPolicy.getTimestamp());
 		request.setSignature(setBucketAccessControlPolicy.getSignature());
 		request.setBucketName(setBucketAccessControlPolicy.getBucket());
 		request.setAcl(toEngineAccessControlList(setBucketAccessControlPolicy.getAccessControlList()));
 		
-		engine.handleRequest(request);
+		S3Response basicResponse = engine.handleRequest(request);
 		SetBucketAccessControlPolicyResponse response = new SetBucketAccessControlPolicyResponse();
 		return response;
     }
@@ -548,17 +547,22 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	}
 	
 	private static Grant[] toGrants(S3Grant[] engineGrants) {
-		if(engineGrants != null) {
-			Grant[] grants = new Grant[engineGrants.length];
-			for(int i = 0; i < engineGrants.length; i++) {
+		Grantee grantee = null; 
+		Grant[] grants  = null;
+
+		if (engineGrants != null && 0 < engineGrants.length) 
+		{
+			grants = new Grant[engineGrants.length];
+			for(int i = 0; i < engineGrants.length; i++) 
+			{
 				grants[i] = new Grant();
 				
-				Grantee grantee = null; 
 				switch(engineGrants[i].getGrantee()) {
 				case SAcl.GRANTEE_USER :
 					grantee = new CanonicalUser();
 					((CanonicalUser)grantee).setID(engineGrants[i].getCanonicalUserID());
 					((CanonicalUser)grantee).setDisplayName("TODO");
+					grants[i].setGrantee(grantee);
 					break;
 					
 				case SAcl.GRANTEE_PUBLIC :
@@ -566,7 +570,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 				default :
 					throw new InternalErrorException("Unsupported grantee type");
 				}
-				grants[i].setGrantee(grantee);
 				
 				switch(engineGrants[i].getPermission()) {
 				case SAcl.PERMISSION_READ:
@@ -589,10 +592,10 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 					grants[i].setPermission(Permission.FULL_CONTROL);
 					break;
 				}
-			}
-			return grants;
+ 			}
+ 			return grants;
 		}
-		return null;
+ 		return null;
 	}
 	
 	private PutObjectInlineResponse toPutObjectInlineResponse(S3PutObjectInlineResponse engineResponse) {

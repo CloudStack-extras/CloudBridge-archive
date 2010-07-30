@@ -114,7 +114,7 @@ CREATE TABLE acl (
 	TargetID BIGINT NOT NULL,
 	
 	GranteeType INT NOT NULL DEFAULT 0,			-- 0 : Cloud service user, 1 : Cloud user community, 2: Public user community
-	GranteeCanonicalID VARCHAR(64),
+	GranteeCanonicalID VARCHAR(150),            -- make it big enought to hold a Cloud API access key
 	
 	Permission INT NOT NULL DEFAULT 0,			-- 0 : no permission, 1 : read, 2 : write, 4 : read_acl, 8 : write_acl 
 	GrantOrder INT NOT NULL DEFAULT 0, 

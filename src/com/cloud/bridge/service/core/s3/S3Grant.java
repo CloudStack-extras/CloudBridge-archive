@@ -55,7 +55,8 @@ public class S3Grant {
 	}
 	
 	public static S3Grant[] toGrants(List<SAcl> grants) {
-		if(grants != null) {
+		if(grants != null) 
+		{
 			S3Grant[] entries = new S3Grant[grants.size()];
 			int i = 0;
 			for(SAcl acl: grants) {
@@ -63,6 +64,7 @@ public class S3Grant {
 				entries[i].setGrantee(acl.getGranteeType());
 				entries[i].setCanonicalUserID(acl.getGranteeCanonicalId());
 				entries[i].setPermission(acl.getPermission());
+				i++;
 			}
 			return entries;
 		}

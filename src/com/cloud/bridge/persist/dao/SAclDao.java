@@ -62,12 +62,12 @@ public class SAclDao extends EntityDao<SAcl> {
 		int grantee = grant.getGrantee();
 		aclEntry.setGranteeType(grantee);
 		aclEntry.setPermission(grant.getPermission());
+		aclEntry.setGranteeCanonicalId(grant.getCanonicalUserID());
 		
 		Date ts = new Date();
 		aclEntry.setCreateTime(ts);
 		aclEntry.setLastModifiedTime(ts);
 		PersistContext.getSession().save(aclEntry);
-		
 		return aclEntry;
 	}
 }
