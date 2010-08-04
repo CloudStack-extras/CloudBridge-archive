@@ -111,9 +111,11 @@ public class SObject implements Serializable {
 	public SObjectItem getLatestVersion() {
 		Iterator<SObjectItem> it = getItems().iterator();
 		int maxVersion = 0;
-		int curVersion;
+		int curVersion = 0;
 		SObjectItem latestItem = null;
-		while(it.hasNext()) {
+		
+		while(it.hasNext()) 
+		{
 			SObjectItem item = it.next();
 			
 			try {
@@ -122,7 +124,7 @@ public class SObject implements Serializable {
 				curVersion = 0;
 			}
 			
-			if(curVersion > maxVersion) {
+			if(curVersion >= maxVersion) {
 				maxVersion = curVersion;
 				latestItem = item;
 			}

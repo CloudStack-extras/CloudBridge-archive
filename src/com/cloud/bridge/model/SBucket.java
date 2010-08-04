@@ -25,6 +25,10 @@ import java.util.Set;
  */
 public class SBucket implements Serializable {
 	private static final long serialVersionUID = 7430267766019671273L;
+	
+	public static final int VERSIONING_NULL = 0;     // -> initial set, not set to anything yet
+	public static final int VERSIONING_ENABLED = 1;
+	public static final int VERSIONING_SUSPENDED = 2;
 
 	private Long id;
 	
@@ -34,9 +38,12 @@ public class SBucket implements Serializable {
 	private SHost shost;
 	private Date createTime;
 	
+	private int versioningStatus;
+	
 	private Set<SObject> objectsInBucket = new HashSet<SObject>();
 	
 	public SBucket() {
+		versioningStatus = VERSIONING_NULL;
 	}
 	
 	public Long getId() {
@@ -77,6 +84,14 @@ public class SBucket implements Serializable {
 	
 	public void setCreateTime(Date createTime) {
 		this.createTime = createTime;
+	}
+	
+	public int getVersioningStatus() {
+		return versioningStatus;
+	}
+	
+	public void setVersioningStatus( int versioningStatus ) {
+		this.versioningStatus = versioningStatus;
 	}
 	
 	public Set<SObject> getObjectsInBucket() {

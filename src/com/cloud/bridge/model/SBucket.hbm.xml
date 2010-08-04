@@ -18,6 +18,10 @@
   		<property name="createTime" type="com.cloud.bridge.persist.GMTDateTimeUserType">
      		<column name="CreateTime" />
   		</property>
+  		           
+  		<property name="versioningStatus">
+     		<column name="VersioningStatus" />
+  		</property>
   		
   		<many-to-one name="shost" column="SHostID" 
   			class="com.cloud.bridge.model.SHost"

@@ -15,8 +15,11 @@
  */
 package com.cloud.bridge.persist.dao;
 
+import com.cloud.bridge.model.SBucket;
+import com.cloud.bridge.model.SObject;
 import com.cloud.bridge.model.SObjectItem;
 import com.cloud.bridge.persist.EntityDao;
+import com.cloud.bridge.util.EntityParam;
 
 /**
  * @author Kelven Yang
@@ -24,5 +27,9 @@ import com.cloud.bridge.persist.EntityDao;
 public class SObjectItemDao extends EntityDao<SObjectItem> {
 	public SObjectItemDao() {
 		super(SObjectItem.class);
+	}
+	
+	public SObjectItem getByObjectIdNullVersion(long id) {
+		return queryEntity("from SObjectItem where theObject=? and version is null", new Object[] { id });
 	}
 }

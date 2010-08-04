@@ -60,6 +60,9 @@ CREATE TABLE sbucket (
 	SHostID BIGINT,
 	
 	CreateTime DATETIME,
+	
+	VersioningStatus INT NOT NULL DEFAULT 0,  -- 0 : initial not set, 1 : enabled, 2 : suspended 
+	
 	PRIMARY KEY(ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

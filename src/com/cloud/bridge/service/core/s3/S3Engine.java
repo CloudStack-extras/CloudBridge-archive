@@ -427,18 +427,18 @@ public class S3Engine {
 		
 		if(sobject.getDeletionMark() != 0) {
 			response.setResultCode(404);
-			response.setResultDescription("Object " + request.getKey() + " has been deleted");
+			response.setResultDescription("Object " + request.getKey() + " has been deleted (1)");
 			return response;
 		}
 		
-    	SObjectItem item = sobject.getLatestVersion();
-    	if(item == null) {
-			response.setResultCode(404);
-			response.setResultDescription("Object " + request.getKey() + " has been deleted");
-			return response;
+    	SObjectItem item = sobject.getLatestVersion();    
+    	if (item == null) {
+    		response.setResultCode(404);
+			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
+			return response;  		
     	}
-    	
     	// TODO logic of IfMatch IfNoneMatch, IfModifiedSince, IfUnmodifiedSince 
+    	
     	
     	response.setContentLength(item.getStoredSize());
     	if(request.isReturnData()) {
@@ -446,16 +446,13 @@ public class S3Engine {
     		response.setLastModified(DateHelper.toCalendar(item.getLastModifiedTime()));
     		if(request.isInlineData()) {
     			Tuple<SHost, String> tupleSHostInfo = getBucketStorageHost(sbucket);
-				S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(tupleSHostInfo.getFirst());
+				S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleSHostInfo.getFirst());
 				
-				if(request.getByteRangeStart() >= 0 && request.getByteRangeEnd() >= 0)
-					response.setData(bucketAdapter.loadObjectRange(tupleSHostInfo.getSecond(), 
-						request.getBucketName(), item.getStoredPath(), request.getByteRangeStart(), request.getByteRangeEnd()));
-				else
-					response.setData(bucketAdapter.loadObject(tupleSHostInfo.getSecond(), request.getBucketName(), item.getStoredPath()));
-    		} else {
-    			// TODO DIME attachment
-    		}
+				if ( request.getByteRangeStart() >= 0 && request.getByteRangeEnd() >= 0)
+					   response.setData(bucketAdapter.loadObjectRange(tupleSHostInfo.getSecond(), 
+						   request.getBucketName(), item.getStoredPath(), request.getByteRangeStart(), request.getByteRangeEnd()));
+				else response.setData(bucketAdapter.loadObject(tupleSHostInfo.getSecond(), request.getBucketName(), item.getStoredPath()));
+    		} 
     	}
     	
     	response.setResultCode(200);
@@ -631,52 +628,89 @@ public class S3Engine {
 		
 		return adapter;
 	}
+
 	
 	@SuppressWarnings("deprecation")
-	public Tuple<SObject, SObjectItem> allocObjectItem(SBucket bucket, String nameKey, S3MetaDataEntry[] meta, S3AccessControlList acl) {
-		SObjectDao objectDao = new SObjectDao();
-		SMetaDao metaDao = new SMetaDao();
-		SAclDao aclDao = new SAclDao();
+	public Tuple<SObject, SObjectItem> allocObjectItem(SBucket bucket, String nameKey, S3MetaDataEntry[] meta, S3AccessControlList acl) 
+	{
+		SObjectDao     objectDao     = new SObjectDao();
+		SObjectItemDao objectItemDao = new SObjectItemDao();
+		SMetaDao       metaDao       = new SMetaDao();
+		SAclDao        aclDao        = new SAclDao();
+		SObjectItem    item          = null;
+		int            versionSeq    = 1;
+		int      versioningStatus    = bucket.getVersioningStatus();
 		
 		Session session = PersistContext.getSession();
-		
+				
+		// -> if versoning is off them we over write a null object item
 		SObject object = objectDao.getByNameKey(bucket, nameKey);
-		int versionSeq = 1;
-		if(object != null) {
-			session.lock(object, LockMode.UPGRADE);
-			versionSeq = object.getNextSequence();
-			object.setNextSequence(versionSeq + 1);
-			session.save(object);
-		} else {
-			object = new SObject();
-			object.setBucket(bucket);
-			object.setNameKey(nameKey);
-			object.setNextSequence(2);
-			object.setCreateTime(DateHelper.currentGMTTime());
-			object.setOwnerCanonicalId(UserContext.current().getCanonicalUserId());
-			session.save(object);
+		if ( object != null ) 
+		{
+			 // -> if versioning is on create new object items
+			 if ( SBucket.VERSIONING_ENABLED  == versioningStatus )
+			 {
+			      session.lock(object, LockMode.UPGRADE);
+			      versionSeq = object.getNextSequence();
+			      object.setNextSequence(versionSeq + 1);
+		 	      session.save(object);
+		 	     
+			      item = new SObjectItem();
+			      item.setTheObject(object);
+			      object.getItems().add(item);
+			      item.setVersion(String.valueOf(versionSeq));
+			      Date ts = DateHelper.currentGMTTime();
+			      item.setCreateTime(ts);
+			      item.setLastAccessTime(ts);
+			      item.setLastModifiedTime(ts);
+			      session.save(item);
+			 }
+			 else
+			 {    // -> find an object item with a null version, can be null
+				  //    if bucket started out with versioning enabled and was then suspended
+				  item = objectItemDao.getByObjectIdNullVersion( object.getId());
+				  if (item == null)
+				  {
+				      item = new SObjectItem();
+				      item.setTheObject(object);
+				      object.getItems().add(item);
+				      Date ts = DateHelper.currentGMTTime();
+				      item.setCreateTime(ts);
+				      item.setLastAccessTime(ts);
+				      item.setLastModifiedTime(ts);
+				      session.save(item);		  
+				  }
+			 }
+		} 
+		else 
+		{    // -> there is no object nor an object item
+			 object = new SObject();
+			 object.setBucket(bucket);
+			 object.setNameKey(nameKey);
+			 object.setNextSequence(2);
+			 object.setCreateTime(DateHelper.currentGMTTime());
+			 object.setOwnerCanonicalId(UserContext.current().getCanonicalUserId());
+			 session.save(object);
+		
+		     item = new SObjectItem();
+		     item.setTheObject(object);
+		     object.getItems().add(item);
+		     if (SBucket.VERSIONING_ENABLED  == versioningStatus) item.setVersion(String.valueOf(versionSeq));
+		     Date ts = DateHelper.currentGMTTime();
+		     item.setCreateTime(ts);
+		     item.setLastAccessTime(ts);
+		     item.setLastModifiedTime(ts);
+		     session.save(item);
 		}
 		
-		SObjectItem item = new SObjectItem();
-		item.setTheObject(object);
-		object.getItems().add(item);
-		item.setVersion(String.valueOf(versionSeq));
-		Date ts = DateHelper.currentGMTTime();
-		item.setCreateTime(ts);
-		item.setLastAccessTime(ts);
-		item.setLastModifiedTime(ts);
-		session.save(item);
 		
 		// we will use the item DB id as the file name, MD5/contentLength will be stored later
-		int dotPos = nameKey.lastIndexOf('.');
 		String suffix = null;
-		if(dotPos >= 0) {
-			suffix = nameKey.substring(dotPos);
-		}
-		if(suffix != null)
-			item.setStoredPath(String.valueOf(item.getId()) + suffix);
-		else
-			item.setStoredPath(String.valueOf(item.getId()));
+		int dotPos = nameKey.lastIndexOf('.');
+		if (dotPos >= 0) suffix = nameKey.substring(dotPos);
+		if ( suffix != null )
+			 item.setStoredPath(String.valueOf(item.getId()) + suffix);
+		else item.setStoredPath(String.valueOf(item.getId()));
 		
 		metaDao.save("SObjectItem", item.getId(), meta);
 		aclDao.save("SObjectItem", item.getId(), acl);

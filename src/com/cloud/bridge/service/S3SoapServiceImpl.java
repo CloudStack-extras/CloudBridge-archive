@@ -319,7 +319,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	public GetObjectResponse getObject(com.amazon.s3.GetObject getObject) {
 		return toGetObjectResponse(engine.handleRequest(toEngineGetObjectRequest(getObject)));
     }
-	
+
 	public GetObjectExtendedResponse getObjectExtended(GetObjectExtended getObjectExtended) {
 		return toGetObjectExtendedResponse(engine.handleRequest(toEngineGetObjectRequest(getObjectExtended)));
     }
@@ -361,25 +361,51 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	
 	private GetObjectResponse toGetObjectResponse(S3GetObjectResponse engineResponse) {
 		GetObjectResponse response = new GetObjectResponse();
+		int resultCode = engineResponse.getResultCode();
 
 		GetObjectResult result = new GetObjectResult();
-		result.setData(engineResponse.getData());
-		result.setETag(engineResponse.getETag());
-		result.setLastModified(engineResponse.getLastModified());
-		result.setMetadata(toMetadataEntry(engineResponse.getMetaEntries()));
+		Status param1 = new Status();
+		param1.setCode( resultCode);
+		param1.setDescription( engineResponse.getResultDescription());
+		result.setStatus( param1 );
 		
+		if ( 200 == resultCode )
+		{
+		     result.setData(engineResponse.getData());
+		     result.setETag( engineResponse.getETag());
+		     result.setMetadata(toMetadataEntry(engineResponse.getMetaEntries()));
+		     result.setLastModified( engineResponse.getLastModified());
+		}
+		else 
+		{    result.setETag( "" );
+			 result.setLastModified( Calendar.getInstance());	
+		}
+			
 		response.setGetObjectResponse(result);
 		return response;
 	}
 	
 	private GetObjectExtendedResponse toGetObjectExtendedResponse(S3GetObjectResponse engineResponse) {
 		GetObjectExtendedResponse response = new GetObjectExtendedResponse();
+		int resultCode = engineResponse.getResultCode();
 
 		GetObjectResult result = new GetObjectResult();
-		result.setData(engineResponse.getData());
-		result.setETag(engineResponse.getETag());
-		result.setLastModified(engineResponse.getLastModified());
-		result.setMetadata(toMetadataEntry(engineResponse.getMetaEntries()));
+		Status param1 = new Status();
+		param1.setCode( resultCode );
+		param1.setDescription( engineResponse.getResultDescription());
+		result.setStatus( param1 );
+
+		if ( 200 == resultCode )
+		{
+		     result.setData(engineResponse.getData());
+		     result.setETag( engineResponse.getETag());
+		     result.setMetadata(toMetadataEntry(engineResponse.getMetaEntries()));
+		     result.setLastModified( engineResponse.getLastModified());
+		}
+		else 
+		{    result.setETag( "" );
+			 result.setLastModified( Calendar.getInstance());	
+		}
 		
 		response.setGetObjectResponse(result);
 		return response;
