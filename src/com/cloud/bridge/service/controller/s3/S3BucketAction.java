@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
 
 import org.apache.axiom.om.OMAbstractFactory;
@@ -54,6 +55,7 @@ import com.cloud.bridge.service.core.s3.S3ListBucketResponse;
 import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.exception.InvalidRequestContentException;
 import com.cloud.bridge.service.exception.NetworkIOException;
+import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.util.Converter;
 import com.cloud.bridge.util.StringHelper;
 import com.cloud.bridge.util.XSerializer;
@@ -202,7 +204,25 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void executeGetBucketVersioning(HttpServletRequest request, HttpServletResponse response) throws IOException{
-		// TODO
+		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String versioningStatus = null;
+		
+		try {
+		    versioningStatus = ServiceProvider.getInstance().getS3Engine().getVersioningStatus( bucketName );
+		} catch( NoSuchObjectException e ) {
+			response.setStatus(404);	
+            return;
+		}
+		
+		StringBuffer xml = new StringBuffer();
+        xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
+        xml.append( "<VersioningConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
+        if (0 < versioningStatus.length()) xml.append( "<Status>" ).append( versioningStatus ).append( "</Status>" );
+        xml.append( "</VersioningConfiguration>" );
+      
+		response.setStatus(200);
+	    response.setContentType("text/xml; charset=UTF-8");
+    	S3RestServlet.endResponse(response, xml.toString());
 	}
 	
 	public void executeGetBucketLogging(HttpServletRequest request, HttpServletResponse response) throws IOException {

@@ -74,7 +74,21 @@ public class S3Engine {
     public S3Engine() {
     	bucketAdapters.put(SHost.STORAGE_HOST_TYPE_LOCAL, new S3FileSystemBucketAdapter());
     }
+    
+    public String getVersioningStatus( String bucketName ) {
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket sbucket = bucketDao.getByName( bucketName );
+		if (sbucket == null) throw new NoSuchObjectException( bucketName + " does not exist"); 
 
+		switch( sbucket.getVersioningStatus()) {
+		default:
+		case 0: return "";
+		case 1: return "Enabled";   
+		case 2: return "Suspended"; 
+		}
+    }
+
+    
     public S3CreateBucketResponse handleRequest(S3CreateBucketRequest request) {
     	S3CreateBucketResponse response = new S3CreateBucketResponse();
     	response.setBucketName(request.getBucketName());
