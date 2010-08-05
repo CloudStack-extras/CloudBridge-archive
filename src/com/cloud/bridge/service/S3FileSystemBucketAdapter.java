@@ -83,6 +83,10 @@ public class S3FileSystemBucketAdapter implements S3BucketAdapter {
 		
 		File file = new File(getBucketFolderDir(mountedRoot, bucket) + File.separatorChar + fileName);
 		try {
+			// -> when versioning is off we need to rewrite the file contents
+			file.delete();
+			file.createNewFile();
+			
 	        final FileOutputStream fos = new FileOutputStream(file);
 	        byte[] buffer = new byte[4096];
 	        int len = 0;

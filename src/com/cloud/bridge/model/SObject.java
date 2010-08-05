@@ -108,7 +108,7 @@ public class SObject implements Serializable {
 		this.items = items;
 	}
 	
-	public SObjectItem getLatestVersion() {
+	public SObjectItem getLatestVersion( boolean versioningOff ) {
 		Iterator<SObjectItem> it = getItems().iterator();
 		int maxVersion = 0;
 		int curVersion = 0;
@@ -118,8 +118,16 @@ public class SObject implements Serializable {
 		{
 			SObjectItem item = it.next();
 			
+		    // -> If versioning is off then return the item with the null version string (if exists)
+			//    For example, the bucket could have allowed versioning and then it was suspended
+			//    If an application wants a specific version it will need to explicitly ask for it
 			try {
-				curVersion = Integer.parseInt(item.getVersion());
+                String version = item.getVersion();
+                if (versioningOff && null == version) {
+                	return item;
+                }
+				curVersion = Integer.parseInt( version );
+				
 			} catch (NumberFormatException e) {
 				curVersion = 0;
 			}

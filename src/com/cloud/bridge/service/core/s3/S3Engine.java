@@ -261,7 +261,7 @@ public class S3Engine {
 		SBucket bucket = bucketDao.getByName(bucketName);
 		if(bucket == null)
 			throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
-		
+
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl);
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
 		
@@ -329,9 +329,7 @@ public class S3Engine {
 			is = request.getInputStream();
 			String md5Checksum = bucketAdapter.saveObject(is, tupleBucketHost.getSecond(), bucket.getName(), itemFileName);
 			response.setETag(md5Checksum);
-			response.setLastModified(DateHelper.toCalendar(
-				tupleObjectItem.getSecond().getLastModifiedTime())
-			);
+			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
 			
 			SObjectItemDao itemDao = new SObjectItemDao();
 			SObjectItem item = itemDao.get(tupleObjectItem.getSecond().getId());
@@ -431,7 +429,8 @@ public class S3Engine {
 			return response;
 		}
 		
-    	SObjectItem item = sobject.getLatestVersion();    
+        int versioningStatus = sbucket.getVersioningStatus();
+    	SObjectItem item = sobject.getLatestVersion(( 1 != versioningStatus ));    
     	if (item == null) {
     		response.setResultCode(404);
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
