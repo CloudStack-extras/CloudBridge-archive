@@ -641,6 +641,7 @@ public class S3RestServlet extends HttpServlet {
     	    			request.getParameter((String)paramName));
     			}
     		}
+    		logger.info( "- End of request -" );
     	}
     }
 }

@@ -25,17 +25,24 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
-import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Node;
+
 import com.amazon.s3.GetBucketAccessControlPolicyResponse;
 import com.amazon.s3.ListAllMyBucketsResponse;
 import com.amazon.s3.ListBucketResponse;
+import com.cloud.bridge.model.SBucket;
+import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.service.S3Constants;
 import com.cloud.bridge.service.S3RestServlet;
 import com.cloud.bridge.service.S3SoapServiceImpl;
@@ -67,9 +74,16 @@ import com.cloud.bridge.util.XSerializerXmlAdapter;
 public class S3BucketAction implements ServletAction {
     protected final static Logger logger = Logger.getLogger(S3BucketAction.class);
     
+    private DocumentBuilderFactory dbf = null;
 	private OMFactory factory = OMAbstractFactory.getOMFactory();
 	private XMLOutputFactory xmlOutFactory = XMLOutputFactory.newInstance();
     
+	public S3BucketAction() {
+		dbf = DocumentBuilderFactory.newInstance();
+		dbf.setNamespaceAware( true );
+
+	}
+	
 	public void execute(HttpServletRequest request, HttpServletResponse response) 
 	    throws IOException, XMLStreamException {
 		String method = request.getMethod(); 
@@ -207,13 +221,26 @@ public class S3BucketAction implements ServletAction {
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String versioningStatus = null;
 		
-		try {
-		    versioningStatus = ServiceProvider.getInstance().getS3Engine().getVersioningStatus( bucketName );
-		} catch( NoSuchObjectException e ) {
-			response.setStatus(404);	
-            return;
+		if (null == bucketName) {
+			logger.error( "executeGetBucketVersioning - no bucket name given" );
+			response.setStatus( 400 ); 
+			return; 
 		}
 		
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket sbucket = bucketDao.getByName( bucketName );
+		if (sbucket == null) {
+			response.setStatus( 404 );
+			return;
+		}
+
+		switch( sbucket.getVersioningStatus()) {
+		default:
+		case 0: versioningStatus = "";
+		case 1: versioningStatus = "Enabled";   
+		case 2: versioningStatus = "Suspended"; 
+		}
+
 		StringBuffer xml = new StringBuffer();
         xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
         xml.append( "<VersioningConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
@@ -272,7 +299,49 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void executePutBucketVersioning(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		// TODO
+		String bucketName       = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String versioningStatus = null;
+		Node   item             = null;
+
+		if (null == bucketName) {
+			logger.error( "executePutBucketVersioning - no bucket name given" );
+			response.setStatus( 400 ); 
+			return; 
+		}
+		
+		try {
+		    DocumentBuilder db = dbf.newDocumentBuilder();
+		    Document restXML = db.parse( request.getInputStream());
+		    NodeList match   = restXML.getElementsByTagName( "Status" ); 
+	        if ( 0 < match.getLength()) 
+	        {
+	    	     item = match.item(0);
+	    	     versioningStatus = new String( item.getFirstChild().getNodeValue());
+	        }
+	        else
+	        {    logger.error( "executePutBucketVersioning - cannot find Status tag in XML body" );
+				 response.setStatus( 400 ); 
+				 return; 
+	        }
+	        
+			SBucketDao bucketDao = new SBucketDao();
+			SBucket sbucket = bucketDao.getByName( bucketName );
+			
+			     if (versioningStatus.equalsIgnoreCase( "Enabled"  )) sbucket.setVersioningStatus( 1 );
+			else if (versioningStatus.equalsIgnoreCase( "Suspended")) sbucket.setVersioningStatus( 2 );
+			else { 
+				 logger.error( "executePutBucketVersioning - unknown state: [" + versioningStatus + "]" );
+				 response.setStatus( 400 ); 
+				 return; 
+		    }
+			bucketDao.update( sbucket );
+			
+		} catch( Exception e ) {
+			logger.error( "executePutBucketVersioning - failed due to " + e.getMessage(), e);
+			response.setStatus(500);
+			return;
+		}		
+		response.setStatus(200);
 	}
 	
 	public void executePutBucketLogging(HttpServletRequest request, HttpServletResponse response) throws IOException {
