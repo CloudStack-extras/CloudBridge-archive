@@ -970,7 +970,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setMonitoring( param12 );
             param7.setSubnetId( "" );
             param7.setVpcId( "" );
-            param7.setPrivateIpAddress( "" );
+            String ipAddr = instances[i].getIpAddress();
+            param7.setPrivateIpAddress((null != ipAddr ? ipAddr : ""));
 	        param7.setIpAddress( instances[i].getIpAddress());
 	        
 	        StateReasonType param13 = new StateReasonType();
@@ -1407,7 +1408,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 
 		param1.setSnapshotId( engineResponse.getId());
 		param1.setVolumeId( engineResponse.getVolumeId());
-		param1.setStatus( engineResponse.getType());
+		param1.setStatus( "completed" );
 		
        	// -> CloudStack seems to have issues with timestamp formats so just in case
         Calendar cal = engineResponse.getCreated();
@@ -1417,7 +1418,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         }
 		param1.setStartTime( cal );
 		
-		param1.setProgress( "0" );
+		param1.setProgress( "100" );
 		param1.setOwnerId( accountName );
         Integer volSize = new Integer( engineResponse.getVolumeSize());
         param1.setVolumeSize( volSize.toString());
