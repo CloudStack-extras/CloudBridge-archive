@@ -1196,7 +1196,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setMonitoring( param12 );
             param7.setSubnetId( "" );
             param7.setVpcId( "" );
-            param7.setPrivateIpAddress( "" );
+            String ipAddr = instances[i].getIpAddress();
+            param7.setPrivateIpAddress((null != ipAddr ? ipAddr : ""));
 	        param7.setIpAddress( instances[i].getIpAddress());
 
 	        StateReasonType param13 = new StateReasonType();
