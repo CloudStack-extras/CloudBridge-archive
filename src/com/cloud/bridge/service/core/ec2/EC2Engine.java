@@ -290,6 +290,20 @@ public class EC2Engine {
    	    }
     }
     
+    public EC2DescribeSecurityGroupsResponse handleRequest(EC2DescribeSecurityGroups request) {
+    	try {
+    		return listSecurityGroups( request.getGroupSet());
+   	        
+       	} catch( EC2ServiceException error ) {
+    		logger.error( "EC2 DescribeSecurityGroups - " + error.toString());
+    		throw error;
+    		
+    	} catch( Exception e ) {
+    		logger.error( "EC2 DescribeSecurityGroups - " + e.toString());
+    		throw new InternalErrorException( e.toString());
+    	}
+    }
+    
     public EC2DescribeSnapshotsResponse handleRequest(EC2DescribeSnapshots request) {
 		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
 		
@@ -1797,6 +1811,51 @@ public class EC2Engine {
         return offerings;
     }
 
+    public EC2DescribeSecurityGroupsResponse listSecurityGroups( String[] interestedGroups ) 
+    throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException {
+    	EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
+    	Node parent = null;
+    	
+	    Document cloudResp = resolveURL( genAPIURL( "command=listNetworkGroups", genQuerySignature( "command=listNetworkGroups" )), "listNetworkGroups", true );
+        NodeList match = cloudResp.getElementsByTagName( "networkgroup" ); 
+	    int     length = match.getLength();
+	       
+	    for( int i=0; i < length; i++ ) {
+	   
+	   	    if (null != (parent = match.item(i))) { 
+	    
+	    		NodeList children = parent.getChildNodes();
+	    		int      numChild = children.getLength();
+    			EC2SecurityGroup group  = new EC2SecurityGroup();
+	    		
+	    		for( int j=0; j < numChild; j++ ) {
+	    		     Node   child = children.item(j);
+	    			 String name  =  child.getNodeName();
+	    			
+	    			 if (null != child.getFirstChild()) {
+	    			     String value = child.getFirstChild().getNodeValue();
+	    			     //System.out.println( "listNetworkGroups " + name + "=" + value );
+	    			     
+	    			          if (name.equalsIgnoreCase( "name"        )) group.setName( value );
+	    			     else if (name.equalsIgnoreCase( "description" )) group.setDescription( value );
+	    			     else if (name.equalsIgnoreCase( "account"     )) group.setAccount( value );
+	    			 } 
+	    	    }
+	 		    // -> are we asking about specific security groups?
+	 		    if ( null != interestedGroups && 0 < interestedGroups.length ) {
+	 		     	 for( int j=0; j < interestedGroups.length; j++ ) {
+	 		    	     if (interestedGroups[j].equalsIgnoreCase( group.getName())) {
+	 		    	    	 groupSet.addGroup( group );
+	 		    			 break;
+	 		    		 }
+	 		    	 }
+	 		    }
+	 		    else groupSet.addGroup( group );
+	    	}
+	    }
+	    return groupSet;
+    }
+    
     /**
      * If given a specific list of snapshots of interest, then only values from those snapshots are returned.
      * 

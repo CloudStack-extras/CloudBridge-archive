@@ -51,6 +51,7 @@ import com.amazon.ec2.DescribeImageAttributeResponse;
 import com.amazon.ec2.DescribeInstanceAttributeResponse;
 import com.amazon.ec2.DescribeInstancesResponse;
 import com.amazon.ec2.DescribeImagesResponse;
+import com.amazon.ec2.DescribeSecurityGroupsResponse;
 import com.amazon.ec2.DescribeSnapshotsResponse;
 import com.amazon.ec2.DescribeVolumesResponse;
 import com.amazon.ec2.AttachVolumeResponse;
@@ -79,6 +80,7 @@ import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZones;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeInstances;
+import com.cloud.bridge.service.core.ec2.EC2DescribeSecurityGroups;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshots;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
@@ -206,7 +208,7 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "DescribeImages"            )) describeImages(request, response);  
     	    else if (action.equalsIgnoreCase( "DescribeInstanceAttribute" )) describeInstanceAttribute(request, response);  
     	    else if (action.equalsIgnoreCase( "DescribeInstances"         )) describeInstances(request, response);  
-    	    else if (action.equalsIgnoreCase( "DescribeSecurityGroups"    )) /* not yet implemented */  ;  
+    	    else if (action.equalsIgnoreCase( "DescribeSecurityGroups"    )) describeSecurityGroups(request, response);  
     	    else if (action.equalsIgnoreCase( "DescribeSnapshots"         )) describeSnapshots(request, response);  
     	    else if (action.equalsIgnoreCase( "DescribeVolumes"           )) describeVolumes(request, response); 
     	    else if (action.equalsIgnoreCase( "DetachVolume"              )) detachVolume(request, response);  
@@ -1111,6 +1113,36 @@ public class EC2RestServlet extends HttpServlet {
 	    response.setContentType("text/xml; charset=UTF-8");
 		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
 		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
+        EC2response.serialize( null, factory, MTOMWriter );
+        xmlWriter.flush();
+        xmlWriter.close();
+        os.close();
+    }
+    
+    private void describeSecurityGroups( HttpServletRequest request, HttpServletResponse response ) 
+        throws ADBException, XMLStreamException, IOException {
+	    EC2DescribeSecurityGroups EC2request = new EC2DescribeSecurityGroups();
+	
+	    // -> load in all the "GroupName.n" parameters if any
+	    Enumeration names = request.getParameterNames();
+	    while( names.hasMoreElements()) {
+		   String key = (String)names.nextElement();
+		   if (key.startsWith("GroupName")) {
+		       String[] value = request.getParameterValues( key );
+		       if (null != value && 0 < value.length) EC2request.addGroupName( value[0] );
+		   }
+	    }	
+	    
+	    // -> execute the request
+	    EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
+	    DescribeSecurityGroupsResponse EC2response = EC2SoapServiceImpl.toDescribeSecurityGroupsResponse( engine.handleRequest( EC2request ));
+
+	    // -> serialize using the apache's Axiom classes
+	    OutputStream os = response.getOutputStream();
+	    response.setStatus(200);	
+        response.setContentType("text/xml; charset=UTF-8");
+	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
+	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
         EC2response.serialize( null, factory, MTOMWriter );
         xmlWriter.flush();
         xmlWriter.close();

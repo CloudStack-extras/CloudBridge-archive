@@ -30,6 +30,8 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImagesResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeInstances;
 import com.cloud.bridge.service.core.ec2.EC2DescribeInstancesResponse;
+import com.cloud.bridge.service.core.ec2.EC2DescribeSecurityGroups;
+import com.cloud.bridge.service.core.ec2.EC2DescribeSecurityGroupsResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshots;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshotsResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
@@ -395,8 +397,16 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	public DescribeSecurityGroupsResponse describeSecurityGroups(DescribeSecurityGroups describeSecurityGroups) {
-		// TODO Auto-generated method stub
-		return null;
+	    EC2DescribeSecurityGroups request = new EC2DescribeSecurityGroups();
+        DescribeSecurityGroupsType sgt = describeSecurityGroups.getDescribeSecurityGroups();
+
+		// -> toEC2DescribeSecurityGroups
+        DescribeSecurityGroupsSetType sgst = sgt.getSecurityGroupSet();
+        DescribeSecurityGroupsSetItemType[] items = sgst.getItem();
+		if (null != items) {  // -> can be empty
+			for( int i=0; i < items.length; i++ ) request.addGroupName( items[i].getGroupName());
+		}
+		return toDescribeSecurityGroupsResponse( engine.handleRequest( request ));
 	}
 
 	public DescribeSnapshotAttributeResponse describeSnapshotAttribute(DescribeSnapshotAttribute describeSnapshotAttribute) {
@@ -1379,28 +1389,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    return response;
 	}
 	
-	/*
-	public static DescribeAddressesResponse toDescribeAddressesResponse( EC2DescribeAddressesResponse engineResponse ) {
-		DescribeAddressesResponse response = new DescribeAddressesResponse();
-		DescribeAddressesResponseType param1 = new DescribeAddressesResponseType();
-		DescribeAddressesResponseInfoType param2 = new DescribeAddressesResponseInfoType();
-		
-		EC2Address[] addresses = engineResponse.getAddressSet();
-	    for( int i=0; i < addresses.length; i++ ) {
-		     DescribeAddressesResponseItemType param3 = new DescribeAddressesResponseItemType();
-		     param3.setPublicIp( addresses[i].getIP());
-		     String instanceId = addresses[i].getInstanceId();
-		     if (null != instanceId) param3.setInstanceId( instanceId );
-             param2.addItem( param3 );
-	    }
-	    
-        param1.setAddressesSet( param2 );
-	    param1.setRequestId( UUID.randomUUID().toString());
-		response.setDescribeAddressesResponse( param1 );
-        return response;
-	}
-	*/
-	
 	public static DeleteSnapshotResponse toDeleteSnapshotResponse( boolean engineResponse ) {
 		DeleteSnapshotResponse response = new DeleteSnapshotResponse();
 		DeleteSnapshotResponseType param1 = new DeleteSnapshotResponseType();
@@ -1434,6 +1422,30 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         param1.setDescription( engineResponse.getName());
 	    param1.setRequestId( UUID.randomUUID().toString());
         response.setCreateSnapshotResponse( param1 );
+		return response;
+	}
+	
+	public static DescribeSecurityGroupsResponse toDescribeSecurityGroupsResponse(EC2DescribeSecurityGroupsResponse engineResponse ) {
+		DescribeSecurityGroupsResponse response = new DescribeSecurityGroupsResponse();
+		DescribeSecurityGroupsResponseType param1 = new DescribeSecurityGroupsResponseType();
+		SecurityGroupSetType param2 = new SecurityGroupSetType();
+		
+		EC2SecurityGroup[] groups = engineResponse.getGroupSet();
+	    for( int i=0; i < groups.length; i++ ) {
+		     SecurityGroupItemType param3 = new SecurityGroupItemType();
+		     param3.setOwnerId( groups[i].getAccount());
+		     param3.setGroupName( groups[i].getName());
+		     String desc = groups[i].getDescription();
+		     param3.setGroupDescription((null != desc ? desc : ""));
+		     
+		     IpPermissionSetType param4 = new IpPermissionSetType();
+             param3.setIpPermissions( param4 );     	 
+		     param2.addItem( param3 );
+	    }
+		
+		param1.setSecurityGroupInfo( param2 );
+	    param1.setRequestId( UUID.randomUUID().toString());
+		response.setDescribeSecurityGroupsResponse( param1 );
 		return response;
 	}
 	
