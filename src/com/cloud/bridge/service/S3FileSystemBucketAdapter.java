@@ -78,7 +78,7 @@ public class S3FileSystemBucketAdapter implements S3BucketAdapter {
 			md5 = MessageDigest.getInstance("MD5");
 		} catch (NoSuchAlgorithmException e) {
 			logger.error("Unexpected exception " + e.getMessage(), e);
-			throw new InternalErrorException("Unabel to get MD5 MessageDigest", e);
+			throw new InternalErrorException("Unable to get MD5 MessageDigest", e);
 		}
 		
 		File file = new File(getBucketFolderDir(mountedRoot, bucket) + File.separatorChar + fileName);

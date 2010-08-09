@@ -244,48 +244,51 @@ public class EC2Engine {
     	}
     }
 
-    /*
-    public EC2DescribeAddressesResponse handleRequest(EC2DescribeAddresses request) {
-    	EC2DescribeAddressesResponse response = new EC2DescribeAddressesResponse();
-     	EC2Instance[] vms = null;
+    /**
+     * Remember to pre-sort the parameters in alphabetical order.
+     * 
+     * @param request
+     * @return was the security group created?
+     */
+    public boolean createSecurityGroup(EC2SecurityGroup request) {
+		if (null == request.getDescription() || null == request.getName()) 
+			 throw new EC2ServiceException( "Both name & description are required", 400 );
 
     	try {
-        	// -> to match an IP address to a VM we have to get a list of all VMs for the caller's account
-    	    EC2DescribeInstancesResponse allVMs = listVirtualMachines( null );
-     	    vms = allVMs.getInstanceSet();
-    	    
-     	    // -> the caller either gives us a list of IPs to query or we look up all IPs allocated to the account
-     		String[] ipSet = request.getIPSet();
-     		if (null == ipSet || 0 == ipSet.length) {
-     			// ToDo: command=listPublicIpAddresses
-     		}
-
-     		// -> find the instance (if any) that the IP address is associated with
-     		if (null != ipSet) {
-     			for( int i=0; i < ipSet.length; i++ ) {
-     				 EC2Address publicIP = new EC2Address();
-     				 publicIP.setIP( ipSet[i] );
-     				
-     				 for( int j=0; j < vms.length; j++ ) {
-     					 if (ipSet[i].equals( vms[j].getIpAddress())) publicIP.setInstanceId( vms[j].getId());
-     				 }
-     				 response.addAddress( publicIP );
-     			}
-     		}
-     		
-     		// -> if there are no VMs or addresses then the response is empty
-      		return response;
+	        String query = new String( "command=createNetworkGroup" +
+	        		                   "&description=" + safeURLencode( request.getDescription()) + 
+	        		                   "&name="        + safeURLencode( request.getName()));
+	        
+            resolveURL( genAPIURL( query, genQuerySignature( query )), "createNetworkGroup", true );
+      		return true;
      		
        	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 DescribeAddresses - " + error.toString());
+    		logger.error( "EC2 CreateSecurityGroup - " + error.toString());
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 DescribeAddresses - " + e.toString());
+    		logger.error( "EC2 CreateSecurityGroup - " + e.toString());
     		throw new InternalErrorException( e.toString());
     	}
     }
-    */
+    
+    public boolean deleteSecurityGroup(EC2SecurityGroup request) {
+		if (null == request.getName()) throw new EC2ServiceException( "Name is a required parameter", 400 );
+
+   	    try {
+	        String query = new String( "command=deleteNetworkGroup&name=" + safeURLencode( request.getName()));        
+            resolveURL( genAPIURL( query, genQuerySignature( query )), "deleteNetworkGroup", true );
+     		return true;
+    		
+      	} catch( EC2ServiceException error ) {
+   		    logger.error( "EC2 DeleteSecurityGroup - " + error.toString());
+   		    throw error;
+   		
+   	    } catch( Exception e ) {
+   		    logger.error( "EC2 DeleteSecurityGroup - " + e.toString());
+   		    throw new InternalErrorException( e.toString());
+   	    }
+    }
     
     public EC2DescribeSnapshotsResponse handleRequest(EC2DescribeSnapshots request) {
 		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();

@@ -41,6 +41,7 @@ import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
 import com.cloud.bridge.service.core.ec2.EC2RunInstancesResponse;
+import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2Snapshot;
 import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StartInstancesResponse;
@@ -139,8 +140,12 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	public CreateSecurityGroupResponse createSecurityGroup(CreateSecurityGroup createSecurityGroup) {
-		// TODO Auto-generated method stub
-		return null;
+        CreateSecurityGroupType sgt = createSecurityGroup.getCreateSecurityGroup();
+        EC2SecurityGroup request = new EC2SecurityGroup();
+        	
+        request.setName( sgt.getGroupName());
+        request.setDescription( sgt.getGroupDescription());
+		return toCreateSecurityGroupResponse( engine.createSecurityGroup( request ));
 	}
 
 	public CreateSnapshotResponse createSnapshot(CreateSnapshot createSnapshot) {
@@ -199,8 +204,11 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	public DeleteSecurityGroupResponse deleteSecurityGroup(DeleteSecurityGroup deleteSecurityGroup) {
-		// TODO Auto-generated method stub
-		return null;
+        DeleteSecurityGroupType sgt = deleteSecurityGroup.getDeleteSecurityGroup();
+        EC2SecurityGroup request = new EC2SecurityGroup();
+        
+        request.setName( sgt.getGroupName());
+		return toDeleteSecurityGroupResponse( engine.deleteSecurityGroup( request ));
 	}
 
 	public DeleteSnapshotResponse deleteSnapshot(DeleteSnapshot deleteSnapshot) {
@@ -1426,6 +1434,26 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         param1.setDescription( engineResponse.getName());
 	    param1.setRequestId( UUID.randomUUID().toString());
         response.setCreateSnapshotResponse( param1 );
+		return response;
+	}
+	
+	public static CreateSecurityGroupResponse toCreateSecurityGroupResponse( boolean success ) {
+		CreateSecurityGroupResponse response = new CreateSecurityGroupResponse();
+		CreateSecurityGroupResponseType param1 = new CreateSecurityGroupResponseType();
+		
+		param1.set_return( success );
+		param1.setRequestId( UUID.randomUUID().toString());
+		response.setCreateSecurityGroupResponse( param1 );
+		return response;
+	}
+	
+	public static DeleteSecurityGroupResponse toDeleteSecurityGroupResponse( boolean success ) {
+		DeleteSecurityGroupResponse response = new DeleteSecurityGroupResponse();
+		DeleteSecurityGroupResponseType param1 = new DeleteSecurityGroupResponseType();
+		
+		param1.set_return( success );
+		param1.setRequestId( UUID.randomUUID().toString());
+		response.setDeleteSecurityGroupResponse( param1 );
 		return response;
 	}
 }

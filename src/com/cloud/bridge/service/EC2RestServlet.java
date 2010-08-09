@@ -44,6 +44,8 @@ import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.log4j.Logger;
 
+import com.amazon.ec2.CreateSecurityGroupResponse;
+import com.amazon.ec2.DeleteSecurityGroupResponse;
 import com.amazon.ec2.DescribeAvailabilityZonesResponse;
 import com.amazon.ec2.DescribeImageAttributeResponse;
 import com.amazon.ec2.DescribeInstanceAttributeResponse;
@@ -85,6 +87,7 @@ import com.cloud.bridge.service.core.ec2.EC2Instance;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
+import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
@@ -190,10 +193,10 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "AttachVolume"              )) attachVolume(request, response );
     	    else if (action.equalsIgnoreCase( "AuthorizeSecurityGroupIngress" )) /* not yet implemented */ ;  
     	    else if (action.equalsIgnoreCase( "CreateImage"               )) createImage(request, response);
-    	    else if (action.equalsIgnoreCase( "CreateSecurityGroup"       )) /* not yet implemented */ ;  
+    	    else if (action.equalsIgnoreCase( "CreateSecurityGroup"       )) createSecurityGroup(request, response);
     	    else if (action.equalsIgnoreCase( "CreateSnapshot"            )) createSnapshot(request, response); 
     	    else if (action.equalsIgnoreCase( "CreateVolume"              )) createVolume(request, response);  
-    	    else if (action.equalsIgnoreCase( "DeleteSecurityGroup"       )) /* not yet implemented */ ;  
+    	    else if (action.equalsIgnoreCase( "DeleteSecurityGroup"       )) deleteSecurityGroup(request, response);  
     	    else if (action.equalsIgnoreCase( "DeleteSnapshot"            )) deleteSnapshot(request, response); 
     	    else if (action.equalsIgnoreCase( "DeleteVolume"              )) deleteVolume(request, response);   
     	    else if (action.equalsIgnoreCase( "DeregisterImage"           )) deregisterImage(request, response);    
@@ -556,6 +559,59 @@ public class EC2RestServlet extends HttpServlet {
 	    response.setContentType("text/xml; charset=UTF-8");
 		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
 		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
+        EC2response.serialize( null, factory, MTOMWriter );
+        xmlWriter.flush();
+        xmlWriter.close();
+        os.close();
+    }
+
+    private void createSecurityGroup( HttpServletRequest request, HttpServletResponse response ) 
+        throws ADBException, XMLStreamException, IOException {
+	    EC2SecurityGroup EC2request = new EC2SecurityGroup();
+	
+        String[] name = request.getParameterValues( "GroupName" );
+	    if ( null != name && 0 < name.length ) 
+		     EC2request.setName( name[0] );
+	    else { response.sendError(530, "Missing GroupName parameter" ); return; }
+	
+        String[] desc = request.getParameterValues( "GroupDescription" );
+        if ( null != desc && 0 < desc.length ) 
+    	     EC2request.setDescription( desc[0] );
+	    else { response.sendError(530, "Missing GroupDescription parameter" ); return; }
+
+	    // -> execute the request
+        CreateSecurityGroupResponse EC2response = EC2SoapServiceImpl.toCreateSecurityGroupResponse( ServiceProvider.getInstance().getEC2Engine().createSecurityGroup( EC2request ));
+
+	    // -> serialize using the apache's Axiom classes
+	    OutputStream os = response.getOutputStream();
+	    response.setStatus(200);	
+        response.setContentType("text/xml; charset=UTF-8");
+	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
+	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
+        EC2response.serialize( null, factory, MTOMWriter );
+        xmlWriter.flush();
+        xmlWriter.close();
+        os.close();
+    }
+
+    private void deleteSecurityGroup( HttpServletRequest request, HttpServletResponse response ) 
+        throws ADBException, XMLStreamException, IOException {
+        EC2SecurityGroup EC2request = new EC2SecurityGroup();
+
+        String[] name = request.getParameterValues( "GroupName" );
+        if ( null != name && 0 < name.length ) 
+	         EC2request.setName( name[0] );
+        else { response.sendError(530, "Missing GroupName parameter" ); return; }
+
+        // -> execute the request
+        DeleteSecurityGroupResponse EC2response = EC2SoapServiceImpl.toDeleteSecurityGroupResponse( ServiceProvider.getInstance().getEC2Engine().deleteSecurityGroup( EC2request ));
+
+        // -> serialize using the apache's Axiom classes
+        OutputStream os = response.getOutputStream();
+        response.setStatus(200);	
+        response.setContentType("text/xml; charset=UTF-8");
+        XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
+        MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
         EC2response.serialize( null, factory, MTOMWriter );
         xmlWriter.flush();
         xmlWriter.close();

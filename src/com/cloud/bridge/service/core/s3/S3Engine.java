@@ -276,9 +276,7 @@ public class S3Engine {
 			is = dataHandler.getInputStream();
 			String md5Checksum = bucketAdapter.saveObject(is, tupleBucketHost.getSecond(), bucket.getName(), itemFileName);
 			response.setETag(md5Checksum);
-			response.setLastModified(DateHelper.toCalendar(
-				tupleObjectItem.getSecond().getLastModifiedTime())
-			);
+			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
 			
 			SObjectItemDao itemDao = new SObjectItemDao();
 			SObjectItem item = itemDao.get(tupleObjectItem.getSecond().getId());
