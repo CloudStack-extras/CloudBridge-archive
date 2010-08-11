@@ -22,7 +22,6 @@ import java.util.UUID;
 
 import com.amazon.ec2.*;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
-import com.cloud.bridge.service.core.ec2.EC2AuthorizeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateImageResponse;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
@@ -44,7 +43,6 @@ import com.cloud.bridge.service.core.ec2.EC2Instance;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
-import com.cloud.bridge.service.core.ec2.EC2RevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
 import com.cloud.bridge.service.core.ec2.EC2RunInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;

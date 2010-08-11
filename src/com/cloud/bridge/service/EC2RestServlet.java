@@ -78,7 +78,6 @@ import com.cloud.bridge.persist.PersistContext;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
 import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
-import com.cloud.bridge.service.core.ec2.EC2AuthorizeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZones;
