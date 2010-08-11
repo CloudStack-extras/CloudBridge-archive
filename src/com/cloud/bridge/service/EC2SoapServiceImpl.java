@@ -21,6 +21,8 @@ import java.util.Calendar;
 import java.util.UUID;
 
 import com.amazon.ec2.*;
+import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
+import com.cloud.bridge.service.core.ec2.EC2AuthorizeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateImageResponse;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
@@ -39,8 +41,10 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeVolumesResponse;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Image;
 import com.cloud.bridge.service.core.ec2.EC2Instance;
+import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
+import com.cloud.bridge.service.core.ec2.EC2RevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
 import com.cloud.bridge.service.core.ec2.EC2RunInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
@@ -92,9 +96,57 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 	
 	public AuthorizeSecurityGroupIngressResponse authorizeSecurityGroupIngress(AuthorizeSecurityGroupIngress authorizeSecurityGroupIngress) {
-		// TODO Auto-generated method stub
-		return null;
+        AuthorizeSecurityGroupIngressType sgit = authorizeSecurityGroupIngress.getAuthorizeSecurityGroupIngress();        
+        IpPermissionSetType ipPerms = sgit.getIpPermissions();
+        
+        EC2AuthorizeRevokeSecurityGroup request = toSecurityGroup( sgit.getGroupName(), ipPerms.getItem());
+		return toAuthorizeSecurityGroupIngressResponse( engine.securityGroupRequest( request, "authorizeNetworkGroupIngress" ));
 	}
+
+	public RevokeSecurityGroupIngressResponse revokeSecurityGroupIngress(RevokeSecurityGroupIngress revokeSecurityGroupIngress) {
+        RevokeSecurityGroupIngressType sgit = revokeSecurityGroupIngress.getRevokeSecurityGroupIngress();        
+        IpPermissionSetType ipPerms = sgit.getIpPermissions();
+        
+        EC2AuthorizeRevokeSecurityGroup request = toSecurityGroup( sgit.getGroupName(), ipPerms.getItem());
+		return toRevokeSecurityGroupIngressResponse( engine.securityGroupRequest( request, "revokeNetworkGroupIngress" ));
+	}
+
+	/**
+	 * Authorize and Revoke Security Group Ingress have the same parameters.
+	 */
+	private EC2AuthorizeRevokeSecurityGroup toSecurityGroup( String groupName, IpPermissionType[] items ) {
+        EC2AuthorizeRevokeSecurityGroup request = new  EC2AuthorizeRevokeSecurityGroup();
+
+        request.setName( groupName );
+         
+        for( int i=0; i < items.length; i++ ) {
+    	   EC2IpPermission perm = new EC2IpPermission();       	
+    	   perm.setProtocol( items[i].getIpProtocol());
+    	   perm.setFromPort( items[i].getFromPort());
+    	   perm.setToPort(   items[i].getToPort());
+    	
+    	   UserIdGroupPairSetType groups = items[i].getGroups();
+    	   if (null != groups) {
+    		   UserIdGroupPairType[] groupItems = groups.getItem();
+    		   for( int j=0; j < groupItems.length; j++ ) {
+    			  EC2SecurityGroup user = new EC2SecurityGroup();
+    			  user.setName( groupItems[j].getUserId());
+    			  user.setAccount( groupItems[j].getGroupName());
+    			  perm.addUser( user );
+    		   }    		
+    	   }     	
+    
+    	   IpRangeSetType ranges = items[i].getIpRanges();
+    	   if (null != ranges) {
+    		   IpRangeItemType[] rangeItems = ranges.getItem();
+    		   for( int k=0; k < rangeItems.length; k++ ) 
+    			  perm.addIpRange( rangeItems[k].getCidrIp());
+    	   }  
+    
+    	   request.addIpPermission( perm );
+        }
+        return request;
+    }
 
 	public BundleInstanceResponse bundleInstance(BundleInstance bundleInstance) {
 		// TODO Auto-generated method stub
@@ -625,11 +677,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return null;
 	}
 
-	public RevokeSecurityGroupIngressResponse revokeSecurityGroupIngress(RevokeSecurityGroupIngress revokeSecurityGroupIngress) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
 	public RunInstancesResponse runInstances(RunInstances runInstances) {
 		EC2RunInstances request = new EC2RunInstances();
 		RunInstancesType rit = runInstances.getRunInstances();
@@ -1467,5 +1514,25 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		param1.setRequestId( UUID.randomUUID().toString());
 		response.setDeleteSecurityGroupResponse( param1 );
 		return response;
+	}
+	
+	public static AuthorizeSecurityGroupIngressResponse toAuthorizeSecurityGroupIngressResponse( boolean success ) {
+		AuthorizeSecurityGroupIngressResponse response = new AuthorizeSecurityGroupIngressResponse();
+		AuthorizeSecurityGroupIngressResponseType param1 = new AuthorizeSecurityGroupIngressResponseType();
+	
+		param1.set_return( success );
+		param1.setRequestId( UUID.randomUUID().toString());
+		response.setAuthorizeSecurityGroupIngressResponse( param1 );
+        return response;
+	}
+	
+	public static RevokeSecurityGroupIngressResponse toRevokeSecurityGroupIngressResponse( boolean success ) {
+		RevokeSecurityGroupIngressResponse response = new RevokeSecurityGroupIngressResponse();
+		RevokeSecurityGroupIngressResponseType param1 = new RevokeSecurityGroupIngressResponseType();
+	
+		param1.set_return( success );
+		param1.setRequestId( UUID.randomUUID().toString());
+		response.setRevokeSecurityGroupIngressResponse( param1 );
+        return response;
 	}
 }

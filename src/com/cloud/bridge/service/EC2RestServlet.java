@@ -44,6 +44,7 @@ import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.log4j.Logger;
 
+import com.amazon.ec2.AuthorizeSecurityGroupIngressResponse;
 import com.amazon.ec2.CreateSecurityGroupResponse;
 import com.amazon.ec2.DeleteSecurityGroupResponse;
 import com.amazon.ec2.DescribeAvailabilityZonesResponse;
@@ -58,6 +59,7 @@ import com.amazon.ec2.AttachVolumeResponse;
 import com.amazon.ec2.DetachVolumeResponse;
 import com.amazon.ec2.CreateVolumeResponse;
 import com.amazon.ec2.DeleteVolumeResponse;
+import com.amazon.ec2.RevokeSecurityGroupIngressResponse;
 import com.amazon.ec2.RunInstancesResponse;
 import com.amazon.ec2.RebootInstancesResponse;
 import com.amazon.ec2.StopInstancesResponse;
@@ -75,6 +77,8 @@ import com.cloud.bridge.model.UserCredentials;
 import com.cloud.bridge.persist.PersistContext;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
 import com.cloud.bridge.service.UserContext;
+import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
+import com.cloud.bridge.service.core.ec2.EC2AuthorizeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZones;
@@ -86,6 +90,7 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Image;
 import com.cloud.bridge.service.core.ec2.EC2Instance;
+import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
@@ -193,7 +198,7 @@ public class EC2RestServlet extends HttpServlet {
     	         if (action.equalsIgnoreCase( "AllocateAddress"           )) /* not yet implemented */ ;   		
     	    else if (action.equalsIgnoreCase( "AssociateAddress"          )) /* not yet implemented */ ;  
     	    else if (action.equalsIgnoreCase( "AttachVolume"              )) attachVolume(request, response );
-    	    else if (action.equalsIgnoreCase( "AuthorizeSecurityGroupIngress" )) /* not yet implemented */ ;  
+    	    else if (action.equalsIgnoreCase( "AuthorizeSecurityGroupIngress" )) authorizeSecurityGroupIngress(request, response);  
     	    else if (action.equalsIgnoreCase( "CreateImage"               )) createImage(request, response);
     	    else if (action.equalsIgnoreCase( "CreateSecurityGroup"       )) createSecurityGroup(request, response);
     	    else if (action.equalsIgnoreCase( "CreateSnapshot"            )) createSnapshot(request, response); 
@@ -218,7 +223,7 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "RegisterImage"             )) registerImage(request, response);  
     	    else if (action.equalsIgnoreCase( "ReleaseAddress"            )) /* not yet implemented */ ;  
     	    else if (action.equalsIgnoreCase( "ResetImageAttribute"       )) resetImageAttribute(request, response);  
-    	    else if (action.equalsIgnoreCase( "RevokeSecurityGroupIngress")) /* not yet implemented */ ;  
+    	    else if (action.equalsIgnoreCase( "RevokeSecurityGroupIngress")) revokeSecurityGroupIngress(request, response);
     	    else if (action.equalsIgnoreCase( "RunInstances"              )) runInstances(request, response);   
     	    else if (action.equalsIgnoreCase( "StartInstances"            )) startInstances(request, response);  
     	    else if (action.equalsIgnoreCase( "StopInstances"             )) stopInstances(request, response); 
@@ -481,7 +486,153 @@ public class EC2RestServlet extends HttpServlet {
         xmlWriter.close();
         os.close();
     }
-        
+  
+    /**
+     * The SOAP equivalent of this function appears to allow multiple permissions per request, yet
+     * in the REST API documentation only one permission is allowed.
+     */
+    private void revokeSecurityGroupIngress( HttpServletRequest request, HttpServletResponse response ) 
+        throws ADBException, XMLStreamException, IOException {
+        EC2AuthorizeRevokeSecurityGroup EC2request = new EC2AuthorizeRevokeSecurityGroup();
+
+        String[] groupName = request.getParameterValues( "GroupName" );
+		if ( null != groupName && 0 < groupName.length ) 
+			 EC2request.setName( groupName[0] );
+		else { response.sendError(530, "Missing GroupName parameter" ); return; }
+
+		EC2IpPermission perm = new EC2IpPermission();       	
+
+        String[] protocol = request.getParameterValues( "IpProtocol" );
+		if ( null != protocol && 0 < protocol.length ) 
+		     perm.setProtocol( protocol[0] );
+		else { response.sendError(530, "Missing IpProtocol parameter" ); return; }
+
+        String[] fromPort = request.getParameterValues( "FromPort" );
+	    if ( null != fromPort && 0 < fromPort.length ) 
+	    	 perm.setProtocol( fromPort[0] );
+		else { response.sendError(530, "Missing FromPort parameter" ); return; }
+
+        String[] toPort = request.getParameterValues( "ToPort" );
+		if ( null != toPort && 0 < toPort.length ) 
+			 perm.setProtocol( toPort[0] );
+		else { response.sendError(530, "Missing ToPort parameter" ); return; }
+		    		    
+	    String[] ranges = request.getParameterValues( "CidrIp" );
+		if ( null != ranges && 0 < ranges.length) 
+		 	 perm.addIpRange( ranges[0] );
+		else { response.sendError(530, "Missing CidrIp parameter" ); return; }
+		
+	    String[] user = request.getParameterValues( "SourceSecurityGroupOwnerId" );
+		if ( null == user || 0 == user.length) { 
+		     response.sendError(530, "Missing SourceSecurityGroupOwnerId parameter" ); 
+		     return; 
+		}
+	
+		String[] name = request.getParameterValues( "SourceSecurityGroupName" );
+		if ( null == name || 0 == name.length) {
+		     response.sendError(530, "Missing SourceSecurityGroupName parameter" ); 
+		     return; 		
+		}
+
+		EC2SecurityGroup group = new EC2SecurityGroup();
+		group.setAccount( user[0] );
+		group.setName( name[0] );
+		perm.addUser( group );
+	    EC2request.addIpPermission( perm );	
+		
+	    // -> execute the request
+        RevokeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toRevokeSecurityGroupIngressResponse( ServiceProvider.getInstance().getEC2Engine().securityGroupRequest( EC2request, "revokeNetworkGroupIngress" ));
+
+	    // -> serialize using the apache's Axiom classes
+	    OutputStream os = response.getOutputStream();
+	    response.setStatus(200);	
+        response.setContentType("text/xml; charset=UTF-8");
+	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
+	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
+        EC2response.serialize( null, factory, MTOMWriter );
+        xmlWriter.flush();
+        xmlWriter.close();
+        os.close();
+    }
+
+     private void authorizeSecurityGroupIngress( HttpServletRequest request, HttpServletResponse response ) 
+        throws ADBException, XMLStreamException, IOException {
+    	// -> parse the complicated paramters into our standard object
+        EC2AuthorizeRevokeSecurityGroup EC2request = new EC2AuthorizeRevokeSecurityGroup();
+
+        String[] groupName = request.getParameterValues( "GroupName" );
+		if ( null != groupName && 0 < groupName.length ) 
+			 EC2request.setName( groupName[0] );
+		else { response.sendError(530, "Missing GroupName parameter" ); return; }
+
+		// -> not clear how many parameters there are until we fail to get IpPermissions.n.IpProtocol
+		int nCount = 1;
+		do 
+		{  	EC2IpPermission perm = new EC2IpPermission();       	
+
+            String[] protocol = request.getParameterValues( "IpPermissions." + nCount + ".IpProtocol" );
+		    if ( null != protocol && 0 < protocol.length ) 
+		    	 perm.setProtocol( protocol[0] );
+		    else break;
+
+            String[] fromPort = request.getParameterValues( "IpPermissions." + nCount + ".FromPort" );
+		    if (null != fromPort && 0 < fromPort.length) perm.setProtocol( fromPort[0] );
+
+            String[] toPort = request.getParameterValues( "IpPermissions." + nCount + ".ToPort" );
+		    if (null != toPort && 0 < toPort.length) perm.setProtocol( toPort[0] );
+		    		    
+            // -> list: IpPermissions.n.IpRanges.m.CidrIp
+			int mCount = 1;
+	        do 
+	        {  String[] ranges = request.getParameterValues( "IpPermissions." + nCount + ".IpRanges." + mCount + ".CidrIp" );
+		       if ( null != ranges && 0 < ranges.length) 
+		    	    perm.addIpRange( ranges[0] );
+		       else break;
+		       mCount++;
+		       
+	        } while( true );
+
+            // -> list: IpPermissions.n.Groups.m.UserId and IpPermissions.n.Groups.m.GroupName 
+	        mCount = 1;
+	        do 
+	        {  String[] user = request.getParameterValues( "IpPermissions." + nCount + ".Groups." + mCount + ".UserId" );
+		       if ( null == user || 0 == user.length) break;
+	
+		       String[] name = request.getParameterValues( "IpPermissions." + nCount + ".Groups." + mCount + ".GroupName" );
+			   if ( null == name || 0 == name.length) break;
+
+			   EC2SecurityGroup group = new EC2SecurityGroup();
+			   group.setAccount( user[0] );
+			   group.setName( name[0] );
+			   perm.addUser( group );
+		       mCount++;
+		       
+	        } while( true );
+	        
+	        // -> multiple IP permissions can be specified per group name
+		    EC2request.addIpPermission( perm );	
+		    nCount++;
+		    
+		} while( true );
+		
+		if (1 == nCount) { response.sendError(530, "At least one IpPermissions required" ); return; }
+
+		
+	    // -> execute the request
+        AuthorizeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toAuthorizeSecurityGroupIngressResponse( ServiceProvider.getInstance().getEC2Engine().securityGroupRequest( EC2request, "authorizeNetworkGroupIngress" ));
+
+	    // -> serialize using the apache's Axiom classes
+	    OutputStream os = response.getOutputStream();
+	    response.setStatus(200);	
+        response.setContentType("text/xml; charset=UTF-8");
+	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
+	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
+        EC2response.serialize( null, factory, MTOMWriter );
+        xmlWriter.flush();
+        xmlWriter.close();
+        os.close();
+    }
+    
     private void detachVolume( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {
 		EC2Volume EC2request = new EC2Volume();

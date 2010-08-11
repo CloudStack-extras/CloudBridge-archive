@@ -303,6 +303,111 @@ public class EC2Engine {
     		throw new InternalErrorException( e.toString());
     	}
     }
+   
+    /**
+     * The Cload Stack API only handles one item out of the EC2 request at a time.
+     * Place authorizw and revoke into one function since it appears that they are practically identical.
+     * 
+     * @param request - ip permission parameters
+     * @param command - { authorizeNetworkGroupIngress | revokeNetworkGroupIngress }
+     */
+    public boolean securityGroupRequest(EC2AuthorizeRevokeSecurityGroup request, String command ) {
+		if (null == request.getName()) throw new EC2ServiceException( "Name is a required parameter", 400 );
+    	
+		StringBuffer url    = new StringBuffer();   // -> used to derive URL for Cloud Stack
+		StringBuffer sorted = new StringBuffer();   // -> used for signature generation
+		StringBuffer params = new StringBuffer();   // -> used to construct common set of parameters
+		
+		EC2IpPermission[] items = request.getIpPermissionSet();
+		
+   	    try {
+   	    	for( int i=0; i < items.length; i++  ) {
+   	    		
+   	    	   // -> cidrList is before command for the sorted version used for signature generation
+  	    	   String cidrList = constructCIDRList( items[i].getIpRangeSet());
+    	       url.append( "command=" + command );	
+    	       if ( null != cidrList) {
+     	    	    url.append( "&" + cidrList );   // &cidrList
+    	    	    sorted.append( cidrList );      // cidrList before command
+    	    	    sorted.append( "&command=" + command );	
+    	       }
+    	       else sorted.append( "command="  + command );	
+
+    	       
+   	    	   String protocol = items[i].getProtocol();
+   	    	   if ( protocol.equalsIgnoreCase( "icmp" )) {
+  	   	            params.append( "&icmpCode="         + items[i].getToPort());
+   	   	            params.append( "&icmpType="         + items[i].getFromPort());
+   	   	            params.append( "&networkGroupName=" + safeURLencode( request.getName()));
+   	   	            params.append( "&protocol="         + safeURLencode( protocol ));
+   	    	   }
+   	    	   else {
+  	   	            params.append( "&endPort="          + items[i].getToPort());
+   	   	            params.append( "&networkGroupName=" + safeURLencode( request.getName()));
+   	   	            params.append( "&protocol="         + safeURLencode( protocol ));
+   	   	            params.append( "&startPort="        + items[i].getFromPort());
+   	    	   }
+   
+   	    	   String userList = constructNetworkUserList( items[i].getUserSet());
+   	    	   if (null != userList) url.append( userList );
+   	    	
+   	    	   // -> sorted is: cidrList=&command=... while url is: command=&cidrList=...
+   	    	   String netParams = params.toString();
+   	    	   url.append( netParams );
+   	    	   sorted.append( netParams );
+
+	           resolveURL( genAPIURL( url.toString(), genQuerySignature( sorted.toString())), command, true );
+   	    	   url.setLength( 0 );
+   	    	   sorted.setLength( 0 );
+   	    	   params.setLength( 0 );
+   	    	}
+     		return true;
+    		
+      	} catch( EC2ServiceException error ) {
+   		    logger.error( "EC2 " + command + "- " + error.toString());
+   		    throw error;
+   		
+   	    } catch( Exception e ) {
+   		    logger.error( "EC2 " + command + " - " + e.toString());
+   		    throw new InternalErrorException( e.toString());
+   	    } 	
+    }
+
+    /**
+     * Cloud Stack API takes a comma separated list of IP ranges as one parameter.
+     * 
+     * @throws UnsupportedEncodingException 
+     */
+    private String constructCIDRList( String[] ipRanges ) throws UnsupportedEncodingException {
+    
+    	if (null == ipRanges || 0 == ipRanges.length) return null;  	
+    	StringBuffer cidrList = new StringBuffer();
+   	
+    	for( int i=0; i < ipRanges.length; i++ ) {
+    		if (0 < i) cidrList.append( "," );
+    		cidrList.append( ipRanges[i] );
+    	}
+    	
+    	String temp = safeURLencode( cidrList.toString());	
+    	return new String( "cidrList=" + temp );
+    }
+    
+    /**
+     * The Cloud Stack API uses array notation to pass along a set of these values.
+     * 
+     * @throws UnsupportedEncodingException 
+     */
+    private String constructNetworkUserList( EC2SecurityGroup[] groups ) throws UnsupportedEncodingException {
+
+    	if (null == groups || 0 == groups.length) return null;    	
+    	StringBuffer userList = new StringBuffer();
+
+    	for( int i=0; i < groups.length; i++ ) {
+        	userList.append( "&" + safeURLencode( "usernetworkgrouplist["+i+"].account=" ) + safeURLencode( groups[i].getAccount()));
+        	userList.append( "&" + safeURLencode( "usernetworkgrouplist["+i+"].group="   ) + safeURLencode( groups[i].getName()));		
+    	}
+    	return userList.toString();
+    }
     
     public EC2DescribeSnapshotsResponse handleRequest(EC2DescribeSnapshots request) {
 		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
@@ -1812,7 +1917,7 @@ public class EC2Engine {
     }
 
     public EC2DescribeSecurityGroupsResponse listSecurityGroups( String[] interestedGroups ) 
-    throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException {
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException {
     	EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
     	Node parent = null;
     	
