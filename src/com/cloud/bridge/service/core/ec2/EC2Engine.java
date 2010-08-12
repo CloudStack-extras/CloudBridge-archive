@@ -20,6 +20,7 @@ import org.apache.log4j.Logger;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -307,6 +308,7 @@ public class EC2Engine {
     /**
      * The Cload Stack API only handles one item out of the EC2 request at a time.
      * Place authorizw and revoke into one function since it appears that they are practically identical.
+     * Both authorizeNetworkGroupIngress and revokeNetworkGroupIngress are asynchonrous
      * 
      * @param request - ip permission parameters
      * @param command - { authorizeNetworkGroupIngress | revokeNetworkGroupIngress }
@@ -359,10 +361,18 @@ public class EC2Engine {
    	   	    	   sorted.append( userList );
    	    	   }
 
-	           resolveURL( genAPIURL( url.toString(), genQuerySignature( sorted.toString())), command, true );
-   	    	   url.setLength( 0 );
-   	    	   sorted.setLength( 0 );
-   	    	   params.setLength( 0 );
+	           Document cloudResp = resolveURL( genAPIURL( url.toString(), genQuerySignature( sorted.toString())), command, true );
+               NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+		       if ( 0 < match.getLength()) {
+		    	    Node item = match.item(0);
+		    	    String jobId = new String( item.getFirstChild().getNodeValue());
+		    	    if (!waitForAsynch( jobId )) throw new EC2ServiceException( command + " failed" );
+	 	        } 
+	 	        else throw new InternalErrorException( "InternalError" );
+
+	            url.setLength( 0 );
+   	    	    sorted.setLength( 0 );
+   	    	    params.setLength( 0 );
    	    	}
      		return true;
     		
@@ -1433,6 +1443,8 @@ public class EC2Engine {
    	    
 	    while( true ) {
 		  String result = checkAsyncResult( jobId );
+		  //System.out.println( "waitForAsynch: " + result );
+		  
 		  if ( -1 != result.indexOf( "s:1" )) {
 		      // -> requested action has finished
 		    	  return true;
@@ -1942,7 +1954,7 @@ public class EC2Engine {
 	    			
 	    			 if (null != child.getFirstChild()) {
 	    			     String value = child.getFirstChild().getNodeValue();
-	    			     System.out.println( "listNetworkGroups " + name + "=" + value );
+	    			     //System.out.println( "listNetworkGroups " + name + "=" + value );
 	    			     
 	    			          if (name.equalsIgnoreCase( "name"        )) group.setName( value );
 	    			     else if (name.equalsIgnoreCase( "description" )) group.setDescription( value );
@@ -1978,7 +1990,7 @@ public class EC2Engine {
     			
     		 if (null != child.getFirstChild()) {
     		     String value = child.getFirstChild().getNodeValue();
-    		     System.out.println( "ingress rule: " + name + "=" + value );
+    		     //System.out.println( "ingress rule: " + name + "=" + value );
     		     
 		              if (name.equalsIgnoreCase( "protocol"  )) perm.setProtocol( value ); 
 		         else if (name.equalsIgnoreCase( "startport" )) perm.setFromPort( Integer.parseInt( value ));
