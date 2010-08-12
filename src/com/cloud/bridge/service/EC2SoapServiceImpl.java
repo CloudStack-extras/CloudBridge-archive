@@ -128,8 +128,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     		   UserIdGroupPairType[] groupItems = groups.getItem();
     		   for( int j=0; null != groupItems && j < groupItems.length; j++ ) {
     			  EC2SecurityGroup user = new EC2SecurityGroup();
-    			  user.setName( groupItems[j].getUserId());
-    			  user.setAccount( groupItems[j].getGroupName());
+    			  user.setName( groupItems[j].getGroupName());
+    			  user.setAccount( groupItems[j].getUserId());
     			  perm.addUser( user );
     		   }    		
     	   }     	

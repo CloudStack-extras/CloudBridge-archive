@@ -347,14 +347,17 @@ public class EC2Engine {
    	   	            params.append( "&protocol="         + safeURLencode( protocol ));
    	   	            params.append( "&startPort="        + items[i].getFromPort());
    	    	   }
-   
-   	    	   String userList = constructNetworkUserList( items[i].getUserSet());
-   	    	   if (null != userList) url.append( userList );
-   	    	
+    	
    	    	   // -> sorted is: cidrList=&command=... while url is: command=&cidrList=...
    	    	   String netParams = params.toString();
    	    	   url.append( netParams );
    	    	   sorted.append( netParams );
+
+   	    	   String userList = constructNetworkUserList( items[i].getUserSet());
+   	    	   if (null != userList) {
+   	    		   url.append( userList );
+   	   	    	   sorted.append( userList );
+   	    	   }
 
 	           resolveURL( genAPIURL( url.toString(), genQuerySignature( sorted.toString())), command, true );
    	    	   url.setLength( 0 );
@@ -403,8 +406,8 @@ public class EC2Engine {
     	StringBuffer userList = new StringBuffer();
 
     	for( int i=0; i < groups.length; i++ ) {
-        	userList.append( "&" + safeURLencode( "usernetworkgrouplist["+i+"].account=" ) + safeURLencode( groups[i].getAccount()));
-        	userList.append( "&" + safeURLencode( "usernetworkgrouplist["+i+"].group="   ) + safeURLencode( groups[i].getName()));		
+        	userList.append( "&userNetworkGroupList["+i+"].account=" + safeURLencode( groups[i].getAccount()));
+        	userList.append( "&userNetworkGroupList["+i+"].group="   + safeURLencode( groups[i].getName()));		
     	}
     	return userList.toString();
     }
@@ -1939,7 +1942,7 @@ public class EC2Engine {
 	    			
 	    			 if (null != child.getFirstChild()) {
 	    			     String value = child.getFirstChild().getNodeValue();
-	    			     //System.out.println( "listNetworkGroups " + name + "=" + value );
+	    			     System.out.println( "listNetworkGroups " + name + "=" + value );
 	    			     
 	    			          if (name.equalsIgnoreCase( "name"        )) group.setName( value );
 	    			     else if (name.equalsIgnoreCase( "description" )) group.setDescription( value );
@@ -1975,7 +1978,7 @@ public class EC2Engine {
     			
     		 if (null != child.getFirstChild()) {
     		     String value = child.getFirstChild().getNodeValue();
-    		     //System.out.println( "ingress rule: " + name + "=" + value );
+    		     System.out.println( "ingress rule: " + name + "=" + value );
     		     
 		              if (name.equalsIgnoreCase( "protocol"  )) perm.setProtocol( value ); 
 		         else if (name.equalsIgnoreCase( "startport" )) perm.setFromPort( Integer.parseInt( value ));
