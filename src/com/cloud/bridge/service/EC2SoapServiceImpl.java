@@ -122,25 +122,25 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	   perm.setProtocol( items[i].getIpProtocol());
     	   perm.setFromPort( items[i].getFromPort());
     	   perm.setToPort(   items[i].getToPort());
-    	
+  	
     	   UserIdGroupPairSetType groups = items[i].getGroups();
     	   if (null != groups) {
     		   UserIdGroupPairType[] groupItems = groups.getItem();
-    		   for( int j=0; j < groupItems.length; j++ ) {
+    		   for( int j=0; null != groupItems && j < groupItems.length; j++ ) {
     			  EC2SecurityGroup user = new EC2SecurityGroup();
     			  user.setName( groupItems[j].getUserId());
     			  user.setAccount( groupItems[j].getGroupName());
     			  perm.addUser( user );
     		   }    		
     	   }     	
-    
+   
     	   IpRangeSetType ranges = items[i].getIpRanges();
     	   if (null != ranges) {
     		   IpRangeItemType[] rangeItems = ranges.getItem();
-    		   for( int k=0; k < rangeItems.length; k++ ) 
+    		   for( int k=0; null != rangeItems && k < rangeItems.length; k++ ) 
     			  perm.addIpRange( rangeItems[k].getCidrIp());
     	   }  
-    
+   
     	   request.addIpPermission( perm );
         }
         return request;
@@ -1484,6 +1484,28 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		     param3.setGroupDescription((null != desc ? desc : ""));
 		     
 		     IpPermissionSetType param4 = new IpPermissionSetType();
+		     EC2IpPermission[] perms = groups[i].getIpPermissionSet();
+		     for( int j=0; j < perms.length; j++ ) 
+		     {
+		    	IpPermissionType param5 = new IpPermissionType();
+		    	param5.setIpProtocol( perms[j].getProtocol());
+		    	param5.setFromPort( perms[j].getFromPort());
+		    	param5.setToPort( perms[j].getToPort());
+		    	
+		    	// -> TBD user groups
+		    	UserIdGroupPairSetType param8 = new UserIdGroupPairSetType();
+		    	param5.setGroups( param8 );
+		    	
+		    	String[] rangeSet = perms[j].getIpRangeSet();
+		    	for( int k=0; null != rangeSet && k < rangeSet.length; k++ ) {
+		    		IpRangeSetType  param6 = new IpRangeSetType();
+		    		IpRangeItemType param7 = new IpRangeItemType();
+		    		param7.setCidrIp( rangeSet[k] );
+		    		param6.addItem( param7 );
+			    	param5.setIpRanges( param6 );
+		    	}
+		        param4.addItem( param5 );
+		     }
              param3.setIpPermissions( param4 );     	 
 		     param2.addItem( param3 );
 	    }

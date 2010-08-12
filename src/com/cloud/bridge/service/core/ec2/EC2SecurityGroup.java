@@ -1,10 +1,14 @@
 package com.cloud.bridge.service.core.ec2;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class EC2SecurityGroup {
 
 	private String name;
 	private String description;
 	private String account;
+	private List<EC2IpPermission> permissionSet = new ArrayList<EC2IpPermission>();    
 
 	public EC2SecurityGroup() {
 		name        = null;
@@ -34,5 +38,13 @@ public class EC2SecurityGroup {
 	
 	public String getAccount() {
 		return this.account;
+	}
+	
+	public void addIpPermission( EC2IpPermission param ) {
+		permissionSet.add( param );
+	}
+	
+	public EC2IpPermission[] getIpPermissionSet() {
+		return permissionSet.toArray(new EC2IpPermission[0]);
 	}
 }

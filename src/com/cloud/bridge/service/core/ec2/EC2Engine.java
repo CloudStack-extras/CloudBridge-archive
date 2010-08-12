@@ -1944,6 +1944,7 @@ public class EC2Engine {
 	    			          if (name.equalsIgnoreCase( "name"        )) group.setName( value );
 	    			     else if (name.equalsIgnoreCase( "description" )) group.setDescription( value );
 	    			     else if (name.equalsIgnoreCase( "account"     )) group.setAccount( value );
+	    			     else if (name.equalsIgnoreCase( "ingressrule" )) group.addIpPermission( toPermission( child.getChildNodes()));
 	    			 } 
 	    	    }
 	 		    // -> are we asking about specific security groups?
@@ -1959,6 +1960,30 @@ public class EC2Engine {
 	    	}
 	    }
 	    return groupSet;
+    }
+    
+    /**
+     * Ingress Rules are one more level down the XML tree.
+     */
+    private EC2IpPermission toPermission( NodeList rule ) {
+    	int numChild = rule.getLength();
+    	EC2IpPermission perm = new EC2IpPermission();
+
+    	for( int i=0; i < numChild; i++ ) {
+    		 Node   child = rule.item(i);
+    		 String name  = child.getNodeName();
+    			
+    		 if (null != child.getFirstChild()) {
+    		     String value = child.getFirstChild().getNodeValue();
+    		     //System.out.println( "ingress rule: " + name + "=" + value );
+    		     
+		              if (name.equalsIgnoreCase( "protocol"  )) perm.setProtocol( value ); 
+		         else if (name.equalsIgnoreCase( "startport" )) perm.setFromPort( Integer.parseInt( value ));
+		         else if (name.equalsIgnoreCase( "endport"   )) perm.setToPort( Integer.parseInt( value ));
+		         else if (name.equalsIgnoreCase( "cidr"      )) perm.addIpRange( value );
+    	     }
+    	}
+		return perm;
     }
     
     /**
