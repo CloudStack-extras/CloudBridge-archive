@@ -1492,17 +1492,37 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		    	param5.setFromPort( perms[j].getFromPort());
 		    	param5.setToPort( perms[j].getToPort());
 		    	
-		    	// -> TBD user groups
-		    	UserIdGroupPairSetType param8 = new UserIdGroupPairSetType();
-		    	param5.setGroups( param8 );
+		    	// -> user groups
+		    	EC2SecurityGroup[] userSet = perms[j].getUserSet();
+		    	if ( null == userSet || 0 == userSet.length ) {
+			    	 UserIdGroupPairSetType param8 = new UserIdGroupPairSetType();
+			    	 param5.setGroups( param8 );	
+		    	}
+		    	else {
+		    		 for( int h=0; h < userSet.length; h++ ) {
+				    	 UserIdGroupPairSetType param8 = new UserIdGroupPairSetType();
+				    	 UserIdGroupPairType param9 = new UserIdGroupPairType();
+				    	 param9.setUserId( userSet[h].getAccount());
+				    	 param9.setGroupName( userSet[h].getName());
+				    	 param8.addItem( param9 );
+				    	 param5.setGroups( param8 );			    			 
+		    		 }
+		    	}
 		    	
+		    	// -> or CIDR list
 		    	String[] rangeSet = perms[j].getIpRangeSet();
-		    	for( int k=0; null != rangeSet && k < rangeSet.length; k++ ) {
-		    		IpRangeSetType  param6 = new IpRangeSetType();
-		    		IpRangeItemType param7 = new IpRangeItemType();
-		    		param7.setCidrIp( rangeSet[k] );
-		    		param6.addItem( param7 );
-			    	param5.setIpRanges( param6 );
+		    	if ( null == rangeSet || 0 == rangeSet.length ) {
+	    		     IpRangeSetType param6 = new IpRangeSetType();
+ 		    	     param5.setIpRanges( param6 );	
+		    	}
+		    	else {
+		    	     for( int k=0; k < rangeSet.length; k++ ) {
+		    		    IpRangeSetType  param6 = new IpRangeSetType();
+		    		    IpRangeItemType param7 = new IpRangeItemType();
+		    		    param7.setCidrIp( rangeSet[k] );
+		    		    param6.addItem( param7 );
+			    	    param5.setIpRanges( param6 );
+		    	     }
 		    	}
 		        param4.addItem( param5 );
 		     }

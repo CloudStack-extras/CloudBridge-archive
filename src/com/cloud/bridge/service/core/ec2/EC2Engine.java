@@ -1983,6 +1983,8 @@ public class EC2Engine {
     private EC2IpPermission toPermission( NodeList rule ) {
     	int numChild = rule.getLength();
     	EC2IpPermission perm = new EC2IpPermission();
+    	String account   = null;
+    	String groupName = null;
 
     	for( int i=0; i < numChild; i++ ) {
     		 Node   child = rule.item(i);
@@ -1992,10 +1994,21 @@ public class EC2Engine {
     		     String value = child.getFirstChild().getNodeValue();
     		     //System.out.println( "ingress rule: " + name + "=" + value );
     		     
-		              if (name.equalsIgnoreCase( "protocol"  )) perm.setProtocol( value ); 
-		         else if (name.equalsIgnoreCase( "startport" )) perm.setFromPort( Integer.parseInt( value ));
-		         else if (name.equalsIgnoreCase( "endport"   )) perm.setToPort( Integer.parseInt( value ));
-		         else if (name.equalsIgnoreCase( "cidr"      )) perm.addIpRange( value );
+		              if (name.equalsIgnoreCase( "protocol"         )) perm.setProtocol( value ); 
+		         else if (name.equalsIgnoreCase( "startport"        )) perm.setFromPort( Integer.parseInt( value ));
+		         else if (name.equalsIgnoreCase( "endport"          )) perm.setToPort( Integer.parseInt( value ));
+		         else if (name.equalsIgnoreCase( "cidr"             )) perm.addIpRange( value );
+		         else if (name.equalsIgnoreCase( "account"          )) account = value;
+		         else if (name.equalsIgnoreCase( "networkgroupname" )) groupName = value ;
+		              
+		         if (null != account && null != groupName) {
+		        	 EC2SecurityGroup group = new EC2SecurityGroup();
+		        	 group.setAccount( account );
+		        	 group.setName( groupName );
+		        	 account   = null;
+		        	 groupName = null;
+		        	 perm.addUser( group );
+		         }
     	     }
     	}
 		return perm;
