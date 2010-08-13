@@ -185,7 +185,9 @@ public class S3RestServlet extends HttpServlet {
     private ServletAction routeRequest(HttpServletRequest request) {
     	// Simple URL routing for S3 REST calls.
     	String pathInfo = request.getPathInfo();
-    	if(ServiceProvider.getInstance().getUseSubDomain()) {
+    	
+    	if (ServiceProvider.getInstance().getUseSubDomain()) 
+    	{
         	String serviceEndpoint = ServiceProvider.getInstance().getServiceEndpoint();
     		String host            = request.getHeader("Host");
     		
@@ -208,7 +210,9 @@ public class S3RestServlet extends HttpServlet {
     			request.setAttribute(S3Constants.OBJECT_ATTR_KEY, objectKey);
     			return new S3ObjectAction();
     		}
-    	} else {
+    	} 
+    	else 
+    	{
     		if(pathInfo == null || pathInfo.equalsIgnoreCase("/")) {
     			logger.warn("Invalid REST request URI " + pathInfo);
     			return null;

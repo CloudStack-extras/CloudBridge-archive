@@ -87,37 +87,48 @@ public class S3BucketAction implements ServletAction {
 	public void execute(HttpServletRequest request, HttpServletResponse response) 
 	    throws IOException, XMLStreamException {
 		String method = request.getMethod(); 
-		if(method.equalsIgnoreCase("PUT")) {
+		
+		if (method.equalsIgnoreCase("PUT")) 
+		{
 			String queryString = request.getQueryString();
-			if(queryString != null && queryString.length() > 0) {
-				if(queryString.equalsIgnoreCase("acl")) {
-					executePutBucketAcl(request, response);
-					return;
-				} else if(queryString.equalsIgnoreCase("versioning")) {
-					executePutBucketVersioning(request, response);
-					return;
-				} else if(queryString.equalsIgnoreCase("logging")) {
-					executePutBucketLogging(request, response);
-					return;
+			if (queryString != null && queryString.length() > 0) 
+			{
+				if ( queryString.equalsIgnoreCase("acl")) {
+					 executePutBucketAcl(request, response);
+					 return;
+				} 
+				else if(queryString.equalsIgnoreCase("versioning")) {
+					 executePutBucketVersioning(request, response);
+					 return;
+				} 
+				else if(queryString.equalsIgnoreCase("logging")) {
+					 executePutBucketLogging(request, response);
+					 return;
 				}
 			}
 			executePutBucket(request, response);
 			return;
-		} else if(method.equalsIgnoreCase("GET")) {
+		} 
+		else if(method.equalsIgnoreCase("GET")) 
+		{
 			String queryString = request.getQueryString();
-			if(queryString != null && queryString.length() > 0) {
-				if(queryString.equalsIgnoreCase("acl")) {
-					executeGetBucketAcl(request, response);
-					return;
-				} else if(queryString.equalsIgnoreCase("versioning")) {
-					executeGetBucketVersioning(request, response);
-					return;
-				} else if(queryString.equalsIgnoreCase("logging")) {
-					executeGetBucketLogging(request, response);
-					return;
-				} else if(queryString.equalsIgnoreCase("location")) {
-					executeGetBucketLocation(request, response);
-					return;
+			if (queryString != null && queryString.length() > 0) 
+			{
+				if ( queryString.equalsIgnoreCase("acl")) {
+					 executeGetBucketAcl(request, response);
+					 return;
+				} 
+				else if(queryString.equalsIgnoreCase("versioning")) {
+					 executeGetBucketVersioning(request, response);
+					 return;
+				} 
+				else if(queryString.equalsIgnoreCase("logging")) {
+					 executeGetBucketLogging(request, response);
+					 return;
+				} 
+				else if(queryString.equalsIgnoreCase("location")) {
+					 executeGetBucketLocation(request, response);
+					 return;
 				}
 			}
 			
@@ -125,14 +136,14 @@ public class S3BucketAction implements ServletAction {
             if ( bucketAtr.equals( "/" ))
             	 executeGetAllBuckets(request, response);
             else executeGetBucket(request, response);
-			return;
-		} else if(method.equalsIgnoreCase("DELETE")) {
+		} 
+		else if (method.equalsIgnoreCase("DELETE")) 
+		{
 			executeDeleteBucket(request, response);
-			return;
-		} else {
-			throw new IllegalArgumentException("Unsupported method in REST request");
-		}
+		} 
+		else throw new IllegalArgumentException("Unsupported method in REST request");
 	}
+	
 	
 	public void executeGetAllBuckets(HttpServletRequest request, HttpServletResponse response) 
 	    throws IOException, XMLStreamException {

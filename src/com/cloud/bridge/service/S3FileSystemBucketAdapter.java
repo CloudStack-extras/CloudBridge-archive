@@ -112,6 +112,13 @@ public class S3FileSystemBucketAdapter implements S3BucketAdapter {
 			throw new FileNotExistException("Unable to open underlying object file");
 		}
 	}
+	
+	@Override
+	public void deleteObject(String mountedRoot, String bucket, String fileName) {
+		String filePath = new String( getBucketFolderDir(mountedRoot, bucket) + File.separatorChar + fileName );
+		File file = new File( filePath );		
+		if (!file.delete()) throw new OutOfStorageException( "Unable to delete " + filePath + " for object deletion" ); 
+	}
 
 	@Override
 	public DataHandler loadObjectRange(String mountedRoot, String bucket, String fileName, long startPos, long endPos) {

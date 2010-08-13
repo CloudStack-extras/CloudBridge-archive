@@ -123,7 +123,7 @@ public class S3Engine {
 		
 		if(sbucket != null) {
 			Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(sbucket);
-			S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(tupleBucketHost.getFirst());
+			S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 			
 			bucketAdapter.deleteContainer(tupleBucketHost.getSecond(), request.getBucketName());
 			
@@ -569,7 +569,7 @@ public class S3Engine {
 		return entry;
 	}
     
-	private Tuple<SHost, String> getBucketStorageHost(SBucket bucket) {
+	public Tuple<SHost, String> getBucketStorageHost(SBucket bucket) {
 		MHostMountDao mountDao = new MHostMountDao();
 		
 		SHost shost = bucket.getShost();
@@ -618,7 +618,7 @@ public class S3Engine {
 		throw new OutOfStorageException("No storage host is available");
 	}
 	
-	private S3BucketAdapter getStorageHostBucketAdapter(SHost shost) {
+	public S3BucketAdapter getStorageHostBucketAdapter(SHost shost) {
 		S3BucketAdapter adapter = bucketAdapters.get(shost.getHostType());
 		if(adapter == null) 
 			throw new InternalErrorException("Bucket adapter is not installed for host type: " + shost.getHostType());

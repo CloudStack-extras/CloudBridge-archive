@@ -29,4 +29,5 @@ public interface S3BucketAdapter {
 	String saveObject(InputStream is, String mountedRoot, String bucket, String fileName);
 	DataHandler loadObject(String mountedRoot, String bucket, String fileName);
 	DataHandler loadObjectRange(String mountedRoot, String bucket, String fileName, long startPos, long endPos);
+	void deleteObject(String mountedRoot, String bucket, String fileName);
 }
