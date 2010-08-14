@@ -311,8 +311,7 @@ public class S3Engine {
 		
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket bucket = bucketDao.getByName(bucketName);
-		if(bucket == null)
-			throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
+		if(bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 		
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl);
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
@@ -422,13 +421,14 @@ public class S3Engine {
 		}
 		
 		if(sobject.getDeletionMark() != 0) {
+		    response.setDeleteMarker( true );
 			response.setResultCode(404);
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (1)");
 			return response;
 		}
 		
         int versioningStatus = sbucket.getVersioningStatus();
-    	SObjectItem item = sobject.getLatestVersion(( 1 != versioningStatus ));    
+    	SObjectItem item = sobject.getLatestVersion(( SBucket.VERSIONING_ENABLED != versioningStatus ));    
     	if (item == null) {
     		response.setResultCode(404);
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
@@ -438,15 +438,18 @@ public class S3Engine {
     	
     	
     	response.setContentLength(item.getStoredSize());
-    	if(request.isReturnData()) {
+    	if(request.isReturnData()) 
+    	{
     		response.setETag(item.getMd5());
     		response.setLastModified(DateHelper.toCalendar(item.getLastModifiedTime()));
-    		if(request.isInlineData()) {
+    		response.setVersion( item.getVersion());
+    		if (request.isInlineData()) 
+    		{
     			Tuple<SHost, String> tupleSHostInfo = getBucketStorageHost(sbucket);
 				S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleSHostInfo.getFirst());
 				
 				if ( request.getByteRangeStart() >= 0 && request.getByteRangeEnd() >= 0)
-					   response.setData(bucketAdapter.loadObjectRange(tupleSHostInfo.getSecond(), 
+					 response.setData(bucketAdapter.loadObjectRange(tupleSHostInfo.getSecond(), 
 						   request.getBucketName(), item.getStoredPath(), request.getByteRangeStart(), request.getByteRangeEnd()));
 				else response.setData(bucketAdapter.loadObject(tupleSHostInfo.getSecond(), request.getBucketName(), item.getStoredPath()));
     		} 
@@ -457,6 +460,9 @@ public class S3Engine {
     	return response;
     }
     
+    /**
+     * In the SOAP API there is no versioning visible.
+     */
     @SuppressWarnings("deprecation")
 	public S3Response handleRequest(S3DeleteObjectRequest request) {
 		S3Response response = new S3Response();

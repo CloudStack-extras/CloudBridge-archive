@@ -26,12 +26,14 @@ public class S3GetObjectResponse extends S3Response {
 	protected String ETag;
 	protected Calendar lastModified;
 	protected DataHandler data;
-	protected S3MetaDataEntry[] metaEntries;
-	
+	protected S3MetaDataEntry[] metaEntries;	
 	protected long contentLength;
+	protected boolean deleteMarkerSet;
+	protected String version;
 	
 	public S3GetObjectResponse() {
 		super();
+		deleteMarkerSet = false;
 	}
 
 	public String getETag() {
@@ -40,6 +42,22 @@ public class S3GetObjectResponse extends S3Response {
 
 	public void setETag(String eTag) {
 		ETag = eTag;
+	}
+
+	public boolean isDeleteMarker() {
+		return this.deleteMarkerSet;
+	}
+
+	public void setDeleteMarker(boolean deleteMarker) {
+		this.deleteMarkerSet = deleteMarker;
+	}
+
+	public String getVersion() {
+		return version;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
 	}
 
 	public Calendar getLastModified() {

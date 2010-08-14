@@ -24,11 +24,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
+import org.hibernate.LockMode;
 
 import com.cloud.bridge.model.SBucket;
 import com.cloud.bridge.model.SHost;
 import com.cloud.bridge.model.SObject;
 import com.cloud.bridge.model.SObjectItem;
+import com.cloud.bridge.persist.PersistContext;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.persist.dao.SObjectDao;
 import com.cloud.bridge.service.S3BucketAdapter;
@@ -78,13 +80,23 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setReturnData(true);
 
 		S3GetObjectResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);
-		response.addHeader("ETag", engineResponse.getETag());
-		response.addHeader("Last-Modified", DateHelper.getDateDisplayString(
-			DateHelper.GMT_TIMEZONE, engineResponse.getLastModified().getTime(), "E, d MMM yyyy HH:mm:ss z"));
 		
+		response.setStatus( engineResponse.getResultCode());
+		
+		if (engineResponse.isDeleteMarker()) response.addHeader( "x-amz-delete-marker", "true" );	
+	
+		String version = engineResponse.getVersion();
+		if (null != version) response.addHeader( "x-amz-version-id", engineResponse.getVersion());
+		
+		
+		// -> is there data to return
 		DataHandler dataHandler = engineResponse.getData();
-		if(dataHandler != null) {
-			response.setContentLength((int)engineResponse.getContentLength());
+		if (dataHandler != null) {
+			response.addHeader("ETag", engineResponse.getETag());
+			response.addHeader("Last-Modified", DateHelper.getDateDisplayString(
+				DateHelper.GMT_TIMEZONE, engineResponse.getLastModified().getTime(), "E, d MMM yyyy HH:mm:ss z"));
+
+			response.setContentLength((int)engineResponse.getContentLength());			
 			S3RestServlet.writeResponse(response, dataHandler.getInputStream());
 		}
 	}
@@ -113,7 +125,11 @@ public class S3ObjectAction implements ServletAction {
 		response.setHeader("ETag", engineResponse.getETag());
 	}
 
-	
+	/**
+	 * Once versioining is turned on then to delete an object requires specifying a version 
+	 * parameter.   A deletion marker is set once versioning is turned on in a bucket.
+	 */
+    @SuppressWarnings("deprecation")
 	private void executeDeleteObject(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
         // -> make sure that the bucket and the object both exist
@@ -166,6 +182,8 @@ public class S3ObjectAction implements ServletAction {
 		 }
 		 else {
 			  // -> versioning was on so we just set the delete marker
+			  sobject.setDeletionMark(1);
+			  sobjectDao.update( sobject );
      		  logger.debug( "executeDeleteObject - set delete marker versioning on" );
 		 }
 		 response.setStatus( 204 );
