@@ -16,8 +16,11 @@
 package com.cloud.bridge.service.controller.s3;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import javax.activation.DataHandler;
@@ -39,11 +42,13 @@ import com.cloud.bridge.service.S3Constants;
 import com.cloud.bridge.service.S3RestServlet;
 import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.ServletAction;
+import com.cloud.bridge.service.core.ec2.EC2Volume;
 import com.cloud.bridge.service.core.s3.S3ConditionalHeaders;
 import com.cloud.bridge.service.core.s3.S3DeleteObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Engine;
 import com.cloud.bridge.service.core.s3.S3GetObjectRequest;
 import com.cloud.bridge.service.core.s3.S3GetObjectResponse;
+import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3PutObjectInlineRequest;
 import com.cloud.bridge.service.core.s3.S3PutObjectInlineResponse;
 import com.cloud.bridge.service.core.s3.S3Response;
@@ -82,7 +87,8 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setBucketName(bucket);
 		engineRequest.setKey(key);
 		engineRequest.setInlineData(true);
-		engineRequest.setReturnData(true);		
+		engineRequest.setReturnData(true);	
+		engineRequest.setReturnMetadata(true);
 		engineRequest = setRequestByteRange( request, engineRequest );
 
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
@@ -109,6 +115,15 @@ public class S3ObjectAction implements ServletAction {
 		// -> was the get conditional?
 		if (!conditionPassed( request, response, engineResponse.getLastModified().getTime(), engineResponse.getETag())) 
 			return;
+	
+		
+		// -> return any associated meta data as headers
+		S3MetaDataEntry[] metaSet = engineResponse.getMetaEntries();
+		for( int i=0; null != metaSet && i < metaSet.length; i++ ) {
+			String name  = metaSet[i].getName();
+			String value = metaSet[i].getValue();
+			response.addHeader( "x-amz-meta-" + name, value );
+		}
 			
 		// -> is there data to return
 		DataHandler dataHandler = engineResponse.getData();
@@ -138,6 +153,7 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setBucketName(bucket);
 		engineRequest.setKey(key);
 		engineRequest.setContentLength(contentLength);
+		engineRequest.setMetaEntries( returnMetaData( request ));
 
 		DataHandler dataHandler = new DataHandler(new ServletRequestDataSource(request));
 		engineRequest.setData(dataHandler);
@@ -281,6 +297,33 @@ public class S3ObjectAction implements ServletAction {
 			return false;
 		}	
 		return true;
+	}
+	
+	private S3MetaDataEntry[] returnMetaData( HttpServletRequest request ) {
+		List<S3MetaDataEntry> metaSet = new ArrayList<S3MetaDataEntry>();  
+		int count = 0;
+		
+		Enumeration headers = request.getHeaderNames();
+        while( headers.hasMoreElements()) 
+        {
+	        String key = (String)headers.nextElement();
+	        if (key.startsWith( "x-amz-meta-" )) 
+	        {
+	        	String name  = key.substring( 11 );
+	            String value = request.getHeader( key );
+	            if (null != value) {
+	            	S3MetaDataEntry oneMeta = new S3MetaDataEntry();
+	            	oneMeta.setName( name );
+	            	oneMeta.setValue( value );
+	            	metaSet.add( oneMeta );
+	            	count++;
+	            }
+	        }
+        }		
+
+        if ( 0 < count )
+        	 return metaSet.toArray(new S3MetaDataEntry[0]);
+        else return null;
 	}
 	
 	/**
