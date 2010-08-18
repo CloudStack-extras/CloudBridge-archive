@@ -74,7 +74,7 @@ CREATE TABLE sobject (
 	
 	OwnerCanonicalID VARCHAR(150) NOT NULL,
 	NextSequence INT NOT NULL DEFAULT 1,
-	DeletionMark TINYINT NOT NULL DEFAULT 0, 
+	DeletionMark VARCHAR (150), 
  	
  	CreateTime DATETIME,
  	

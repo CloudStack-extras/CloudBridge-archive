@@ -743,8 +743,11 @@ public class EC2Engine {
     
     public EC2Volume attachVolume(EC2Volume request) {
     	try {
+    		request = mapDeviceToCloudDeviceId( request );
+    		
 	        StringBuffer params = new StringBuffer();
    	        params.append( "command=attachVolume" );
+   	        params.append( "&deviceId=" + request.getDeviceId());
    	        params.append( "&id=" + request.getId());
    	        params.append( "&virtualMachineId=" + request.getInstanceId());
    	        String query = params.toString();
@@ -2107,6 +2110,37 @@ public class EC2Engine {
     		logger.error( "EC2 checkAsyncResult - " + e.toString());
     		throw new InternalErrorException( e.toString());
     	}
+    }
+    
+    /**
+     * Translate the device name string into a Cloud Stack deviceId.   
+     * deviceId 3 is reserved for CDROM and 0 for the ROOT disk
+     * 
+     * @param request
+     * @return a modified EC2Volume object
+     */
+    private EC2Volume mapDeviceToCloudDeviceId( EC2Volume request ) {
+    	
+    	String device = request.getDevice();
+	         if (device.equalsIgnoreCase( "/dev/sdb"  )) request.setDeviceId( 1 );
+    	else if (device.equalsIgnoreCase( "/dev/sdc"  )) request.setDeviceId( 2 ); 
+    	else if (device.equalsIgnoreCase( "/dev/sde"  )) request.setDeviceId( 4 ); 
+    	else if (device.equalsIgnoreCase( "/dev/sdf"  )) request.setDeviceId( 5 ); 
+    	else if (device.equalsIgnoreCase( "/dev/sdg"  )) request.setDeviceId( 6 ); 
+    	else if (device.equalsIgnoreCase( "/dev/sdh"  )) request.setDeviceId( 7 ); 
+    	else if (device.equalsIgnoreCase( "/dev/sdi"  )) request.setDeviceId( 8 ); 
+    	else if (device.equalsIgnoreCase( "/dev/sdj"  )) request.setDeviceId( 9 ); 
+    	else if (device.equalsIgnoreCase( "/dev/xvdb" )) request.setDeviceId( 1 );  
+    	else if (device.equalsIgnoreCase( "/dev/xvdc" )) request.setDeviceId( 2 );  
+    	else if (device.equalsIgnoreCase( "/dev/xvde" )) request.setDeviceId( 4 );  
+    	else if (device.equalsIgnoreCase( "/dev/xvdf" )) request.setDeviceId( 5 );  
+    	else if (device.equalsIgnoreCase( "/dev/xvdg" )) request.setDeviceId( 6 );  
+    	else if (device.equalsIgnoreCase( "/dev/xvdh" )) request.setDeviceId( 7 );  
+    	else if (device.equalsIgnoreCase( "/dev/xvdi" )) request.setDeviceId( 8 );  
+    	else if (device.equalsIgnoreCase( "/dev/xvdj" )) request.setDeviceId( 9 );  
+    	else throw new EC2ServiceException( device + " is not supported" );
+    	     
+    	return request;
     }
     
     private String genAPIURL( String query, String signature ) throws UnsupportedEncodingException {

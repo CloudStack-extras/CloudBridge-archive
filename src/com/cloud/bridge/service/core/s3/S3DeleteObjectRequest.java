@@ -21,9 +21,11 @@ package com.cloud.bridge.service.core.s3;
 public class S3DeleteObjectRequest extends S3Request {
 	protected String bucketName;
 	protected String key;
+	protected String version;
 	
 	public S3DeleteObjectRequest() {
 		super();
+		version = null;
 	}
 	
 	public String getBucketName() {
@@ -40,5 +42,13 @@ public class S3DeleteObjectRequest extends S3Request {
 
 	public void setKey(String key) {
 		this.key = key;
+	}
+	
+	public String getVersion() {
+		return version;
+	}
+	
+	public void setVersion(String version) {
+		this.version = version;
 	}
 }

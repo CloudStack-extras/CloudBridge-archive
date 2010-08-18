@@ -33,7 +33,7 @@ public class SObject implements Serializable {
 	private String ownerCanonicalId;
 	
 	private int nextSequence;
-	private int deletionMark;
+	private String deletionMark;   // -> this must also a unique ID to give to the REST client
 	
 	private Date createTime;
 	
@@ -42,6 +42,7 @@ public class SObject implements Serializable {
 	private Set<SObjectItem> items = new HashSet<SObjectItem>();
 
 	public SObject() {
+		deletionMark = null;
 	}
 	
 	public Long getId() {
@@ -76,11 +77,11 @@ public class SObject implements Serializable {
 		this.nextSequence = nextSequence;
 	}
 
-	public int getDeletionMark() {
+	public String getDeletionMark() {
 		return deletionMark;
 	}
 
-	public void setDeletionMark(int deletionMark) {
+	public void setDeletionMark(String deletionMark) {
 		this.deletionMark = deletionMark;
 	}
 
@@ -108,13 +109,27 @@ public class SObject implements Serializable {
 		this.items = items;
 	}
 	
+	public void deleteItem( long id ) {
+		Iterator<SObjectItem> it = getItems().iterator();
+	
+		while( it.hasNext()) 
+		{
+			SObjectItem oneItem = it.next();
+			if (id == oneItem.getId()) {
+				boolean bRemoved = items.remove( oneItem );
+				System.out.println( "deleteItem from sobject: " + bRemoved );
+				return;
+			}
+		}
+	}
+	
 	public SObjectItem getLatestVersion( boolean versioningOff ) {
 		Iterator<SObjectItem> it = getItems().iterator();
 		int maxVersion = 0;
 		int curVersion = 0;
 		SObjectItem latestItem = null;
 		
-		while(it.hasNext()) 
+		while( it.hasNext()) 
 		{
 			SObjectItem item = it.next();
 			
@@ -140,6 +155,25 @@ public class SObject implements Serializable {
 		return latestItem;
 	}
 	
+	/**
+	 * S3 versioning allows the client to request the return of a specific version,
+	 * not just the last version.
+	 * 
+	 * @param wantVersion
+	 * @return
+	 */
+	public SObjectItem getVersion( String wantVersion ) 
+	{
+		Iterator<SObjectItem> it = getItems().iterator();	
+		while( it.hasNext()) 
+		{
+			SObjectItem item = it.next();
+			String curVersion = item.getVersion();
+			if (null != curVersion && wantVersion.equalsIgnoreCase( curVersion )) return item;				
+		}
+		return null;
+	}
+
 	@Override
 	public boolean equals(Object other) {
 		if(this == other)

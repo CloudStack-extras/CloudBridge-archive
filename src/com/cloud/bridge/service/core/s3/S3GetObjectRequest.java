@@ -23,6 +23,7 @@ import java.util.Calendar;
 public class S3GetObjectRequest extends S3Request {
 	private String bucketName;
 	private String key;
+	private String version;
 	private boolean returnMetadata;
 	private boolean returnData;
 	private boolean inlineData;
@@ -37,6 +38,7 @@ public class S3GetObjectRequest extends S3Request {
 	
 	public S3GetObjectRequest() {
 		super();
+		version = null;
 	}
 
 	public String getBucketName() {
@@ -53,6 +55,14 @@ public class S3GetObjectRequest extends S3Request {
 	
 	public void setKey(String key) {
 		this.key = key;
+	}
+
+	public String getVersion() {
+		return version;
+	}
+	
+	public void setVersion(String version) {
+		this.version = version;
 	}
 
 	public boolean isReturnMetadata() {

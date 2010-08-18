@@ -28,12 +28,12 @@ public class S3GetObjectResponse extends S3Response {
 	protected DataHandler data;
 	protected S3MetaDataEntry[] metaEntries;	
 	protected long contentLength;
-	protected boolean deleteMarkerSet;
+	protected String deleteMarker;
 	protected String version;
 	
 	public S3GetObjectResponse() {
 		super();
-		deleteMarkerSet = false;
+		deleteMarker = null;
 	}
 
 	public String getETag() {
@@ -44,12 +44,12 @@ public class S3GetObjectResponse extends S3Response {
 		ETag = eTag;
 	}
 
-	public boolean isDeleteMarker() {
-		return this.deleteMarkerSet;
+	public String getDeleteMarker() {
+		return this.deleteMarker;
 	}
 
-	public void setDeleteMarker(boolean deleteMarker) {
-		this.deleteMarkerSet = deleteMarker;
+	public void setDeleteMarker(String deleteMarker) {
+		this.deleteMarker = deleteMarker;
 	}
 
 	public String getVersion() {

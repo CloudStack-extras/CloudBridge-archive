@@ -26,6 +26,7 @@ public class EC2Volume {
 	private String   zoneName;
 	private String   instanceId;
 	private String   device;
+	private int      deviceId;
 	private String   status;
 	private String   type;
 	private String   vmstate;
@@ -37,6 +38,7 @@ public class EC2Volume {
 		zoneName   = null;
 		instanceId = null;
 		device     = null;
+		deviceId   = 0;
 		status     = null;
 		type       = null;
 		vmstate    = null;
@@ -87,7 +89,15 @@ public class EC2Volume {
 	public String getDevice() {
 		return this.device;
 	}
+
+	public void setDeviceId( int deviceId ) {
+		this.deviceId = deviceId;
+	}
 	
+	public int getDeviceId() {
+		return this.deviceId;
+	}
+
 	public void setStatus( String status ) {
 		this.status = status;
 	}

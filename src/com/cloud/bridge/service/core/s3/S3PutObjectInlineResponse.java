@@ -23,6 +23,7 @@ import java.util.Calendar;
 public class S3PutObjectInlineResponse extends S3Response {
 	protected String ETag;
 	protected Calendar lastModified;
+	protected String version;
 	
 	public S3PutObjectInlineResponse() {
 		super();
@@ -42,5 +43,13 @@ public class S3PutObjectInlineResponse extends S3Response {
 
 	public void setLastModified(Calendar lastModified) {
 		this.lastModified = lastModified;
+	}
+	
+	public String getVersion() {
+		return version;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
 	}
 }

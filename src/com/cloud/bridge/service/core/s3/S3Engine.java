@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 import javax.activation.DataHandler;
 
@@ -259,13 +260,12 @@ public class S3Engine {
 		
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket bucket = bucketDao.getByName(bucketName);
-		if(bucket == null)
-			throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
+		if (bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl);
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
 		
-		S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(tupleBucketHost.getFirst());
+		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 		String itemFileName = tupleObjectItem.getSecond().getStoredPath();
 		DataHandler dataHandler = request.getData();
 		InputStream is = null;
@@ -277,9 +277,10 @@ public class S3Engine {
 			String md5Checksum = bucketAdapter.saveObject(is, tupleBucketHost.getSecond(), bucket.getName(), itemFileName);
 			response.setETag(md5Checksum);
 			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
+	        response.setVersion( tupleObjectItem.getSecond().getVersion());
 			
 			SObjectItemDao itemDao = new SObjectItemDao();
-			SObjectItem item = itemDao.get(tupleObjectItem.getSecond().getId());
+			SObjectItem item = itemDao.get( tupleObjectItem.getSecond().getId());
 			item.setMd5(md5Checksum);
 			item.setStoredSize(contentLength);
 			PersistContext.getSession().save(item);
@@ -404,9 +405,10 @@ public class S3Engine {
     public S3GetObjectResponse handleRequest(S3GetObjectRequest request) {
     	S3GetObjectResponse response = new S3GetObjectResponse();
 
+    	// -> verify that the bucket and the object exist
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket sbucket = bucketDao.getByName(request.getBucketName());
-		if(sbucket == null) {
+		if (sbucket == null) {
 			response.setResultCode(404);
 			response.setResultDescription("Bucket " + request.getBucketName() + " does not exist");
 			return response;
@@ -414,29 +416,39 @@ public class S3Engine {
 		
 		SObjectDao objectDao = new SObjectDao();
 		SObject sobject = objectDao.getByNameKey(sbucket, request.getKey());
-		if(sobject == null) {
+		if (sobject == null) {
 			response.setResultCode(404);
 			response.setResultDescription("Object " + request.getKey() + " does not exist in bucket " + request.getBucketName());
 			return response;
 		}
 		
-		if(sobject.getDeletionMark() != 0) {
-		    response.setDeleteMarker( true );
+		String deletionMark = sobject.getDeletionMark();
+		if (null != deletionMark) {
+		    response.setDeleteMarker( deletionMark );
 			response.setResultCode(404);
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (1)");
 			return response;
 		}
 		
+		
+		// -> versioning allow the client to ask for a specific version not just the latest
+		SObjectItem item = null;
         int versioningStatus = sbucket.getVersioningStatus();
-    	SObjectItem item = sobject.getLatestVersion(( SBucket.VERSIONING_ENABLED != versioningStatus ));    
-    	if (item == null) {
+		String wantVersion = request.getVersion();
+		if ( SBucket.VERSIONING_ENABLED == versioningStatus && null != wantVersion)
+			 item = sobject.getVersion( wantVersion );
+		else item = sobject.getLatestVersion(( SBucket.VERSIONING_ENABLED != versioningStatus ));    
+    	
+		if (item == null) {
     		response.setResultCode(404);
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
 			return response;  		
     	}
+    	
     	// TODO logic of IfMatch IfNoneMatch, IfModifiedSince, IfUnmodifiedSince 
     	
-    	
+		
+		// -> return the contents of the object inline
     	response.setContentLength(item.getStoredSize());
     	if(request.isReturnData()) 
     	{
@@ -461,34 +473,94 @@ public class S3Engine {
     }
     
     /**
-     * In the SOAP API there is no versioning visible.
+     * In one place we handle both versioning and non-versioning delete requests.
      */
-    @SuppressWarnings("deprecation")
+    //@SuppressWarnings("deprecation")
 	public S3Response handleRequest(S3DeleteObjectRequest request) {
 		S3Response response = new S3Response();
 		
+		// -> verify that the bucket and object exist
 		SBucketDao bucketDao = new SBucketDao();
-		SBucket sbucket = bucketDao.getByName(request.getBucketName());
-		if(sbucket == null) {
+		String bucketName = request.getBucketName();
+		SBucket sbucket = bucketDao.getByName( bucketName );
+		if (sbucket == null) {
 			response.setResultCode(404);
 			response.setResultDescription("Bucket does not exist");
 			return response;
 		}
 		
 		SObjectDao objectDao = new SObjectDao();
-		SObject sobject = objectDao.getByNameKey(sbucket, request.getKey());
-		if(sobject == null) {
+		SObject sobject = objectDao.getByNameKey( sbucket, request.getKey());
+		if (sobject == null) {
 			response.setResultCode(404);
 			response.setResultDescription("Bucket does not exist");
 			return response;
 		}
 		
-		PersistContext.getSession().lock(sobject, LockMode.UPGRADE);
-		sobject.setDeletionMark(1);
-		objectDao.update(sobject);
 		
-		response.setResultCode(200);
-		response.setResultDescription("OK");
+		// -> versioning controls what delete means
+		String storedPath = null;
+		SObjectItem item = null;
+        int versioningStatus = sbucket.getVersioningStatus();
+		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) 
+	    {
+			 String wantVersion = request.getVersion();
+			 if (null == wantVersion) {
+				 // -> if versioning is on and no versionId is given then we just write a deletion marker
+				 sobject.setDeletionMark( UUID.randomUUID().toString());
+				 objectDao.update( sobject );
+			 }
+			 else {	
+				  // -> are we removing the delete marker?
+				  String deletionMarker = sobject.getDeletionMark();
+				  if (null != deletionMarker && wantVersion.equalsIgnoreCase( deletionMarker )) {
+					  sobject.setDeletionMark( null );  
+			    	  objectDao.update( sobject );	
+			  		  response.setResultCode(204);
+					  return response;
+	              }
+				  
+				  // -> if versioning is on and the versionId is given then we delete the object matching that version
+			      if ( null == (item = sobject.getVersion( wantVersion ))) {
+			    	   response.setResultCode(404);
+			    	   return response;
+			      }
+			      else {
+			    	   // -> just delete the one item that matches the versionId from the database
+			    	   storedPath = item.getStoredPath();
+			    	   sobject.deleteItem( item.getId());
+			    	   objectDao.update( sobject );	    	   
+			      }
+			 }
+	    }
+		else {
+			 // -> if versioning if off then we do delete the null object
+			 if ( null == (item = sobject.getLatestVersion( true ))) {
+		    	  response.setResultCode(404);
+		    	  return response;
+		     }
+		     else {
+		    	  // -> if no item with a null version then we are done
+		    	  if (null == item.getVersion()) {
+		    	      // -> remove the entire object 
+		    	      storedPath = item.getStoredPath();
+				      // TODO
+		    	      // Cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
+				      // need to perform deletion of these objects related to bucket manually.
+				      objectDao.delete( sobject );
+		    	  }
+		     }
+		}
+		
+		// -> delete the file holding the object
+		if (null != storedPath) 
+		{
+			 Tuple<SHost, String> tupleBucketHost = getBucketStorageHost( sbucket );
+			 S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter( tupleBucketHost.getFirst());		 
+			 bucketAdapter.deleteObject( tupleBucketHost.getSecond(), bucketName, storedPath );		
+		}
+		
+		response.setResultCode(204);
 		return response;
     }
     
