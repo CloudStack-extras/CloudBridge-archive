@@ -6,10 +6,10 @@ import java.util.Calendar;
 import java.util.Date;
 
 public class S3ConditionalHeaders {
-    protected Date   modifiedSince;
-    protected Date   unmodifiedSince;
-    protected String ifMatch;      
-    protected String ifNoneMatch;
+    protected Date     modifiedSince;
+    protected Date     unmodifiedSince;
+    protected String[] ifMatch;      
+    protected String[] ifNoneMatch;
 	
 	public S3ConditionalHeaders() {
 		modifiedSince = null;
@@ -40,12 +40,43 @@ public class S3ConditionalHeaders {
 		} catch( Exception e ) {}		
 	}
 	
+	/**
+	 * Takes the header value from HTTP "If-Match", for example is:
+	 * If-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"
+	 * 
+	 * @param ifMatch
+	 */
 	public void setMatch( String ifMatch ) {
-		this.ifMatch = (null == ifMatch ? null : ifMatch.trim());
+		if ( null == ifMatch ) {
+			 this.ifMatch = null;
+		}
+		else {
+			 String[] parts = ifMatch.split( "," );
+			 this.ifMatch = new String[parts.length];
+			 for( int i=0; i < parts.length; i++ ) {
+				 String temp = new String( parts[i].trim());
+				 if (temp.startsWith( "\"" )) temp = temp.substring( 1 );
+				 if (temp.endsWith( "\"" )) temp = temp.substring( 0, temp.length()-1 );
+				 this.ifMatch[i] = temp;
+			 }
+		}
 	}
 	
 	public void setNoneMatch( String ifNoneMatch ) {
-		this.ifNoneMatch = (null == ifNoneMatch ? null : ifNoneMatch.trim());
+		if ( null == ifNoneMatch ) {
+			 this.ifNoneMatch = null;
+		}
+		else {
+			 String[] parts = ifNoneMatch.split( "," );
+			 this.ifNoneMatch = new String[parts.length];
+			 for( int i=0; i < parts.length; i++ ) {
+				 String temp = new String( parts[i].trim());
+				 if (temp.startsWith( "\"" )) temp = temp.substring( 1 );
+				 if (temp.endsWith( "\"" )) temp = temp.substring( 0, temp.length()-1 );
+				 this.ifNoneMatch[i] = temp;
+				 System.out.println( i + "> " + temp );
+			 }
+		}
 	}
 	
 	/**
@@ -92,14 +123,16 @@ public class S3ConditionalHeaders {
 	{
 		if (null == ifMatch || null == ETag) return 1;
 		
-		if ( ifMatch.equals( ETag ))
-			 return 2;
-		else return -1;
+		for( int i=0; i < ifMatch.length; i++ ) 
+		{
+		    if (ifMatch[i].equals( ETag )) return 2;
+		}
+		return -1;
 	}
 	
 	/**
-	 * Is the content (measured by its MD5 signature) of the stored object different from 
-	 * what the client thinks?
+	 * None of the given ETags in the "If-None-Match" can match the ETag parameter for this
+	 * function to pass.
 	 * 
 	 * @param ETag - an MD5 signature of the content of the data being stored in S3
 	 * @return a negative value means that the test has failed,
@@ -109,8 +142,10 @@ public class S3ConditionalHeaders {
 	{
 		if (null == ifNoneMatch || null == ETag) return 1;
 		
-		if ( !ifNoneMatch.equals( ETag ))
-			 return 2;
-		else return -1;
+		for( int i=0; i < ifNoneMatch.length; i++ ) 
+		{
+		    if (ifNoneMatch[i].equals( ETag )) return -1;
+		}
+		return 2;
 	}
 }
