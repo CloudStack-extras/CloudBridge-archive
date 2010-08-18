@@ -404,6 +404,7 @@ public class S3Engine {
     
     public S3GetObjectResponse handleRequest(S3GetObjectRequest request) {
     	S3GetObjectResponse response = new S3GetObjectResponse();
+    	int resultCode = 200;
 
     	// -> verify that the bucket and the object exist
 		SBucketDao bucketDao = new SBucketDao();
@@ -445,15 +446,22 @@ public class S3Engine {
 			return response;  		
     	}
     	
-    	// TODO logic of IfMatch IfNoneMatch, IfModifiedSince, IfUnmodifiedSince 
-    	
+    	// TODO logic of IfMatch IfNoneMatch, IfModifiedSince, IfUnmodifiedSince (already done in the REST half)  	
 		
 		// -> return the contents of the object inline
-    	response.setContentLength(item.getStoredSize());
+		long bytesStart = request.getByteRangeStart();
+		long bytesEnd   = request.getByteRangeEnd();
+		if ( 0 <= bytesStart && 0 <= bytesEnd) {
+		     response.setContentLength( bytesEnd - bytesStart );	
+		     resultCode = 206;
+		}
+		else response.setContentLength( item.getStoredSize());
+ 
+		// -> return the contents of the object inline
     	if(request.isReturnData()) 
     	{
-    		response.setETag(item.getMd5());
-    		response.setLastModified(DateHelper.toCalendar(item.getLastModifiedTime()));
+    		response.setETag( item.getMd5());
+    		response.setLastModified(DateHelper.toCalendar( item.getLastModifiedTime()));
     		response.setVersion( item.getVersion());
     		if (request.isInlineData()) 
     		{
@@ -462,12 +470,12 @@ public class S3Engine {
 				
 				if ( request.getByteRangeStart() >= 0 && request.getByteRangeEnd() >= 0)
 					 response.setData(bucketAdapter.loadObjectRange(tupleSHostInfo.getSecond(), 
-						   request.getBucketName(), item.getStoredPath(), request.getByteRangeStart(), request.getByteRangeEnd()));
+						   request.getBucketName(), item.getStoredPath(), bytesStart, bytesEnd ));
 				else response.setData(bucketAdapter.loadObject(tupleSHostInfo.getSecond(), request.getBucketName(), item.getStoredPath()));
     		} 
     	}
     	
-    	response.setResultCode(200);
+    	response.setResultCode( resultCode );
     	response.setResultDescription("OK");
     	return response;
     }

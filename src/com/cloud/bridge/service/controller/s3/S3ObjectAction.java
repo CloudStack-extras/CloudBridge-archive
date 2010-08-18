@@ -82,7 +82,8 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setBucketName(bucket);
 		engineRequest.setKey(key);
 		engineRequest.setInlineData(true);
-		engineRequest.setReturnData(true);
+		engineRequest.setReturnData(true);		
+		engineRequest = setRequestByteRange( request, engineRequest );
 
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
 		String queryString = request.getQueryString();
@@ -91,8 +92,7 @@ public class S3ObjectAction implements ServletAction {
 		    if (null != paramList) engineRequest.setVersion( returnParameter( paramList, "versionId" ));
 		}
 
-		S3GetObjectResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );	
-		
+		S3GetObjectResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );			
 		response.setStatus( engineResponse.getResultCode());
 		
 		String deleteMarker = engineResponse.getDeleteMarker();
@@ -184,9 +184,10 @@ public class S3ObjectAction implements ServletAction {
 		S3GetObjectRequest engineRequest = new S3GetObjectRequest();
 		engineRequest.setBucketName(bucket);
 		engineRequest.setKey(key);
-		engineRequest.setInlineData(false);
-		engineRequest.setReturnData(false);
-
+		engineRequest.setInlineData(true);    // -> need to set so we get ETag etc returned
+		engineRequest.setReturnData(true);
+		engineRequest = setRequestByteRange( request, engineRequest );
+		
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
 		String queryString = request.getQueryString();
 		if (null != queryString) {
@@ -194,8 +195,7 @@ public class S3ObjectAction implements ServletAction {
 		    if (null != paramList) engineRequest.setVersion( returnParameter( paramList, "versionId" ));
 		}
 
-		S3GetObjectResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );
-		
+		S3GetObjectResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );		
 		response.setStatus( engineResponse.getResultCode());
 		
 		String deleteMarker = engineResponse.getDeleteMarker();
@@ -207,10 +207,48 @@ public class S3ObjectAction implements ServletAction {
 		     String version = engineResponse.getVersion();
 		     if (null != version) response.addHeader( "x-amz-version-id", version );
 		}
+		
+		// -> was the head request conditional?
+		if (!conditionPassed( request, response, engineResponse.getLastModified().getTime(), engineResponse.getETag())) 
+			return;	
+		
+		// -> for a head request we return everything except the data
+		DataHandler dataHandler = engineResponse.getData();
+		if (dataHandler != null) {
+			response.addHeader("ETag", engineResponse.getETag());
+			response.addHeader("Last-Modified", DateHelper.getDateDisplayString(
+				DateHelper.GMT_TIMEZONE, engineResponse.getLastModified().getTime(), "E, d MMM yyyy HH:mm:ss z"));
+
+			response.setContentLength((int)engineResponse.getContentLength());			
+		}	
 	}
 
 	public void executePostObject(HttpServletRequest request,HttpServletResponse response) throws IOException {
 		// TODO
+	}
+
+	/**
+	 * Support the "Range: bytes=0-399" header with just one byte range.
+	 * @param request
+	 * @param engineRequest
+	 * @return
+	 */
+	private S3GetObjectRequest setRequestByteRange(HttpServletRequest request, S3GetObjectRequest engineRequest ) {
+		String temp = request.getHeader( "Range" );
+		if (null == temp) return engineRequest;
+		
+		int offset = temp.indexOf( "=" );
+		if (-1 != offset) {
+			String range = temp.substring( offset+1 );
+		
+		    String[] parts = range.split( "-" );
+		    if (2 >= parts.length) {
+		    	// -> the end byte is inclusive
+			    engineRequest.setByteRangeStart( Long.parseLong(parts[0]));
+			    engineRequest.setByteRangeEnd(   Long.parseLong(parts[1])+1);
+		    }
+		}	
+		return engineRequest;
 	}
 	
 	private S3ConditionalHeaders conditionalRequest( HttpServletRequest request ) {
