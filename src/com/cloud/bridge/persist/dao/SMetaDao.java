@@ -15,6 +15,8 @@
  */
 package com.cloud.bridge.persist.dao;
 
+import java.util.List;
+
 import com.cloud.bridge.model.SMeta;
 import com.cloud.bridge.persist.EntityDao;
 import com.cloud.bridge.persist.PersistContext;
@@ -28,6 +30,10 @@ public class SMetaDao extends EntityDao<SMeta> {
 		super(SMeta.class);
 	}
 	
+	public List<SMeta> getByTarget(String target, long targetId) {
+		return queryEntities("from SMeta where target=? and targetId=?", new Object[] {target, targetId});
+	}
+
 	public SMeta save(String target, long targetId, S3MetaDataEntry entry) {
 		SMeta meta = new SMeta();
 		meta.setTarget(target);

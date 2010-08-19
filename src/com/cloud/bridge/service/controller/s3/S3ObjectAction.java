@@ -22,6 +22,7 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.activation.DataHandler;
 import javax.servlet.http.HttpServletRequest;
@@ -68,6 +69,8 @@ public class S3ObjectAction implements ServletAction {
 	{
 		String method = request.getMethod();
 		
+	    response.addHeader( "x-amz-request-id", UUID.randomUUID().toString());	
+
 		     if (method.equalsIgnoreCase("GET"   )) executeGetObject(request, response);
 		else if (method.equalsIgnoreCase("PUT"   )) executePutObject(request, response);
 		else if (method.equalsIgnoreCase("DELETE")) executeDeleteObject(request, response);
@@ -116,16 +119,10 @@ public class S3ObjectAction implements ServletAction {
 		if (!conditionPassed( request, response, engineResponse.getLastModified().getTime(), engineResponse.getETag())) 
 			return;
 	
-		
-		// -> return any associated meta data as headers
-		S3MetaDataEntry[] metaSet = engineResponse.getMetaEntries();
-		for( int i=0; null != metaSet && i < metaSet.length; i++ ) {
-			String name  = metaSet[i].getName();
-			String value = metaSet[i].getValue();
-			response.addHeader( "x-amz-meta-" + name, value );
-		}
-			
+
 		// -> is there data to return
+		returnMetaData( engineResponse, response );
+			
 		DataHandler dataHandler = engineResponse.getData();
 		if (dataHandler != null) {
 			response.addHeader("ETag", engineResponse.getETag());
@@ -153,7 +150,7 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setBucketName(bucket);
 		engineRequest.setKey(key);
 		engineRequest.setContentLength(contentLength);
-		engineRequest.setMetaEntries( returnMetaData( request ));
+		engineRequest.setMetaEntries( extractMetaData( request ));
 
 		DataHandler dataHandler = new DataHandler(new ServletRequestDataSource(request));
 		engineRequest.setData(dataHandler);
@@ -192,7 +189,7 @@ public class S3ObjectAction implements ServletAction {
 		if (null != version) response.addHeader( "x-amz-version-id", version );		
 	}
 
-	private void executeHeadObject(HttpServletRequest request,HttpServletResponse response) throws IOException {
+	private void executeHeadObject(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		String   bucket    = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String   key       = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 		String[] paramList = null;
@@ -228,7 +225,10 @@ public class S3ObjectAction implements ServletAction {
 		if (!conditionPassed( request, response, engineResponse.getLastModified().getTime(), engineResponse.getETag())) 
 			return;	
 		
+		
 		// -> for a head request we return everything except the data
+		returnMetaData( engineResponse, response );
+		
 		DataHandler dataHandler = engineResponse.getData();
 		if (dataHandler != null) {
 			response.addHeader("ETag", engineResponse.getETag());
@@ -299,7 +299,29 @@ public class S3ObjectAction implements ServletAction {
 		return true;
 	}
 	
-	private S3MetaDataEntry[] returnMetaData( HttpServletRequest request ) {
+	/**
+	 * Return the saved object's meta data back to the client as HTTP "x-amz-meta-" headers.
+	 * 
+	 * @param engineResponse
+	 * @param response
+	 */
+	private void returnMetaData( S3GetObjectResponse engineResponse, HttpServletResponse response ) {
+	    S3MetaDataEntry[] metaSet = engineResponse.getMetaEntries();
+	    for( int i=0; null != metaSet && i < metaSet.length; i++ ) {
+		   String name  = metaSet[i].getName();
+		   String value = metaSet[i].getValue();
+		   response.addHeader( "x-amz-meta-" + name, value );
+	    }
+	}		
+
+	/**
+	 * Extract the name and value of all meta data so it can be written with the
+	 * object that is being 'PUT'.
+	 * 
+	 * @param request
+	 * @return
+	 */
+	private S3MetaDataEntry[] extractMetaData( HttpServletRequest request ) {
 		List<S3MetaDataEntry> metaSet = new ArrayList<S3MetaDataEntry>();  
 		int count = 0;
 		

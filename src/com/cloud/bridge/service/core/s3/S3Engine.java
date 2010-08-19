@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -37,6 +38,7 @@ import com.cloud.bridge.model.MHostMount;
 import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.model.SBucket;
 import com.cloud.bridge.model.SHost;
+import com.cloud.bridge.model.SMeta;
 import com.cloud.bridge.model.SObject;
 import com.cloud.bridge.model.SObjectItem;
 import com.cloud.bridge.persist.PersistContext;
@@ -406,7 +408,7 @@ public class S3Engine {
     	S3GetObjectResponse response = new S3GetObjectResponse();
     	int resultCode = 200;
 
-    	// -> verify that the bucket and the object exist
+    	// [A] Verify that the bucket and the object exist
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket sbucket = bucketDao.getByName(request.getBucketName());
 		if (sbucket == null) {
@@ -432,7 +434,7 @@ public class S3Engine {
 		}
 		
 		
-		// -> versioning allow the client to ask for a specific version not just the latest
+		// [B] Versioning allow the client to ask for a specific version not just the latest
 		SObjectItem item = null;
         int versioningStatus = sbucket.getVersioningStatus();
 		String wantVersion = request.getVersion();
@@ -445,10 +447,30 @@ public class S3Engine {
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
 			return response;  		
     	}
-    	
+		
+		// -> extract the meta data that corresponds the specific versioned item 
+		SMetaDao metaDao = new SMetaDao();
+		List<SMeta> itemMetaData = metaDao.getByTarget( "SObjectItem", item.getId());
+		if (null != itemMetaData) 
+		{
+			int i = 0;
+			S3MetaDataEntry[] metaEntries = new S3MetaDataEntry[ itemMetaData.size() ];
+		    ListIterator it = itemMetaData.listIterator();
+		    while( it.hasNext()) {
+		    	SMeta oneTag = (SMeta)it.next();
+		    	S3MetaDataEntry oneEntry = new S3MetaDataEntry();
+		    	oneEntry.setName(  oneTag.getName());
+		    	oneEntry.setValue( oneTag.getValue());
+		    	metaEntries[i++] = oneEntry;
+		    }
+		    response.setMetaEntries( metaEntries );
+		}
+		
+		
     	// TODO logic of IfMatch IfNoneMatch, IfModifiedSince, IfUnmodifiedSince (already done in the REST half)  	
 		
-		// -> return the contents of the object inline
+		// [C] Return the contents of the object inline
+		//  -> support a single byte range
 		long bytesStart = request.getByteRangeStart();
 		long bytesEnd   = request.getByteRangeEnd();
 		if ( 0 <= bytesStart && 0 <= bytesEnd) {
@@ -457,7 +479,6 @@ public class S3Engine {
 		}
 		else response.setContentLength( item.getStoredSize());
  
-		// -> return the contents of the object inline
     	if(request.isReturnData()) 
     	{
     		response.setETag( item.getMd5());
