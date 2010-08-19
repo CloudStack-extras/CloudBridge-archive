@@ -91,7 +91,7 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setKey(key);
 		engineRequest.setInlineData(true);
 		engineRequest.setReturnData(true);	
-		engineRequest.setReturnMetadata(true);
+		//engineRequest.setReturnMetadata(true);
 		engineRequest = setRequestByteRange( request, engineRequest );
 
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
@@ -121,7 +121,8 @@ public class S3ObjectAction implements ServletAction {
 	
 
 		// -> is there data to return
-		returnMetaData( engineResponse, response );
+		// -> from the Amazon REST documentation it appears that Meta data is only returned as part of a HEAD request
+		//returnMetaData( engineResponse, response );
 			
 		DataHandler dataHandler = engineResponse.getData();
 		if (dataHandler != null) {
@@ -199,6 +200,7 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setKey(key);
 		engineRequest.setInlineData(true);    // -> need to set so we get ETag etc returned
 		engineRequest.setReturnData(true);
+		engineRequest.setReturnMetadata(true);
 		engineRequest = setRequestByteRange( request, engineRequest );
 		
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
@@ -301,17 +303,52 @@ public class S3ObjectAction implements ServletAction {
 	
 	/**
 	 * Return the saved object's meta data back to the client as HTTP "x-amz-meta-" headers.
+	 * This function is constructing an HTTP header and these headers have a defined syntax
+	 * as defined in rfc2616.   Any characters that could cause an invalid HTTP header will
+	 * prevent that meta data from being returned via the REST call (as is defined in the Amazon
+	 * spec).   These characters can be defined if using the SOAP API as well as the REST API.
 	 * 
 	 * @param engineResponse
 	 * @param response
 	 */
-	private void returnMetaData( S3GetObjectResponse engineResponse, HttpServletResponse response ) {
+	private void returnMetaData( S3GetObjectResponse engineResponse, HttpServletResponse response ) 
+	{ 
+		boolean ignoreMeta   = false;
+		int     ignoredCount = 0;
+		
 	    S3MetaDataEntry[] metaSet = engineResponse.getMetaEntries();
-	    for( int i=0; null != metaSet && i < metaSet.length; i++ ) {
-		   String name  = metaSet[i].getName();
-		   String value = metaSet[i].getValue();
-		   response.addHeader( "x-amz-meta-" + name, value );
+	    for( int i=0; null != metaSet && i < metaSet.length; i++ ) 
+	    {
+		   String name      = metaSet[i].getName();
+		   String value     = metaSet[i].getValue();
+		   byte[] nameBytes = name.getBytes();
+		   ignoreMeta = false;
+		   
+		   // -> cannot have control characters (octets 0 - 31) and DEL (127), in an HTTP header
+		   for( int j=0; j < name.length(); j++ ) {
+			   if ((0 <= nameBytes[j] && 31 >= nameBytes[j]) || 127 == nameBytes[j]) {
+				   ignoreMeta = true;
+				   break;
+			   }
+		   }
+		   
+		   // -> cannot have HTTP separators in an HTTP header 
+		   if (-1 != name.indexOf('(')  || -1 != name.indexOf(')') || -1 != name.indexOf('@')  || 
+			   -1 != name.indexOf('<')  || -1 != name.indexOf('>') || -1 != name.indexOf('\"') ||
+			   -1 != name.indexOf('[')  || -1 != name.indexOf(']') || -1 != name.indexOf('=')  ||	   
+			   -1 != name.indexOf(',')  || -1 != name.indexOf(';') || -1 != name.indexOf(':')  ||
+			   -1 != name.indexOf('\\') || -1 != name.indexOf('/') || -1 != name.indexOf(' ')  ||
+			   -1 != name.indexOf('{')  || -1 != name.indexOf('}') || -1 != name.indexOf('?')  ||
+			   -1 != name.indexOf('\t')
+			  ) ignoreMeta = true;
+		   
+		   
+		   if ( ignoreMeta )
+			    ignoredCount++;
+		   else response.addHeader( "x-amz-meta-" + name, value );
 	    }
+	    
+	    if (0 < ignoredCount) response.addHeader( "x-amz-missing-meta", new String( "" + ignoredCount ));
 	}		
 
 	/**

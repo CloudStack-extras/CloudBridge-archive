@@ -193,7 +193,7 @@ public class S3Engine {
     	List<SBucket> buckets = bucketDao.listBuckets(UserContext.current().getCanonicalUserId());
     	S3CanonicalUser owner = new S3CanonicalUser();
     	owner.setID(UserContext.current().getCanonicalUserId());
-    	owner.setDisplayName("TODO");
+    	owner.setDisplayName("");
     	response.setOwner(owner);
     	
     	if(buckets != null) {
@@ -241,7 +241,7 @@ public class S3Engine {
     	
     	S3CanonicalUser owner = new S3CanonicalUser();
     	owner.setID(sbucket.getOwnerCanonicalId());
-    	owner.setDisplayName("TODO");
+    	owner.setDisplayName("");
     	policy.setOwner(owner);
     	
     	SAclDao aclDao = new SAclDao();
@@ -394,7 +394,7 @@ public class S3Engine {
     	
     	S3CanonicalUser owner = new S3CanonicalUser();
     	owner.setID(sobject.getOwnerCanonicalId());
-    	owner.setDisplayName("TODO");
+    	owner.setDisplayName("");
     	policy.setOwner(owner);
     	
     	SAclDao aclDao = new SAclDao();
@@ -459,7 +459,7 @@ public class S3Engine {
 		    while( it.hasNext()) {
 		    	SMeta oneTag = (SMeta)it.next();
 		    	S3MetaDataEntry oneEntry = new S3MetaDataEntry();
-		    	oneEntry.setName(  oneTag.getName());
+		    	oneEntry.setName( oneTag.getName());
 		    	oneEntry.setValue( oneTag.getValue());
 		    	metaEntries[i++] = oneEntry;
 		    }
@@ -572,11 +572,10 @@ public class S3Engine {
 		    	  // -> if no item with a null version then we are done
 		    	  if (null == item.getVersion()) {
 		    	      // -> remove the entire object 
+		    	      // -> cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
 		    	      storedPath = item.getStoredPath();
-				      // TODO
-		    	      // Cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
-				      // need to perform deletion of these objects related to bucket manually.
-				      objectDao.delete( sobject );
+		    		  deleteMetaData( item.getId());
+		    	      objectDao.delete( sobject );
 		    	  }
 		     }
 		}
@@ -593,6 +592,20 @@ public class S3Engine {
 		return response;
     }
     
+
+	private void deleteMetaData( long itemId ) {
+	    SMetaDao metaDao = new SMetaDao();
+	    List<SMeta> itemMetaData = metaDao.getByTarget( "SObjectItem", itemId );
+	    if (null != itemMetaData) 
+	    {
+	        ListIterator it = itemMetaData.listIterator();
+		    while( it.hasNext()) {
+		       SMeta oneTag = (SMeta)it.next();
+		       metaDao.delete( oneTag );
+		    }
+		}
+	}
+
 	private S3ListBucketPrefixEntry[] composeListBucketPrefixEntries(List<SObject> l, String prefix, String delimiter, int maxKeys) {
 		List<S3ListBucketPrefixEntry> entries = new ArrayList<S3ListBucketPrefixEntry>();
 		
@@ -672,7 +685,7 @@ public class S3Engine {
 		entry.setSize(item.getStoredSize());
 		entry.setLastModified(DateHelper.toCalendar(item.getLastModifiedTime()));
 		entry.setOwnerCanonicalId(sobject.getOwnerCanonicalId());
-		entry.setOwnerDisplayName("TODO");
+		entry.setOwnerDisplayName("");
 		return entry;
 	}
     
