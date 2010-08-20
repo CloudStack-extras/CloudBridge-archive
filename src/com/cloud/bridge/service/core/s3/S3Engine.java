@@ -134,7 +134,7 @@ public class S3Engine {
 			 // Cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
 			 // need to perform deletion of these objects related to bucket manually.
 			 //
-			 // Delete SMeta objects: (1)Get all the objects in the bucket, (2)then all the items in each object, (3) then all meta data for each item
+			 // Delete SMeta & SAcl objects: (1)Get all the objects in the bucket, (2)then all the items in each object, (3) then all meta & acl data for each item
 			 Set<SObject> objectsInBucket = sbucket.getObjectsInBucket();
 			 Iterator it = objectsInBucket.iterator();
 			 while( it.hasNext()) 
@@ -146,9 +146,11 @@ public class S3Engine {
 				{
 					SObjectItem oneItem = (SObjectItem)is.next();
 		    		deleteMetaData( oneItem.getId());
+		    		deleteObjectAcls( oneItem.getId());
 				}				
-			 }
-			 bucketDao.delete(sbucket);		
+			 }			 
+			 deleteBucketAcls( sbucket.getId());
+			 bucketDao.delete( sbucket );		
 			 response.setResultCode(204);
 			 response.setResultDescription("OK");
 		} 
@@ -586,9 +588,10 @@ public class S3Engine {
 		    	  // -> if no item with a null version then we are done
 		    	  if (null == item.getVersion()) {
 		    	      // -> remove the entire object 
-		    	      // -> cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
+		    	      // -> cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects.
 		    	      storedPath = item.getStoredPath();
 		    		  deleteMetaData( item.getId());
+		    		  deleteObjectAcls( item.getId());
 		    	      objectDao.delete( sobject );
 		    	  }
 		     }
@@ -616,6 +619,32 @@ public class S3Engine {
 		    while( it.hasNext()) {
 		       SMeta oneTag = (SMeta)it.next();
 		       metaDao.delete( oneTag );
+		    }
+		}
+	}
+
+	private void deleteObjectAcls( long itemId ) {
+	    SAclDao aclDao = new SAclDao();
+	    List<SAcl> itemAclData = aclDao.listGrants( "SObject", itemId );
+	    if (null != itemAclData) 
+	    {
+	        ListIterator it = itemAclData.listIterator();
+		    while( it.hasNext()) {
+		       SAcl oneTag = (SAcl)it.next();
+		       aclDao.delete( oneTag );
+		    }
+		}
+	}
+
+	private void deleteBucketAcls( long bucketId ) {
+	    SAclDao aclDao = new SAclDao();
+	    List<SAcl> bucketAclData = aclDao.listGrants( "SBucket", bucketId );
+	    if (null != bucketAclData) 
+	    {
+	        ListIterator it = bucketAclData.listIterator();
+		    while( it.hasNext()) {
+		       SAcl oneTag = (SAcl)it.next();
+		       aclDao.delete( oneTag );
 		    }
 		}
 	}
