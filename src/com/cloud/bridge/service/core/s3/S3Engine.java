@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.activation.DataHandler;
@@ -118,29 +119,42 @@ public class S3Engine {
 		return response;
     }
     
-    public S3Response handleRequest(S3DeleteBucketRequest request) {
-    	S3Response response = new S3Response();
-    	
+    public S3Response handleRequest( S3DeleteBucketRequest request ) 
+    {
+    	S3Response response = new S3Response();   	
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket sbucket = bucketDao.getByName(request.getBucketName());
 		
-		if(sbucket != null) {
-			Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(sbucket);
-			S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
+		if ( sbucket != null ) 
+		{
+			 Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(sbucket);
+			 S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());			
+			 bucketAdapter.deleteContainer(tupleBucketHost.getSecond(), request.getBucketName());
 			
-			bucketAdapter.deleteContainer(tupleBucketHost.getSecond(), request.getBucketName());
-			
-			// TODO
-			// Cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
-			// need to perform deletion of these objects related to bucket manually.
-			// 
-			bucketDao.delete(sbucket);
-			
-			response.setResultCode(204);
-			response.setResultDescription("OK");
-		} else {
-			response.setResultCode(404);
-			response.setResultDescription("Bucket does not exist");
+			 // Cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
+			 // need to perform deletion of these objects related to bucket manually.
+			 //
+			 // Delete SMeta objects: (1)Get all the objects in the bucket, (2)then all the items in each object, (3) then all meta data for each item
+			 Set<SObject> objectsInBucket = sbucket.getObjectsInBucket();
+			 Iterator it = objectsInBucket.iterator();
+			 while( it.hasNext()) 
+			 {
+			 	SObject oneObject = (SObject)it.next();
+				Set<SObjectItem> itemsInObject = oneObject.getItems();
+				Iterator is = itemsInObject.iterator();
+				while( is.hasNext()) 
+				{
+					SObjectItem oneItem = (SObjectItem)is.next();
+		    		deleteMetaData( oneItem.getId());
+				}				
+			 }
+			 bucketDao.delete(sbucket);		
+			 response.setResultCode(204);
+			 response.setResultDescription("OK");
+		} 
+		else 
+		{    response.setResultCode(404);
+			 response.setResultDescription("Bucket does not exist");
 		}
     	return response;
     }
