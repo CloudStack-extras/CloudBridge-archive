@@ -15,6 +15,7 @@
  */
 package com.cloud.bridge.service.controller.s3;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -41,6 +42,7 @@ import org.w3c.dom.Node;
 import com.amazon.s3.GetBucketAccessControlPolicyResponse;
 import com.amazon.s3.ListAllMyBucketsResponse;
 import com.amazon.s3.ListBucketResponse;
+import com.amazon.s3.SetBucketAccessControlPolicyResponse;
 import com.cloud.bridge.model.SBucket;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.service.S3Constants;
@@ -49,6 +51,7 @@ import com.cloud.bridge.service.S3SoapServiceImpl;
 import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.ServletAction;
 import com.cloud.bridge.service.UserContext;
+import com.cloud.bridge.service.core.s3.S3AccessControlList;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
 import com.cloud.bridge.service.core.s3.S3CreateBucketConfiguration;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
@@ -59,7 +62,9 @@ import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsResponse;
 import com.cloud.bridge.service.core.s3.S3ListBucketRequest;
 import com.cloud.bridge.service.core.s3.S3ListBucketResponse;
+import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Response;
+import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.exception.InvalidRequestContentException;
 import com.cloud.bridge.service.exception.NetworkIOException;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
@@ -306,7 +311,24 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void executePutBucketAcl(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		// TODO
+		S3PutObjectRequest putRequest = null;
+		
+		// -> reuse the Access Control List parsing code that was added to support DIME
+		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		try {
+		    putRequest = S3RestServlet.toEnginePutObjectRequest( request.getInputStream());
+		}
+		catch( Exception e ) {
+			throw new IOException( e.toString());
+		}
+		
+		// -> reuse the SOAP code to save the passed in ACLs
+		S3SetBucketAccessControlPolicyRequest engineRequest = new S3SetBucketAccessControlPolicyRequest();
+		engineRequest.setBucketName( bucketName );
+		engineRequest.setAcl( putRequest.getAcl());
+		
+	    S3Response engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);	
+	    response.setStatus( engineResponse.getResultCode());
 	}
 	
 	public void executePutBucketVersioning(HttpServletRequest request, HttpServletResponse response) throws IOException {

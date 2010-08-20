@@ -365,7 +365,7 @@ public class S3RestServlet extends HttpServlet {
      * @return 
      * @throws Exception 
      */
-	private S3PutObjectRequest toEnginePutObjectRequest( InputStream is ) throws Exception 
+	public static S3PutObjectRequest toEnginePutObjectRequest( InputStream is ) throws Exception 
 	{
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		dbf.setNamespaceAware( true );
@@ -532,7 +532,7 @@ public class S3RestServlet extends HttpServlet {
 	 * @param childName
 	 * @return
 	 */
-	private String getChildNodeValue( Node parent, String childName )
+	private static String getChildNodeValue( Node parent, String childName )
 	{
 		NodeList children = null;
 		Node     element  = null;
