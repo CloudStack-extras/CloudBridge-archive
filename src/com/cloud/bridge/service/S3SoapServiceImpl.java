@@ -442,7 +442,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return request;
 	}
 	
-	private GetObjectAccessControlPolicyResponse toGetObjectAccessControlPolicyResponse(S3AccessControlPolicy policy) {
+	public static GetObjectAccessControlPolicyResponse toGetObjectAccessControlPolicyResponse(S3AccessControlPolicy policy) {
 		GetObjectAccessControlPolicyResponse response = new GetObjectAccessControlPolicyResponse();
 		response.setGetObjectAccessControlPolicyResponse(toAccessControlPolicy(policy));
 		return response;

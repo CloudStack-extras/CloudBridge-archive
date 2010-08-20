@@ -15,7 +15,6 @@
  */
 package com.cloud.bridge.service.controller.s3;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -42,7 +41,6 @@ import org.w3c.dom.Node;
 import com.amazon.s3.GetBucketAccessControlPolicyResponse;
 import com.amazon.s3.ListAllMyBucketsResponse;
 import com.amazon.s3.ListBucketResponse;
-import com.amazon.s3.SetBucketAccessControlPolicyResponse;
 import com.cloud.bridge.model.SBucket;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.service.S3Constants;
@@ -51,7 +49,6 @@ import com.cloud.bridge.service.S3SoapServiceImpl;
 import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.ServletAction;
 import com.cloud.bridge.service.UserContext;
-import com.cloud.bridge.service.core.s3.S3AccessControlList;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
 import com.cloud.bridge.service.core.s3.S3CreateBucketConfiguration;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
@@ -67,7 +64,6 @@ import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.exception.InvalidRequestContentException;
 import com.cloud.bridge.service.exception.NetworkIOException;
-import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.util.Converter;
 import com.cloud.bridge.util.StringHelper;
 import com.cloud.bridge.util.XSerializer;
@@ -273,7 +269,7 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void executeGetBucketLocation(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		// TODO
+		// TODO - this returns the region that the bucket is in and Cloud Stack has no equivalent
 	}
 	
 	public void executePutBucket(HttpServletRequest request, HttpServletResponse response) throws IOException {
