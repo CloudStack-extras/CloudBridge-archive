@@ -312,19 +312,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
 		return null;
 	}
-	/*
-	public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
-		EC2DescribeAddresses request = new EC2DescribeAddresses();
-		
-        DescribeAddressesType dat = describeAddresses.getDescribeAddresses();
-        DescribeAddressesInfoType dait = dat.getPublicIpsSet();
-        DescribeAddressesItemType[] items = dait.getItem();
-        if (null != items) {  // -> can be empty
-			for( int i=0; i < items.length; i++ ) request.addIP( items[i].getPublicIp());   	
-        }
-		return toDescribeAddressesResponse( engine.handleRequest( request ));
-	}
-	*/
 
 	public DescribeAvailabilityZonesResponse describeAvailabilityZones(DescribeAvailabilityZones describeAvailabilityZones) {
 		EC2DescribeAvailabilityZones request = new EC2DescribeAvailabilityZones();

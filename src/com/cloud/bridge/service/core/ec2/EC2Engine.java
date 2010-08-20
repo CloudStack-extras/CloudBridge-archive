@@ -113,7 +113,7 @@ public class EC2Engine {
     			logger.warn("Unable to read properties file: " + propertiesFile.getAbsolutePath(), e);
     		}
    	        managementServer = EC2Prop.getProperty( "managementServer" );
-		cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
+		    cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
    	        
    	        try {
    	            pollInterval1  = Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
