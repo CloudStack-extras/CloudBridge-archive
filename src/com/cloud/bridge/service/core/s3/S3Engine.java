@@ -121,7 +121,7 @@ public class S3Engine {
     
     public S3Response handleRequest( S3DeleteBucketRequest request ) 
     {
-    	S3Response response = new S3Response();   	
+    	S3Response response  = new S3Response();   	
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket sbucket = bucketDao.getByName(request.getBucketName());
 		
