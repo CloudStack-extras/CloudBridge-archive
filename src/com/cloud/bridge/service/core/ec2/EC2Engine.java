@@ -20,7 +20,6 @@ import org.apache.log4j.Logger;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -100,9 +99,11 @@ public class EC2Engine {
      * Load a mapping form Amazon values for 'instanceType' to cloud defined
      * diskOfferingId and serviceOfferingId.
      */
-    private void loadConfigValues() throws IOException {
+    private void loadConfigValues() throws IOException 
+    {
         File propertiesFile = ConfigurationHelper.findConfigurationFile("ec2-service.properties");
-        if (null != propertiesFile) {
+        if (null != propertiesFile) 
+        {
        		logger.info("Use EC2 properties file: " + propertiesFile.getAbsolutePath());
        	    Properties EC2Prop = new Properties();
         	try {
@@ -159,7 +160,8 @@ public class EC2Engine {
        	else logger.error( "ec2-service.properties not found" );
 	}
     
-    private int getCloudStackVersion(Properties prop) {
+    private int getCloudStackVersion(Properties prop) 
+    {
     	String versionProp = prop.getProperty( "cloudstackVersion", null );
     	if(versionProp!=null){
     		if(versionProp.equals("2.0")){
@@ -189,7 +191,8 @@ public class EC2Engine {
      * @param secretKey - Cloud.com's API secret key
      * @return true if the account exists, false otherwise
      */
-    public boolean validateAccount( String accessKey, String secretKey ) {
+    public boolean validateAccount( String accessKey, String secretKey ) 
+    {
     	try {
         	StringBuffer sigOver = new StringBuffer();
         	sigOver.append( "apikey=" ).append( safeURLencode( accessKey ));
@@ -224,7 +227,8 @@ public class EC2Engine {
      * @return the unique account name matching the currently used Cloud API access & secret keys
      *         or an empty string is returned (which is required in the XML responses).
      */
-    public String getAccountName() {
+    public String getAccountName() 
+    {
     	try {
 	        String query = new String( "command=listAccounts" );
             Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listAccounts", true );
@@ -251,7 +255,8 @@ public class EC2Engine {
      * @param request
      * @return was the security group created?
      */
-    public boolean createSecurityGroup(EC2SecurityGroup request) {
+    public boolean createSecurityGroup(EC2SecurityGroup request) 
+    {
 		if (null == request.getDescription() || null == request.getName()) 
 			 throw new EC2ServiceException( "Both name & description are required", 400 );
 
@@ -273,7 +278,8 @@ public class EC2Engine {
     	}
     }
     
-    public boolean deleteSecurityGroup(EC2SecurityGroup request) {
+    public boolean deleteSecurityGroup(EC2SecurityGroup request) 
+    {
 		if (null == request.getName()) throw new EC2ServiceException( "Name is a required parameter", 400 );
 
    	    try {
@@ -291,7 +297,8 @@ public class EC2Engine {
    	    }
     }
     
-    public EC2DescribeSecurityGroupsResponse handleRequest(EC2DescribeSecurityGroups request) {
+    public EC2DescribeSecurityGroupsResponse handleRequest(EC2DescribeSecurityGroups request) 
+    {
     	try {
     		return listSecurityGroups( request.getGroupSet());
    	        
@@ -313,7 +320,8 @@ public class EC2Engine {
      * @param request - ip permission parameters
      * @param command - { authorizeNetworkGroupIngress | revokeNetworkGroupIngress }
      */
-    public boolean securityGroupRequest(EC2AuthorizeRevokeSecurityGroup request, String command ) {
+    public boolean securityGroupRequest(EC2AuthorizeRevokeSecurityGroup request, String command ) 
+    {
 		if (null == request.getName()) throw new EC2ServiceException( "Name is a required parameter", 400 );
     	
 		StringBuffer url    = new StringBuffer();   // -> used to derive URL for Cloud Stack
@@ -391,8 +399,8 @@ public class EC2Engine {
      * 
      * @throws UnsupportedEncodingException 
      */
-    private String constructCIDRList( String[] ipRanges ) throws UnsupportedEncodingException {
-    
+    private String constructCIDRList( String[] ipRanges ) throws UnsupportedEncodingException 
+    {
     	if (null == ipRanges || 0 == ipRanges.length) return null;  	
     	StringBuffer cidrList = new StringBuffer();
    	
@@ -410,8 +418,8 @@ public class EC2Engine {
      * 
      * @throws UnsupportedEncodingException 
      */
-    private String constructNetworkUserList( EC2SecurityGroup[] groups ) throws UnsupportedEncodingException {
-
+    private String constructNetworkUserList( EC2SecurityGroup[] groups ) throws UnsupportedEncodingException 
+    {
     	if (null == groups || 0 == groups.length) return null;    	
     	StringBuffer userList = new StringBuffer();
 
@@ -422,7 +430,8 @@ public class EC2Engine {
     	return userList.toString();
     }
     
-    public EC2DescribeSnapshotsResponse handleRequest(EC2DescribeSnapshots request) {
+    public EC2DescribeSnapshotsResponse handleRequest(EC2DescribeSnapshots request) 
+    {
 		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
 		
     	try {
@@ -447,7 +456,8 @@ public class EC2Engine {
     	}
     }
     
-    public EC2Snapshot createSnapshot( String volumeId ) {
+    public EC2Snapshot createSnapshot( String volumeId ) 
+    {
 		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
 
     	try {
@@ -477,7 +487,8 @@ public class EC2Engine {
     	}
     }
     
-    public boolean deleteSnapshot( String snapshotId ) {
+    public boolean deleteSnapshot( String snapshotId ) 
+    {
     	try {
 	        String query = new String( "command=deleteSnapshot&id=" + snapshotId );
             Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "deleteSnapshot", true );
@@ -501,7 +512,8 @@ public class EC2Engine {
     	}
     }
     
-    public boolean modifyImageAttribute( EC2Image request ) {
+    public boolean modifyImageAttribute( EC2Image request ) 
+    {
     	EC2DescribeImagesResponse images = new EC2DescribeImagesResponse();
 
     	try {
@@ -530,7 +542,8 @@ public class EC2Engine {
      * We only support the imageSet version of this call or when no search parameters are passed
      * which results in asking for all templates.
      */
-    public EC2DescribeImagesResponse handleRequest(EC2DescribeImages request) {
+    public EC2DescribeImagesResponse handleRequest(EC2DescribeImages request) 
+    {
     	EC2DescribeImagesResponse images = new EC2DescribeImagesResponse();
     	
     	try {
@@ -566,7 +579,8 @@ public class EC2Engine {
      * If we have to start and stop the VM in question then this function is
      * going to take a long time to complete.
      */
-    public EC2CreateImageResponse handleRequest(EC2CreateImage request) {
+    public EC2CreateImageResponse handleRequest(EC2CreateImage request) 
+    {
     	EC2CreateImageResponse response = null;
     	boolean needsRestart = false;
     	String volumeId      = null;
@@ -644,7 +658,8 @@ public class EC2Engine {
      * EC2CreateImageResponse has the same content that the class EC2RegisterImageResponse
      * would have.
      */
-    public EC2CreateImageResponse handleRequest(EC2RegisterImage request) {
+    public EC2CreateImageResponse handleRequest(EC2RegisterImage request) 
+    {
     	try {
     		if (null == request.getFormat()   || null == request.getName() || null == request.getOsTypeName() ||
     		    null == request.getLocation() || null == request.getZoneName())
@@ -683,7 +698,8 @@ public class EC2Engine {
      * Our implementation is different from Amazon in that we do delete the template
      * when we deregister it.   The cloud API has not deregister call.
      */
-    public boolean deregisterImage( EC2Image image ) {
+    public boolean deregisterImage( EC2Image image ) 
+    {
     	try {
 	        String query = new String( "command=deleteTemplate&id=" + image.getId());
             Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "deleteTemplate", true );
@@ -707,7 +723,8 @@ public class EC2Engine {
     	}
     }
     
-    public EC2DescribeInstancesResponse handleRequest(EC2DescribeInstances request) {
+    public EC2DescribeInstancesResponse handleRequest(EC2DescribeInstances request) 
+    {
     	try {
    	        return listVirtualMachines( request.getInstancesSet()); 
    	        
@@ -721,8 +738,8 @@ public class EC2Engine {
     	}
     }
 
-    public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) {
-    	
+    public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) 
+    {	
     	try {
     		return listZones( request.getZoneSet());
     		
@@ -736,7 +753,8 @@ public class EC2Engine {
     	}
     }
     
-    public EC2DescribeVolumesResponse handleRequest(EC2DescribeVolumes request) {
+    public EC2DescribeVolumesResponse handleRequest(EC2DescribeVolumes request) 
+    {
     	EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
 
     	try {
@@ -761,7 +779,8 @@ public class EC2Engine {
     	}
     }
     
-    public EC2Volume attachVolume(EC2Volume request) {
+    public EC2Volume attachVolume(EC2Volume request) 
+    {
     	try {
     		request = mapDeviceToCloudDeviceId( request );
     		
@@ -793,7 +812,8 @@ public class EC2Engine {
     	}   	    
     }
 
-    public EC2Volume detachVolume(EC2Volume request) {
+    public EC2Volume detachVolume(EC2Volume request) 
+    {
     	try {
 	        StringBuffer params = new StringBuffer();
    	        params.append( "command=detachVolume" );
@@ -830,16 +850,19 @@ public class EC2Engine {
     	}   	    
     }
    
-    public EC2Volume handleRequest(EC2CreateVolume request) {
+    public EC2Volume handleRequest(EC2CreateVolume request) 
+    {
     	String offerId    = null;
     	String snapshotId = null;
     	
     	try {
-    		if (null == (snapshotId = request.getSnapshotId())) {
+    		if (null == (snapshotId = request.getSnapshotId())) 
+    		{
     		    // -> match up the required volume size with the existing disk offerings
     		    DiskOfferings offerings = listDiskOfferings();
     		    DiskOffer[] availDisks  = offerings.getOfferSet();
-    		    for( int i=0; i < availDisks.length; i++ ) {
+    		    for( int i=0; i < availDisks.length; i++ ) 
+    		    {
     			     // -> both values here are in GBs, (for now we just take the first that fits)
     			     if (availDisks[i].getSize() >= request.getSize()) {
     				     offerId = availDisks[i].getId();
@@ -879,7 +902,8 @@ public class EC2Engine {
     	}   	    
     }
 
-    public EC2Volume deleteVolume(EC2Volume request) {
+    public EC2Volume deleteVolume(EC2Volume request) 
+    {
     	try {
 	        StringBuffer params = new StringBuffer();
    	        params.append( "command=deleteVolume" );
@@ -911,7 +935,8 @@ public class EC2Engine {
      * Note that more than one VM can be requested rebooted at once. 
      * The Amazon API does not wait around for the result of the operation.
      */
-    public boolean handleRequest(EC2RebootInstances request) {
+    public boolean handleRequest(EC2RebootInstances request) 
+    {
     	EC2Instance[] vms = null;
 
     	// -> reboot is not allowed on destroyed (i.e., terminated) instances
@@ -920,7 +945,8 @@ public class EC2Engine {
      	    vms = previousState.getInstanceSet();
     	    
      	    // -> send reboot requests for each item 
-     		for( int i=0; i < vms.length; i++ ) {
+     		for( int i=0; i < vms.length; i++ ) 
+     		{
      		   if (vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
 
      	       String query = new String( "command=rebootVirtualMachine&id=" + vms[i].getId());
@@ -946,7 +972,8 @@ public class EC2Engine {
      * have been made then we enter a polling state waiting for all the asynch requests to
      * complete.
      */
-    public EC2RunInstancesResponse handleRequest(EC2RunInstances request) {
+    public EC2RunInstancesResponse handleRequest(EC2RunInstances request) 
+    {
     	EC2RunInstancesResponse instances = new EC2RunInstancesResponse();
     	NodeList match  = null;
     	Node     item   = null;
@@ -986,7 +1013,8 @@ public class EC2Engine {
        	    String query      = params.toString();
             String apiCommand = genAPIURL( query, genQuerySignature( query ));
  		
-     		for( int i=0; i < createInstances; i++ ) {
+     		for( int i=0; i < createInstances; i++ ) 
+     		{
      		   Document cloudResp = resolveURL( apiCommand, "deployVirtualMachine", true );
      		   vms[i] = new EC2Instance();
       		    
@@ -1030,7 +1058,8 @@ public class EC2Engine {
      * The Amazon API returns the previous state and the modified state as the
      * result of this API.
      */
-    public EC2StartInstancesResponse handleRequest(EC2StartInstances request) {
+    public EC2StartInstancesResponse handleRequest(EC2StartInstances request) 
+    {
     	EC2StartInstancesResponse instances = new EC2StartInstancesResponse();
     	EC2Instance[] vms = null;
     	Node item    = null;
@@ -1043,7 +1072,8 @@ public class EC2Engine {
         	String[] jobIds = new String[ vms.length ];
 
     	    // -> send start requests for each item 
-     		for( int i=0; i < vms.length; i++ ) {
+     		for( int i=0; i < vms.length; i++ ) 
+     		{
      		   // -> if its already running then we are done
      		   vms[i].setPreviousState( vms[i].getState());
      		   if (vms[i].getState().equalsIgnoreCase( "Running" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
@@ -1079,7 +1109,8 @@ public class EC2Engine {
      * The Amazon API returns the previous state and the modified state as the
      * result of this API.
      */
-    public EC2StopInstancesResponse handleRequest(EC2StopInstances request) {
+    public EC2StopInstancesResponse handleRequest(EC2StopInstances request) 
+    {
     	EC2StopInstancesResponse instances = new EC2StopInstancesResponse();
     	EC2Instance[] vms = null;
     	String query   = null;
@@ -1093,7 +1124,8 @@ public class EC2Engine {
         	String[] jobIds = new String[ vms.length ];
     
     	    // -> send stop requests for each item 
-     		for( int i=0; i < vms.length; i++ ) {
+     		for( int i=0; i < vms.length; i++ ) 
+     		{
      		   vms[i].setPreviousState( vms[i].getState());
      		   
      		   if ( request.getDestroyInstances()) {
@@ -1191,33 +1223,33 @@ public class EC2Engine {
      *         the user can create.
      */
     private int calculateAllowedInstances() 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException {
-	    
-    	if(cloudStackVersion >= CLOUD_STACK_VERSION_2_1){
-	    	NodeList match      = null;
-		    Node     item       = null;
-		    int      maxAllowed = -1;
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
+    {    
+    	if ( cloudStackVersion >= CLOUD_STACK_VERSION_2_1 )
+    	{
+	    	 NodeList match      = null;
+		     Node     item       = null;
+		     int      maxAllowed = -1;
 		
-	 		// -> get the user limits on instances
-	     	String   query     = new String( "command=listResourceLimits&resourceType=0" );
-	 		Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listResourceLimits", true );
+	 		 // -> get the user limits on instances
+	     	 String   query     = new String( "command=listResourceLimits&resourceType=0" );
+	 		 Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listResourceLimits", true );
 	 		    
-	  		match = cloudResp.getElementsByTagName( "max" ); 
-		    if ( 0 < match.getLength()) {
-		    	 item = match.item(0);
-	    	     maxAllowed = Integer.parseInt( item.getFirstChild().getNodeValue());
-	    	     if (-1 == maxAllowed) return -1;   // no limit
+	  		 match = cloudResp.getElementsByTagName( "max" ); 
+		     if ( 0 < match.getLength()) 
+		     {
+		    	  item = match.item(0);
+	    	      maxAllowed = Integer.parseInt( item.getFirstChild().getNodeValue());
+	    	      if (-1 == maxAllowed) return -1;   // no limit
 		        
-		         // -> how many instances has the user already created?
-	    	     EC2DescribeInstancesResponse existingVMS = listVirtualMachines( null );
-	    	     EC2Instance[] vmsList = existingVMS.getInstanceSet();
-	    	     return (maxAllowed - vmsList.length);
-		    }
-		    else return 0;    	
+		          // -> how many instances has the user already created?
+	    	      EC2DescribeInstancesResponse existingVMS = listVirtualMachines( null );
+	    	      EC2Instance[] vmsList = existingVMS.getInstanceSet();
+	    	      return (maxAllowed - vmsList.length);
+		     }
+		     else return 0;    	
     	}
-    	else{
-    		return -1;
-    	}
+    	else return -1;
  	}
    
     /**
@@ -1227,13 +1259,15 @@ public class EC2Engine {
      * @param jobId - parameter returned from the createTemplate request
      */
     private EC2CreateImageResponse waitForTemplate( String jobId ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, SignatureException {
+        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, SignatureException 
+    {
     	EC2CreateImageResponse image = new EC2CreateImageResponse();
     	NodeList  match  = null;
 	    Node      item   = null;
 	    int       status = 0;
 	    
-        while( true ) {
+        while( true ) 
+        {
 	      String query = "command=queryAsyncJobResult&jobId=" + jobId;
 	      Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "queryAsyncJobResult", true );
 	      
@@ -1284,14 +1318,17 @@ public class EC2Engine {
      * @return the same array given as 'vms' parameter but with modified vm state
      */
     private EC2Instance[] waitForDeploy( EC2Instance[] vms, String[] jobIds, int waitCount ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException {
+        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
+    {
    	    NodeList match  = null;
    	    Node     item   = null;
    	    int      status = 0;
    	    int      j      = 0;
   	    
-	    while( waitCount > 0 ) {
- 	      if (null != jobIds[j]) {
+	    while( waitCount > 0 ) 
+	    {
+ 	      if (null != jobIds[j]) 
+ 	      {
  		      String query = "command=queryAsyncJobResult&jobId=" + jobIds[j];
  		      Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "queryAsyncJobResult", true );
 
@@ -1381,13 +1418,15 @@ public class EC2Engine {
      * @param jobId 
      */
     private EC2Volume waitForVolume( String jobId ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException {
+        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
+    {
 	    EC2Volume vol    = new EC2Volume();
     	NodeList  match  = null;
 	    Node      item   = null;
 	    int       status = 0;
 	    
-        while( true ) {
+        while( true ) 
+        {
 		  String query = "command=queryAsyncJobResult&jobId=" + jobId;
  		  Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "queryAsyncJobResult", true );
 
@@ -1442,13 +1481,15 @@ public class EC2Engine {
     }
 
     private EC2Snapshot waitForSnapshot( String jobId ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException {
+        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
+    {
         EC2Snapshot shot   = new EC2Snapshot();
 	    NodeList    match  = null;
         Node        item   = null;
         int         status = 0;
     
-        while( true ) {
+        while( true ) 
+        {
   		   String query = "command=queryAsyncJobResult&jobId=" + jobId;
  		   Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "queryAsyncJobResult", true );
 
@@ -1512,9 +1553,10 @@ public class EC2Engine {
      * @param jobId
      * @return true - the requested action was successful, false - it failed
      */
-    private boolean waitForAsynch( String jobId ) throws SignatureException {
-   	    
-	    while( true ) {
+    private boolean waitForAsynch( String jobId ) throws SignatureException 
+    {    
+	    while( true ) 
+	    {
 		  String result = checkAsyncResult( jobId );
 		  //System.out.println( "waitForAsynch: " + result );
 		  
@@ -1541,21 +1583,24 @@ public class EC2Engine {
      * 
      * @return the same array given as 'vms' parameter but with modified vm state
      */
-    private EC2Instance[] waitForStartStop( EC2Instance[] vms, String[] jobIds, int waitCount, String newState ) 
-        throws SignatureException {
+    private EC2Instance[] waitForStartStop( EC2Instance[] vms, String[] jobIds, int waitCount, String newState ) throws SignatureException 
+    {
    	    int j=0;
    	    
-	    while( waitCount > 0 ) {
- 	      if (null != jobIds[j]) {
- 	    	  
+	    while( waitCount > 0 ) 
+	    {
+ 	      if (null != jobIds[j]) 
+ 	      {  
 		      String result = checkAsyncResult( jobIds[j] );
-		      if ( -1 != result.indexOf( "s:1" )) {
+		      if ( -1 != result.indexOf( "s:1" )) 
+		      {
 		           // -> requested action has finished
 			       vms[j].setState( newState );
 			       waitCount--;
 			       jobIds[j] = null;
 		      }
-		      else if (-1 != result.indexOf( "s:2" )) {
+		      else if (-1 != result.indexOf( "s:2" )) 
+		      {
 		           // -> state of the vm has not changed
 			       vms[j].setState( vms[j].getPreviousState());
 			       waitCount--;
@@ -1578,7 +1623,8 @@ public class EC2Engine {
      * @param virtualMachineIds - an array of instances we are interested in getting information on
      */
     private EC2DescribeInstancesResponse listVirtualMachines( String[] virtualMachineIds ) 
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException {
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+    {
 	    EC2DescribeInstancesResponse instances = new EC2DescribeInstancesResponse();
  	 
         if (null == virtualMachineIds || 0 == virtualMachineIds.length) {
@@ -1598,9 +1644,9 @@ public class EC2Engine {
      * @param instanceId - if interested in volumes for a specific instance, null if instance is not important
      */
     private EC2DescribeVolumesResponse listVolumes( String volumeId, String instanceId, EC2DescribeVolumesResponse volumes ) 
-        throws IOException, SAXException, ParserConfigurationException, EC2ServiceException, SignatureException, ParseException {    
-       	Node parent = null;
-       	
+        throws IOException, SAXException, ParserConfigurationException, EC2ServiceException, SignatureException, ParseException 
+    {    
+       	Node parent = null;    	
 	    StringBuffer params = new StringBuffer();
    	    params.append( "command=listVolumes" );
    	    if (null != volumeId  ) params.append( "&id=" + volumeId );
@@ -1611,19 +1657,21 @@ public class EC2Engine {
 		NodeList match     = cloudResp.getElementsByTagName( "volume" ); 
 		int length = match.getLength();
 		    
-	    for( int i=0; i < length; i++ ) {
-	   
-	    	if (null != (parent = match.item(i))) { 
-
+	    for( int i=0; i < length; i++ ) 
+	    {
+	    	if (null != (parent = match.item(i))) 
+	    	{ 
 	    		NodeList children = parent.getChildNodes();
 	    		int      numChild = children.getLength();
     			EC2Volume vol = new EC2Volume();
 	    		
-	    		for( int j=0; j < numChild; j++ ) {
+	    		for( int j=0; j < numChild; j++ ) 
+	    		{
 	    			Node   child = children.item(j);
 	    			String name  = child.getNodeName();
 	    			
-	    			if (null != child.getFirstChild()) {
+	    			if (null != child.getFirstChild()) 
+	    			{
 	    			    String value = child.getFirstChild().getNodeValue();
 	    			
 		                     if (name.equalsIgnoreCase( "id"              )) vol.setId( value );
@@ -1652,7 +1700,8 @@ public class EC2Engine {
      * @return the zoneId that matches the given zone name
      */
  	private String toZoneId( String zoneName ) 
- 	    throws EC2ServiceException, SignatureException, IOException, SAXException, ParserConfigurationException {
+ 	    throws EC2ServiceException, SignatureException, IOException, SAXException, ParserConfigurationException 
+ 	{
  		EC2DescribeAvailabilityZonesResponse zones = null;
  		String[] interestedZones = null;
  		
@@ -1674,7 +1723,8 @@ public class EC2Engine {
  	 * 
  	 * @return an OfferingBundle
  	 */
- 	private OfferingBundle instanceTypeToOfferBundle( String instanceType ) {
+ 	private OfferingBundle instanceTypeToOfferBundle( String instanceType ) 
+ 	{
  	    OfferingBundle found = null;
         
  	         if (null == instanceType)                          found = M1Small;
@@ -1701,18 +1751,18 @@ public class EC2Engine {
  	 * @param serviceOfferingId
  	 * @return A valid value for the Amazon defined instanceType
  	 */
- 	private String serviceOfferingIdToInstanceType( String serviceOfferingId ) {
- 		
+ 	private String serviceOfferingIdToInstanceType( String serviceOfferingId ) 
+ 	{	
  		serviceOfferingId = serviceOfferingId.trim();
  		
- 		     if (M1Small.getServiceOfferingId().equals( serviceOfferingId ))   return "m1.small";
- 		else if (M1Large.getServiceOfferingId().equals( serviceOfferingId ))   return "m1.large";
- 		else if (M1Xlarge.getServiceOfferingId().equals( serviceOfferingId ))  return "m1.xlarge";
- 		else if (C1Medium.getServiceOfferingId().equals( serviceOfferingId ))  return "c1.medium";
- 		else if (C1Xlarge.getServiceOfferingId().equals( serviceOfferingId ))  return "c1.xlarge";
- 		else if (M2Xlarge.getServiceOfferingId().equals( serviceOfferingId ))  return "m2.xlarge";
- 		else if (M22Xlarge.getServiceOfferingId().equals( serviceOfferingId )) return "m2.2xlarge";
- 		else if (M24Xlarge.getServiceOfferingId().equals( serviceOfferingId )) return "m2.4xlarge";
+ 		     if (M1Small.getServiceOfferingId().equals( serviceOfferingId    )) return "m1.small";
+ 		else if (M1Large.getServiceOfferingId().equals( serviceOfferingId    )) return "m1.large";
+ 		else if (M1Xlarge.getServiceOfferingId().equals( serviceOfferingId   )) return "m1.xlarge";
+ 		else if (C1Medium.getServiceOfferingId().equals( serviceOfferingId   )) return "c1.medium";
+ 		else if (C1Xlarge.getServiceOfferingId().equals( serviceOfferingId   )) return "c1.xlarge";
+ 		else if (M2Xlarge.getServiceOfferingId().equals( serviceOfferingId   )) return "m2.xlarge";
+ 		else if (M22Xlarge.getServiceOfferingId().equals( serviceOfferingId  )) return "m2.2xlarge";
+ 		else if (M24Xlarge.getServiceOfferingId().equals( serviceOfferingId  )) return "m2.4xlarge";
  		else if (CC14xlarge.getServiceOfferingId().equals( serviceOfferingId )) return "cc1.4xlarge";
  		else {
  			 logger.warn( "No instanceType match for serverOfferingId: [" + serviceOfferingId + "]" );
@@ -1728,7 +1778,8 @@ public class EC2Engine {
  	 * @return the Cloud.com API osTypeId 
  	 */
     private String toOSTypeId( String osTypeName ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException {
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException 
+    {
    	    Node   parent = null;
    	    String id     = null;
    	
@@ -1736,21 +1787,23 @@ public class EC2Engine {
 	    NodeList match     = cloudResp.getElementsByTagName( "ostype" ); 
 	    
 	    int length = match.getLength();
-        for( int i=0; i < length; i++ ) {
-   
-    	    if (null != (parent = match.item(i))) { 
-
+        for( int i=0; i < length; i++ ) 
+        {
+    	    if (null != (parent = match.item(i))) 
+    	    { 
     		    NodeList children = parent.getChildNodes();
     		    int      numChild = children.getLength();
     		
-    		    for( int j=0; j < numChild; j++ ) {
+    		    for( int j=0; j < numChild; j++ ) 
+    		    {
     			    Node   child    = children.item(j);
     			    String nodeName = child.getNodeName();
     			
 			        if (nodeName.equalsIgnoreCase( "id" )) 
 			        	id = child.getFirstChild().getNodeValue();
 			        
-			        if (nodeName.equalsIgnoreCase( "description" )) {
+			        if (nodeName.equalsIgnoreCase( "description" )) 
+			        {
 			        	String description = child.getFirstChild().getNodeValue();
 			        	if (-1 != description.indexOf( osTypeName )) return id;
 			        }
@@ -1769,7 +1822,8 @@ public class EC2Engine {
      * @return EC2DescribeAvailabilityZonesResponse
      */
     private EC2DescribeAvailabilityZonesResponse listZones( String[] interestedZones ) 
-        throws IOException, SAXException, ParserConfigurationException, EC2ServiceException, SignatureException {    
+        throws IOException, SAXException, ParserConfigurationException, EC2ServiceException, SignatureException 
+    {    
     	EC2DescribeAvailabilityZonesResponse zones = new EC2DescribeAvailabilityZonesResponse();
        	Node   parent = null;
        	String id     = null;
@@ -1780,14 +1834,15 @@ public class EC2Engine {
 		NodeList match       = cloudResp.getElementsByTagName( "zone" ); 
 		int length = match.getLength();
 		    
-	    for( int i=0; i < length; i++ ) {
-	   
-	    	if (null != (parent = match.item(i))) { 
-
+	    for( int i=0; i < length; i++ ) 
+	    {
+	    	if (null != (parent = match.item(i))) 
+	    	{ 
 	    		NodeList children = parent.getChildNodes();
 	    		int      numChild = children.getLength();
 	    		
-	    		for( int j=0; j < numChild; j++ ) {
+	    		for( int j=0; j < numChild; j++ ) 
+	    		{
 	    			Node   child    = children.item(j);
 	    			String nodeName = child.getNodeName();
 	    			
@@ -1796,8 +1851,10 @@ public class EC2Engine {
 	    	    }
 	    		
 	 		    // -> are we asking about specific zones?
-	 		    if ( null != interestedZones && 0 < interestedZones.length ) {
-	 		     	 for( int j=0; j < interestedZones.length; j++ ) {
+	 		    if ( null != interestedZones && 0 < interestedZones.length ) 
+	 		    {
+	 		     	 for( int j=0; j < interestedZones.length; j++ ) 
+	 		     	 {
 	 		    	     if (interestedZones[j].equalsIgnoreCase( name )) {
 	 		    			 zones.addZone( id, name );
 	 		    			 break;
@@ -1821,9 +1878,9 @@ public class EC2Engine {
      *         EC2Instance objects loaded.
      */
     private EC2DescribeInstancesResponse lookupInstances( String instanceId, EC2DescribeInstancesResponse instances ) 
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException {
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+    {
        	Node parent = null;
-
 	    StringBuffer params = new StringBuffer();
    	    params.append( "command=listVirtualMachines" );
    	    if (null != instanceId) params.append( "&id=" + instanceId );
@@ -1833,20 +1890,22 @@ public class EC2Engine {
 	    NodeList match     = cloudResp.getElementsByTagName( "virtualmachine" ); 
 	    int      length    = match.getLength();
 
-	    for( int i=0; i < length; i++ ) {
-	   
-	    	if (null != (parent = match.item(i))) { 
-	    
+	    for( int i=0; i < length; i++ ) 
+	    {
+	    	if (null != (parent = match.item(i))) 
+	    	{ 
 	    		NodeList children = parent.getChildNodes();
 	    		int      numChild = children.getLength();
     			EC2Instance vm = new EC2Instance();
 	    		
-	    		for( int j=0; j < numChild; j++ ) {
+	    		for( int j=0; j < numChild; j++ ) 
+	    		{
 	    		    // -> each template has many child tags
 	    			Node   child = children.item(j);
 	    			String name  = child.getNodeName();
     			
-	    			if (null != child.getFirstChild()) {
+	    			if (null != child.getFirstChild()) 
+	    			{
 	    			    String value = child.getFirstChild().getNodeValue();
 	    			    //System.out.println( "vm: " + name + " = " + value );
 	    			
@@ -1878,34 +1937,35 @@ public class EC2Engine {
      *         EC2Image objects loaded.
      */
     private EC2DescribeImagesResponse listTemplates( String templateId, EC2DescribeImagesResponse images ) 
-        throws IOException, ParserConfigurationException, SAXException, EC2ServiceException, SignatureException {
+        throws IOException, ParserConfigurationException, SAXException, EC2ServiceException, SignatureException 
+    {
     	Node parent = null;
-
 	    StringBuffer params = new StringBuffer();
    	    params.append( "command=listTemplates" );
-   	    if ( null == templateId) 
-   	    	 params.append( "&templateFilter=executable" );
-   	    else params.append( "&id=" + templateId );
+   	    if (null != templateId) params.append( "&id=" + templateId );
+   	    params.append( "&templateFilter=executable" );   // -> a required parameter
    	    String query = params.toString();
 
        	Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listTemplates", true );
 	    NodeList match     = cloudResp.getElementsByTagName( "template" ); 
 	    int      length    = match.getLength();
 
-	    for( int i=0; i < length; i++ ) {
-	   
-	    	if (null != (parent = match.item(i))) { 
-	    
+	    for( int i=0; i < length; i++ ) 
+	    {	   
+	    	if (null != (parent = match.item(i))) 
+	    	{ 
 	    		NodeList children = parent.getChildNodes();
 	    		int      numChild = children.getLength();
     			EC2Image template = new EC2Image();
 	    		
-	    		for( int j=0; j < numChild; j++ ) {
+	    		for( int j=0; j < numChild; j++ ) 
+	    		{
 	    		    // -> each template has many child tags
 	    			Node   child = children.item(j);
 	    			String name  =  child.getNodeName();
 	    			
-	    			if (null != child.getFirstChild()) {
+	    			if (null != child.getFirstChild()) 
+	    			{
 	    			    String value = child.getFirstChild().getNodeValue();
 	    			    
 	    			         if (name.equalsIgnoreCase( "id"         )) template.setId( value );
@@ -1926,28 +1986,30 @@ public class EC2Engine {
      * Return information on all defined disk offerings.
      */
     private DiskOfferings listDiskOfferings() 
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException {
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+   {
    	    DiskOfferings offerings = new DiskOfferings();
-    	Node parent = null;
-
+    	Node parent  = null;
 	    String query = new String( "command=listDiskOfferings" );
    	    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listDiskOfferings", true );
         NodeList match     = cloudResp.getElementsByTagName( "diskoffering" ); 
         int      length    = match.getLength();
 
-        for( int i=0; i < length; i++ ) {
-   
-    	    if (null != (parent = match.item(i))) { 
-    
+        for( int i=0; i < length; i++ ) 
+        {
+    	    if (null != (parent = match.item(i))) 
+    	    { 
     		    NodeList children = parent.getChildNodes();
     		    int      numChild = children.getLength();
 			    DiskOffer df = new DiskOffer();
     		
-    		    for( int j=0; j < numChild; j++ ) {
+    		    for( int j=0; j < numChild; j++ ) 
+    		    {
     			    Node   child = children.item(j);
     			    String name  = child.getNodeName();
 			
-    			    if (null != child.getFirstChild()) {
+    			    if (null != child.getFirstChild()) 
+    			    {
     			        String value = child.getFirstChild().getNodeValue();
       			
 			                 if (name.equalsIgnoreCase( "id"       )) df.setId( value );
@@ -1966,28 +2028,30 @@ public class EC2Engine {
      * Return information on all defined service offerings.
      */
     private ServiceOfferings listServiceOfferings() 
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException {
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+    {
 	    ServiceOfferings offerings = new ServiceOfferings();
 	    Node parent = null;
-
         String query = new String( "command=listServiceOfferings" );
 	    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listServiceOfferings", true );
         NodeList match     = cloudResp.getElementsByTagName( "serviceoffering" ); 
         int      length    = match.getLength();
 
-        for( int i=0; i < length; i++ ) {
-
-	        if (null != (parent = match.item(i))) { 
-
+        for( int i=0; i < length; i++ ) 
+        {
+	        if (null != (parent = match.item(i))) 
+	        { 
 		        NodeList children = parent.getChildNodes();
 		        int      numChild = children.getLength();
 		        ServiceOffer sf = new ServiceOffer();
 		
-		        for( int j=0; j < numChild; j++ ) {
+		        for( int j=0; j < numChild; j++ ) 
+		        {
 			         Node   child = children.item(j);
 	 		         String name  = child.getNodeName();
 		
-			         if (null != child.getFirstChild()) {
+			         if (null != child.getFirstChild()) 
+			         {
 			             String value = child.getFirstChild().getNodeValue();
 		
 		                      if (name.equalsIgnoreCase( "id"        )) sf.setId( value );
@@ -2005,27 +2069,29 @@ public class EC2Engine {
     }
 
     public EC2DescribeSecurityGroupsResponse listSecurityGroups( String[] interestedGroups ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException {
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
+    {
     	EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
-    	Node parent = null;
-    	
+    	Node parent = null; 	
 	    Document cloudResp = resolveURL( genAPIURL( "command=listNetworkGroups", genQuerySignature( "command=listNetworkGroups" )), "listNetworkGroups", true );
         NodeList match = cloudResp.getElementsByTagName( "networkgroup" ); 
 	    int     length = match.getLength();
 	       
-	    for( int i=0; i < length; i++ ) {
-	   
-	   	    if (null != (parent = match.item(i))) { 
-	    
+	    for( int i=0; i < length; i++ ) 
+	    {	   
+	   	    if (null != (parent = match.item(i))) 
+	   	    { 
 	    		NodeList children = parent.getChildNodes();
 	    		int      numChild = children.getLength();
     			EC2SecurityGroup group  = new EC2SecurityGroup();
 	    		
-	    		for( int j=0; j < numChild; j++ ) {
+	    		for( int j=0; j < numChild; j++ ) 
+	    		{
 	    		     Node   child = children.item(j);
 	    			 String name  =  child.getNodeName();
 	    			
-	    			 if (null != child.getFirstChild()) {
+	    			 if (null != child.getFirstChild()) 
+	    			 {
 	    			     String value = child.getFirstChild().getNodeValue();
 	    			     //System.out.println( "listNetworkGroups " + name + "=" + value );
 	    			     
@@ -2036,8 +2102,10 @@ public class EC2Engine {
 	    			 } 
 	    	    }
 	 		    // -> are we asking about specific security groups?
-	 		    if ( null != interestedGroups && 0 < interestedGroups.length ) {
-	 		     	 for( int j=0; j < interestedGroups.length; j++ ) {
+	 		    if ( null != interestedGroups && 0 < interestedGroups.length ) 
+	 		    {
+	 		     	 for( int j=0; j < interestedGroups.length; j++ ) 
+	 		     	 {
 	 		    	     if (interestedGroups[j].equalsIgnoreCase( group.getName())) {
 	 		    	    	 groupSet.addGroup( group );
 	 		    			 break;
@@ -2053,17 +2121,20 @@ public class EC2Engine {
     /**
      * Ingress Rules are one more level down the XML tree.
      */
-    private EC2IpPermission toPermission( NodeList rule ) {
+    private EC2IpPermission toPermission( NodeList rule ) 
+    {
     	int numChild = rule.getLength();
     	EC2IpPermission perm = new EC2IpPermission();
     	String account   = null;
     	String groupName = null;
 
-    	for( int i=0; i < numChild; i++ ) {
+    	for( int i=0; i < numChild; i++ ) 
+    	{
     		 Node   child = rule.item(i);
     		 String name  = child.getNodeName();
     			
-    		 if (null != child.getFirstChild()) {
+    		 if (null != child.getFirstChild()) 
+    		 {
     		     String value = child.getFirstChild().getNodeValue();
     		     //System.out.println( "ingress rule: " + name + "=" + value );
     		     
@@ -2074,7 +2145,8 @@ public class EC2Engine {
 		         else if (name.equalsIgnoreCase( "account"          )) account = value;
 		         else if (name.equalsIgnoreCase( "networkgroupname" )) groupName = value ;
 		              
-		         if (null != account && null != groupName) {
+		         if (null != account && null != groupName) 
+		         {
 		        	 EC2SecurityGroup group = new EC2SecurityGroup();
 		        	 group.setAccount( account );
 		        	 group.setName( groupName );
@@ -2093,27 +2165,29 @@ public class EC2Engine {
      * @param interestedShots - can be null, should be a subset of all snapshots
      */
     private EC2DescribeSnapshotsResponse listSnapshots( String[] interestedShots ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException {
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
+    {
     	EC2DescribeSnapshotsResponse snapshots = new EC2DescribeSnapshotsResponse();
-    	Node parent = null;
-    	
+    	Node parent = null; 	
 	    Document cloudResp = resolveURL( genAPIURL( "command=listSnapshots", genQuerySignature( "command=listSnapshots" )), "listSnapshots", true );
         NodeList match = cloudResp.getElementsByTagName( "snapshot" ); 
 	    int     length = match.getLength();
 	       
-	    for( int i=0; i < length; i++ ) {
-	   
-	   	    if (null != (parent = match.item(i))) { 
-	    
+	    for( int i=0; i < length; i++ ) 
+	    {
+	   	    if (null != (parent = match.item(i))) 
+	   	    { 
 	    		NodeList children = parent.getChildNodes();
 	    		int      numChild = children.getLength();
     			EC2Snapshot shot  = new EC2Snapshot();
 	    		
-	    		for( int j=0; j < numChild; j++ ) {
+	    		for( int j=0; j < numChild; j++ ) 
+	    		{
 	    		     Node   child = children.item(j);
 	    			 String name  =  child.getNodeName();
 	    			
-	    			 if (null != child.getFirstChild()) {
+	    			 if (null != child.getFirstChild()) 
+	    			 {
 	    			     String value = child.getFirstChild().getNodeValue();
 	    			
 	    			          if (name.equalsIgnoreCase( "id"           )) shot.setId( value );
@@ -2124,8 +2198,10 @@ public class EC2Engine {
 	    			 } 
 	    	    }
 	 		    // -> are we asking about specific snapshots?
-	 		    if ( null != interestedShots && 0 < interestedShots.length ) {
-	 		     	 for( int j=0; j < interestedShots.length; j++ ) {
+	 		    if ( null != interestedShots && 0 < interestedShots.length ) 
+	 		    {
+	 		     	 for( int j=0; j < interestedShots.length; j++ ) 
+	 		     	 {
 	 		    	     if (interestedShots[j].equalsIgnoreCase( shot.getId())) {
 	 		    	    	 snapshots.addSnapshot( shot );
 	 		    			 break;
@@ -2144,8 +2220,8 @@ public class EC2Engine {
      * @param jobId
      * @return A string with one or two values, "s:status r:result" if both present.
      */
-    private String checkAsyncResult( String jobId )
-        throws EC2ServiceException, InternalErrorException, SignatureException {
+    private String checkAsyncResult( String jobId ) throws EC2ServiceException, InternalErrorException, SignatureException 
+    {
     	StringBuffer checkResult = new StringBuffer();
     	NodeList match  = null;
     	Node     item   = null;
@@ -2189,9 +2265,10 @@ public class EC2Engine {
      * @param request
      * @return a modified EC2Volume object
      */
-    private EC2Volume mapDeviceToCloudDeviceId( EC2Volume request ) {
-    	
+    private EC2Volume mapDeviceToCloudDeviceId( EC2Volume request ) 
+    {	
     	String device = request.getDevice();
+    	
 	         if (device.equalsIgnoreCase( "/dev/sdb"  )) request.setDeviceId( 1 );
     	else if (device.equalsIgnoreCase( "/dev/sdc"  )) request.setDeviceId( 2 ); 
     	else if (device.equalsIgnoreCase( "/dev/sde"  )) request.setDeviceId( 4 ); 
@@ -2213,7 +2290,8 @@ public class EC2Engine {
     	return request;
     }
     
-    private String genAPIURL( String query, String signature ) throws UnsupportedEncodingException {
+    private String genAPIURL( String query, String signature ) throws UnsupportedEncodingException 
+    {
 		UserContext ctx = UserContext.current();
 		if ( null != ctx ) {
        	     StringBuffer apiCommand = new StringBuffer();
@@ -2233,9 +2311,8 @@ public class EC2Engine {
      * 
      * @return a hash of the lower-cased query string using the HMAC SHA-1 algorithm with the secret key
      */
-    private String genQuerySignature( String sortedCommand ) 
-        throws UnsupportedEncodingException, SignatureException {
-    
+    private String genQuerySignature( String sortedCommand ) throws UnsupportedEncodingException, SignatureException 
+    {
 		UserContext ctx = UserContext.current();
 		if ( null != ctx ) {
     	     StringBuffer sigOver = new StringBuffer();
@@ -2255,8 +2332,8 @@ public class EC2Engine {
      * 
      * @return String   - the recalculated string
      */
-    private String calculateRFC2104HMAC( String signIt, String secretKey )
-        throws SignatureException {
+    private String calculateRFC2104HMAC( String signIt, String secretKey ) throws SignatureException 
+    {
    	    String result = null;
    	    
    	    try { 	 
@@ -2279,14 +2356,15 @@ public class EC2Engine {
      * @returns a parsed XML document from the cloud API server. 
      */
 	private Document resolveURL( String uri, String command, boolean logRequest ) 
-	    throws IOException, SAXException, ParserConfigurationException, EC2ServiceException  {
-		
+	    throws IOException, SAXException, ParserConfigurationException, EC2ServiceException  
+	{	
 		if (logRequest) logger.debug( "Cloud API call + [" + uri + "]" );
 		String errorMsg = null;
         URL cloudapi = new URL( uri );
         HttpURLConnection connect = (HttpURLConnection) cloudapi.openConnection();
         Integer code = new Integer( connect.getResponseCode());
-        if (400 <= code.intValue()) {
+        if (400 <= code.intValue()) 
+        {
         	if ( null != (errorMsg = connect.getResponseMessage()))
         		 throw new EC2ServiceException( code.toString() + " " + errorMsg, code );
         	else throw new EC2ServiceException( command + " cloud API HTTP Error: " + code.toString(), code );
@@ -2298,13 +2376,15 @@ public class EC2Engine {
 	/**
 	 * Normalized URL encoding uses "%20" for spaces instead of "+" signs.
 	 */
-	private String safeURLencode( String param ) throws UnsupportedEncodingException {
+	private String safeURLencode( String param ) throws UnsupportedEncodingException 
+	{
 	    return URLEncoder.encode( param, "UTF-8" ).replaceAll( "\\+", "%20" );
 	}
 	
-	private String getServerURL() {
+	private String getServerURL() 
+	{
 		if ( null == cloudAPIPort ) 
-			return new String( "http://" + managementServer + "/client/api?" );
+			 return new String( "http://" + managementServer + "/client/api?" );
 		else return new String( "http://" + managementServer + ":" + cloudAPIPort + "/client/api?" );
 	}
 }
