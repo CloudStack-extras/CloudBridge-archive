@@ -304,9 +304,9 @@ public class S3BucketAction implements ServletAction {
 			} catch (IOException e) {
 				logger.error("Unable to read request data due to " + e.getMessage(), e);
 				throw new NetworkIOException(e);
+				
 			} finally {
-				if(is != null) 
-					is.close();
+				if(is != null) is.close();
 			}
 		}
 		
@@ -374,9 +374,9 @@ public class S3BucketAction implements ServletAction {
 			SBucketDao bucketDao = new SBucketDao();
 			SBucket sbucket = bucketDao.getByName( bucketName );
 		
-			 String client = UserContext.current().getCanonicalUserId();
-			 if (!client.equals( sbucket.getOwnerCanonicalId()))
-			     throw new PermissionDeniedException( "Access Denied - only the owner can turn on versioing on a bucket" );
+			String client = UserContext.current().getCanonicalUserId();
+			if (!client.equals( sbucket.getOwnerCanonicalId()))
+			    throw new PermissionDeniedException( "Access Denied - only the owner can turn on versioing on a bucket" );
 		
 			     if (versioningStatus.equalsIgnoreCase( "Enabled"  )) sbucket.setVersioningStatus( 1 );
 			else if (versioningStatus.equalsIgnoreCase( "Suspended")) sbucket.setVersioningStatus( 2 );

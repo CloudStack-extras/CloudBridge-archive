@@ -21,6 +21,7 @@ package com.cloud.bridge.service.core.s3;
 public class S3CreateBucketRequest extends S3Request {
 	protected String bucketName;
 	protected S3CreateBucketConfiguration config;
+	protected String cannedAccessPolicy;    // -> REST only sets an acl with a simple keyword
 	
 	public S3CreateBucketRequest() {
 		super();
@@ -40,5 +41,13 @@ public class S3CreateBucketRequest extends S3Request {
 
 	public void setConfig(S3CreateBucketConfiguration config) {
 		this.config = config;
+	}
+	
+	public String getCannedAccess() {
+		return cannedAccessPolicy;
+	}
+
+	public void setCannedAccess(String cannedAccessPolicy) {
+		this.cannedAccessPolicy = cannedAccessPolicy;
 	}
 }
