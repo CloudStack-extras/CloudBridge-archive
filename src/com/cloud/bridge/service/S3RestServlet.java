@@ -546,8 +546,12 @@ public class S3RestServlet extends HttpServlet {
 				{
 				    // -> name may have a namespace on it
 					String name = element.getNodeName().trim();
-					if ( name.endsWith( childName ))
-						return element.getFirstChild().getNodeValue().trim();
+					if ( name.endsWith( childName )) 
+					{
+						 String value = element.getFirstChild().getNodeValue();
+						 if (null != value) value = value.trim();
+						 return value;
+					}
 				}
 			 }
 		}

@@ -26,6 +26,7 @@ public class S3PutObjectInlineRequest extends S3Request {
 	protected long contentLength;
 	protected S3MetaDataEntry[] metaEntries;
 	protected S3AccessControlList acl;
+	protected String cannedAccessPolicy;    // -> REST only sets an acl with a simple keyword
 	protected DataHandler data;
 	
 	public S3PutObjectInlineRequest() {
@@ -70,6 +71,14 @@ public class S3PutObjectInlineRequest extends S3Request {
 	
 	public void setAcl(S3AccessControlList acl) {
 		this.acl = acl;
+	}
+	
+	public String getCannedAccess() {
+		return cannedAccessPolicy;
+	}
+
+	public void setCannedAccess(String cannedAccessPolicy) {
+		this.cannedAccessPolicy = cannedAccessPolicy;
 	}
 	
 	public DataHandler getData() {

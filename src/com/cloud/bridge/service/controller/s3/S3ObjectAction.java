@@ -241,14 +241,14 @@ public class S3ObjectAction implements ServletAction {
 		}
 	}
 
-	private void executePutObject(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	private void executePutObject(HttpServletRequest request, HttpServletResponse response) throws IOException  
 	{
-		String continueHeader = request.getHeader("Expect");
+		String continueHeader = request.getHeader( "Expect" );
 		if (continueHeader != null && continueHeader.equalsIgnoreCase("100-continue")) {
 			S3RestServlet.writeResponse(response, "HTTP/1.1 100 Continue\r\n");
 		}
 
-		String contentType = request.getHeader("Content-Type");
+		String contentType = request.getHeader( "Content-Type" );
 		long contentLength = Converter.toLong(request.getHeader("Content-Length"), 0);
 
 		String bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
@@ -258,6 +258,7 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setKey(key);
 		engineRequest.setContentLength(contentLength);
 		engineRequest.setMetaEntries( extractMetaData( request ));
+		engineRequest.setCannedAccess( request.getHeader( "x-amz-acl" ));
 
 		DataHandler dataHandler = new DataHandler(new ServletRequestDataSource(request));
 		engineRequest.setData(dataHandler);

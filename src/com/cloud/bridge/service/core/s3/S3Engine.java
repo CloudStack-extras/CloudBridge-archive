@@ -105,15 +105,7 @@ public class S3Engine {
 				shostTuple.getFirst().getBuckets().add(sbucket);
 				bucketDao.save(sbucket);
 
-				// -> if no ACL given on creation then we default one to the owner - FULL_CONTROL
-		    	SAclDao aclDao = new SAclDao();
-				S3AccessControlList defaultAcl = new S3AccessControlList();
- 			    S3Grant defaultGrant = new S3Grant();
-		        defaultGrant.setGrantee(SAcl.GRANTEE_USER);
-			    defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
-			    defaultGrant.setPermission( SAcl.PERMISSION_FULL );
-			    defaultAcl.addGrant( defaultGrant );
-		    	aclDao.save("SBucket", sbucket.getId(), defaultAcl);
+				setObjectAcl( "SBucket", sbucket.getId(), SAcl.PERMISSION_FULL, UserContext.current().getCanonicalUserId()); 
 			
 				// explicitly commit the transaction
 				PersistContext.commitTransaction();
@@ -304,7 +296,7 @@ public class S3Engine {
     	accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE ); 
 
 
-		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl);
+		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl, request.getCannedAccess());
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
 		
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
@@ -344,7 +336,7 @@ public class S3Engine {
     	return response;
     }
 
-    public S3PutObjectResponse handleRequest(S3PutObjectRequest request) 
+    public S3PutObjectResponse handleRequest(S3PutObjectRequest request)  
     {
     	S3PutObjectResponse response = new S3PutObjectResponse();	
 		String bucketName = request.getBucketName();
@@ -360,7 +352,7 @@ public class S3Engine {
     	accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE ); 
 
 		
-		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl);
+		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl, null);
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
 		
 		S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(tupleBucketHost.getFirst());
@@ -685,6 +677,18 @@ public class S3Engine {
 		    }
 		}
 	}
+	
+	private void setObjectAcl( String target, long targetId, int permission, String canonicalUserId ) 
+	{	
+		SAclDao aclDao  = new SAclDao();
+        S3AccessControlList defaultAcl = new S3AccessControlList();
+        S3Grant defaultGrant = new S3Grant();
+        defaultGrant.setGrantee(SAcl.GRANTEE_USER);
+        defaultGrant.setCanonicalUserID( canonicalUserId );
+        defaultGrant.setPermission( permission );
+        defaultAcl.addGrant( defaultGrant );
+        aclDao.save( target, targetId, defaultAcl );
+	}
 
 	private S3ListBucketPrefixEntry[] composeListBucketPrefixEntries(List<SObject> l, String prefix, String delimiter, int maxKeys) 
 	{
@@ -836,8 +840,16 @@ public class S3Engine {
 	}
 
 	
+	/**
+	 * If acl is set then the cannedAccessPolicy parameter should be null and is ignored.   
+	 * The cannedAccessPolicy parameter is for REST Put requests only where a simple set of ACLs can be
+	 * created with a single header value.  Note that we do not currently support "anonymous" un-authenticated 
+	 * access in our implementation.
+	 * 
+	 * @throws IOException 
+	 */
 	@SuppressWarnings("deprecation")
-	public Tuple<SObject, SObjectItem> allocObjectItem(SBucket bucket, String nameKey, S3MetaDataEntry[] meta, S3AccessControlList acl) 
+	public Tuple<SObject, SObjectItem> allocObjectItem(SBucket bucket, String nameKey, S3MetaDataEntry[] meta, S3AccessControlList acl, String cannedAccessPolicy) 
 	{
 		SObjectDao     objectDao     = new SObjectDao();
 		SObjectItemDao objectItemDao = new SObjectItemDao();
@@ -922,20 +934,41 @@ public class S3Engine {
 		metaDao.save("SObjectItem", item.getId(), meta);
 		
 		
-		// [C] If no ACL given on creation or on rewrite then we default one to the owner - FULL_CONTROL
-		//  -> creating a new version with an existing object does not force a default ACL
-		if ((null == acl || 0 == acl.size()) && !newVersion ) 
+		// [C] Are we setting an ACL along with the object
+		if ( null != cannedAccessPolicy )
 		{
-		     S3AccessControlList defaultAcl = new S3AccessControlList();
-		     S3Grant defaultGrant = new S3Grant();
-             defaultGrant.setGrantee(SAcl.GRANTEE_USER);
-	         defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
-	         defaultGrant.setPermission( SAcl.PERMISSION_FULL );
-	         defaultAcl.addGrant( defaultGrant );
-    	     aclDao.save("SObject", object.getId(), defaultAcl);
+			 // -> note that canned policies can be set when the object's contents are set
+			 if (cannedAccessPolicy.equalsIgnoreCase( "authenticated-read" )) {
+				 // -> "Owner gets FULL_CONTROL, and any principal authenticated as a registered S3 user (the "*" here) is granted READ access
+			     S3AccessControlList defaultAcl = new S3AccessControlList();
+			     
+			     S3Grant defaultGrant = new S3Grant();
+			     defaultGrant.setGrantee(SAcl.GRANTEE_USER);
+			     defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
+			     defaultGrant.setPermission( SAcl.PERMISSION_FULL );
+			     defaultAcl.addGrant( defaultGrant );
+			     
+			     defaultGrant = new S3Grant();
+			     defaultGrant.setGrantee(SAcl.GRANTEE_USER);
+			     defaultGrant.setCanonicalUserID( "*" );
+			     defaultGrant.setPermission( SAcl.PERMISSION_READ );
+			     defaultAcl.addGrant( defaultGrant );
+			     
+			     aclDao.save( "SObject", object.getId(), defaultAcl );
+			 }
+			 else if (cannedAccessPolicy.equalsIgnoreCase( "private" )) {
+				  // -> this is termed the "private" or default ACL, "Owner gets FULL_CONTROL"
+				  setObjectAcl( "SObject", object.getId(), SAcl.PERMISSION_FULL, UserContext.current().getCanonicalUserId()); 
+			 }
+			 else throw new NoSuchObjectException( "Requested Canned Access Policy is not supported" );
+		}
+		else if ((null == acl || 0 == acl.size()) && !newVersion ) 
+		{
+			 // -> this is termed the "private" or default ACL, "Owner gets FULL_CONTROL"
+			 setObjectAcl( "SObject", object.getId(), SAcl.PERMISSION_FULL, UserContext.current().getCanonicalUserId()); 
 		}
 		else if (null != acl) {
-			 aclDao.save("SObject", object.getId(), acl);
+			 aclDao.save( "SObject", object.getId(), acl );
 		}
 		
 		session.update(item);
@@ -946,6 +979,8 @@ public class S3Engine {
 	/**
 	 * This function verifies that the accessing client has the requested
 	 * premission on the object/bucket/Acl represented by the tuble: <target, targetId>
+	 * For cases where an ACL is meant for any authenticated user we place a "*" for the
+	 * Canonical User Id ("*" is not a legal Cloud Stack Access key).
 	 */
 	public void accessAllowed( String target, long targetId, int requestedPermission ) {
 		SAclDao aclDao = new SAclDao();
@@ -953,6 +988,17 @@ public class S3Engine {
         // -> no priviledges means no access allowed		
 		List<SAcl> priviledges = aclDao.listGrants( target, targetId, UserContext.current().getCanonicalUserId());
         ListIterator it = priviledges.listIterator();
+        while( it.hasNext()) 
+        {
+           // -> is the requested permission "contained" in one or the granted rights for this user
+           SAcl rights = (SAcl)it.next();
+           int permission = rights.getPermission();
+            if (requestedPermission == (permission & requestedPermission)) return;
+        }
+
+        // -> or maybe there is a public ACL set
+		priviledges = aclDao.listGrants( target, targetId, "*" );
+        it = priviledges.listIterator();
         while( it.hasNext()) 
         {
            // -> is the requested permission "contained" in one or the granted rights for this user
