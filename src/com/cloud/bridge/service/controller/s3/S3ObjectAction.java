@@ -130,8 +130,8 @@ public class S3ObjectAction implements ServletAction {
 		else throw new IllegalArgumentException( "Unsupported method in REST request");
 	}
 
-	private void executeGetObjectAcl(HttpServletRequest request, HttpServletResponse response) 
-	    throws IOException {
+	private void executeGetObjectAcl(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	{
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String key        = (String)request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 
@@ -296,7 +296,8 @@ public class S3ObjectAction implements ServletAction {
 		if (null != version) response.addHeader( "x-amz-version-id", version );		
 	}
 
-	private void executeHeadObject(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	private void executeHeadObject(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	{
 		String   bucket    = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String   key       = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 		String[] paramList = null;
@@ -357,12 +358,14 @@ public class S3ObjectAction implements ServletAction {
 	 * @param engineRequest
 	 * @return
 	 */
-	private S3GetObjectRequest setRequestByteRange(HttpServletRequest request, S3GetObjectRequest engineRequest ) {
+	private S3GetObjectRequest setRequestByteRange(HttpServletRequest request, S3GetObjectRequest engineRequest ) 
+	{
 		String temp = request.getHeader( "Range" );
 		if (null == temp) return engineRequest;
 		
 		int offset = temp.indexOf( "=" );
-		if (-1 != offset) {
+		if (-1 != offset) 
+		{
 			String range = temp.substring( offset+1 );
 		
 		    String[] parts = range.split( "-" );
@@ -375,7 +378,8 @@ public class S3ObjectAction implements ServletAction {
 		return engineRequest;
 	}
 	
-	private S3ConditionalHeaders conditionalRequest( HttpServletRequest request ) {
+	private S3ConditionalHeaders conditionalRequest( HttpServletRequest request ) 
+	{
 		S3ConditionalHeaders headers = new S3ConditionalHeaders();
 		
 		headers.setModifiedSince( request.getHeader( "If-Modified-Since" ));
@@ -385,7 +389,8 @@ public class S3ObjectAction implements ServletAction {
         return headers;
 	}
 	
-	private boolean conditionPassed( HttpServletRequest request, HttpServletResponse response, Date lastModified, String ETag ) {	
+	private boolean conditionPassed( HttpServletRequest request, HttpServletResponse response, Date lastModified, String ETag ) 
+	{	
 		S3ConditionalHeaders ifCond = conditionalRequest( request );
 		
 		if (0 > ifCond.ifModifiedSince( lastModified )) {
@@ -464,7 +469,8 @@ public class S3ObjectAction implements ServletAction {
 	 * @param request
 	 * @return
 	 */
-	private S3MetaDataEntry[] extractMetaData( HttpServletRequest request ) {
+	private S3MetaDataEntry[] extractMetaData( HttpServletRequest request ) 
+	{
 		List<S3MetaDataEntry> metaSet = new ArrayList<S3MetaDataEntry>();  
 		int count = 0;
 		
@@ -496,7 +502,8 @@ public class S3ObjectAction implements ServletAction {
 	 * @param find      - name string to return first found
 	 * @return the value matching the found name 
 	 */
-	private String returnParameter( String[] paramList, String find ) {
+	private String returnParameter( String[] paramList, String find ) 
+	{
 		int i=0;
 		
 		if (paramList == null) return null;

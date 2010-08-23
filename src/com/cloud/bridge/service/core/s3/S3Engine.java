@@ -61,6 +61,7 @@ import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.service.exception.ObjectAlreadyExistsException;
 import com.cloud.bridge.service.exception.OutOfServiceException;
 import com.cloud.bridge.service.exception.OutOfStorageException;
+import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.DateHelper;
 import com.cloud.bridge.util.StringHelper;
 import com.cloud.bridge.util.Tuple;
@@ -79,11 +80,13 @@ public class S3Engine {
     	bucketAdapters.put(SHost.STORAGE_HOST_TYPE_LOCAL, new S3FileSystemBucketAdapter());
     }
     
-    public S3CreateBucketResponse handleRequest(S3CreateBucketRequest request) {
+    public S3CreateBucketResponse handleRequest(S3CreateBucketRequest request) 
+    {
     	S3CreateBucketResponse response = new S3CreateBucketResponse();
     	response.setBucketName(request.getBucketName());
     	
-		if(PersistContext.acquireNamedLock("bucket.creation", LOCK_ACQUIRING_TIMEOUT_SECONDS)) {
+		if (PersistContext.acquireNamedLock("bucket.creation", LOCK_ACQUIRING_TIMEOUT_SECONDS)) 
+		{
 			Tuple<SHost, String> shostTuple = null;
 			boolean success = false;
 			try {
@@ -97,15 +100,27 @@ public class S3Engine {
 				SBucket sbucket = new SBucket();
 				sbucket.setName(request.getBucketName());
 				sbucket.setCreateTime(DateHelper.currentGMTTime());
-				sbucket.setOwnerCanonicalId(UserContext.current().getCanonicalUserId());
+				sbucket.setOwnerCanonicalId( UserContext.current().getCanonicalUserId());
 				sbucket.setShost(shostTuple.getFirst());
 				shostTuple.getFirst().getBuckets().add(sbucket);
 				bucketDao.save(sbucket);
-				
+
+				// -> if no ACL given on creation then we default one to the owner - FULL_CONTROL
+		    	SAclDao aclDao = new SAclDao();
+				S3AccessControlList defaultAcl = new S3AccessControlList();
+ 			    S3Grant defaultGrant = new S3Grant();
+		        defaultGrant.setGrantee(SAcl.GRANTEE_USER);
+			    defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
+			    defaultGrant.setPermission( SAcl.PERMISSION_FULL );
+			    defaultAcl.addGrant( defaultGrant );
+		    	aclDao.save("SBucket", sbucket.getId(), defaultAcl);
+			
 				// explicitly commit the transaction
 				PersistContext.commitTransaction();
 				success = true;
-			} finally {
+				
+			} 
+			finally {
 				if(!success && shostTuple != null) {
 					S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(shostTuple.getFirst());
 					bucketAdapter.deleteContainer(shostTuple.getSecond(), request.getBucketName());
@@ -123,18 +138,23 @@ public class S3Engine {
     {
     	S3Response response  = new S3Response();   	
 		SBucketDao bucketDao = new SBucketDao();
-		SBucket sbucket = bucketDao.getByName(request.getBucketName());
+		SBucket    sbucket   = bucketDao.getByName(request.getBucketName());
 		
 		if ( sbucket != null ) 
 		{
+			 // -> does not matter what the ACLs say only the owner can delete a bucket
+			 String client = UserContext.current().getCanonicalUserId();
+			 if (!client.equals( sbucket.getOwnerCanonicalId()))
+			     throw new PermissionDeniedException( "Access Denied - only the owner can delete a bucket" );
+			 
+			 // -> delete the file
 			 Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(sbucket);
 			 S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());			
 			 bucketAdapter.deleteContainer(tupleBucketHost.getSecond(), request.getBucketName());
 			
-			 // Cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
-			 // need to perform deletion of these objects related to bucket manually.
-			 //
-			 // Delete SMeta & SAcl objects: (1)Get all the objects in the bucket, (2)then all the items in each object, (3) then all meta & acl data for each item
+			 // -> cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
+			 //    need to perform deletion of these objects related to bucket manually.
+			 //    Delete SMeta & SAcl objects: (1)Get all the objects in the bucket, (2)then all the items in each object, (3) then all meta & acl data for each item
 			 Set<SObject> objectsInBucket = sbucket.getObjectsInBucket();
 			 Iterator it = objectsInBucket.iterator();
 			 while( it.hasNext()) 
@@ -161,29 +181,28 @@ public class S3Engine {
     	return response;
     }
     
-    public S3ListBucketResponse handleRequest(S3ListBucketRequest request) {
+    public S3ListBucketResponse handleRequest(S3ListBucketRequest request) 
+    {
     	S3ListBucketResponse response = new S3ListBucketResponse();
 		String bucketName = request.getBucketName();
 		String prefix = request.getPrefix();
-		if(prefix == null)
-			prefix = StringHelper.EMPTY_STRING;
+		if (prefix == null) prefix = StringHelper.EMPTY_STRING;
 		String marker = request.getMarker();
-		if(marker == null)
-			marker = StringHelper.EMPTY_STRING;
+		if (marker == null)	marker = StringHelper.EMPTY_STRING;
 			
 		String delimiter = request.getDelimiter();
 		int maxKeys = request.getMaxKeys();
-		if(maxKeys <= 0)
-			maxKeys = 1000;
+		if(maxKeys <= 0) maxKeys = 1000;
 		
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket sbucket = bucketDao.getByName(bucketName);
-		if(sbucket == null) 
-			throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
+		if (sbucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 		
-		SObjectDao sobjectDao = new SObjectDao();
+    	accessAllowed( "SBucket", sbucket.getId(), SAcl.PERMISSION_READ ); 
+
 		
 		// when we query, request one more item so that we know how to set isTruncated flag 
+		SObjectDao sobjectDao = new SObjectDao();
 		List<SObject> l = sobjectDao.listBucketObjects(sbucket, prefix, marker, maxKeys + 1);   
 		response.setBucketName(bucketName);
 		response.setMarker(marker);
@@ -201,9 +220,9 @@ public class S3Engine {
 		return response;
     }
     
-    public S3ListAllMyBucketsResponse handleRequest(S3ListAllMyBucketsRequest request) {
-    	S3ListAllMyBucketsResponse response = new S3ListAllMyBucketsResponse();
-    	
+    public S3ListAllMyBucketsResponse handleRequest(S3ListAllMyBucketsRequest request) 
+    {
+    	S3ListAllMyBucketsResponse response = new S3ListAllMyBucketsResponse();   	
     	SBucketDao bucketDao = new SBucketDao();
     	
     	List<SBucket> buckets = bucketDao.listBuckets(UserContext.current().getCanonicalUserId());
@@ -212,7 +231,8 @@ public class S3Engine {
     	owner.setDisplayName("");
     	response.setOwner(owner);
     	
-    	if(buckets != null) {
+    	if (buckets != null) 
+    	{
     		S3ListAllMyBucketsEntry[] entries = new S3ListAllMyBucketsEntry[buckets.size()];
     		int i = 0;
     		for(SBucket bucket : buckets) {
@@ -220,17 +240,15 @@ public class S3Engine {
     			entries[i].setName(bucket.getName());
     			entries[i].setCreationDate(DateHelper.toCalendar(bucket.getCreateTime()));
     			i++;
-    		}
-    		
+    		}   		
     		response.setBuckets(entries);
-    	}
-    	
+    	}   	
     	return response;
     }
     
-    public S3Response handleRequest(S3SetBucketAccessControlPolicyRequest request) {
-    	S3Response response = new S3Response();
-    	
+    public S3Response handleRequest(S3SetBucketAccessControlPolicyRequest request) 
+    {
+    	S3Response response = new S3Response();	
     	SBucketDao bucketDao = new SBucketDao();
     	SBucket sbucket = bucketDao.getByName(request.getBucketName());
     	if(sbucket == null) {
@@ -239,6 +257,8 @@ public class S3Engine {
     		return response;
     	}
  
+    	accessAllowed( "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE_ACL ); 
+
     	SAclDao aclDao = new SAclDao();
     	aclDao.save("SBucket", sbucket.getId(), request.getAcl());
    	
@@ -247,12 +267,12 @@ public class S3Engine {
     	return response;
     }
     
-    public S3AccessControlPolicy handleRequest(S3GetBucketAccessControlPolicyRequest request) {
-    	S3AccessControlPolicy policy = new S3AccessControlPolicy();
-    	
+    public S3AccessControlPolicy handleRequest(S3GetBucketAccessControlPolicyRequest request) 
+    {
+    	S3AccessControlPolicy policy = new S3AccessControlPolicy();   	
     	SBucketDao bucketDao = new SBucketDao();
     	SBucket sbucket = bucketDao.getByName(request.getBucketName());
-    	if(sbucket == null)
+    	if (sbucket == null)
     		throw new NoSuchObjectException("Bucket " + request.getBucketName() + " does not exist");
     	
     	S3CanonicalUser owner = new S3CanonicalUser();
@@ -260,16 +280,17 @@ public class S3Engine {
     	owner.setDisplayName("");
     	policy.setOwner(owner);
     	
+    	accessAllowed( "SBucket", sbucket.getId(), SAcl.PERMISSION_READ_ACL ); 
+
     	SAclDao aclDao = new SAclDao();
     	List<SAcl> grants = aclDao.listGrants("SBucket", sbucket.getId());
-    	policy.setGrants(S3Grant.toGrants(grants));
-    	
+    	policy.setGrants(S3Grant.toGrants(grants));  	
     	return policy;
     }
     
-    public S3PutObjectInlineResponse handleRequest(S3PutObjectInlineRequest request) {
-    	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();
-    	
+    public S3PutObjectInlineResponse handleRequest(S3PutObjectInlineRequest request) 
+    {
+    	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
 		String bucketName = request.getBucketName();
 		String key = request.getKey();
 		long contentLength = request.getContentLength();
@@ -279,6 +300,9 @@ public class S3Engine {
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket bucket = bucketDao.getByName(bucketName);
 		if (bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
+		
+    	accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE ); 
+
 
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl);
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
@@ -302,6 +326,7 @@ public class S3Engine {
 			item.setMd5(md5Checksum);
 			item.setStoredSize(contentLength);
 			PersistContext.getSession().save(item);
+			
 		} catch (IOException e) {
 			logger.error("PutObjectInline failed due to " + e.getMessage(), e);
 		} catch (OutOfStorageException e) {
@@ -319,9 +344,9 @@ public class S3Engine {
     	return response;
     }
 
-    public S3PutObjectResponse handleRequest(S3PutObjectRequest request) {
-    	S3PutObjectResponse response = new S3PutObjectResponse();
-    	
+    public S3PutObjectResponse handleRequest(S3PutObjectRequest request) 
+    {
+    	S3PutObjectResponse response = new S3PutObjectResponse();	
 		String bucketName = request.getBucketName();
 		String key = request.getKey();
 		long contentLength = request.getContentLength();
@@ -331,6 +356,9 @@ public class S3Engine {
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket bucket = bucketDao.getByName(bucketName);
 		if(bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
+		
+    	accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE ); 
+
 		
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl);
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
@@ -352,6 +380,7 @@ public class S3Engine {
 			item.setMd5(md5Checksum);
 			item.setStoredSize(contentLength);
 			PersistContext.getSession().save(item);
+			
 		} catch (OutOfStorageException e) {
 			logger.error("PutObject failed due to " + e.getMessage(), e);
 		} finally {
@@ -367,9 +396,9 @@ public class S3Engine {
     	return response;
     }
 
-    public S3Response handleRequest(S3SetObjectAccessControlPolicyRequest request) {
-    	S3Response response = new S3Response();
-    	
+    public S3Response handleRequest(S3SetObjectAccessControlPolicyRequest request) 
+    {
+    	S3Response response  = new S3Response(); 	
     	SBucketDao bucketDao = new SBucketDao();
     	SBucket sbucket = bucketDao.getByName(request.getBucketName());
     	if(sbucket == null) {
@@ -387,6 +416,8 @@ public class S3Engine {
     		return response;
     	}
     	
+    	accessAllowed( "SObject", sobject.getId(), SAcl.PERMISSION_WRITE_ACL ); 
+    	
     	SAclDao aclDao = new SAclDao();
     	aclDao.save("SObject", sobject.getId(), request.getAcl());
     	
@@ -395,17 +426,17 @@ public class S3Engine {
     	return response;
     }
     
-    public S3AccessControlPolicy handleRequest(S3GetObjectAccessControlPolicyRequest request) {
-    	S3AccessControlPolicy policy = new S3AccessControlPolicy();
-    	
+    public S3AccessControlPolicy handleRequest(S3GetObjectAccessControlPolicyRequest request) 
+    {
+    	S3AccessControlPolicy policy = new S3AccessControlPolicy();	
     	SBucketDao bucketDao = new SBucketDao();
     	SBucket sbucket = bucketDao.getByName(request.getBucketName());
-    	if(sbucket == null)
+    	if (sbucket == null)
     		throw new NoSuchObjectException("Bucket " + request.getBucketName() + " does not exist");
     	
     	SObjectDao sobjectDao = new SObjectDao();
     	SObject sobject = sobjectDao.getByNameKey(sbucket, request.getKey());
-    	if(sobject == null)
+    	if (sobject == null)
     		throw new NoSuchObjectException("Object " + request.getKey() + " does not exist");
     	
     	S3CanonicalUser owner = new S3CanonicalUser();
@@ -413,14 +444,16 @@ public class S3Engine {
     	owner.setDisplayName("");
     	policy.setOwner(owner);
     	
+    	accessAllowed( "SObject", sobject.getId(), SAcl.PERMISSION_READ_ACL ); 
+
     	SAclDao aclDao = new SAclDao();
     	List<SAcl> grants = aclDao.listGrants("SObject", sobject.getId());
-    	policy.setGrants(S3Grant.toGrants(grants));
-    	
+    	policy.setGrants(S3Grant.toGrants(grants));    	
     	return policy;
     }
     
-    public S3GetObjectResponse handleRequest(S3GetObjectRequest request) {
+    public S3GetObjectResponse handleRequest(S3GetObjectRequest request) 
+    {
     	S3GetObjectResponse response = new S3GetObjectResponse();
     	int resultCode = 200;
 
@@ -463,6 +496,8 @@ public class S3Engine {
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
 			return response;  		
     	}
+		
+		accessAllowed( "SObject", item.getId(), SAcl.PERMISSION_READ );
 		
 		// -> extract the meta data that corresponds the specific versioned item 
 		SMetaDao metaDao = new SMetaDao();
@@ -521,10 +556,10 @@ public class S3Engine {
      * In one place we handle both versioning and non-versioning delete requests.
      */
     //@SuppressWarnings("deprecation")
-	public S3Response handleRequest(S3DeleteObjectRequest request) {
-		S3Response response = new S3Response();
-		
+	public S3Response handleRequest(S3DeleteObjectRequest request) 
+	{		
 		// -> verify that the bucket and object exist
+		S3Response response  = new S3Response();
 		SBucketDao bucketDao = new SBucketDao();
 		String bucketName = request.getBucketName();
 		SBucket sbucket = bucketDao.getByName( bucketName );
@@ -541,6 +576,8 @@ public class S3Engine {
 			response.setResultDescription("Bucket does not exist");
 			return response;
 		}
+		
+		accessAllowed( "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
 		
 		
 		// -> versioning controls what delete means
@@ -649,54 +686,62 @@ public class S3Engine {
 		}
 	}
 
-	private S3ListBucketPrefixEntry[] composeListBucketPrefixEntries(List<SObject> l, String prefix, String delimiter, int maxKeys) {
-		List<S3ListBucketPrefixEntry> entries = new ArrayList<S3ListBucketPrefixEntry>();
-		
+	private S3ListBucketPrefixEntry[] composeListBucketPrefixEntries(List<SObject> l, String prefix, String delimiter, int maxKeys) 
+	{
+		List<S3ListBucketPrefixEntry> entries = new ArrayList<S3ListBucketPrefixEntry>();		
 		int count = 0;
-		for(SObject sobject : l) {
-			if(delimiter != null && !delimiter.isEmpty()) {
+		
+		for(SObject sobject : l) 
+		{
+			if(delimiter != null && !delimiter.isEmpty()) 
+			{
 				String subName = StringHelper.substringInBetween(sobject.getNameKey(), prefix, delimiter);
-				if(subName != null) {
+				if(subName != null) 
+				{
 					S3ListBucketPrefixEntry entry = new S3ListBucketPrefixEntry();
-					if(prefix != null && prefix.length() > 0)
-						entry.setPrefix(prefix + delimiter + subName);
-					else
-						entry.setPrefix(subName);
+					if ( prefix != null && prefix.length() > 0)
+						 entry.setPrefix(prefix + delimiter + subName);
+					else entry.setPrefix(subName);
 				}
-			}
-			
+			}		
 			count++;
-			if(count >= maxKeys)
-				break;
+			if(count >= maxKeys) break;
 		}
 		
-		if(entries.size() > 0)
-			return entries.toArray(new S3ListBucketPrefixEntry[0]);
+		if(entries.size() > 0) return entries.toArray(new S3ListBucketPrefixEntry[0]);
 		return null;
 	}
 	
-	private S3ListBucketObjectEntry[] composeListBucketContentEntries(List<SObject> l, String prefix, String delimiter, int maxKeys, boolean enableVersion) {
+	private S3ListBucketObjectEntry[] composeListBucketContentEntries(List<SObject> l, String prefix, String delimiter, int maxKeys, boolean enableVersion) 
+	{
 		List<S3ListBucketObjectEntry> entries = new ArrayList<S3ListBucketObjectEntry>();
 		int count = 0;
-		for(SObject sobject : l) {
-			if(delimiter != null && !delimiter.isEmpty()) {
-				if(StringHelper.substringInBetween(sobject.getNameKey(), prefix, delimiter) != null)
+		
+		for(SObject sobject : l) 
+		{
+			if (delimiter != null && !delimiter.isEmpty()) 
+			{
+				if (StringHelper.substringInBetween(sobject.getNameKey(), prefix, delimiter) != null)
 					continue;
 			}
 			
-			if(enableVersion) {
+			if (enableVersion) 
+			{
 				Iterator<SObjectItem> it = sobject.getItems().iterator();
-				while(it.hasNext()) {
+				while(it.hasNext()) 
+				{
 					// TODO, should add version info
 					SObjectItem item = (SObjectItem)it.next();
 					entries.add(toListEntry(sobject, item));
 				}
-			} else {
+			} 
+			else {
 				// this should be able to be optimized
 				Iterator<SObjectItem> it = sobject.getItems().iterator();
 				SObjectItem lastestItem = null;
 				int maxVersion = 0;
-				while(it.hasNext()) {
+				while(it.hasNext()) 
+				{
 					SObjectItem item = (SObjectItem)it.next();
 					int version = Integer.parseInt(item.getVersion());
 					if(version > maxVersion) {
@@ -704,24 +749,22 @@ public class S3Engine {
 						lastestItem = item;
 					}
 				}
-				if(lastestItem != null) {
+				if (lastestItem != null) {
 					entries.add(toListEntry(sobject, lastestItem));
 				}
 			}
 			
 			count++;
-			if(count >= maxKeys)
-				break;
+			if(count >= maxKeys) break;
 		}
 		
-		if(entries.size() > 0) 
-			return entries.toArray(new S3ListBucketObjectEntry[0]);
+		if(entries.size() > 0) return entries.toArray(new S3ListBucketObjectEntry[0]);
 		return null;
 	}
     
-	private static S3ListBucketObjectEntry toListEntry(SObject sobject, SObjectItem item) {
-		// TODO, should add version info
-		
+	private static S3ListBucketObjectEntry toListEntry(SObject sobject, SObjectItem item) 
+	{
+		// TODO, should add version info	
 		S3ListBucketObjectEntry entry = new S3ListBucketObjectEntry();
 		entry.setKey(sobject.getNameKey());
 		entry.setETag(item.getMd5());
@@ -732,7 +775,8 @@ public class S3Engine {
 		return entry;
 	}
     
-	public Tuple<SHost, String> getBucketStorageHost(SBucket bucket) {
+	public Tuple<SHost, String> getBucketStorageHost(SBucket bucket) 
+	{
 		MHostMountDao mountDao = new MHostMountDao();
 		
 		SHost shost = bucket.getShost();
@@ -749,7 +793,8 @@ public class S3Engine {
 		throw new HostNotMountedException("Storage host " + shost.getHost() + " is not locally mounted");
 	}
     
-	private Tuple<SHost, String> allocBucketStorageHost(String bucketName) {
+	private Tuple<SHost, String> allocBucketStorageHost(String bucketName) 
+	{
 		MHostDao mhostDao = new MHostDao();
 		SHostDao shostDao = new SHostDao();
 		
@@ -781,7 +826,8 @@ public class S3Engine {
 		throw new OutOfStorageException("No storage host is available");
 	}
 	
-	public S3BucketAdapter getStorageHostBucketAdapter(SHost shost) {
+	public S3BucketAdapter getStorageHostBucketAdapter(SHost shost) 
+	{
 		S3BucketAdapter adapter = bucketAdapters.get(shost.getHostType());
 		if(adapter == null) 
 			throw new InternalErrorException("Bucket adapter is not installed for host type: " + shost.getHostType());
@@ -798,12 +844,13 @@ public class S3Engine {
 		SMetaDao       metaDao       = new SMetaDao();
 		SAclDao        aclDao        = new SAclDao();
 		SObjectItem    item          = null;
+		boolean        newVersion    = false;
 		int            versionSeq    = 1;
 		int      versioningStatus    = bucket.getVersioningStatus();
 		
 		Session session = PersistContext.getSession();
 				
-		// -> if versoning is off them we over write a null object item
+		// [A] If versoning is off them we over write a null object item
 		SObject object = objectDao.getByNameKey(bucket, nameKey);
 		if ( object != null ) 
 		{
@@ -824,6 +871,7 @@ public class S3Engine {
 			      item.setLastAccessTime(ts);
 			      item.setLastModifiedTime(ts);
 			      session.save(item);
+			      newVersion = true;   
 			 }
 			 else
 			 {    // -> find an object item with a null version, can be null
@@ -862,9 +910,8 @@ public class S3Engine {
 		     item.setLastModifiedTime(ts);
 		     session.save(item);
 		}
-		
-		
-		// we will use the item DB id as the file name, MD5/contentLength will be stored later
+				
+		// [B] We will use the item DB id as the file name, MD5/contentLength will be stored later
 		String suffix = null;
 		int dotPos = nameKey.lastIndexOf('.');
 		if (dotPos >= 0) suffix = nameKey.substring(dotPos);
@@ -873,9 +920,47 @@ public class S3Engine {
 		else item.setStoredPath(String.valueOf(item.getId()));
 		
 		metaDao.save("SObjectItem", item.getId(), meta);
-		aclDao.save("SObjectItem", item.getId(), acl);
+		
+		
+		// [C] If no ACL given on creation or on rewrite then we default one to the owner - FULL_CONTROL
+		//  -> creating a new version with an existing object does not force a default ACL
+		if ((null == acl || 0 == acl.size()) && !newVersion ) 
+		{
+		     S3AccessControlList defaultAcl = new S3AccessControlList();
+		     S3Grant defaultGrant = new S3Grant();
+             defaultGrant.setGrantee(SAcl.GRANTEE_USER);
+	         defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
+	         defaultGrant.setPermission( SAcl.PERMISSION_FULL );
+	         defaultAcl.addGrant( defaultGrant );
+    	     aclDao.save("SObject", object.getId(), defaultAcl);
+		}
+		else if (null != acl) {
+			 aclDao.save("SObject", object.getId(), acl);
+		}
+		
 		session.update(item);
 		
 		return new Tuple<SObject, SObjectItem>(object, item);
+	}
+	
+	/**
+	 * This function verifies that the accessing client has the requested
+	 * premission on the object/bucket/Acl represented by the tuble: <target, targetId>
+	 */
+	public void accessAllowed( String target, long targetId, int requestedPermission ) {
+		SAclDao aclDao = new SAclDao();
+
+        // -> no priviledges means no access allowed		
+		List<SAcl> priviledges = aclDao.listGrants( target, targetId, UserContext.current().getCanonicalUserId());
+        ListIterator it = priviledges.listIterator();
+        while( it.hasNext()) 
+        {
+           // -> is the requested permission "contained" in one or the granted rights for this user
+           SAcl rights = (SAcl)it.next();
+           int permission = rights.getPermission();
+           if (requestedPermission == (permission & requestedPermission)) return;
+        }
+
+        throw new PermissionDeniedException( "Access Denied - user does not have the required permission" );
 	}
 }

@@ -562,27 +562,39 @@ public class EC2Engine {
      * 1) listVolumes&virtualMachineId=   -- gets the volumeId
      * 2) listVirtualMachinees&id=        -- gets the templateId
      * 3) listTemplates&id=               -- gets the osTypeId
+     * 
+     * If we have to start and stop the VM in question then this function is
+     * going to take a long time to complete.
      */
     public EC2CreateImageResponse handleRequest(EC2CreateImage request) {
-    	String volumeId = null;
+    	EC2CreateImageResponse response = null;
+    	boolean needsRestart = false;
+    	String volumeId      = null;
     	
     	try {
-    		// -> creating a template from a VM volume should be from the ROOT volume
-    		//    also for this to work the VM must be in a Stopped state
+    		// [A] Creating a template from a VM volume should be from the ROOT volume
+    		//     Also for this to work the VM must be in a Stopped state so we 'reboot' it if its not
     	    EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
             volumes = listVolumes( null, request.getInstanceId(), volumes );
             EC2Volume[] volSet = volumes.getVolumeSet();
-            for( int i=0; i < volSet.length; i++ ) {
+            for( int i=0; i < volSet.length; i++ ) 
+            {
             	 String volType = volSet[i].getType();
-            	 if (volType.equalsIgnoreCase( "ROOT" )) {
-            		 if (!volSet[i].getVMState().equalsIgnoreCase( "Stopped" )) 
-            			 throw new EC2ServiceException( "Instance must be in a stopped state", 400 );
-            		 
+            	 if (volType.equalsIgnoreCase( "ROOT" )) 
+            	 {
+            		 String vmState = volSet[i].getVMState();
+            		 if (vmState.equalsIgnoreCase( "running" ) || vmState.equalsIgnoreCase( "starting" )) 
+            		 {
+            			 needsRestart = true;
+            			 if (!stopVirtualMachine( request.getInstanceId()))
+            		         throw new EC2ServiceException( "CreateImage - instance must be in a stopped state", 400 );
+            		 }           		 
             		 volumeId = volSet[i].getId();
             		 break;
             	 }
             }
    	
+            // [B] The parameters must be in sorted order for proper signature generation
     	    EC2DescribeInstancesResponse instances = new EC2DescribeInstancesResponse();
     	    instances = lookupInstances( request.getInstanceId(), instances );
     	    EC2Instance[] instanceSet = instances.getInstanceSet();
@@ -593,7 +605,6 @@ public class EC2Engine {
             EC2Image[] imageSet = images.getImageSet();
             String osTypeId = imageSet[0].getOsTypeId();
             
-            // -> the parameters must be in sorted order for proper signature generation
             String description = request.getDescription();
   	        String query = new String( "command=createTemplate" +
   	        		                   "&displayText=" + (null == description ? "" : safeURLencode( description )) +
@@ -606,9 +617,18 @@ public class EC2Engine {
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     return waitForTemplate( jobId );  
+	    	     response = waitForTemplate( jobId );  
             }
  	        else throw new InternalErrorException( "InternalError" );
+ 	        
+ 	        
+ 	        // [C] If we stopped the virtual machine now we need to restart it
+ 	        if (needsRestart) 
+ 	        {
+   			    if (!startVirtualMachine( request.getInstanceId()))
+		            throw new EC2ServiceException( "CreateImage - restarting instance " + request.getInstanceId() + " failed", 400 );
+ 	        }
+ 	        return response;
     	    
     	} catch( EC2ServiceException error ) {
  		    logger.error( "EC2 CreateImage - " + error.toString());
@@ -1111,7 +1131,57 @@ public class EC2Engine {
     	}
     }
 
-    
+    /**
+     * Wait until one specific VM has stopped
+     */
+    private boolean stopVirtualMachine( String instanceId ) 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException 
+    {
+    	EC2Instance[] vms    = new EC2Instance[1];
+    	String[]      jobIds = new String[1];
+    	
+    	vms[0] = new EC2Instance();
+    	vms[0].setState( "running" );
+    	vms[0].setPreviousState( "running" );
+
+        String query = new String( "command=stopVirtualMachine&id=" + instanceId );
+	    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), query, true );
+		   
+        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+        if ( 0 < match.getLength()) {
+   	         Node item = match.item(0);
+   	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
+        }
+        else throw new EC2ServiceException( "Internal Server Error", 500 );
+		
+	    vms = waitForStartStop( vms, jobIds, 1, "stopped" );
+	    return vms[0].getState().equalsIgnoreCase( "stopped" );    	
+    }
+  
+    private boolean startVirtualMachine( String instanceId ) 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException 
+    {
+	    EC2Instance[] vms    = new EC2Instance[1];
+	    String[]      jobIds = new String[1];
+	
+	    vms[0] = new EC2Instance();
+	    vms[0].setState( "stopped" );
+	    vms[0].setPreviousState( "stopped" );
+
+        String query = new String( "command=startVirtualMachine&id=" + instanceId );
+        Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), query, true );
+	   
+        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+        if ( 0 < match.getLength()) {
+	         Node item = match.item(0);
+	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
+        }
+        else throw new EC2ServiceException( "Internal Server Error", 500 );
+	
+        vms = waitForStartStop( vms, jobIds, 1, "running" );
+        return vms[0].getState().equalsIgnoreCase( "running" );    	
+    }
+
     /**
      * RunInstances includes a min and max count of requested instances to create.  
      * We have to be able to create the min number for the user or none at all.  So

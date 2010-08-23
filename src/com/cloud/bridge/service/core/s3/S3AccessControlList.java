@@ -34,4 +34,8 @@ public class S3AccessControlList {
 	public void addGrant(S3Grant grant) {
 		list.add(grant);
 	}
+	
+	public int size() {
+		return list.size();
+	}
 }

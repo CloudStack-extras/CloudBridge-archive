@@ -31,7 +31,7 @@ public class UserContext {
 	private boolean annonymous = false;
 	private String accessKey;
 	private String secretKey;
-	private String canonicalUserId;
+	private String canonicalUserId;  // -> for us this is the accessKey
 	private String description;
 	
 	public UserContext() {

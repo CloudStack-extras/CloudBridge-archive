@@ -41,6 +41,7 @@ import org.w3c.dom.Node;
 import com.amazon.s3.GetBucketAccessControlPolicyResponse;
 import com.amazon.s3.ListAllMyBucketsResponse;
 import com.amazon.s3.ListBucketResponse;
+import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.model.SBucket;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.service.S3Constants;
@@ -64,6 +65,7 @@ import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.exception.InvalidRequestContentException;
 import com.cloud.bridge.service.exception.NetworkIOException;
+import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.Converter;
 import com.cloud.bridge.util.StringHelper;
 import com.cloud.bridge.util.XSerializer;
@@ -147,7 +149,8 @@ public class S3BucketAction implements ServletAction {
 	
 	
 	public void executeGetAllBuckets(HttpServletRequest request, HttpServletResponse response) 
-	    throws IOException, XMLStreamException {
+	    throws IOException, XMLStreamException 
+	{
 		Calendar cal = Calendar.getInstance();
 		cal.set( 1970, 1, 1 ); 
 		S3ListAllMyBucketsRequest engineRequest = new S3ListAllMyBucketsRequest();
@@ -174,7 +177,8 @@ public class S3BucketAction implements ServletAction {
 	}
 
 	public void executeGetBucket(HttpServletRequest request, HttpServletResponse response) 
-	    throws IOException, XMLStreamException {
+	    throws IOException, XMLStreamException 
+	{
 		S3ListBucketRequest engineRequest = new S3ListBucketRequest();
 		engineRequest.setBucketName((String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY));
 		engineRequest.setDelimiter(request.getParameter("delimiter"));
@@ -202,7 +206,8 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void executeGetBucketAcl(HttpServletRequest request, HttpServletResponse response) 
-	    throws IOException, XMLStreamException {
+	    throws IOException, XMLStreamException 
+	{
 		S3GetBucketAccessControlPolicyRequest engineRequest = new S3GetBucketAccessControlPolicyRequest();
 		Calendar cal = Calendar.getInstance();
 		cal.set( 1970, 1, 1 ); 
@@ -229,7 +234,8 @@ public class S3BucketAction implements ServletAction {
         os.close();
 	}
 	
-	public void executeGetBucketVersioning(HttpServletRequest request, HttpServletResponse response) throws IOException{
+	public void executeGetBucketVersioning(HttpServletRequest request, HttpServletResponse response) throws IOException
+	{
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String versioningStatus = null;
 		
@@ -245,6 +251,11 @@ public class S3BucketAction implements ServletAction {
 			response.setStatus( 404 );
 			return;
 		}
+		
+		String client = UserContext.current().getCanonicalUserId();
+		if (!client.equals( sbucket.getOwnerCanonicalId()))
+		    throw new PermissionDeniedException( "Access Denied - only the owner can read bucket versioning" );
+
 
 		switch( sbucket.getVersioningStatus()) {
 		default:
@@ -272,10 +283,13 @@ public class S3BucketAction implements ServletAction {
 		// TODO - this returns the region that the bucket is in and Cloud Stack has no equivalent
 	}
 	
-	public void executePutBucket(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	public void executePutBucket(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	{
 		int contentLength = request.getContentLength();
 		Object objectInContent = null;
-		if(contentLength > 0) {
+		
+		if(contentLength > 0) 
+		{
 			InputStream is = null;
 			try {
 				is = request.getInputStream();
@@ -286,6 +300,7 @@ public class S3BucketAction implements ServletAction {
 					throw new InvalidRequestContentException("Invalid rquest content in create-bucket: " + xml);
 				}
 				is.close();
+				
 			} catch (IOException e) {
 				logger.error("Unable to read request data due to " + e.getMessage(), e);
 				throw new NetworkIOException(e);
@@ -306,7 +321,8 @@ public class S3BucketAction implements ServletAction {
 		response.flushBuffer();
 	}
 	
-	public void executePutBucketAcl(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	public void executePutBucketAcl(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	{
 		S3PutObjectRequest putRequest = null;
 		
 		// -> reuse the Access Control List parsing code that was added to support DIME
@@ -327,7 +343,8 @@ public class S3BucketAction implements ServletAction {
 	    response.setStatus( engineResponse.getResultCode());
 	}
 	
-	public void executePutBucketVersioning(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	public void executePutBucketVersioning(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	{
 		String bucketName       = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String versioningStatus = null;
 		Node   item             = null;
@@ -352,10 +369,15 @@ public class S3BucketAction implements ServletAction {
 				 response.setStatus( 400 ); 
 				 return; 
 	        }
-	        
+	      
+			// -> does not matter what the ACLs say only the owner can turn on versioning on a bucket
 			SBucketDao bucketDao = new SBucketDao();
 			SBucket sbucket = bucketDao.getByName( bucketName );
-			
+		
+			 String client = UserContext.current().getCanonicalUserId();
+			 if (!client.equals( sbucket.getOwnerCanonicalId()))
+			     throw new PermissionDeniedException( "Access Denied - only the owner can turn on versioing on a bucket" );
+		
 			     if (versioningStatus.equalsIgnoreCase( "Enabled"  )) sbucket.setVersioningStatus( 1 );
 			else if (versioningStatus.equalsIgnoreCase( "Suspended")) sbucket.setVersioningStatus( 2 );
 			else { 
@@ -364,6 +386,10 @@ public class S3BucketAction implements ServletAction {
 				 return; 
 		    }
 			bucketDao.update( sbucket );
+			
+		} catch( PermissionDeniedException e ) {
+			logger.error( "executePutBucketVersioning - failed due to " + e.getMessage(), e);
+			throw e;
 			
 		} catch( Exception e ) {
 			logger.error( "executePutBucketVersioning - failed due to " + e.getMessage(), e);
@@ -377,7 +403,8 @@ public class S3BucketAction implements ServletAction {
 		// TODO
 	}
 	
-	public void executeDeleteBucket(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	public void executeDeleteBucket(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	{
 		S3DeleteBucketRequest engineRequest = new S3DeleteBucketRequest();
 		engineRequest.setBucketName((String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY));
 		S3Response engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);  

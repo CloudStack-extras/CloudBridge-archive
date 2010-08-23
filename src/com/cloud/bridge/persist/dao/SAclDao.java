@@ -38,7 +38,12 @@ public class SAclDao extends EntityDao<SAcl> {
 		return queryEntities("from SAcl where target=? and targetId=? order by grantOrder asc",
 			new Object[] { target, new Long(targetId)});
 	}
-	
+
+	public List<SAcl> listGrants(String target, long targetId, String userCanonicalId) {
+		return queryEntities("from SAcl where target=? and targetId=? and granteeCanonicalId=? order by grantOrder asc",
+			new Object[] { target, new Long(targetId), userCanonicalId });
+	}
+
 	public void save(String target, long targetId, S3AccessControlList acl) {
 		executeUpdate("delete from SAcl where target=? and targetId=?",
 			new Object[] { target, new Long(targetId)});
