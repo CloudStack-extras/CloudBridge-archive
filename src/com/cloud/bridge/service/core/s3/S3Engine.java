@@ -62,6 +62,7 @@ import com.cloud.bridge.service.exception.ObjectAlreadyExistsException;
 import com.cloud.bridge.service.exception.OutOfServiceException;
 import com.cloud.bridge.service.exception.OutOfStorageException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
+import com.cloud.bridge.service.exception.UnsupportedException;
 import com.cloud.bridge.util.DateHelper;
 import com.cloud.bridge.util.StringHelper;
 import com.cloud.bridge.util.Tuple;
@@ -107,8 +108,8 @@ public class S3Engine {
 
 				String cannedAccessPolicy = request.getCannedAccess();
 				if ( null != cannedAccessPolicy ) 
-					 setCannedAccessControls( cannedAccessPolicy, "SBucket", sbucket.getId());
-				else setObjectAcl( "SBucket", sbucket.getId(), SAcl.PERMISSION_FULL, UserContext.current().getCanonicalUserId()); 
+					 setCannedAccessControls( cannedAccessPolicy, "SBucket", sbucket.getId(), sbucket );
+				else setSingleAcl( "SBucket", sbucket.getId(), SAcl.PERMISSION_FULL ); 
 			
 				// explicitly commit the transaction
 				PersistContext.commitTransaction();
@@ -682,18 +683,6 @@ public class S3Engine {
 		}
 	}
 	
-	private void setObjectAcl( String target, long targetId, int permission, String canonicalUserId ) 
-	{	
-		SAclDao aclDao  = new SAclDao();
-        S3AccessControlList defaultAcl = new S3AccessControlList();
-        S3Grant defaultGrant = new S3Grant();
-        defaultGrant.setGrantee(SAcl.GRANTEE_USER);
-        defaultGrant.setCanonicalUserID( canonicalUserId );
-        defaultGrant.setPermission( permission );
-        defaultAcl.addGrant( defaultGrant );
-        aclDao.save( target, targetId, defaultAcl );
-	}
-
 	private S3ListBucketPrefixEntry[] composeListBucketPrefixEntries(List<SObject> l, String prefix, String delimiter, int maxKeys) 
 	{
 		List<S3ListBucketPrefixEntry> entries = new ArrayList<S3ListBucketPrefixEntry>();		
@@ -940,12 +929,12 @@ public class S3Engine {
 		// [C] Are we setting an ACL along with the object
 		if ( null != cannedAccessPolicy )
 		{
-			 setCannedAccessControls( cannedAccessPolicy, "SObject", object.getId()); 
+			 setCannedAccessControls( cannedAccessPolicy, "SObject", object.getId(), bucket ); 
 		}
 		else if ((null == acl || 0 == acl.size()) && !newVersion ) 
 		{
 			 // -> this is termed the "private" or default ACL, "Owner gets FULL_CONTROL"
-			 setObjectAcl( "SObject", object.getId(), SAcl.PERMISSION_FULL, UserContext.current().getCanonicalUserId()); 
+			 setSingleAcl( "SObject", object.getId(), SAcl.PERMISSION_FULL ); 
 		}
 		else if (null != acl) {
 			 aclDao.save( "SObject", object.getId(), acl );
@@ -958,35 +947,80 @@ public class S3Engine {
 	/**
 	 * Access controls that are specified via the "x-amz-acl:" headers in REST requests.
 	 */
-	private void setCannedAccessControls( String cannedAccessPolicy, String target, long objectId ) 
+	private void setCannedAccessControls( String cannedAccessPolicy, String target, long objectId, SBucket bucket )
 	{
-		SAclDao aclDao = new SAclDao();
-		
 	    // -> note that canned policies can be set when the object's contents are set
 	    if ( cannedAccessPolicy.equalsIgnoreCase( "authenticated-read" )) 
 	    {
 		     // -> "Owner gets FULL_CONTROL, and any principal authenticated as a registered S3 user (the "*" here) is granted READ access
-	         S3AccessControlList defaultAcl = new S3AccessControlList();
-	     
-	         S3Grant defaultGrant = new S3Grant();
-	         defaultGrant.setGrantee(SAcl.GRANTEE_USER);
-	         defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
-	         defaultGrant.setPermission( SAcl.PERMISSION_FULL );
-	         defaultAcl.addGrant( defaultGrant );
-	     
-	         defaultGrant = new S3Grant();
-	         defaultGrant.setGrantee(SAcl.GRANTEE_USER);
-	         defaultGrant.setCanonicalUserID( "*" );
-	         defaultGrant.setPermission( SAcl.PERMISSION_READ );
-	         defaultAcl.addGrant( defaultGrant );
-	     
-	         aclDao.save( target, objectId, defaultAcl );
+	    	 setDefaultAcls( target, objectId, SAcl.PERMISSION_FULL, SAcl.PERMISSION_READ, "*" );
 	    }
-	    else if (cannedAccessPolicy.equalsIgnoreCase( "private" )) {
+	    else if (cannedAccessPolicy.equalsIgnoreCase( "private" )) 
+	    {
 		     // -> this is termed the "private" or default ACL, "Owner gets FULL_CONTROL"
-		     setObjectAcl( target, objectId, SAcl.PERMISSION_FULL, UserContext.current().getCanonicalUserId()); 
+		     setSingleAcl( target, objectId, SAcl.PERMISSION_FULL ); 
 	    }
-	    else throw new NoSuchObjectException( "Requested Canned Access Policy: " + cannedAccessPolicy + " is not supported" );
+	    else if (cannedAccessPolicy.equalsIgnoreCase( "bucket-owner-read" )) 
+	    {
+	    	 // -> Object Owner gets FULL_CONTROL, Bucket Owner gets READ
+	    	 // -> is equivalent to private when used with PUT Bucket
+	    	 if ( target.equalsIgnoreCase( "SBucket" ))  
+			      setSingleAcl( target, objectId, SAcl.PERMISSION_FULL );     		 
+	    	 else setDefaultAcls( target, objectId, SAcl.PERMISSION_FULL, SAcl.PERMISSION_READ, bucket.getOwnerCanonicalId());
+	    }
+	    else if (cannedAccessPolicy.equalsIgnoreCase( "bucket-owner-full-control" )) 
+	    {
+	    	 // -> Object Owner gets FULL_CONTROL, Bucket Owner gets FULL_CONTROL
+	    	 // -> is equivalent to private when used with PUT Bucket
+	    	 if ( target.equalsIgnoreCase( "SBucket" ))   
+			      setSingleAcl( target, objectId, SAcl.PERMISSION_FULL );     		 
+	    	 else setDefaultAcls( target, objectId, SAcl.PERMISSION_FULL, SAcl.PERMISSION_FULL, bucket.getOwnerCanonicalId());
+	    }
+	    else if (cannedAccessPolicy.equalsIgnoreCase( "public-read" ) || cannedAccessPolicy.equalsIgnoreCase( "public-read-write" )) 
+	    {
+	         // -> these represent authorized access which we do not currently support
+	    	 throw new UnsupportedException( "Unsupported Canned Access Policy: " + cannedAccessPolicy + " is not supported" );
+	    }
+	    else throw new UnsupportedException( "Unknown Canned Access Policy: " + cannedAccessPolicy + " is not supported" );
+	}
+
+	private void setSingleAcl( String target, long targetId, int permission ) 
+	{	
+		SAclDao aclDao  = new SAclDao();
+        S3AccessControlList defaultAcl = new S3AccessControlList();
+        
+        S3Grant defaultGrant = new S3Grant();
+        defaultGrant.setGrantee(SAcl.GRANTEE_USER);
+        defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
+        defaultGrant.setPermission( permission );
+        defaultAcl.addGrant( defaultGrant );
+        
+        aclDao.save( target, targetId, defaultAcl );
+	}
+
+	/**
+	 * Note that we use the Cloud Stack API Access key for the Canonical User Id everywhere
+	 * (i.e., for buckets, and objects).   For annoymonus we use the symbol '*'.
+	 */
+	private void setDefaultAcls( String target, long objectId, int permission1, int permission2, String owner  ) 
+	{
+		SAclDao aclDao = new SAclDao();
+		S3AccessControlList defaultAcl = new S3AccessControlList();	   
+		
+		// -> object owner
+        S3Grant defaultGrant = new S3Grant();
+        defaultGrant.setGrantee(SAcl.GRANTEE_USER);
+        defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
+        defaultGrant.setPermission( permission1 );
+        defaultAcl.addGrant( defaultGrant );	
+    
+        // -> bucket owner or annoymnous (i.e., '*' )
+        defaultGrant = new S3Grant();
+        defaultGrant.setGrantee(SAcl.GRANTEE_USER);
+        defaultGrant.setCanonicalUserID( owner );
+        defaultGrant.setPermission( permission2 );
+        defaultAcl.addGrant( defaultGrant );	     
+        aclDao.save( target, objectId, defaultAcl );
 	}
 
 	/**
