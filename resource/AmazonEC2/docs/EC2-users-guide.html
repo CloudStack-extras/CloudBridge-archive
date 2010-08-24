@@ -4,7 +4,7 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's EC2 API User's Guide</H1>
-7/19/2010
+8/24/2010
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#part1">Part 1. Cloud.com's Specific Implementation Details</A></LI>
@@ -129,11 +129,6 @@ As defined for Cloud.com's EC2 implementation:
 <pre>
 imageLocation - is a URL of where the template is hosted. Possible URL include http:// and https://
 </pre>
-<P></br>
-<font size=+1><I>EC2's CreateImage Function</I></font>
-<P>
-The instance selected to create the image from must be in a "stopped" state, otherwise the function
-will fail.
 <P>
 <H3 id="misc">4. Miscellaneous</H3>
 The EC2 service provides a Cloud.com extension to obtain the release version of the EC2 software.
@@ -153,9 +148,12 @@ Refer to the Amazon EC2 documentation <A href="#ref3">[3]</A> for a description 
 Also see Part1, section 3 above, for differences between Amazon's and Cloud.com's EC2 implementations.
 <pre>
 AttachVolume 
+AuthorizeSecurityGroupIngress
 CreateImage 
+CreateSecurityGroup
 CreateSnapshot
 CreateVolume
+DeleteSecurityGroup
 DeleteSnapshot  
 DeleteVolume   
 DeregisterImage   
@@ -164,12 +162,14 @@ DescribeImageAttribute
 DescribeImages   
 DescribeInstanceAttribute  
 DescribeInstances  
+DescribeSecurityGroups
 DescribeSnapshots   
 DescribeVolumes  
 DetachVolume  
 ModifyImageAttribute  
 RebootInstances   
 RegisterImage  
+RevokeSecurityGroupIngress
 ResetImageAttribute   
 RunInstances  
 StartInstances  
