@@ -993,8 +993,7 @@ public class S3Engine {
         defaultGrant.setGrantee(SAcl.GRANTEE_USER);
         defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
         defaultGrant.setPermission( permission );
-        defaultAcl.addGrant( defaultGrant );
-        
+        defaultAcl.addGrant( defaultGrant );       
         aclDao.save( target, targetId, defaultAcl );
 	}
 

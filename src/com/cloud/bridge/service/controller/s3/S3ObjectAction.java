@@ -15,6 +15,8 @@
  */
 package com.cloud.bridge.service.controller.s3;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -39,6 +41,7 @@ import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
+import org.apache.commons.fileupload.MultipartStream;
 import org.hibernate.LockMode;
 
 import com.amazon.s3.GetBucketAccessControlPolicyResponse;
@@ -349,8 +352,24 @@ public class S3ObjectAction implements ServletAction {
 		}	
 	}
 
-	public void executePostObject(HttpServletRequest request,HttpServletResponse response) throws IOException {
-		// TODO
+	@SuppressWarnings("deprecation")
+	public void executePostObject(HttpServletRequest request,HttpServletResponse response) throws IOException 
+	{
+		String contentType = request.getHeader( "Content-Type" );
+		int boundaryIndex  = contentType.indexOf( "boundary=" );
+		byte[] boundary = (contentType.substring( boundaryIndex + 9 )).getBytes();
+		MultipartStream multipartStream =  new MultipartStream(request.getInputStream(), boundary);
+		
+		boolean nextPart = multipartStream.skipPreamble();
+		while(nextPart) {
+		  String headers = multipartStream.readHeaders();
+		  System.out.println( "*** Headers: " + headers );
+		  ByteArrayOutputStream data = new ByteArrayOutputStream();
+		  multipartStream.readBodyData(data);
+		  System.out.println( "*** " + new String(data.toByteArray()));
+
+		  nextPart = multipartStream.readBoundary();
+		}
 	}
 
 	/**
