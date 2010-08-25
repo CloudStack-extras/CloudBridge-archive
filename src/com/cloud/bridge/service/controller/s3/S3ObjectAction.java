@@ -15,9 +15,12 @@
  */
 package com.cloud.bridge.service.controller.s3;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -352,24 +355,93 @@ public class S3ObjectAction implements ServletAction {
 		}	
 	}
 
-	@SuppressWarnings("deprecation")
+	// There is a problem with POST since the 'Signature' and 'AccessKey' parameters are not
+	// determined until we hit this function.   However, the S3 authentication test is done in 
+	// the calling functions.
+	//
+	// Still need to handle: 
+	// engineRequest.setMetaEntries( extractMetaData( request ));
+    //
 	public void executePostObject(HttpServletRequest request,HttpServletResponse response) throws IOException 
 	{
-		String contentType = request.getHeader( "Content-Type" );
-		int boundaryIndex  = contentType.indexOf( "boundary=" );
-		byte[] boundary = (contentType.substring( boundaryIndex + 9 )).getBytes();
-		MultipartStream multipartStream =  new MultipartStream(request.getInputStream(), boundary);
+		String bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String contentType  = request.getHeader( "Content-Type" );
+		int boundaryIndex   = contentType.indexOf( "boundary=" );
+		String boundary     = "--" + (contentType.substring( boundaryIndex + 9 ));
+		String lastBoundary = boundary + "--";
 		
-		boolean nextPart = multipartStream.skipPreamble();
-		while(nextPart) {
-		  String headers = multipartStream.readHeaders();
-		  System.out.println( "*** Headers: " + headers );
-		  ByteArrayOutputStream data = new ByteArrayOutputStream();
-		  multipartStream.readBodyData(data);
-		  System.out.println( "*** " + new String(data.toByteArray()));
-
-		  nextPart = multipartStream.readBoundary();
+		InputStreamReader isr = new InputStreamReader( request.getInputStream());
+		BufferedReader br = new BufferedReader( isr );
+		
+		StringBuffer temp = new StringBuffer();
+		String oneLine = null;
+		String name = null;
+		String value = null;
+		int state = 0;
+		
+		// -> reset of the values are passed in the form data
+		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
+		engineRequest.setBucketName(bucket);
+		
+		while( null != (oneLine = br.readLine())) 
+		{
+			if ( oneLine.startsWith( lastBoundary )) 
+			{
+				 // -> this is the data of the object to put
+				 if (0 < temp.length()) {
+				     value = temp.toString();
+				     temp.setLength( 0 );
+				     System.out.println( "last param: " + name + " = " + value );
+				     
+				 	 engineRequest.setContentLength( value.length());	
+				 	 engineRequest.setDataAsString( value );
+				 }
+				 break;
+			}
+			else if ( oneLine.startsWith( boundary )) 
+			{
+				 // -> this is the header data
+				 if (0 < temp.length()) {
+				     value = temp.toString();
+				     temp.setLength( 0 );				     
+				     System.out.println( "param: " + name + " = " + value );
+				     
+				          if (name.equalsIgnoreCase( "key" ))       engineRequest.setKey( value );
+				     else if (name.equalsIgnoreCase( "x-amz-acl" )) engineRequest.setCannedAccess( value );
+				 }
+				 state = 1;
+			}
+			else if (1 == state && 0 == oneLine.length()) 
+			{
+				 // -> data of a body part starts here 
+				 state = 2;
+			}
+			else if (1 == state) 
+			{
+				 // -> the name of the 'name-value' pair is encoded in the Content-Disposition header
+				 if (oneLine.startsWith( "Content-Disposition: form-data;")) 
+				 {
+					 int nameOffset = oneLine.indexOf( "name=" );
+					 if (-1 != nameOffset) {
+						 name = oneLine.substring( nameOffset+5 );
+						 if (name.startsWith( "\"" )) name = name.substring( 1 );
+						 if (name.endsWith( "\"" ))   name = name.substring( 0, name.length()-1 );
+					 }
+				 }
+			}
+			else if (2 == state) 
+			{
+				 // -> the body parts data may take up multiple lines
+                 //System.out.println( oneLine.length() + " body data: " + oneLine );
+                 temp.append( oneLine );
+			}
+//			else System.out.println( oneLine.length() + " preamble: " + oneLine );
 		}
+		
+		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );
+		response.setHeader("ETag", engineResponse.getETag());
+		String version = engineResponse.getVersion();
+		if (null != version) response.addHeader( "x-amz-version-id", version );		
 	}
 
 	/**

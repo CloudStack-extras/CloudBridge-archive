@@ -15,6 +15,10 @@
  */
 package com.cloud.bridge.service.core.s3;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 import javax.activation.DataHandler;
 
 /**
@@ -28,9 +32,11 @@ public class S3PutObjectInlineRequest extends S3Request {
 	protected S3AccessControlList acl;
 	protected String cannedAccessPolicy;    // -> REST only sets an acl with a simple keyword
 	protected DataHandler data;
+	protected String dataAsString;
 	
 	public S3PutObjectInlineRequest() {
 		super();
+		data = null;
 	}
 	
 	public String getBucketName() {
@@ -87,5 +93,19 @@ public class S3PutObjectInlineRequest extends S3Request {
 	
 	public void setData(DataHandler data) {
 		this.data = data;
+	}
+	
+	public void setDataAsString( String data ) {
+		this.dataAsString = data;
+	}
+	
+	public InputStream getDataInputStream() throws IOException 
+	{
+		if ( null == data ) 
+		{
+			 ByteArrayInputStream bs = new ByteArrayInputStream( dataAsString.getBytes());
+			 return bs;
+		}
+		else return data.getInputStream();
 	}
 }

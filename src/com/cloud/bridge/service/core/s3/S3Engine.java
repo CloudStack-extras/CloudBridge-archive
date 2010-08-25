@@ -306,13 +306,12 @@ public class S3Engine {
 		
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 		String itemFileName = tupleObjectItem.getSecond().getStoredPath();
-		DataHandler dataHandler = request.getData();
 		InputStream is = null;
 		try {
 			// explicit transaction control to avoid holding transaction during file-copy process
 			PersistContext.commitTransaction();
 			
-			is = dataHandler.getInputStream();
+			is = request.getDataInputStream();
 			String md5Checksum = bucketAdapter.saveObject(is, tupleBucketHost.getSecond(), bucket.getName(), itemFileName);
 			response.setETag(md5Checksum);
 			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
