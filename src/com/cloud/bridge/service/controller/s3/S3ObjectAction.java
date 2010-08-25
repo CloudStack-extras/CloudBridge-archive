@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -65,6 +66,7 @@ import com.cloud.bridge.service.ServletAction;
 import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
+import com.cloud.bridge.service.core.s3.S3AuthParams;
 import com.cloud.bridge.service.core.s3.S3ConditionalHeaders;
 import com.cloud.bridge.service.core.s3.S3DeleteObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Engine;
@@ -82,6 +84,7 @@ import com.cloud.bridge.service.core.s3.S3SetObjectAccessControlPolicyRequest;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.util.Converter;
 import com.cloud.bridge.util.DateHelper;
+import com.cloud.bridge.util.HeaderParam;
 import com.cloud.bridge.util.ServletRequestDataSource;
 import com.cloud.bridge.util.Tuple;
 
@@ -357,12 +360,10 @@ public class S3ObjectAction implements ServletAction {
 
 	// There is a problem with POST since the 'Signature' and 'AccessKey' parameters are not
 	// determined until we hit this function (i.e., they are encoded in the body of the message
-	// they are not HTTP request headers).   However, the S3 authentication test is done in 
-	// the calling functions.
-	//
-	// All the values we used to get in the request headers are not encoded in the request body.
+	// they are not HTTP request headers).  All the values we used to get in the request headers 
+	// are not encoded in the request body.
     //
-	public void executePostObject(HttpServletRequest request,HttpServletResponse response) throws IOException 
+	public void executePostObject( HttpServletRequest request, HttpServletResponse response ) throws IOException 
 	{
 		String bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String contentType  = request.getHeader( "Content-Type" );
@@ -381,7 +382,9 @@ public class S3ObjectAction implements ServletAction {
 		int countMeta = 0;
 		int state = 0;
 		
+		// [A] First parse all the parts out of the POST request and message body
 		// -> bucket name is still encoded in a Host header
+	   	S3AuthParams params = new S3AuthParams();
 		List<S3MetaDataEntry> metaSet = new ArrayList<S3MetaDataEntry>();  
 		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
 		engineRequest.setBucketName( bucket );
@@ -426,6 +429,12 @@ public class S3ObjectAction implements ServletAction {
 			            	  metaSet.add( oneMeta );
 			            	  countMeta++;
 				     }
+				       
+				     // -> build up the headers so we can do authentication on this POST
+				     HeaderParam oneHeader = new HeaderParam();
+				     oneHeader.setName( name );
+				     oneHeader.setValue( value );
+				     params.addHeader( oneHeader );
 				 }
 				 state = 1;
 			}
@@ -463,6 +472,16 @@ public class S3ObjectAction implements ServletAction {
 //			else System.out.println( oneLine.length() + " preamble: " + oneLine );
 		}
 		
+		
+		// [B] Authenticate the POST request after we have all the headers
+		try {
+		    S3RestServlet.authenticateRequest( request, params );
+		}
+		catch( Exception e ) {
+			throw new IOException( e.toString());
+		}
+		
+		// [C] Perform the request
         if (0 < countMeta) engineRequest.setMetaEntries( metaSet.toArray(new S3MetaDataEntry[0]));
 		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );
 		response.setHeader("ETag", engineResponse.getETag());
