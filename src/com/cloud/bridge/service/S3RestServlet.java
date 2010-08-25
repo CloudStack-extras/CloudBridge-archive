@@ -43,12 +43,14 @@ import com.cloud.bridge.persist.PersistContext;
 import com.cloud.bridge.service.controller.s3.S3BucketAction;
 import com.cloud.bridge.service.controller.s3.S3ObjectAction;
 import com.cloud.bridge.service.core.s3.S3AccessControlList;
+import com.cloud.bridge.service.core.s3.S3AuthParams;
 import com.cloud.bridge.service.core.s3.S3Engine;
 import com.cloud.bridge.service.core.s3.S3Grant;
 import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3PutObjectResponse;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
+import com.cloud.bridge.util.HeaderParam;
 import com.cloud.bridge.util.MultiPartDimeInputStream;
 import com.cloud.bridge.util.RestAuth;
 import com.cloud.bridge.util.S3SoapAuth;
@@ -62,53 +64,69 @@ public class S3RestServlet extends HttpServlet {
 	public static final Logger logger = Logger.getLogger(S3RestServlet.class);
 	
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
-	    processRequest(req, resp);
+	    processRequest( req, resp, "GET" );
     }
 	
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) 
+    {
+    	// -> DIME requests are authenticated via the SOAP auth mechanism
     	String type = req.getHeader( "Content-Type" );
-    	if ( null != type && type.equalsIgnoreCase( "application/dime" ))
+    	if ( null != type && type.equalsIgnoreCase( "application/dime" )) 	
     	     processDimeRequest(req, resp);
-    	else processRequest(req, resp);
+    	else processRequest( req, resp, "POST" );
     }
     
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) {
-        processRequest(req, resp);
+        processRequest( req, resp, "PUT" );
     }
     
     protected void doHead(HttpServletRequest req, HttpServletResponse resp) {
-        processRequest(req, resp);
+        processRequest( req, resp, "HEAD" );
     }
     
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp) {
-        processRequest(req, resp);
+        processRequest( req, resp, "OPTIONS" );
     }
     
-    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) {
-        processRequest(req, resp);
+    protected void doDelete( HttpServletRequest req, HttpServletResponse resp ) {
+        processRequest( req, resp, "DELETE" );
     }
     
-    private void processRequest(HttpServletRequest request, HttpServletResponse response) {
+	/**
+	 * POST requests do not get authenticated on entry.   The associated
+	 * access key and signature headers are embedded in the message not encoded
+	 * as HTTP headers.
+	 */
+    private void processRequest( HttpServletRequest request, HttpServletResponse response, String method ) 
+    {
         try {
         	logRequest(request);
-        	authenticateRequest(request);
+        	if (!method.equalsIgnoreCase( "POST" )) {
+        	    S3AuthParams params = extractRequestHeaders( request );
+        		authenticateRequest( request, params );
+        	}
+        	
         	ServletAction action = routeRequest(request);
-        	if(action != null) {
-        		action.execute(request, response);
-        	} else {
-        		response.setStatus(404);
-            	endResponse(response, "File not found");
+        	if ( action != null ) {
+        		 action.execute(request, response);
+        	} 
+        	else {
+        		 response.setStatus(404);
+            	 endResponse(response, "File not found");
         	}
         	
 			PersistContext.commitTransaction();
+			
         } catch(PermissionDeniedException e) {
     		logger.error("Unexpected exception " + e.getMessage(), e);
     		response.setStatus(403);
         	endResponse(response, "Access denied");
+        	
         } catch(Throwable e) {
     		logger.error("Unexpected exception " + e.getMessage(), e);
     		response.setStatus(500);
         	endResponse(response, "Internal server error");
+        	
         } finally {
         	try {
 				response.flushBuffer();
@@ -119,15 +137,39 @@ public class S3RestServlet extends HttpServlet {
         }
     }
     
-    private void authenticateRequest(HttpServletRequest request) 
-        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
+    /**
+     * We are using the S3AuthParams class to hide where the header values are coming
+     * from so that the authenticateRequest call can be made from several places.
+     */
+    private S3AuthParams extractRequestHeaders( HttpServletRequest request ) {
+    	S3AuthParams params = new S3AuthParams();
+    	   	
+		Enumeration headers = request.getHeaderNames();
+		if (null != headers) 
+		{
+			while( headers.hasMoreElements()) 
+			{
+	    		HeaderParam oneHeader = new HeaderParam();
+	    		String headerName = (String)headers.nextElement();
+	    		oneHeader.setName( headerName );
+	    		oneHeader.setValue( request.getHeader( headerName ));
+	    		params.addHeader( oneHeader );
+			}
+		}
+    	return params;
+    }
+    
+    public static void authenticateRequest( HttpServletRequest request, S3AuthParams params ) 
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
+    {
     	RestAuth auth          = new RestAuth(ServiceProvider.getInstance().getUseSubDomain()); 	
     	String   AWSAccessKey  = null;
     	String   signature     = null;
     	String   authorization = null;
     	
     	// [A] Is it an authenticated request?
-    	if (null != (authorization = request.getHeader( "Authorization" ))) {
+    	if (null != (authorization = params.getHeader( "Authorization" ))) 
+    	{
     		int offset = authorization.indexOf( "AWS" );
     		if (-1 != offset) {
     			String temp = authorization.substring( offset+3 ).trim();
@@ -151,19 +193,17 @@ public class S3RestServlet extends HttpServlet {
     	auth.addUriPath( request.getRequestURI());
     	
     	// -> are their any Amazon specific (i.e. 'x-amz-' ) headers?
-		Enumeration headers = request.getHeaderNames();
-		if (null != headers) {
-			while(headers.hasMoreElements()) {
-				String headerName = (String)headers.nextElement();
-				String ignoreCase = headerName.toLowerCase();
-				if (ignoreCase.startsWith( "x-amz-" ))
-					auth.addAmazonHeader( headerName + ":" + request.getHeader( headerName ));
-			}
+    	HeaderParam[] headers = params.getHeaders();
+    	for( int i=0; null != headers && i < headers.length; i++ )
+		{
+			 String headerName = headers[i].getName();
+			 String ignoreCase = headerName.toLowerCase();
+			 if (ignoreCase.startsWith( "x-amz-" ))
+				 auth.addAmazonHeader( headerName + ":" + headers[i].getValue());
 		}
 		
 		UserInfo info = ServiceProvider.getInstance().getUserInfo(AWSAccessKey);
-		if(info == null)
-			throw new PermissionDeniedException("Unable to authenticate access key: " + AWSAccessKey);
+		if (info == null) throw new PermissionDeniedException("Unable to authenticate access key: " + AWSAccessKey);
 		
     	try {
 			if (auth.verifySignature( request.getMethod(), info.getSecretKey(), signature )) {
@@ -174,6 +214,7 @@ public class S3RestServlet extends HttpServlet {
 			// -> just for testing
 			UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), AWSAccessKey, info.getDescription());
             return;
+            
 		} catch (SignatureException e) {
 			throw new PermissionDeniedException(e);
 		} catch (UnsupportedEncodingException e) {
