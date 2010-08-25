@@ -356,11 +356,11 @@ public class S3ObjectAction implements ServletAction {
 	}
 
 	// There is a problem with POST since the 'Signature' and 'AccessKey' parameters are not
-	// determined until we hit this function.   However, the S3 authentication test is done in 
+	// determined until we hit this function (i.e., they are encoded in the body of the message
+	// they are not HTTP request headers).   However, the S3 authentication test is done in 
 	// the calling functions.
 	//
-	// Still need to handle: 
-	// engineRequest.setMetaEntries( extractMetaData( request ));
+	// All the values we used to get in the request headers are not encoded in the request body.
     //
 	public void executePostObject(HttpServletRequest request,HttpServletResponse response) throws IOException 
 	{
@@ -377,21 +377,27 @@ public class S3ObjectAction implements ServletAction {
 		String oneLine = null;
 		String name = null;
 		String value = null;
+		boolean isMetaTag = false;
+		int countMeta = 0;
 		int state = 0;
 		
-		// -> reset of the values are passed in the form data
+		// -> bucket name is still encoded in a Host header
+		List<S3MetaDataEntry> metaSet = new ArrayList<S3MetaDataEntry>();  
 		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
-		engineRequest.setBucketName(bucket);
+		engineRequest.setBucketName( bucket );
 		
+		// -> the last body part contains the content that is used to write the S3 object, all
+		//    other body parts are header values
 		while( null != (oneLine = br.readLine())) 
 		{
 			if ( oneLine.startsWith( lastBoundary )) 
 			{
 				 // -> this is the data of the object to put
-				 if (0 < temp.length()) {
+				 if (0 < temp.length()) 
+				 {
 				     value = temp.toString();
 				     temp.setLength( 0 );
-				     System.out.println( "last param: " + name + " = " + value );
+				     //System.out.println( "request contents: " + name + " = " + value );
 				     
 				 	 engineRequest.setContentLength( value.length());	
 				 	 engineRequest.setDataAsString( value );
@@ -401,13 +407,25 @@ public class S3ObjectAction implements ServletAction {
 			else if ( oneLine.startsWith( boundary )) 
 			{
 				 // -> this is the header data
-				 if (0 < temp.length()) {
+				 if (0 < temp.length()) 
+				 {
 				     value = temp.toString();
 				     temp.setLength( 0 );				     
 				     System.out.println( "param: " + name + " = " + value );
 				     
-				          if (name.equalsIgnoreCase( "key" ))       engineRequest.setKey( value );
-				     else if (name.equalsIgnoreCase( "x-amz-acl" )) engineRequest.setCannedAccess( value );
+				          if (name.equalsIgnoreCase( "key" )) {
+				        	  engineRequest.setKey( value );
+				          }
+				     else if (name.equalsIgnoreCase( "x-amz-acl" )) {
+				    	      engineRequest.setCannedAccess( value );
+				     }
+				     else if (isMetaTag) {
+			            	  S3MetaDataEntry oneMeta = new S3MetaDataEntry();
+			            	  oneMeta.setName( name );
+			            	  oneMeta.setValue( value );
+			            	  metaSet.add( oneMeta );
+			            	  countMeta++;
+				     }
 				 }
 				 state = 1;
 			}
@@ -421,11 +439,18 @@ public class S3ObjectAction implements ServletAction {
 				 // -> the name of the 'name-value' pair is encoded in the Content-Disposition header
 				 if (oneLine.startsWith( "Content-Disposition: form-data;")) 
 				 {
+					 isMetaTag = false;
 					 int nameOffset = oneLine.indexOf( "name=" );
-					 if (-1 != nameOffset) {
+					 if (-1 != nameOffset) 
+					 {
 						 name = oneLine.substring( nameOffset+5 );
 						 if (name.startsWith( "\"" )) name = name.substring( 1 );
 						 if (name.endsWith( "\"" ))   name = name.substring( 0, name.length()-1 );
+						 
+						 if (name.startsWith( "x-amz-meta-" )) {
+							 name = name.substring( 11 );
+							 isMetaTag = true;
+						 }
 					 }
 				 }
 			}
@@ -438,6 +463,7 @@ public class S3ObjectAction implements ServletAction {
 //			else System.out.println( oneLine.length() + " preamble: " + oneLine );
 		}
 		
+        if (0 < countMeta) engineRequest.setMetaEntries( metaSet.toArray(new S3MetaDataEntry[0]));
 		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );
 		response.setHeader("ETag", engineResponse.getETag());
 		String version = engineResponse.getVersion();
