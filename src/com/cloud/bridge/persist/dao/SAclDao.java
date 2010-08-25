@@ -45,8 +45,8 @@ public class SAclDao extends EntityDao<SAcl> {
 	}
 
 	public void save(String target, long targetId, S3AccessControlList acl) {
-		executeUpdate("delete from SAcl where target=? and targetId=?",
-			new Object[] { target, new Long(targetId)});
+		// -> the target's ACLs are being redefined
+		executeUpdate("delete from SAcl where target=? and targetId=?",	new Object[] { target, new Long(targetId)});
 		
 		if(acl != null) {
 			S3Grant[] grants = acl.getGrants();

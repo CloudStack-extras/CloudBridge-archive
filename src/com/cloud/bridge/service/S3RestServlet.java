@@ -167,7 +167,6 @@ public class S3RestServlet extends HttpServlet {
     	String   signature     = null;
     	String   authorization = null;
     	
-System.out.println( "entered auth request" );
     	// [A] Is it an authenticated request?
     	if (null != (authorization = params.getHeader( "Authorization" ))) 
     	{
@@ -199,7 +198,6 @@ System.out.println( "entered auth request" );
 		{
 			 String headerName = headers[i].getName();
 			 String ignoreCase = headerName.toLowerCase();
-System.out.println( "auth request: " + i + " " + headerName + " = " + headers[i].getValue());
 			 if (ignoreCase.startsWith( "x-amz-" ))
 				 auth.addAmazonHeader( headerName + ":" + headers[i].getValue());
 		}

@@ -378,6 +378,7 @@ public class S3ObjectAction implements ServletAction {
 		String oneLine = null;
 		String name = null;
 		String value = null;
+		String metaName = null;   // -> after stripped off the x-amz-meta-
 		boolean isMetaTag = false;
 		int countMeta = 0;
 		int state = 0;
@@ -400,7 +401,6 @@ public class S3ObjectAction implements ServletAction {
 				 {
 				     value = temp.toString();
 				     temp.setLength( 0 );
-				     //System.out.println( "request contents: " + name + " = " + value );
 				     
 				 	 engineRequest.setContentLength( value.length());	
 				 	 engineRequest.setDataAsString( value );
@@ -412,9 +412,9 @@ public class S3ObjectAction implements ServletAction {
 				 // -> this is the header data
 				 if (0 < temp.length()) 
 				 {
-				     value = temp.toString();
+				     value = temp.toString().trim();
 				     temp.setLength( 0 );				     
-				     System.out.println( "param: " + name + " = " + value );
+				     //System.out.println( "param: " + name + " = " + value );
 				     
 				          if (name.equalsIgnoreCase( "key" )) {
 				        	  engineRequest.setKey( value );
@@ -424,10 +424,11 @@ public class S3ObjectAction implements ServletAction {
 				     }
 				     else if (isMetaTag) {
 			            	  S3MetaDataEntry oneMeta = new S3MetaDataEntry();
-			            	  oneMeta.setName( name );
+			            	  oneMeta.setName( metaName );
 			            	  oneMeta.setValue( value );
 			            	  metaSet.add( oneMeta );
 			            	  countMeta++;
+			            	  metaName = null;
 				     }
 				       
 				     // -> build up the headers so we can do authentication on this POST
@@ -455,9 +456,10 @@ public class S3ObjectAction implements ServletAction {
 						 name = oneLine.substring( nameOffset+5 );
 						 if (name.startsWith( "\"" )) name = name.substring( 1 );
 						 if (name.endsWith( "\"" ))   name = name.substring( 0, name.length()-1 );
+						 name = name.trim();
 						 
 						 if (name.startsWith( "x-amz-meta-" )) {
-							 name = name.substring( 11 );
+							 metaName  = name.substring( 11 );
 							 isMetaTag = true;
 						 }
 					 }

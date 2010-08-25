@@ -46,6 +46,9 @@ public class SMetaDao extends EntityDao<SMeta> {
 	}
 	
 	public void save(String target, long targetId, S3MetaDataEntry[] entries) {
+		// -> the target's meta data are being redefined
+		executeUpdate("delete from SMeta where target=? and targetId=?", new Object[] { target, new Long(targetId)});
+
 		if(entries != null) {
 			for(S3MetaDataEntry entry : entries)
 				save(target, targetId, entry);

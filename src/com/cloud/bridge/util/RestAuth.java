@@ -194,7 +194,7 @@ public class RestAuth {
              canonicalized = new String( canonicalized + "," + value + "\n" );	
              canonicalized = canonicalized.replaceAll( "\n,", "," );   // remove the '\n' from the first stored value
 	    }
-		else canonicalized = new String( header + value + "\n" );
+		else canonicalized = new String( header + value + "\n" );  // -> as per spec, no space between header and its value
 
 		AmazonHeaders.put( header, canonicalized );
 		
