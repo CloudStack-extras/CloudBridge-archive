@@ -223,8 +223,7 @@ public class RestAuth {
 	public boolean verifySignature( String httpVerb, String secretKey, String signature )
 	    throws SignatureException, UnsupportedEncodingException {
 		
-		if (null == httpVerb || null == secretKey || null == signature) 
-			return false;
+		if (null == httpVerb || null == secretKey || null == signature) return false;
 		
 		httpVerb  = httpVerb.trim();
 		secretKey = secretKey.trim();

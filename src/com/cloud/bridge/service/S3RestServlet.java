@@ -167,24 +167,22 @@ public class S3RestServlet extends HttpServlet {
     	String   signature     = null;
     	String   authorization = null;
     	
-    	// [A] Is it an authenticated request?
-    	if (null != (authorization = params.getHeader( "Authorization" ))) 
-    	{
-    		int offset = authorization.indexOf( "AWS" );
-    		if (-1 != offset) {
-    			String temp = authorization.substring( offset+3 ).trim();
-    			offset = temp.indexOf( ":" );
-    			AWSAccessKey = temp.substring( 0, offset );
-    			signature    = temp.substring( offset+1 );
-    		}
+    	// [A] Is it an annonymous request?
+    	if (null == (authorization = params.getHeader( "Authorization" ))) {
+            UserContext.current().initContext();
+            return;
     	}
     	
-    	if (null == signature) {
-    		UserContext.current().initContext();
-    		return;
+    	// [B] Is it an authenticated request?
+    	int offset = authorization.indexOf( "AWS" );
+    	if (-1 != offset) {
+    		String temp = authorization.substring( offset+3 ).trim();
+    		offset = temp.indexOf( ":" );
+    		AWSAccessKey = temp.substring( 0, offset );
+    		signature    = temp.substring( offset+1 );
     	}
-    	
-    	// [B] Calculate the signature from the request's headers
+    	    	
+    	// [C] Calculate the signature from the request's headers
     	auth.setDateHeader( request.getHeader( "Date" ));
     	auth.setContentTypeHeader( request.getHeader( "Content-Type" ));
     	auth.setContentMD5Header( request.getHeader( "Content-MD5" ));
@@ -217,6 +215,7 @@ public class S3RestServlet extends HttpServlet {
             
 		} catch (SignatureException e) {
 			throw new PermissionDeniedException(e);
+			
 		} catch (UnsupportedEncodingException e) {
 			throw new PermissionDeniedException(e);
 		}

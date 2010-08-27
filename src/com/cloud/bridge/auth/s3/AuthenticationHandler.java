@@ -92,13 +92,17 @@ public class AuthenticationHandler implements Handler {
             String       xmlBody      = soapBody.toString();
             //logger.debug( "xmlrequest: " + xmlBody );
          
-            // -> if it is anonymous request, then no access key should exist?
+            // -> if it is anonymous request, then no access key should exist
             int start = xmlBody.indexOf( "AWSAccessKeyId>" );
-            if (-1 == start) return InvocationResponse.CONTINUE; 
+            if (-1 == start) {
+                UserContext.current().initContext();
+                return InvocationResponse.CONTINUE;
+            }           
             temp = xmlBody.substring( start+15 );
             int end   = temp.indexOf( "</" );
             accessKey = temp.substring( 0, end );
             //logger.debug( "accesskey " + accessKey );
+            
             
             // -> what if we cannot find the user's key?
             if (null != (secretKey = lookupSecretKey( accessKey )))

@@ -485,9 +485,8 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return response;
 	}
  
-	public SetObjectAccessControlPolicyResponse setObjectAccessControlPolicy(
-          SetObjectAccessControlPolicy setObjectAccessControlPolicy) {
-		
+	public SetObjectAccessControlPolicyResponse setObjectAccessControlPolicy(SetObjectAccessControlPolicy setObjectAccessControlPolicy) 
+	{	
 		S3SetObjectAccessControlPolicyRequest request = new S3SetObjectAccessControlPolicyRequest();
 		request.setAccessKey(setObjectAccessControlPolicy.getAWSAccessKeyId());
 		request.setRequestTimestamp(setObjectAccessControlPolicy.getTimestamp());
@@ -533,19 +532,22 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return null;
 	}
 	
-	private S3AccessControlList toEngineAccessControlList(AccessControlList acl) {
-		if(acl == null)
-			return null;
+	private S3AccessControlList toEngineAccessControlList(AccessControlList acl) 
+	{
+		if (acl == null) return null;
 		
 		S3AccessControlList engineAcl = new S3AccessControlList();
 		
 		Grant[] grants = acl.getGrant();
-		if(grants != null) {
-			for(Grant grant: grants) {
+		if (grants != null) 
+		{
+			for (Grant grant: grants) 
+			{
 				S3Grant engineGrant = new S3Grant();
 
 				Grantee grantee = grant.getGrantee();
-				if(grantee instanceof CanonicalUser) {
+				if (grantee instanceof CanonicalUser) 
+				{
 					engineGrant.setGrantee(SAcl.GRANTEE_USER);
 					engineGrant.setCanonicalUserID(((CanonicalUser)grantee).getID());
 				} else {

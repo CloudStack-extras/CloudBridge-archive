@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package com.cloud.bridge.service.core.s3;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -298,11 +297,10 @@ public class S3Engine {
 		SBucket bucket = bucketDao.getByName(bucketName);
 		if (bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 		
-    	accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE ); 
 
-
+		// -> is the caller allowed to write the object?
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl, request.getCannedAccess());
-		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
+		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
 		
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 		String itemFileName = tupleObjectItem.getSecond().getStoredPath();
@@ -353,12 +351,10 @@ public class S3Engine {
 		SBucket bucket = bucketDao.getByName(bucketName);
 		if(bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 		
-    	accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE ); 
-
-		
+		// -> is the caller allowed to write the object?	
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl, null);
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
-		
+    	
 		S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 		String itemFileName = tupleObjectItem.getSecond().getStoredPath();
 		InputStream is = null;
@@ -372,7 +368,7 @@ public class S3Engine {
 			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
 			
 			SObjectItemDao itemDao = new SObjectItemDao();
-			SObjectItem item = itemDao.get(tupleObjectItem.getSecond().getId());
+			SObjectItem item = itemDao.get( tupleObjectItem.getSecond().getId());
 			item.setMd5(md5Checksum);
 			item.setStoredSize(contentLength);
 			PersistContext.getSession().save(item);
@@ -857,6 +853,8 @@ public class S3Engine {
 		SObject object = objectDao.getByNameKey(bucket, nameKey);
 		if ( object != null ) 
 		{
+			 accessAllowed( "SObject", object.getId(), SAcl.PERMISSION_WRITE ); 
+
 			 // -> if versioning is on create new object items
 			 if ( SBucket.VERSIONING_ENABLED  == versioningStatus )
 			 {
@@ -895,6 +893,9 @@ public class S3Engine {
 		} 
 		else 
 		{    // -> there is no object nor an object item
+			 // -> to create a new object in a bucket then we need write access to that bucket
+			 accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE ); 
+
 			 object = new SObject();
 			 object.setBucket(bucket);
 			 object.setNameKey(nameKey);
@@ -943,15 +944,26 @@ public class S3Engine {
 		return new Tuple<SObject, SObjectItem>(object, item);
 	}
 	
+	
 	/**
 	 * Access controls that are specified via the "x-amz-acl:" headers in REST requests.
+	 * Note that canned policies can be set when the object's contents are set
 	 */
 	private void setCannedAccessControls( String cannedAccessPolicy, String target, long objectId, SBucket bucket )
 	{
-	    // -> note that canned policies can be set when the object's contents are set
-	    if ( cannedAccessPolicy.equalsIgnoreCase( "authenticated-read" )) 
+	    if ( cannedAccessPolicy.equalsIgnoreCase( "public-read" )) 
 	    {
-		     // -> "Owner gets FULL_CONTROL, and any principal authenticated as a registered S3 user (the "*" here) is granted READ access
+             // -> owner gets FULL_CONTROL  and the anonymous principal (the 'A' symbol here) is granted READ access.
+	    	 setDefaultAcls( target, objectId, SAcl.PERMISSION_FULL, SAcl.PERMISSION_READ, "A" );
+	    }
+	    else if (cannedAccessPolicy.equalsIgnoreCase( "public-read-write" )) 
+	    {
+	    	 // -> owner gets FULL_CONTROL and the anonymous principal (the 'A' symbol here) is granted READ and WRITE access
+	    	 setDefaultAcls( target, objectId, SAcl.PERMISSION_FULL, (SAcl.PERMISSION_READ | SAcl.PERMISSION_WRITE), "A" );
+	    }
+	    else if (cannedAccessPolicy.equalsIgnoreCase( "authenticated-read" )) 
+	    {
+		     // -> Owner gets FULL_CONTROL and ANY principal authenticated as a registered S3 user (the '*' symbol here) is granted READ access
 	    	 setDefaultAcls( target, objectId, SAcl.PERMISSION_FULL, SAcl.PERMISSION_READ, "*" );
 	    }
 	    else if (cannedAccessPolicy.equalsIgnoreCase( "private" )) 
@@ -975,30 +987,36 @@ public class S3Engine {
 			      setSingleAcl( target, objectId, SAcl.PERMISSION_FULL );     		 
 	    	 else setDefaultAcls( target, objectId, SAcl.PERMISSION_FULL, SAcl.PERMISSION_FULL, bucket.getOwnerCanonicalId());
 	    }
-	    else if (cannedAccessPolicy.equalsIgnoreCase( "public-read" ) || cannedAccessPolicy.equalsIgnoreCase( "public-read-write" )) 
-	    {
-	         // -> these represent authorized access which we do not currently support
-	    	 throw new UnsupportedException( "Unsupported Canned Access Policy: " + cannedAccessPolicy + " is not supported" );
-	    }
 	    else throw new UnsupportedException( "Unknown Canned Access Policy: " + cannedAccessPolicy + " is not supported" );
 	}
 
+	
 	private void setSingleAcl( String target, long targetId, int permission ) 
 	{	
 		SAclDao aclDao  = new SAclDao();
         S3AccessControlList defaultAcl = new S3AccessControlList();
         
-        S3Grant defaultGrant = new S3Grant();
-        defaultGrant.setGrantee(SAcl.GRANTEE_USER);
-        defaultGrant.setCanonicalUserID( UserContext.current().getCanonicalUserId());
-        defaultGrant.setPermission( permission );
-        defaultAcl.addGrant( defaultGrant );       
-        aclDao.save( target, targetId, defaultAcl );
+		// -> if an annoymous request, then do not rewrite the ACL
+		String userId = UserContext.current().getCanonicalUserId();
+        if (0 < userId.length())
+        {
+            S3Grant defaultGrant = new S3Grant();
+            defaultGrant.setGrantee(SAcl.GRANTEE_USER);
+            defaultGrant.setCanonicalUserID( userId);
+            defaultGrant.setPermission( permission );
+            defaultAcl.addGrant( defaultGrant );       
+            aclDao.save( target, targetId, defaultAcl );
+        }
 	}
 
 	/**
 	 * Note that we use the Cloud Stack API Access key for the Canonical User Id everywhere
-	 * (i.e., for buckets, and objects).   For annoymonus we use the symbol '*'.
+	 * (i.e., for buckets, and objects).   
+	 * 
+	 * @param owner - this can be the Cloud Access Key for a bucket owner or one of the
+	 *                following special symbols:
+	 *                (a) '*' - any principal authenticated user (i.e., any user with a registered Cloud Access Key)
+	 *                (b) 'A' - any anonymous principal (i.e., S3 request without an Authorization header)
 	 */
 	private void setDefaultAcls( String target, long objectId, int permission1, int permission2, String owner  ) 
 	{
@@ -1012,7 +1030,7 @@ public class S3Engine {
         defaultGrant.setPermission( permission1 );
         defaultAcl.addGrant( defaultGrant );	
     
-        // -> bucket owner or annoymnous (i.e., '*' )
+        // -> bucket owner 
         defaultGrant = new S3Grant();
         defaultGrant.setGrantee(SAcl.GRANTEE_USER);
         defaultGrant.setCanonicalUserID( owner );
@@ -1021,37 +1039,45 @@ public class S3Engine {
         aclDao.save( target, objectId, defaultAcl );
 	}
 
+	
 	/**
 	 * This function verifies that the accessing client has the requested
 	 * premission on the object/bucket/Acl represented by the tuble: <target, targetId>
 	 * For cases where an ACL is meant for any authenticated user we place a "*" for the
-	 * Canonical User Id ("*" is not a legal Cloud Stack Access key).
+	 * Canonical User Id ("*" is not a legal Cloud Stack Access key).   For cases where
+	 * an ACL is meant for any anonymous user we place a "A" for the Canonical User Id ("A"
+	 * is not a legal Cloud Stack Access key).
 	 */
 	public void accessAllowed( String target, long targetId, int requestedPermission ) {
 		SAclDao aclDao = new SAclDao();
+		
+		// -> if an annoymous request, then canonicalUserId is an empty string
+		String userId = UserContext.current().getCanonicalUserId();
+        if ( 0 == userId.length())
+        {
+            // -> is an anonymous principal ACL set for this <target, targetId>?
+		    if (hasPermission( aclDao.listGrants( target, targetId, "A" ), requestedPermission )) return;
+        }
+        else
+        {    // -> no priviledges means no access allowed		
+		     if (hasPermission( aclDao.listGrants( target, targetId, userId ), requestedPermission )) return;
 
-        // -> no priviledges means no access allowed		
-		List<SAcl> priviledges = aclDao.listGrants( target, targetId, UserContext.current().getCanonicalUserId());
+		     // -> or maybe there is any principal authenticated ACL set for this <target, targetId>?
+		     if (hasPermission( aclDao.listGrants( target, targetId, "*" ), requestedPermission )) return;
+        }
+        throw new PermissionDeniedException( "Access Denied - user does not have the required permission" );
+	}
+	
+	private boolean hasPermission( List<SAcl> priviledges, int requestedPermission ) 
+	{
         ListIterator it = priviledges.listIterator();
         while( it.hasNext()) 
         {
            // -> is the requested permission "contained" in one or the granted rights for this user
            SAcl rights = (SAcl)it.next();
            int permission = rights.getPermission();
-            if (requestedPermission == (permission & requestedPermission)) return;
+           if (requestedPermission == (permission & requestedPermission)) return true;
         }
-
-        // -> or maybe there is a public ACL set
-		priviledges = aclDao.listGrants( target, targetId, "*" );
-        it = priviledges.listIterator();
-        while( it.hasNext()) 
-        {
-           // -> is the requested permission "contained" in one or the granted rights for this user
-           SAcl rights = (SAcl)it.next();
-           int permission = rights.getPermission();
-           if (requestedPermission == (permission & requestedPermission)) return;
-        }
-
-        throw new PermissionDeniedException( "Access Denied - user does not have the required permission" );
+        return false;
 	}
 }
