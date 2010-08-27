@@ -20,6 +20,7 @@ import java.sql.SQLException;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPBody;
 import org.apache.log4j.Logger;
+import org.apache.axis2.addressing.EndpointReference;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.engine.Handler;
 import org.apache.axis2.AxisFault;
@@ -92,6 +93,11 @@ public class AuthenticationHandler implements Handler {
             String       xmlBody      = soapBody.toString();
             //logger.debug( "xmlrequest: " + xmlBody );
          
+            // -> did we get here yet its an EC2 request?
+            int offset = xmlBody.indexOf( "http://ec2.amazonaws.com" );
+            if (-1 != offset) return InvocationResponse.CONTINUE;
+            
+            
             // -> if it is anonymous request, then no access key should exist
             int start = xmlBody.indexOf( "AWSAccessKeyId>" );
             if (-1 == start) {

@@ -46,7 +46,7 @@ public class UserContext {
 		return context;
 	}
 	
-	public void initContext() {
+	public void initContext() {		
 		annonymous = true;
 	}
 	
@@ -55,6 +55,7 @@ public class UserContext {
 		this.secretKey = secretKey;
 		this.canonicalUserId = canonicalUserId;
 		this.description = description;
+		this.annonymous = false;
 	}
 	
 	public String getAccessKey() {

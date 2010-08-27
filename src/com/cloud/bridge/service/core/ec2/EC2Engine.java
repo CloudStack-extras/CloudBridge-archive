@@ -545,7 +545,7 @@ public class EC2Engine {
     public EC2DescribeImagesResponse handleRequest(EC2DescribeImages request) 
     {
     	EC2DescribeImagesResponse images = new EC2DescribeImagesResponse();
-    	
+   
     	try {
     		String[] templateIds = request.getImageSet();
     	
@@ -1009,6 +1009,12 @@ public class EC2Engine {
        	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
        	    params.append( "&templateId=" + request.getTemplateId());
        	    if (null != request.getUserData()) params.append( "&userData=" + safeURLencode( request.getUserData()));
+       	    
+       	    // temp hack
+       	    //String vlanId = hackGetVlanId();
+       	    //if (null != vlanId) params.append( "&vlanId=" + vlanId );
+       	    // temp hack   
+       	    
        	    params.append( "&zoneId=" + toZoneId( request.getZoneName()));
        	    String query      = params.toString();
             String apiCommand = genAPIURL( query, genQuerySignature( query ));
@@ -2118,6 +2124,42 @@ public class EC2Engine {
 	    return groupSet;
     }
     
+    
+    /**
+     * Temporary hack to just get a valid VLANID
+     */
+    private String hackGetVlanId() 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
+    {
+	    Node parent = null; 	
+        Document cloudResp = resolveURL( genAPIURL( "command=listVlanIpRanges&vlantype=DirectAttached", genQuerySignature( "command=listVlanIpRanges&vlantype=DirectAttached" )), "listVlanIpRanges", true );
+        NodeList match = cloudResp.getElementsByTagName( "vlaniprange" ); 
+        int     length = match.getLength();
+       
+        for( int i=0; i < length; i++ ) 
+        {	   
+   	       if (null != (parent = match.item(i))) 
+   	       { 
+    		   NodeList children = parent.getChildNodes();
+    		   int      numChild = children.getLength();
+    		
+    		   for( int j=0; j < numChild; j++ ) 
+    		   {
+    		       Node   child = children.item(j);
+    			   String name  =  child.getNodeName();
+    			
+    			   if (null != child.getFirstChild()) 
+    			   {
+    			       String value = child.getFirstChild().getNodeValue();
+    			       System.out.println( "listVlanIpRanges " + name + "=" + value );   			     
+    			       if (name.equalsIgnoreCase( "id" )) return value;
+    			   } 
+    	       }
+   	       }
+    	}
+        return null;
+    }
+
     /**
      * Ingress Rules are one more level down the XML tree.
      */
@@ -2313,14 +2355,10 @@ public class EC2Engine {
      */
     private String genQuerySignature( String sortedCommand ) throws UnsupportedEncodingException, SignatureException 
     {
-		UserContext ctx = UserContext.current();
-		if ( null != ctx ) {
-    	     StringBuffer sigOver = new StringBuffer();
-    	     sigOver.append( "apikey=" ).append( safeURLencode( ctx.getAccessKey() ));
-    	     sigOver.append( "&" ).append( sortedCommand );
-    	     return calculateRFC2104HMAC( sigOver.toString().toLowerCase(), ctx.getSecretKey());
-		}
-		else return null;
+    	StringBuffer sigOver = new StringBuffer();
+    	sigOver.append( "apikey=" ).append( safeURLencode( UserContext.current().getAccessKey() ));
+    	sigOver.append( "&" ).append( sortedCommand );
+    	return calculateRFC2104HMAC( sigOver.toString().toLowerCase(), UserContext.current().getSecretKey());
     }
     
     /**
@@ -2335,7 +2373,6 @@ public class EC2Engine {
     private String calculateRFC2104HMAC( String signIt, String secretKey ) throws SignatureException 
     {
    	    String result = null;
-   	    
    	    try { 	 
    	    	SecretKeySpec key = new SecretKeySpec( secretKey.getBytes(), "HmacSHA1" );
    	        Mac hmacSha1 = Mac.getInstance( "HmacSHA1" );

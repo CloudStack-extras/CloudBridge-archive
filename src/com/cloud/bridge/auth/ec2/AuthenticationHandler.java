@@ -111,13 +111,14 @@ public class AuthenticationHandler implements Handler {
                 
                 // -> find the Cloud API key and the secret key from the cert's uniqueId 
 	     	     UserCredentialsDao credentialDao = new UserCredentialsDao();
-	     	     UserCredentials cloudKeys = credentialDao.getByCertUniqueId( uniqueId ); 
+	     	     UserCredentials cloudKeys = credentialDao.getByCertUniqueId( uniqueId );
 	     	     if ( null == cloudKeys ) {
 	        	      logger.error( "Cert does not map to Cloud API keys: " + uniqueId );
 	        		  throw new AxisFault( "User not properly registered: certificate does not map to Cloud API Keys", "Client.Blocked" );
 	     	     }
 	     	     else UserContext.current().initContext( cloudKeys.getAccessKey(), cloudKeys.getSecretKey(), cloudKeys.getAccessKey(), "SOAP Request" );
-            }
+System.out.println( "end of cert match: " + UserContext.current().getSecretKey());
+	        }
     	}
     	catch( Exception e )
     	{
