@@ -149,7 +149,7 @@ public class AuthenticationHandler implements Handler {
     	}
     	
         // -> for SOAP requests the Cloud API keys are sent here and only here
-    	//S3SoapAuth.verifySignature( msgSig, operation, timestamp, accessKey, secretKey );   	
+    	S3SoapAuth.verifySignature( msgSig, operation, timestamp, accessKey, secretKey );   	
         UserContext.current().initContext( accessKey, secretKey, accessKey, "S3 SOAP request" );
         return InvocationResponse.CONTINUE;
      }
