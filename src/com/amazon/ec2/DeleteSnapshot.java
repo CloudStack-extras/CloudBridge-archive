@@ -17,14 +17,14 @@
         implements org.apache.axis2.databinding.ADBBean{
         
                 public static final javax.xml.namespace.QName MY_QNAME = new javax.xml.namespace.QName(
-                "http://ec2.amazonaws.com/doc/2009-11-30/",
+                "http://ec2.amazonaws.com/doc/2010-06-15/",
                 "DeleteSnapshot",
                 "ns1");
 
             
 
         private static java.lang.String generatePrefix(java.lang.String namespace) {
-            if(namespace.equals("http://ec2.amazonaws.com/doc/2009-11-30/")){
+            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-06-15/")){
                 return "ns1";
             }
             return org.apache.axis2.databinding.utils.BeanUtil.getUniquePrefix();
@@ -327,7 +327,7 @@
                 while(!reader.isEndElement()) {
                     if (reader.isStartElement() ){
                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","DeleteSnapshot").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","DeleteSnapshot").equals(reader.getName())){
                                 
                                                 object.setDeleteSnapshot(com.amazon.ec2.DeleteSnapshotType.Factory.parse(reader));
                                             

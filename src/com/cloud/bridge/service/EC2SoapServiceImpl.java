@@ -568,6 +568,36 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	public ActivateLicenseResponse activateLicense(ActivateLicense activateLicense) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public CreatePlacementGroupResponse createPlacementGroup(CreatePlacementGroup createPlacementGroup) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public DeactivateLicenseResponse deactivateLicense(DeactivateLicense deactivateLicense) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public DeletePlacementGroupResponse deletePlacementGroup(DeletePlacementGroup deletePlacementGroup) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public DescribeLicensesResponse describeLicenses(DescribeLicenses describeLicenses) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public DescribePlacementGroupsResponse describePlacementGroups(DescribePlacementGroups describePlacementGroups) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 	/**
 	 * Did not find a matching service offering so for now we just return disabled

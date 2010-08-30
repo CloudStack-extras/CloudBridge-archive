@@ -66,6 +66,7 @@ import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.exception.InvalidRequestContentException;
 import com.cloud.bridge.service.exception.NetworkIOException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
+import com.cloud.bridge.service.exception.UnsupportedException;
 import com.cloud.bridge.util.Converter;
 import com.cloud.bridge.util.StringHelper;
 import com.cloud.bridge.util.XSerializer;
@@ -276,11 +277,11 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void executeGetBucketLogging(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		// TODO
+		// TODO 
 	}
 	
 	public void executeGetBucketLocation(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		// TODO - this returns the region that the bucket is in and Cloud Stack has no equivalent
+		throw new UnsupportedException( "No concept of Region is support in this EC2 implementation." );
 	}
 	
 	public void executePutBucket(HttpServletRequest request, HttpServletResponse response) throws IOException 

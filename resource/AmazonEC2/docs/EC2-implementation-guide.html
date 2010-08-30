@@ -4,7 +4,7 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's EC2 API Implementation Guide</H1>
-7/21/2010
+8/30/2010
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#conf">1. Configuration Parameters</A></LI>
@@ -20,7 +20,7 @@ The following parameters are defined in the file:</BR> &lt;install directory>"/a
 <pre>
 managementServer=192.168.154.36
 cloudAPIPort=8080
-WSDLVersion=2009-11-30
+WSDLVersion=2010-06-15
 keystore=xes.keystore
 keystorePass=apache
 m1.small.diskId=1
@@ -92,6 +92,7 @@ MySql
 apache-tomcat 6.0.18
 axis2 1.5.1
 rampart 1.5 (installed into axis2 for WS-Security)
+used for testing: ec2-api-tools-1.3-53907
 </pre>
 <P>
 <H2 id="maintenace">3. Maintenance</H2>
@@ -110,7 +111,7 @@ The MySql command line client can be used to delete usercredentials entries no l
 After a successful installation the following directory and file structure should exist:
 <pre>
 &lt;install directory>
-   apache-tomcat-6.0.1
+   apache-tomcat-6.0.18
       conf
         ec2-service.properties  (EC2 service's configuration parameters)
         server.xml		

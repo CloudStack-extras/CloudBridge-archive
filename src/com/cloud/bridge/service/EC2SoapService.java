@@ -492,4 +492,34 @@ public class EC2SoapService implements AmazonEC2SkeletonInterface {
 			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
 			return ec2Service.unmonitorInstances(unmonitorInstances);
 		}
+
+		public ActivateLicenseResponse activateLicense(ActivateLicense activateLicense) {			
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.activateLicense(activateLicense);
+		}
+
+		public CreatePlacementGroupResponse createPlacementGroup(CreatePlacementGroup createPlacementGroup) {
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.createPlacementGroup(createPlacementGroup);
+		}
+
+		public DeactivateLicenseResponse deactivateLicense(DeactivateLicense deactivateLicense) {
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.deactivateLicense(deactivateLicense);
+		}
+
+		public DeletePlacementGroupResponse deletePlacementGroup(DeletePlacementGroup deletePlacementGroup) {
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.deletePlacementGroup(deletePlacementGroup);
+		}
+
+		public DescribeLicensesResponse describeLicenses(DescribeLicenses describeLicenses) {
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.describeLicenses(describeLicenses);
+		}
+
+		public DescribePlacementGroupsResponse describePlacementGroups(DescribePlacementGroups describePlacementGroups) {
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.describePlacementGroups(describePlacementGroups);
+		}
 }

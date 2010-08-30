@@ -17,13 +17,13 @@
         implements org.apache.axis2.databinding.ADBBean{
         /* This type was generated from the piece of schema that had
                 name = DescribeKeyPairsType
-                Namespace URI = http://ec2.amazonaws.com/doc/2009-11-30/
+                Namespace URI = http://ec2.amazonaws.com/doc/2010-06-15/
                 Namespace Prefix = ns1
                 */
             
 
         private static java.lang.String generatePrefix(java.lang.String namespace) {
-            if(namespace.equals("http://ec2.amazonaws.com/doc/2009-11-30/")){
+            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-06-15/")){
                 return "ns1";
             }
             return org.apache.axis2.databinding.utils.BeanUtil.getUniquePrefix();
@@ -144,7 +144,7 @@
                   if (serializeType){
                
 
-                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2009-11-30/");
+                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-06-15/");
                    if ((namespacePrefix != null) && (namespacePrefix.trim().length() > 0)){
                        writeAttribute("xsi","http://www.w3.org/2001/XMLSchema-instance","type",
                            namespacePrefix+":DescribeKeyPairsType",
@@ -161,7 +161,7 @@
                                             if (localKeySet==null){
                                                  throw new org.apache.axis2.databinding.ADBException("keySet cannot be null!!");
                                             }
-                                           localKeySet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","keySet"),
+                                           localKeySet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","keySet"),
                                                factory,xmlWriter);
                                         
                     xmlWriter.writeEndElement();
@@ -326,7 +326,7 @@
                  java.util.ArrayList attribList = new java.util.ArrayList();
 
                 
-                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/",
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
                                                                       "keySet"));
                             
                             
@@ -413,7 +413,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","keySet").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","keySet").equals(reader.getName())){
                                 
                                                 object.setKeySet(com.amazon.ec2.DescribeKeyPairsInfoType.Factory.parse(reader));
                                               

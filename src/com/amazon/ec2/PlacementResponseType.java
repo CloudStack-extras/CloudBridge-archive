@@ -17,13 +17,13 @@
         implements org.apache.axis2.databinding.ADBBean{
         /* This type was generated from the piece of schema that had
                 name = PlacementResponseType
-                Namespace URI = http://ec2.amazonaws.com/doc/2009-11-30/
+                Namespace URI = http://ec2.amazonaws.com/doc/2010-06-15/
                 Namespace Prefix = ns1
                 */
             
 
         private static java.lang.String generatePrefix(java.lang.String namespace) {
-            if(namespace.equals("http://ec2.amazonaws.com/doc/2009-11-30/")){
+            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-06-15/")){
                 return "ns1";
             }
             return org.apache.axis2.databinding.utils.BeanUtil.getUniquePrefix();
@@ -56,6 +56,50 @@
                                public void setAvailabilityZone(java.lang.String param){
                             
                                             this.localAvailabilityZone=param;
+                                    
+
+                               }
+                            
+
+                        /**
+                        * field for GroupName
+                        */
+
+                        
+                                    protected java.lang.String localGroupName ;
+                                
+                           /*  This tracker boolean wil be used to detect whether the user called the set method
+                          *   for this attribute. It will be used to determine whether to include this field
+                           *   in the serialized XML
+                           */
+                           protected boolean localGroupNameTracker = false ;
+                           
+
+                           /**
+                           * Auto generated getter method
+                           * @return java.lang.String
+                           */
+                           public  java.lang.String getGroupName(){
+                               return localGroupName;
+                           }
+
+                           
+                        
+                            /**
+                               * Auto generated setter method
+                               * @param param GroupName
+                               */
+                               public void setGroupName(java.lang.String param){
+                            
+                                       if (param != null){
+                                          //update the setting tracker
+                                          localGroupNameTracker = true;
+                                       } else {
+                                          localGroupNameTracker = false;
+                                              
+                                       }
+                                   
+                                            this.localGroupName=param;
                                     
 
                                }
@@ -144,7 +188,7 @@
                   if (serializeType){
                
 
-                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2009-11-30/");
+                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-06-15/");
                    if ((namespacePrefix != null) && (namespacePrefix.trim().length() > 0)){
                        writeAttribute("xsi","http://www.w3.org/2001/XMLSchema-instance","type",
                            namespacePrefix+":PlacementResponseType",
@@ -158,7 +202,7 @@
                
                    }
                
-                                    namespace = "http://ec2.amazonaws.com/doc/2009-11-30/";
+                                    namespace = "http://ec2.amazonaws.com/doc/2010-06-15/";
                                     if (! namespace.equals("")) {
                                         prefix = xmlWriter.getPrefix(namespace);
 
@@ -191,7 +235,41 @@
                                           }
                                     
                                    xmlWriter.writeEndElement();
-                             
+                              if (localGroupNameTracker){
+                                    namespace = "http://ec2.amazonaws.com/doc/2010-06-15/";
+                                    if (! namespace.equals("")) {
+                                        prefix = xmlWriter.getPrefix(namespace);
+
+                                        if (prefix == null) {
+                                            prefix = generatePrefix(namespace);
+
+                                            xmlWriter.writeStartElement(prefix,"groupName", namespace);
+                                            xmlWriter.writeNamespace(prefix, namespace);
+                                            xmlWriter.setPrefix(prefix, namespace);
+
+                                        } else {
+                                            xmlWriter.writeStartElement(namespace,"groupName");
+                                        }
+
+                                    } else {
+                                        xmlWriter.writeStartElement("groupName");
+                                    }
+                                
+
+                                          if (localGroupName==null){
+                                              // write the nil attribute
+                                              
+                                                     throw new org.apache.axis2.databinding.ADBException("groupName cannot be null!!");
+                                                  
+                                          }else{
+
+                                        
+                                                   xmlWriter.writeCharacters(localGroupName);
+                                            
+                                          }
+                                    
+                                   xmlWriter.writeEndElement();
+                             }
                     xmlWriter.writeEndElement();
                
 
@@ -354,7 +432,7 @@
                  java.util.ArrayList attribList = new java.util.ArrayList();
 
                 
-                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/",
+                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
                                                                       "availabilityZone"));
                                  
                                         if (localAvailabilityZone != null){
@@ -362,7 +440,16 @@
                                         } else {
                                            throw new org.apache.axis2.databinding.ADBException("availabilityZone cannot be null!!");
                                         }
-                                    
+                                     if (localGroupNameTracker){
+                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
+                                                                      "groupName"));
+                                 
+                                        if (localGroupName != null){
+                                            elementList.add(org.apache.axis2.databinding.utils.ConverterUtil.convertToString(localGroupName));
+                                        } else {
+                                           throw new org.apache.axis2.databinding.ADBException("groupName cannot be null!!");
+                                        }
+                                    }
 
                 return new org.apache.axis2.databinding.utils.reader.ADBXMLStreamReaderImpl(qName, elementList.toArray(), attribList.toArray());
             
@@ -441,7 +528,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","availabilityZone").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","availabilityZone").equals(reader.getName())){
                                 
                                     java.lang.String content = reader.getElementText();
                                     
@@ -456,7 +543,25 @@
                                     // A start element we are not expecting indicates an invalid parameter was passed
                                     throw new org.apache.axis2.databinding.ADBException("Unexpected subelement " + reader.getLocalName());
                                 }
-                              
+                            
+                                    
+                                    while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
+                                
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","groupName").equals(reader.getName())){
+                                
+                                    java.lang.String content = reader.getElementText();
+                                    
+                                              object.setGroupName(
+                                                    org.apache.axis2.databinding.utils.ConverterUtil.convertToString(content));
+                                              
+                                        reader.next();
+                                    
+                              }  // End of if for expected property start element
+                                
+                                    else {
+                                        
+                                    }
+                                  
                             while (!reader.isStartElement() && !reader.isEndElement())
                                 reader.next();
                             

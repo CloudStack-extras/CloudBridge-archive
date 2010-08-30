@@ -17,13 +17,13 @@
         implements org.apache.axis2.databinding.ADBBean{
         /* This type was generated from the piece of schema that had
                 name = RunningInstancesSetType
-                Namespace URI = http://ec2.amazonaws.com/doc/2009-11-30/
+                Namespace URI = http://ec2.amazonaws.com/doc/2010-06-15/
                 Namespace Prefix = ns1
                 */
             
 
         private static java.lang.String generatePrefix(java.lang.String namespace) {
-            if(namespace.equals("http://ec2.amazonaws.com/doc/2009-11-30/")){
+            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-06-15/")){
                 return "ns1";
             }
             return org.apache.axis2.databinding.utils.BeanUtil.getUniquePrefix();
@@ -183,7 +183,7 @@
                   if (serializeType){
                
 
-                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2009-11-30/");
+                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-06-15/");
                    if ((namespacePrefix != null) && (namespacePrefix.trim().length() > 0)){
                        writeAttribute("xsi","http://www.w3.org/2001/XMLSchema-instance","type",
                            namespacePrefix+":RunningInstancesSetType",
@@ -200,7 +200,7 @@
                                        if (localItem!=null){
                                             for (int i = 0;i < localItem.length;i++){
                                                 if (localItem[i] != null){
-                                                 localItem[i].serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","item"),
+                                                 localItem[i].serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","item"),
                                                            factory,xmlWriter);
                                                 } else {
                                                    
@@ -381,7 +381,7 @@
                                  for (int i = 0;i < localItem.length;i++){
 
                                     if (localItem[i] != null){
-                                         elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/",
+                                         elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
                                                                           "item"));
                                          elementList.add(localItem[i]);
                                     } else {
@@ -478,7 +478,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","item").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","item").equals(reader.getName())){
                                 
                                     
                                     
@@ -500,7 +500,7 @@
                                                                 //two continuous end elements means we are exiting the xml structure
                                                                 loopDone1 = true;
                                                             } else {
-                                                                if (new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","item").equals(reader.getName())){
+                                                                if (new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","item").equals(reader.getName())){
                                                                     list1.add(com.amazon.ec2.RunningInstancesItemType.Factory.parse(reader));
                                                                         
                                                                 }else{

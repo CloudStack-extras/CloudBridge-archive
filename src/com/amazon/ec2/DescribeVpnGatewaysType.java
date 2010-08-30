@@ -17,13 +17,13 @@
         implements org.apache.axis2.databinding.ADBBean{
         /* This type was generated from the piece of schema that had
                 name = DescribeVpnGatewaysType
-                Namespace URI = http://ec2.amazonaws.com/doc/2009-11-30/
+                Namespace URI = http://ec2.amazonaws.com/doc/2010-06-15/
                 Namespace Prefix = ns1
                 */
             
 
         private static java.lang.String generatePrefix(java.lang.String namespace) {
-            if(namespace.equals("http://ec2.amazonaws.com/doc/2009-11-30/")){
+            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-06-15/")){
                 return "ns1";
             }
             return org.apache.axis2.databinding.utils.BeanUtil.getUniquePrefix();
@@ -202,7 +202,7 @@
                   if (serializeType){
                
 
-                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2009-11-30/");
+                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-06-15/");
                    if ((namespacePrefix != null) && (namespacePrefix.trim().length() > 0)){
                        writeAttribute("xsi","http://www.w3.org/2001/XMLSchema-instance","type",
                            namespacePrefix+":DescribeVpnGatewaysType",
@@ -219,13 +219,13 @@
                                             if (localVpnGatewaySet==null){
                                                  throw new org.apache.axis2.databinding.ADBException("vpnGatewaySet cannot be null!!");
                                             }
-                                           localVpnGatewaySet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","vpnGatewaySet"),
+                                           localVpnGatewaySet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","vpnGatewaySet"),
                                                factory,xmlWriter);
                                         } if (localFilterSetTracker){
                                             if (localFilterSet==null){
                                                  throw new org.apache.axis2.databinding.ADBException("filterSet cannot be null!!");
                                             }
-                                           localFilterSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","filterSet"),
+                                           localFilterSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","filterSet"),
                                                factory,xmlWriter);
                                         }
                     xmlWriter.writeEndElement();
@@ -390,7 +390,7 @@
                  java.util.ArrayList attribList = new java.util.ArrayList();
 
                  if (localVpnGatewaySetTracker){
-                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/",
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
                                                                       "vpnGatewaySet"));
                             
                             
@@ -399,7 +399,7 @@
                                     }
                                     elementList.add(localVpnGatewaySet);
                                 } if (localFilterSetTracker){
-                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/",
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
                                                                       "filterSet"));
                             
                             
@@ -486,7 +486,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","vpnGatewaySet").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","vpnGatewaySet").equals(reader.getName())){
                                 
                                                 object.setVpnGatewaySet(com.amazon.ec2.VpnGatewayIdSetType.Factory.parse(reader));
                                               
@@ -501,7 +501,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2009-11-30/","filterSet").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","filterSet").equals(reader.getName())){
                                 
                                                 object.setFilterSet(com.amazon.ec2.FilterSetType.Factory.parse(reader));
                                               
