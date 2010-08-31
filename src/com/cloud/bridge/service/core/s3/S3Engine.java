@@ -1043,10 +1043,12 @@ public class S3Engine {
 	/**
 	 * This function verifies that the accessing client has the requested
 	 * premission on the object/bucket/Acl represented by the tuble: <target, targetId>
+	 * 
 	 * For cases where an ACL is meant for any authenticated user we place a "*" for the
-	 * Canonical User Id ("*" is not a legal Cloud Stack Access key).   For cases where
-	 * an ACL is meant for any anonymous user we place a "A" for the Canonical User Id ("A"
-	 * is not a legal Cloud Stack Access key).
+	 * Canonical User Id ("*" is not a legal Cloud Stack Access key).   
+	 * 
+	 * For cases where an ACL is meant for any anonymous user (or 'AllUsers') we place a "A" for the 
+	 * Canonical User Id ("A" is not a legal Cloud Stack Access key).
 	 */
 	public void accessAllowed( String target, long targetId, int requestedPermission ) {
 		SAclDao aclDao = new SAclDao();

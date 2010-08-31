@@ -24,6 +24,7 @@ import com.amazon.s3.AccessControlList;
 import com.amazon.s3.AccessControlPolicy;
 import com.amazon.s3.AmazonS3SkeletonInterface;
 import com.amazon.s3.CanonicalUser;
+import com.amazon.s3.Group;
 import com.amazon.s3.CopyObjectResponse;
 import com.amazon.s3.CreateBucket;
 import com.amazon.s3.CreateBucketResponse;
@@ -550,9 +551,23 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 				{
 					engineGrant.setGrantee(SAcl.GRANTEE_USER);
 					engineGrant.setCanonicalUserID(((CanonicalUser)grantee).getID());
-				} else {
-					throw new UnsupportedOperationException("Unsupported grantee type: " + grantee.getClass().getCanonicalName()); 
+				} 
+				else if (grantee instanceof Group)
+				{
+					 Group temp = (Group)grantee;
+					 String uri = temp.getURI();
+					 if ( uri.equalsIgnoreCase( "http://acs.amazonaws.com/groups/global/AllUsers" )) {
+						  engineGrant.setGrantee(SAcl.GRANTEE_ALLUSERS);
+						  engineGrant.setCanonicalUserID( "*" );
+					 }
+					 else if (uri.equalsIgnoreCase( "http://acs.amazonaws.com/groups/global/Authenticated" )) {
+						  engineGrant.setGrantee(SAcl.GRANTEE_AUTHENTICATED);
+						  engineGrant.setCanonicalUserID( "A" );
+					 }
+					 else throw new UnsupportedOperationException("Unsupported grantee group URI: " + uri ); 
+
 				}
+				else throw new UnsupportedOperationException("Unsupported grantee type: " + grantee.getClass().getCanonicalName()); 
 				
 				Permission permission = grant.getPermission();
 				String permissionValue = permission.getValue();
@@ -586,40 +601,37 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 			{
 				grants[i] = new Grant();
 				
-				switch(engineGrants[i].getGrantee()) {
+				switch( engineGrants[i].getGrantee()) {
 				case SAcl.GRANTEE_USER :
-					grantee = new CanonicalUser();
-					((CanonicalUser)grantee).setID(engineGrants[i].getCanonicalUserID());
-					((CanonicalUser)grantee).setDisplayName("TODO");
-					grants[i].setGrantee(grantee);
-					break;
+					 grantee = new CanonicalUser();
+					 ((CanonicalUser)grantee).setID(engineGrants[i].getCanonicalUserID());
+					 ((CanonicalUser)grantee).setDisplayName("TODO");
+					 grants[i].setGrantee(grantee);
+					 break;
 					
-				case SAcl.GRANTEE_PUBLIC :
-				case SAcl.GRANTEE_CLOUD_COMMUNITY :
+				case SAcl.GRANTEE_ALLUSERS:
+					 grantee = new Group();
+					 ((Group)grantee).setURI( "http://acs.amazonaws.com/groups/global/AllUsers" );
+					 grants[i].setGrantee(grantee);
+				     break;
+				     
+				case SAcl.GRANTEE_AUTHENTICATED:				
+					 grantee = new Group();
+					 ((Group)grantee).setURI( "http://acs.amazonaws.com/groups/global/Authenticated" );
+					 grants[i].setGrantee(grantee);
+					 break;
+					
 				default :
 					throw new InternalErrorException("Unsupported grantee type");
 				}
 				
-				switch(engineGrants[i].getPermission()) {
-				case SAcl.PERMISSION_READ:
-					grants[i].setPermission(Permission.READ);
-					break;
-					
-				case SAcl.PERMISSION_WRITE :
-					grants[i].setPermission(Permission.WRITE);
-					break;
-					
-				case SAcl.PERMISSION_READ_ACL :
-					grants[i].setPermission(Permission.READ_ACP);
-					break;
-					
-				case SAcl.PERMISSION_WRITE_ACL :
-					grants[i].setPermission(Permission.WRITE_ACP);
-					break;
-					
-				case SAcl.PERMISSION_FULL :
-					grants[i].setPermission(Permission.FULL_CONTROL);
-					break;
+				
+				switch( engineGrants[i].getPermission()) {
+				case SAcl.PERMISSION_READ:      grants[i].setPermission(Permission.READ);   break;
+				case SAcl.PERMISSION_WRITE:     grants[i].setPermission(Permission.WRITE);  break;
+				case SAcl.PERMISSION_READ_ACL:	grants[i].setPermission(Permission.READ_ACP); break;
+				case SAcl.PERMISSION_WRITE_ACL:	grants[i].setPermission(Permission.WRITE_ACP); break;
+				case SAcl.PERMISSION_FULL:   	grants[i].setPermission(Permission.FULL_CONTROL); break;
 				}
  			}
  			return grants;

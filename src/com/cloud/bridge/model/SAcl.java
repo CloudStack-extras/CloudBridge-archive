@@ -25,9 +25,9 @@ public class SAcl implements Serializable {
 	private static final long serialVersionUID = 7900837117165018850L;
 
 	public static final int GRANTEE_USER = 0;
-	public static final int GRANTEE_CLOUD_COMMUNITY = 1;
-	public static final int GRANTEE_PUBLIC = 2;
-	
+	public static final int GRANTEE_ALLUSERS = 1;
+	public static final int GRANTEE_AUTHENTICATED = 2;
+
 	public static final int PERMISSION_NONE = 0;
 	public static final int PERMISSION_READ = 1;
 	public static final int PERMISSION_WRITE = 2;
