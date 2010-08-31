@@ -1497,11 +1497,11 @@ public class EC2RestServlet extends HttpServlet {
     	restAuth.setHTTPRequestURI( requestUri);
     	restAuth.setQueryString( request.getQueryString());
     	
-		//if ( restAuth.verifySignature( request.getMethod(), cloudSecretKey, signature, sigMethod )) {
+		if ( restAuth.verifySignature( request.getMethod(), cloudSecretKey, signature, sigMethod )) {
 		     UserContext.current().initContext( cloudAccessKey, cloudSecretKey, cloudAccessKey, "REST request" );
 		     return true;
-		//}
-		//else throw new PermissionDeniedException("Invalid signature");
+		}
+		else throw new PermissionDeniedException("Invalid signature");
     }
 
     /**
