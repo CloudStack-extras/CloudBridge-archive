@@ -108,6 +108,10 @@ the "usercredentials" table of the "clouds3" MySql database.
 The MySql command line client can be used to delete usercredentials entries no longer in use.
 <P>
 <H2 id="install">4. Installation Instructions</H2>
+<P>
+On the very first install an EC2/S3 MySql database is created by running the following
+scripts in the given order: clouds3_db.sql, clouds3_schema.sql, clouds3_index.sql
+<P>
 After a successful installation the following directory and file structure should exist:
 <pre>
 &lt;install directory>
