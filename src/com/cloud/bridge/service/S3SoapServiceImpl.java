@@ -246,6 +246,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		request.setRequestTimestamp(createBucket.getTimestamp());
 		request.setSignature(createBucket.getSignature());
 		request.setBucketName(createBucket.getBucket());
+		request.setAcl(toEngineAccessControlList(createBucket.getAccessControlList()));
 		return request;
 	}
 	
@@ -549,18 +550,23 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 				Grantee grantee = grant.getGrantee();
 				if (grantee instanceof CanonicalUser) 
 				{
+System.out.println( "*** seen canonicalUser" );
 					engineGrant.setGrantee(SAcl.GRANTEE_USER);
 					engineGrant.setCanonicalUserID(((CanonicalUser)grantee).getID());
 				} 
 				else if (grantee instanceof Group)
 				{
+System.out.println( "*** seen Group" );
+
 					 Group temp = (Group)grantee;
 					 String uri = temp.getURI();
 					 if ( uri.equalsIgnoreCase( "http://acs.amazonaws.com/groups/global/AllUsers" )) {
+						  // -> this allows all public unauthenticated access based on permission given
 						  engineGrant.setGrantee(SAcl.GRANTEE_ALLUSERS);
 						  engineGrant.setCanonicalUserID( "*" );
 					 }
 					 else if (uri.equalsIgnoreCase( "http://acs.amazonaws.com/groups/global/Authenticated" )) {
+						  // -> this allows any authenticated user access based on permission given
 						  engineGrant.setGrantee(SAcl.GRANTEE_AUTHENTICATED);
 						  engineGrant.setCanonicalUserID( "A" );
 					 }

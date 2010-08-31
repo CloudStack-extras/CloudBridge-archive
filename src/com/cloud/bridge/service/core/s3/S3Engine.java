@@ -91,6 +91,7 @@ public class S3Engine {
 			boolean success = false;
 			try {
 				SBucketDao bucketDao = new SBucketDao();
+				SAclDao    aclDao    = new SAclDao();
 				
 				if(bucketDao.getByName(request.getBucketName()) != null)
 					throw new ObjectAlreadyExistsException("Bucket already exists"); 
@@ -105,9 +106,13 @@ public class S3Engine {
 				shostTuple.getFirst().getBuckets().add(sbucket);
 				bucketDao.save(sbucket);
 
+				S3AccessControlList acl = request.getAcl();
 				String cannedAccessPolicy = request.getCannedAccess();
+				
 				if ( null != cannedAccessPolicy ) 
 					 setCannedAccessControls( cannedAccessPolicy, "SBucket", sbucket.getId(), sbucket );
+				else if (null != acl) 
+					 aclDao.save(  "SBucket", sbucket.getId(), acl );
 				else setSingleAcl( "SBucket", sbucket.getId(), SAcl.PERMISSION_FULL ); 
 			
 				// explicitly commit the transaction

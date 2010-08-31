@@ -22,6 +22,7 @@ public class S3CreateBucketRequest extends S3Request {
 	protected String bucketName;
 	protected S3CreateBucketConfiguration config;
 	protected String cannedAccessPolicy;    // -> REST only sets an acl with a simple keyword
+	protected S3AccessControlList acl;
 	
 	public S3CreateBucketRequest() {
 		super();
@@ -49,5 +50,13 @@ public class S3CreateBucketRequest extends S3Request {
 
 	public void setCannedAccess(String cannedAccessPolicy) {
 		this.cannedAccessPolicy = cannedAccessPolicy;
+	}
+
+	public S3AccessControlList getAcl() {
+		return acl;
+	}
+	
+	public void setAcl(S3AccessControlList acl) {
+		this.acl = acl;
 	}
 }

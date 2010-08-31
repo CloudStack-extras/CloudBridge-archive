@@ -20,29 +20,9 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "ListAllMyBucketsResult".equals(typeName)){
-                   
-                            return  com.amazon.s3.ListAllMyBucketsResult.Factory.parse(reader);
-                        
-
-                  }
-
-              
-                  if (
-                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
                   "PutObjectResult".equals(typeName)){
                    
                             return  com.amazon.s3.PutObjectResult.Factory.parse(reader);
-                        
-
-                  }
-
-              
-                  if (
-                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "BucketLoggingStatus".equals(typeName)){
-                   
-                            return  com.amazon.s3.BucketLoggingStatus.Factory.parse(reader);
                         
 
                   }
@@ -60,9 +40,9 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "ListAllMyBucketsEntry".equals(typeName)){
+                  "VersioningConfiguration".equals(typeName)){
                    
-                            return  com.amazon.s3.ListAllMyBucketsEntry.Factory.parse(reader);
+                            return  com.amazon.s3.VersioningConfiguration.Factory.parse(reader);
                         
 
                   }
@@ -70,9 +50,9 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "MetadataDirective".equals(typeName)){
+                  "ListAllMyBucketsEntry".equals(typeName)){
                    
-                            return  com.amazon.s3.MetadataDirective.Factory.parse(reader);
+                            return  com.amazon.s3.ListAllMyBucketsEntry.Factory.parse(reader);
                         
 
                   }
@@ -90,16 +70,6 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "AccessControlPolicy".equals(typeName)){
-                   
-                            return  com.amazon.s3.AccessControlPolicy.Factory.parse(reader);
-                        
-
-                  }
-
-              
-                  if (
-                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
                   "PrefixEntry".equals(typeName)){
                    
                             return  com.amazon.s3.PrefixEntry.Factory.parse(reader);
@@ -110,9 +80,9 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "GetObjectResult".equals(typeName)){
+                  "AccessControlPolicy".equals(typeName)){
                    
-                            return  com.amazon.s3.GetObjectResult.Factory.parse(reader);
+                            return  com.amazon.s3.AccessControlPolicy.Factory.parse(reader);
                         
 
                   }
@@ -120,9 +90,9 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "Grant".equals(typeName)){
+                  "VersioningStatus".equals(typeName)){
                    
-                            return  com.amazon.s3.Grant.Factory.parse(reader);
+                            return  com.amazon.s3.VersioningStatus.Factory.parse(reader);
                         
 
                   }
@@ -160,9 +130,9 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "MetadataEntry".equals(typeName)){
+                  "VersionEntry".equals(typeName)){
                    
-                            return  com.amazon.s3.MetadataEntry.Factory.parse(reader);
+                            return  com.amazon.s3.VersionEntry.Factory.parse(reader);
                         
 
                   }
@@ -180,9 +150,9 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "CopyObjectResult".equals(typeName)){
+                  "AmazonCustomerByEmail".equals(typeName)){
                    
-                            return  com.amazon.s3.CopyObjectResult.Factory.parse(reader);
+                            return  com.amazon.s3.AmazonCustomerByEmail.Factory.parse(reader);
                         
 
                   }
@@ -200,29 +170,19 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "CopyObjectResult".equals(typeName)){
+                   
+                            return  com.amazon.s3.CopyObjectResult.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
                   "ListEntry".equals(typeName)){
                    
                             return  com.amazon.s3.ListEntry.Factory.parse(reader);
-                        
-
-                  }
-
-              
-                  if (
-                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "Grantee".equals(typeName)){
-                   
-                            return  com.amazon.s3.Grantee.Factory.parse(reader);
-                        
-
-                  }
-
-              
-                  if (
-                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
-                  "StorageClass".equals(typeName)){
-                   
-                            return  com.amazon.s3.StorageClass.Factory.parse(reader);
                         
 
                   }
@@ -240,9 +200,189 @@
               
                   if (
                   "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "Grantee".equals(typeName)){
+                   
+                            return  com.amazon.s3.Grantee.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
                   "Result".equals(typeName)){
                    
                             return  com.amazon.s3.Result.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "RequestPaymentConfiguration".equals(typeName)){
+                   
+                            return  com.amazon.s3.RequestPaymentConfiguration.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "MfaDeleteStatus".equals(typeName)){
+                   
+                            return  com.amazon.s3.MfaDeleteStatus.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "Payer".equals(typeName)){
+                   
+                            return  com.amazon.s3.Payer.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "ListAllMyBucketsResult".equals(typeName)){
+                   
+                            return  com.amazon.s3.ListAllMyBucketsResult.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "BucketLoggingStatus".equals(typeName)){
+                   
+                            return  com.amazon.s3.BucketLoggingStatus.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "ListVersionsResult".equals(typeName)){
+                   
+                            return  com.amazon.s3.ListVersionsResult.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "MetadataDirective".equals(typeName)){
+                   
+                            return  com.amazon.s3.MetadataDirective.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "GetObjectResult".equals(typeName)){
+                   
+                            return  com.amazon.s3.GetObjectResult.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "Grant".equals(typeName)){
+                   
+                            return  com.amazon.s3.Grant.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "CreateBucketConfiguration".equals(typeName)){
+                   
+                            return  com.amazon.s3.CreateBucketConfiguration.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "TopicConfiguration".equals(typeName)){
+                   
+                            return  com.amazon.s3.TopicConfiguration.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "Group".equals(typeName)){
+                   
+                            return  com.amazon.s3.Group.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "NotificationConfiguration".equals(typeName)){
+                   
+                            return  com.amazon.s3.NotificationConfiguration.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "MetadataEntry".equals(typeName)){
+                   
+                            return  com.amazon.s3.MetadataEntry.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "DeleteMarkerEntry".equals(typeName)){
+                   
+                            return  com.amazon.s3.DeleteMarkerEntry.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "LocationConstraint".equals(typeName)){
+                   
+                            return  com.amazon.s3.LocationConstraint.Factory.parse(reader);
+                        
+
+                  }
+
+              
+                  if (
+                  "http://s3.amazonaws.com/doc/2006-03-01/".equals(namespaceURI) &&
+                  "StorageClass".equals(typeName)){
+                   
+                            return  com.amazon.s3.StorageClass.Factory.parse(reader);
                         
 
                   }
