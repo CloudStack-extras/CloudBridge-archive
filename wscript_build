@@ -30,7 +30,7 @@ ant_args = [
 	"-Dimpl.version=%s"%bld.env.VERSION,
 	"-Dtarget.dir=%s"%Utils.relpath(_join(builddir,"target")),
 	"-Dbuildnumber.dir=%s"%Utils.relpath(_join(builddir)),
-	"-Ddist.dir=%s"%Utils.relpath(_join(builddir,"dist")),
+	"-Ddist.dir=%s"%Utils.relpath(builddir),
 ]
 
 # FIXME make this depend on appropriate variables, add support for build number command line option, and now that build number autodetection is no longer possible in cloudstack project, remove build number autodetection support altogether, making it cleaner.  and so should the build number support on this project be -- no autodetection
@@ -38,7 +38,7 @@ tgen = bld(
 	rule=Utils.runant,
 	name='runant',
 	source=filelist('src/**',bld=0,src=1,dir=0),
-	target='cloud-bridge.jar',
+	target='cloud-bridge.jar cloud-auth-ec2.mar cloud-auth-s3.mar cloud-ec2.aar cloud-s3.aar',
 	anttgts=["build-cloud-bridge"],
 	antargs=ant_args)
 # FIXME declare correct build outputs for installation
