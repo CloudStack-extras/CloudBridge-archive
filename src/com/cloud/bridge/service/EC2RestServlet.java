@@ -326,6 +326,7 @@ public class EC2RestServlet extends HttpServlet {
         	return;
         }
     	response.setStatus(200);	
+        endResponse(response, "User keys set successfully");
     }
     
     /**
@@ -383,7 +384,8 @@ public class EC2RestServlet extends HttpServlet {
             logger.debug( "SetCertificate, uniqueId: " + uniqueId );
     	    UserCredentialsDao credentialDao = new UserCredentialsDao();
     	    credentialDao.setCertificateId( accessKey[0], uniqueId ); 
-    		response.setStatus(200);	
+    		response.setStatus(200);
+            endResponse(response, "User certificate set successfully");
     	    
     	} catch( NoSuchObjectException e ) {
     		logger.error("SetCertificate exception " + e.getMessage(), e);
@@ -428,7 +430,8 @@ public class EC2RestServlet extends HttpServlet {
 	     	     // -> dis-associate the cert's uniqueId with the Cloud API keys
 	     	     UserCredentialsDao credentialDao = new UserCredentialsDao();
 	     	     credentialDao.setCertificateId( accessKey[0], null ); 
-		         response.setStatus(200);	
+		         response.setStatus(200);
+		           endResponse(response, "User certificate deleted successfully");
 	        }
 	        else response.setStatus(404);
 	        
