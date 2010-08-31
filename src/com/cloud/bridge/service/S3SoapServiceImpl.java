@@ -550,14 +550,11 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 				Grantee grantee = grant.getGrantee();
 				if (grantee instanceof CanonicalUser) 
 				{
-System.out.println( "*** seen canonicalUser" );
 					engineGrant.setGrantee(SAcl.GRANTEE_USER);
 					engineGrant.setCanonicalUserID(((CanonicalUser)grantee).getID());
 				} 
 				else if (grantee instanceof Group)
 				{
-System.out.println( "*** seen Group" );
-
 					 Group temp = (Group)grantee;
 					 String uri = temp.getURI();
 					 if ( uri.equalsIgnoreCase( "http://acs.amazonaws.com/groups/global/AllUsers" )) {
