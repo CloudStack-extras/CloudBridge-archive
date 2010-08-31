@@ -1,1 +1,6 @@
 target
+.lock-wscript
+.waf-*
+waf-*
+*~
+artifacts
