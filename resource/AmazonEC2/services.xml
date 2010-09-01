@@ -2,7 +2,7 @@
 <!-- This file was auto-generated from WSDL -->
 <!-- by the Apache Axis2 version: 1.5.1  Built on : Oct 19, 2009 (10:59:00 EDT) -->
 <serviceGroup>
-    <service name="AmazonEC2">
+    <service name="AmazonEC2"  class="com.cloud.bridge.lifecycle.ServiceEngineLifecycle">
         <messageReceivers>
             <messageReceiver mep="http://www.w3.org/ns/wsdl/in-out" class="com.amazon.ec2.AmazonEC2MessageReceiverInOut"/>
         </messageReceivers>
