@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<definitions targetNamespace="http://ec2.amazonaws.com/doc/2010-06-15/" xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:tns="http://ec2.amazonaws.com/doc/2010-06-15/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/">
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://ec2.amazonaws.com/doc/2010-06-15/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" targetNamespace="http://ec2.amazonaws.com/doc/2010-06-15/">
   <types>
-    <xs:schema elementFormDefault="qualified" targetNamespace="http://ec2.amazonaws.com/doc/2010-06-15/" xmlns:tns="http://ec2.amazonaws.com/doc/2010-06-15/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <xs:schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tns="http://ec2.amazonaws.com/doc/2010-06-15/" targetNamespace="http://ec2.amazonaws.com/doc/2010-06-15/" elementFormDefault="qualified">
       <xs:element name="CreateImage" type="tns:CreateImageType"/>
       <xs:complexType name="CreateImageType">
         <xs:sequence>
           <xs:element name="instanceId" type="xs:string"/>
           <xs:element name="name" type="xs:string"/>
-          <xs:element minOccurs="0" name="description" type="xs:string"/>
-          <xs:element minOccurs="0" name="noReboot" type="xs:boolean"/>
+          <xs:element name="description" type="xs:string" minOccurs="0"/>
+          <xs:element name="noReboot" type="xs:boolean" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="CreateImageResponse" type="tns:CreateImageResponseType"/>
@@ -25,21 +25,21 @@
       </xs:complexType>
       <xs:complexType name="ProductCodeSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:ProductCodeType"/>
+          <xs:element name="item" type="tns:ProductCodeType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="RegisterImage" type="tns:RegisterImageType"/>
       <xs:element name="RegisterImageResponse" type="tns:RegisterImageResponseType"/>
       <xs:complexType name="RegisterImageType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="imageLocation" type="xs:string"/>
+          <xs:element name="imageLocation" type="xs:string" minOccurs="0"/>
           <xs:element name="name" type="xs:string"/>
-          <xs:element minOccurs="0" name="description" type="xs:string"/>
-          <xs:element minOccurs="0" name="architecture" type="xs:string"/>
-          <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
-          <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
-          <xs:element minOccurs="0" name="rootDeviceName" type="xs:string"/>
-          <xs:element minOccurs="0" name="blockDeviceMapping" type="tns:BlockDeviceMappingType"/>
+          <xs:element name="description" type="xs:string" minOccurs="0"/>
+          <xs:element name="architecture" type="xs:string" minOccurs="0"/>
+          <xs:element name="kernelId" type="xs:string" minOccurs="0"/>
+          <xs:element name="ramdiskId" type="xs:string" minOccurs="0"/>
+          <xs:element name="rootDeviceName" type="xs:string" minOccurs="0"/>
+          <xs:element name="blockDeviceMapping" type="tns:BlockDeviceMappingType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="RegisterImageResponseType">
@@ -97,7 +97,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeKeyPairsInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeKeyPairsItemType"/>
+          <xs:element name="item" type="tns:DescribeKeyPairsItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeKeyPairsItemType">
@@ -114,7 +114,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeKeyPairsResponseInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeKeyPairsResponseItemType"/>
+          <xs:element name="item" type="tns:DescribeKeyPairsResponseItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeKeyPairsResponseItemType">
@@ -129,27 +129,27 @@
           <xs:element name="imageId" type="xs:string"/>
           <xs:element name="minCount" type="xs:int"/>
           <xs:element name="maxCount" type="xs:int"/>
-          <xs:element minOccurs="0" name="keyName" type="xs:string"/>
+          <xs:element name="keyName" type="xs:string" minOccurs="0"/>
           <xs:element name="groupSet" type="tns:GroupSetType"/>
-          <xs:element minOccurs="0" name="additionalInfo" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="userData" type="tns:UserDataType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="addressingType" type="xs:string"/>
+          <xs:element name="additionalInfo" type="xs:string" minOccurs="0"/>
+          <xs:element name="userData" type="tns:UserDataType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="addressingType" type="xs:string" minOccurs="0" maxOccurs="1"/>
           <xs:element name="instanceType" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="placement" type="tns:PlacementRequestType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="kernelId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="ramdiskId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="blockDeviceMapping" type="tns:BlockDeviceMappingType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="monitoring" type="tns:MonitoringInstanceType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="subnetId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="disableApiTermination" type="xs:boolean"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="instanceInitiatedShutdownBehavior" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="license" type="tns:InstanceLicenseRequestType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="privateIpAddress" type="xs:string"/>
+          <xs:element name="placement" type="tns:PlacementRequestType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="kernelId" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="ramdiskId" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="blockDeviceMapping" type="tns:BlockDeviceMappingType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="monitoring" type="tns:MonitoringInstanceType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="subnetId" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="disableApiTermination" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="instanceInitiatedShutdownBehavior" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="license" type="tns:InstanceLicenseRequestType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="privateIpAddress" type="xs:string" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="GroupSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:GroupItemType"/>
+          <xs:element name="item" type="tns:GroupItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="GroupItemType">
@@ -157,16 +157,16 @@
           <xs:element name="groupId" type="xs:string"/>
         </xs:sequence>
       </xs:complexType>
-      <xs:complexType mixed="true" name="UserDataType">
+      <xs:complexType name="UserDataType" mixed="true">
         <xs:sequence>
-          <xs:element minOccurs="0" name="data" type="xs:string"/>
+          <xs:element name="data" type="xs:string" minOccurs="0"/>
         </xs:sequence>
-        <xs:attribute fixed="1.0" name="version" type="xs:string" use="required"/>
-        <xs:attribute fixed="base64" name="encoding" type="xs:string" use="required"/>
+        <xs:attribute name="version" type="xs:string" use="required" fixed="1.0"/>
+        <xs:attribute name="encoding" type="xs:string" use="required" fixed="base64"/>
       </xs:complexType>
       <xs:complexType name="BlockDeviceMappingType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:BlockDeviceMappingItemType"/>
+          <xs:element name="item" type="tns:BlockDeviceMappingItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="BlockDeviceMappingItemType">
@@ -181,25 +181,25 @@
       </xs:complexType>
       <xs:complexType name="EbsBlockDeviceType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="snapshotId" type="xs:string"/>
-          <xs:element minOccurs="0" name="volumeSize" type="xs:int"/>
-          <xs:element minOccurs="0" name="deleteOnTermination" type="xs:boolean"/>
+          <xs:element name="snapshotId" type="xs:string" minOccurs="0"/>
+          <xs:element name="volumeSize" type="xs:int" minOccurs="0"/>
+          <xs:element name="deleteOnTermination" type="xs:boolean" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="PlacementRequestType">
         <xs:sequence>
-          <xs:element maxOccurs="1" minOccurs="0" name="availabilityZone" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="groupName" type="xs:string"/>
+          <xs:element name="availabilityZone" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="groupName" type="xs:string" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="MonitoringInstanceType">
         <xs:sequence>
-          <xs:element maxOccurs="1" minOccurs="0" name="enabled" type="xs:boolean"/>
+          <xs:element name="enabled" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="InstanceLicenseRequestType">
         <xs:sequence>
-          <xs:element maxOccurs="1" minOccurs="1" name="pool" type="xs:string"/>
+          <xs:element name="pool" type="xs:string" minOccurs="1" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="RunInstancesResponse" type="tns:RunInstancesResponseType"/>
@@ -210,7 +210,7 @@
           <xs:element name="ownerId" type="xs:string"/>
           <xs:element name="groupSet" type="tns:GroupSetType"/>
           <xs:element name="instancesSet" type="tns:RunningInstancesSetType"/>
-          <xs:element minOccurs="0" name="requesterId" type="xs:string"/>
+          <xs:element name="requesterId" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="ReservationInfoType">
@@ -219,51 +219,51 @@
           <xs:element name="ownerId" type="xs:string"/>
           <xs:element name="groupSet" type="tns:GroupSetType"/>
           <xs:element name="instancesSet" type="tns:RunningInstancesSetType"/>
-          <xs:element minOccurs="0" name="requesterId" type="xs:string"/>
+          <xs:element name="requesterId" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="RunningInstancesSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="1" name="item" type="tns:RunningInstancesItemType"/>
+          <xs:element name="item" type="tns:RunningInstancesItemType" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="RunningInstancesItemType">
         <xs:sequence>
           <xs:element name="instanceId" type="xs:string"/>
-          <xs:element minOccurs="0" name="imageId" type="xs:string"/>
+          <xs:element name="imageId" type="xs:string" minOccurs="0"/>
           <xs:element name="instanceState" type="tns:InstanceStateType"/>
           <xs:element name="privateDnsName" type="xs:string"/>
-          <xs:element minOccurs="0" name="dnsName" type="xs:string"/>
-          <xs:element minOccurs="0" name="reason" type="xs:string"/>
-          <xs:element minOccurs="0" name="keyName" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="amiLaunchIndex" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="productCodes" type="tns:ProductCodesSetType"/>
+          <xs:element name="dnsName" type="xs:string" minOccurs="0"/>
+          <xs:element name="reason" type="xs:string" minOccurs="0"/>
+          <xs:element name="keyName" type="xs:string" minOccurs="0"/>
+          <xs:element name="amiLaunchIndex" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="productCodes" type="tns:ProductCodesSetType" minOccurs="0" maxOccurs="1"/>
           <xs:element name="instanceType" type="xs:string"/>
           <xs:element name="launchTime" type="xs:dateTime"/>
-          <xs:element minOccurs="0" name="placement" type="tns:PlacementResponseType"/>
-          <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
-          <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
-          <xs:element minOccurs="0" name="platform" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="monitoring" type="tns:InstanceMonitoringStateType"/>
-          <xs:element minOccurs="0" name="subnetId" type="xs:string"/>
-          <xs:element minOccurs="0" name="vpcId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="privateIpAddress" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="ipAddress" type="xs:string"/>
-          <xs:element minOccurs="0" name="stateReason" type="tns:StateReasonType"/>
-          <xs:element minOccurs="0" name="architecture" type="xs:string"/>
-          <xs:element minOccurs="0" name="rootDeviceType" type="xs:string"/>
-          <xs:element minOccurs="0" name="rootDeviceName" type="xs:string"/>
-          <xs:element minOccurs="0" name="blockDeviceMapping" type="tns:InstanceBlockDeviceMappingResponseType"/>
-          <xs:element minOccurs="0" name="instanceLifecycle" type="xs:string"/>
-          <xs:element minOccurs="0" name="spotInstanceRequestId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="license" type="tns:InstanceLicenseResponseType"/>
-          <xs:element minOccurs="0" name="virtualizationType" type="xs:string"/>
+          <xs:element name="placement" type="tns:PlacementResponseType" minOccurs="0"/>
+          <xs:element name="kernelId" type="xs:string" minOccurs="0"/>
+          <xs:element name="ramdiskId" type="xs:string" minOccurs="0"/>
+          <xs:element name="platform" type="xs:string" minOccurs="0"/>
+          <xs:element name="monitoring" type="tns:InstanceMonitoringStateType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="subnetId" type="xs:string" minOccurs="0"/>
+          <xs:element name="vpcId" type="xs:string" minOccurs="0"/>
+          <xs:element name="privateIpAddress" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="ipAddress" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="stateReason" type="tns:StateReasonType" minOccurs="0"/>
+          <xs:element name="architecture" type="xs:string" minOccurs="0"/>
+          <xs:element name="rootDeviceType" type="xs:string" minOccurs="0"/>
+          <xs:element name="rootDeviceName" type="xs:string" minOccurs="0"/>
+          <xs:element name="blockDeviceMapping" type="tns:InstanceBlockDeviceMappingResponseType" minOccurs="0"/>
+          <xs:element name="instanceLifecycle" type="xs:string" minOccurs="0"/>
+          <xs:element name="spotInstanceRequestId" type="xs:string" minOccurs="0"/>
+          <xs:element name="license" type="tns:InstanceLicenseResponseType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="virtualizationType" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="PlacementResponseType">
         <xs:sequence>
           <xs:element name="availabilityZone" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="groupName" type="xs:string"/>
+          <xs:element name="groupName" type="xs:string" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="StateReasonType">
@@ -274,7 +274,7 @@
       </xs:complexType>
       <xs:complexType name="InstanceBlockDeviceMappingResponseType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:InstanceBlockDeviceMappingResponseItemType"/>
+          <xs:element name="item" type="tns:InstanceBlockDeviceMappingResponseItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="InstanceBlockDeviceMappingResponseItemType">
@@ -290,12 +290,12 @@
           <xs:element name="volumeId" type="xs:string"/>
           <xs:element name="status" type="xs:string"/>
           <xs:element name="attachTime" type="xs:dateTime"/>
-          <xs:element minOccurs="0" name="deleteOnTermination" type="xs:boolean"/>
+          <xs:element name="deleteOnTermination" type="xs:boolean" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="InstanceLicenseResponseType">
         <xs:sequence>
-          <xs:element maxOccurs="1" minOccurs="1" name="pool" type="xs:string"/>
+          <xs:element name="pool" type="xs:string" minOccurs="1" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="GetConsoleOutput" type="tns:GetConsoleOutputType"/>
@@ -335,7 +335,7 @@
       </xs:complexType>
       <xs:complexType name="InstanceIdSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:InstanceIdType"/>
+          <xs:element name="item" type="tns:InstanceIdType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="InstanceStateChangeType">
@@ -347,7 +347,7 @@
       </xs:complexType>
       <xs:complexType name="InstanceStateChangeSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:InstanceStateChangeType"/>
+          <xs:element name="item" type="tns:InstanceStateChangeType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="TerminateInstances" type="tns:TerminateInstancesType"/>
@@ -365,7 +365,7 @@
       </xs:complexType>
       <xs:complexType name="InstanceBlockDeviceMappingType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:InstanceBlockDeviceMappingItemType"/>
+          <xs:element name="item" type="tns:InstanceBlockDeviceMappingItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="InstanceBlockDeviceMappingItemType">
@@ -381,7 +381,7 @@
       <xs:complexType name="InstanceEbsBlockDeviceType">
         <xs:sequence>
           <xs:element name="volumeId" type="xs:string"/>
-          <xs:element minOccurs="0" name="deleteOnTermination" type="xs:boolean"/>
+          <xs:element name="deleteOnTermination" type="xs:boolean" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="StopInstances" type="tns:StopInstancesType"/>
@@ -389,7 +389,7 @@
       <xs:complexType name="StopInstancesType">
         <xs:sequence>
           <xs:element name="instancesSet" type="tns:InstanceIdSetType"/>
-          <xs:element minOccurs="0" name="force" type="xs:boolean"/>
+          <xs:element name="force" type="xs:boolean" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="StopInstancesResponseType">
@@ -419,7 +419,7 @@
       </xs:complexType>
       <xs:complexType name="RebootInstancesInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="1" name="item" type="tns:RebootInstancesItemType"/>
+          <xs:element name="item" type="tns:RebootInstancesItemType" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="RebootInstancesItemType">
@@ -442,7 +442,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeInstancesInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeInstancesItemType"/>
+          <xs:element name="item" type="tns:DescribeInstancesItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeInstancesItemType">
@@ -459,20 +459,20 @@
       </xs:complexType>
       <xs:complexType name="ReservationSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:ReservationInfoType"/>
+          <xs:element name="item" type="tns:ReservationInfoType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="DescribeImages" type="tns:DescribeImagesType"/>
       <xs:complexType name="DescribeImagesType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="executableBySet" type="tns:DescribeImagesExecutableBySetType"/>
+          <xs:element name="executableBySet" type="tns:DescribeImagesExecutableBySetType" minOccurs="0"/>
           <xs:element name="imagesSet" type="tns:DescribeImagesInfoType"/>
-          <xs:element minOccurs="0" name="ownersSet" type="tns:DescribeImagesOwnersType"/>
+          <xs:element name="ownersSet" type="tns:DescribeImagesOwnersType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeImagesInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeImagesItemType"/>
+          <xs:element name="item" type="tns:DescribeImagesItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeImagesItemType">
@@ -482,7 +482,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeImagesOwnersType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeImagesOwnerType"/>
+          <xs:element name="item" type="tns:DescribeImagesOwnerType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeImagesOwnerType">
@@ -492,7 +492,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeImagesExecutableBySetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeImagesExecutableByType"/>
+          <xs:element name="item" type="tns:DescribeImagesExecutableByType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeImagesExecutableByType">
@@ -509,30 +509,30 @@
       </xs:complexType>
       <xs:complexType name="DescribeImagesResponseInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeImagesResponseItemType"/>
+          <xs:element name="item" type="tns:DescribeImagesResponseItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeImagesResponseItemType">
         <xs:sequence>
           <xs:element name="imageId" type="xs:string"/>
-          <xs:element minOccurs="0" name="imageLocation" type="xs:string"/>
+          <xs:element name="imageLocation" type="xs:string" minOccurs="0"/>
           <xs:element name="imageState" type="xs:string"/>
           <xs:element name="imageOwnerId" type="xs:string"/>
           <xs:element name="isPublic" type="xs:boolean"/>
-          <xs:element minOccurs="0" name="productCodes" type="tns:ProductCodesSetType"/>
-          <xs:element minOccurs="0" name="architecture" type="xs:string"/>
-          <xs:element minOccurs="0" name="imageType" type="xs:string"/>
-          <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
-          <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
-          <xs:element minOccurs="0" name="platform" type="xs:string"/>
-          <xs:element minOccurs="0" name="stateReason" type="tns:StateReasonType"/>
-          <xs:element minOccurs="0" name="imageOwnerAlias" type="xs:string"/>
-          <xs:element minOccurs="0" name="name" type="xs:string"/>
-          <xs:element minOccurs="0" name="description" type="xs:string"/>
-          <xs:element minOccurs="0" name="rootDeviceType" type="xs:string"/>
-          <xs:element minOccurs="0" name="rootDeviceName" type="xs:string"/>
-          <xs:element minOccurs="0" name="blockDeviceMapping" type="tns:BlockDeviceMappingType"/>
-          <xs:element minOccurs="0" name="virtualizationType" type="xs:string"/>
+          <xs:element name="productCodes" type="tns:ProductCodesSetType" minOccurs="0"/>
+          <xs:element name="architecture" type="xs:string" minOccurs="0"/>
+          <xs:element name="imageType" type="xs:string" minOccurs="0"/>
+          <xs:element name="kernelId" type="xs:string" minOccurs="0"/>
+          <xs:element name="ramdiskId" type="xs:string" minOccurs="0"/>
+          <xs:element name="platform" type="xs:string" minOccurs="0"/>
+          <xs:element name="stateReason" type="tns:StateReasonType" minOccurs="0"/>
+          <xs:element name="imageOwnerAlias" type="xs:string" minOccurs="0"/>
+          <xs:element name="name" type="xs:string" minOccurs="0"/>
+          <xs:element name="description" type="xs:string" minOccurs="0"/>
+          <xs:element name="rootDeviceType" type="xs:string" minOccurs="0"/>
+          <xs:element name="rootDeviceName" type="xs:string" minOccurs="0"/>
+          <xs:element name="blockDeviceMapping" type="tns:BlockDeviceMappingType" minOccurs="0"/>
+          <xs:element name="virtualizationType" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="CreateSecurityGroup" type="tns:CreateSecurityGroupType"/>
@@ -570,7 +570,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeSecurityGroupsSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeSecurityGroupsSetItemType"/>
+          <xs:element name="item" type="tns:DescribeSecurityGroupsSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeSecurityGroupsSetItemType">
@@ -587,7 +587,7 @@
       </xs:complexType>
       <xs:complexType name="IpPermissionSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:IpPermissionType"/>
+          <xs:element name="item" type="tns:IpPermissionType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="IpPermissionType">
@@ -601,7 +601,7 @@
       </xs:complexType>
       <xs:complexType name="IpRangeSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:IpRangeItemType"/>
+          <xs:element name="item" type="tns:IpRangeItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="IpRangeItemType">
@@ -611,7 +611,7 @@
       </xs:complexType>
       <xs:complexType name="UserIdGroupPairSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:UserIdGroupPairType"/>
+          <xs:element name="item" type="tns:UserIdGroupPairType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="UserIdGroupPairType">
@@ -622,7 +622,7 @@
       </xs:complexType>
       <xs:complexType name="SecurityGroupSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:SecurityGroupItemType"/>
+          <xs:element name="item" type="tns:SecurityGroupItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="SecurityGroupItemType">
@@ -766,7 +766,7 @@
       </xs:complexType>
       <xs:complexType name="LaunchPermissionListType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:LaunchPermissionItemType"/>
+          <xs:element name="item" type="tns:LaunchPermissionItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="LaunchPermissionItemType">
@@ -777,7 +777,7 @@
       </xs:complexType>
       <xs:complexType name="ProductCodeListType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:ProductCodeItemType"/>
+          <xs:element name="item" type="tns:ProductCodeItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="ProductCodeItemType">
@@ -846,12 +846,12 @@
       </xs:complexType>
       <xs:complexType name="NullableAttributeValueType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="value" type="xs:string"/>
+          <xs:element name="value" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="NullableAttributeBooleanValueType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="value" type="xs:boolean"/>
+          <xs:element name="value" type="xs:boolean" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="AttributeValueType">
@@ -873,7 +873,7 @@
       </xs:complexType>
       <xs:complexType name="ProductCodesSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:ProductCodesSetItemType"/>
+          <xs:element name="item" type="tns:ProductCodesSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="ProductCodesSetItemType">
@@ -886,7 +886,7 @@
         <xs:sequence>
           <xs:element name="requestId" type="xs:string"/>
           <xs:element name="return" type="xs:boolean"/>
-          <xs:element minOccurs="0" name="ownerId" type="xs:string"/>
+          <xs:element name="ownerId" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="DescribeAvailabilityZones" type="tns:DescribeAvailabilityZonesType"/>
@@ -897,7 +897,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeAvailabilityZonesSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeAvailabilityZonesSetItemType"/>
+          <xs:element name="item" type="tns:DescribeAvailabilityZonesSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeAvailabilityZonesSetItemType">
@@ -914,7 +914,7 @@
       </xs:complexType>
       <xs:complexType name="AvailabilityZoneSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:AvailabilityZoneItemType"/>
+          <xs:element name="item" type="tns:AvailabilityZoneItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="AvailabilityZoneMessageType">
@@ -924,7 +924,7 @@
       </xs:complexType>
       <xs:complexType name="AvailabilityZoneMessageSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:AvailabilityZoneMessageType"/>
+          <xs:element name="item" type="tns:AvailabilityZoneMessageType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="AvailabilityZoneItemType">
@@ -965,7 +965,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeAddressesInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeAddressesItemType"/>
+          <xs:element name="item" maxOccurs="unbounded" minOccurs="0" type="tns:DescribeAddressesItemType"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeAddressesItemType">
@@ -982,13 +982,13 @@
       </xs:complexType>
       <xs:complexType name="DescribeAddressesResponseInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeAddressesResponseItemType"/>
+          <xs:element name="item" maxOccurs="unbounded" minOccurs="0" type="tns:DescribeAddressesResponseItemType"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeAddressesResponseItemType">
         <xs:sequence>
           <xs:element name="publicIp" type="xs:string"/>
-          <xs:element minOccurs="0" name="instanceId" type="xs:string"/>
+          <xs:element name="instanceId" minOccurs="0" type="xs:string"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="AssociateAddress" type="tns:AssociateAddressType"/>
@@ -1021,8 +1021,8 @@
       <xs:element name="CreateVolume" type="tns:CreateVolumeType"/>
       <xs:complexType name="CreateVolumeType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="size" type="xs:string"/>
-          <xs:element minOccurs="0" name="snapshotId" type="xs:string"/>
+          <xs:element name="size" type="xs:string" minOccurs="0"/>
+          <xs:element name="snapshotId" type="xs:string" minOccurs="0"/>
           <xs:element name="availabilityZone" type="xs:string"/>
         </xs:sequence>
       </xs:complexType>
@@ -1059,7 +1059,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeVolumesSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeVolumesSetItemType"/>
+          <xs:element name="item" type="tns:DescribeVolumesSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeVolumesSetItemType">
@@ -1076,7 +1076,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeVolumesSetResponseType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeVolumesSetItemResponseType"/>
+          <xs:element name="item" type="tns:DescribeVolumesSetItemResponseType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeVolumesSetItemResponseType">
@@ -1092,7 +1092,7 @@
       </xs:complexType>
       <xs:complexType name="AttachmentSetResponseType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:AttachmentSetItemResponseType"/>
+          <xs:element name="item" type="tns:AttachmentSetItemResponseType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="AttachmentSetItemResponseType">
@@ -1128,9 +1128,9 @@
       <xs:complexType name="DetachVolumeType">
         <xs:sequence>
           <xs:element name="volumeId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="instanceId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="device" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="force" type="xs:boolean"/>
+          <xs:element name="instanceId" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="device" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="force" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="DetachVolumeResponse" type="tns:DetachVolumeResponseType"/>
@@ -1148,7 +1148,7 @@
       <xs:complexType name="CreateSnapshotType">
         <xs:sequence>
           <xs:element name="volumeId" type="xs:string"/>
-          <xs:element minOccurs="0" name="description" type="xs:string"/>
+          <xs:element name="description" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="CreateSnapshotResponse" type="tns:CreateSnapshotResponseType"/>
@@ -1162,7 +1162,7 @@
           <xs:element name="progress" type="xs:string"/>
           <xs:element name="ownerId" type="xs:string"/>
           <xs:element name="volumeSize" type="xs:string"/>
-          <xs:element minOccurs="0" name="description" type="xs:string"/>
+          <xs:element name="description" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="DeleteSnapshot" type="tns:DeleteSnapshotType"/>
@@ -1182,13 +1182,13 @@
       <xs:complexType name="DescribeSnapshotsType">
         <xs:sequence>
           <xs:element name="snapshotSet" type="tns:DescribeSnapshotsSetType"/>
-          <xs:element minOccurs="0" name="ownersSet" type="tns:DescribeSnapshotsOwnersType"/>
-          <xs:element minOccurs="0" name="restorableBySet" type="tns:DescribeSnapshotsRestorableBySetType"/>
+          <xs:element name="ownersSet" type="tns:DescribeSnapshotsOwnersType" minOccurs="0"/>
+          <xs:element name="restorableBySet" type="tns:DescribeSnapshotsRestorableBySetType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeSnapshotsSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeSnapshotsSetItemType"/>
+          <xs:element name="item" type="tns:DescribeSnapshotsSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeSnapshotsSetItemType">
@@ -1198,7 +1198,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeSnapshotsOwnersType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeSnapshotsOwnerType"/>
+          <xs:element name="item" type="tns:DescribeSnapshotsOwnerType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeSnapshotsOwnerType">
@@ -1208,7 +1208,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeSnapshotsRestorableBySetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeSnapshotsRestorableByType"/>
+          <xs:element name="item" type="tns:DescribeSnapshotsRestorableByType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeSnapshotsRestorableByType">
@@ -1225,7 +1225,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeSnapshotsSetResponseType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeSnapshotsSetItemResponseType"/>
+          <xs:element name="item" type="tns:DescribeSnapshotsSetItemResponseType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeSnapshotsSetItemResponseType">
@@ -1237,8 +1237,8 @@
           <xs:element name="progress" type="xs:string"/>
           <xs:element name="ownerId" type="xs:string"/>
           <xs:element name="volumeSize" type="xs:string"/>
-          <xs:element minOccurs="0" name="description" type="xs:string"/>
-          <xs:element minOccurs="0" name="ownerAlias" type="xs:string"/>
+          <xs:element name="description" type="xs:string" minOccurs="0"/>
+          <xs:element name="ownerAlias" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="ModifySnapshotAttribute" type="tns:ModifySnapshotAttributeType"/>
@@ -1256,7 +1256,7 @@
       </xs:complexType>
       <xs:complexType name="CreateVolumePermissionListType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:CreateVolumePermissionItemType"/>
+          <xs:element name="item" type="tns:CreateVolumePermissionItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="CreateVolumePermissionItemType">
@@ -1327,9 +1327,9 @@
         <xs:sequence>
           <xs:element name="bucket" type="xs:string"/>
           <xs:element name="prefix" type="xs:string"/>
-          <xs:element minOccurs="0" name="awsAccessKeyId" type="xs:string"/>
-          <xs:element minOccurs="0" name="uploadPolicy" type="xs:string"/>
-          <xs:element minOccurs="0" name="uploadPolicySignature" type="xs:string"/>
+          <xs:element name="awsAccessKeyId" type="xs:string" minOccurs="0"/>
+          <xs:element name="uploadPolicy" type="xs:string" minOccurs="0"/>
+          <xs:element name="uploadPolicySignature" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="BundleInstanceResponse" type="tns:BundleInstanceResponseType"/>
@@ -1347,8 +1347,8 @@
           <xs:element name="startTime" type="xs:dateTime"/>
           <xs:element name="updateTime" type="xs:dateTime"/>
           <xs:element name="storage" type="tns:BundleInstanceTaskStorageType"/>
-          <xs:element minOccurs="0" name="progress" type="xs:string"/>
-          <xs:element minOccurs="0" name="error" type="tns:BundleInstanceTaskErrorType"/>
+          <xs:element name="progress" type="xs:string" minOccurs="0"/>
+          <xs:element name="error" type="tns:BundleInstanceTaskErrorType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="BundleInstanceTaskErrorType">
@@ -1365,7 +1365,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeBundleTasksInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeBundleTasksItemType"/>
+          <xs:element name="item" type="tns:DescribeBundleTasksItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeBundleTasksItemType">
@@ -1382,7 +1382,7 @@
       </xs:complexType>
       <xs:complexType name="BundleInstanceTasksSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:BundleInstanceTaskType"/>
+          <xs:element name="item" type="tns:BundleInstanceTaskType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="CancelBundleTask" type="tns:CancelBundleTaskType"/>
@@ -1406,7 +1406,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeRegionsSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeRegionsSetItemType"/>
+          <xs:element name="item" type="tns:DescribeRegionsSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeRegionsSetItemType">
@@ -1423,7 +1423,7 @@
       </xs:complexType>
       <xs:complexType name="RegionSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:RegionItemType"/>
+          <xs:element name="item" type="tns:RegionItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="RegionItemType">
@@ -1435,15 +1435,15 @@
       <xs:element name="DescribeReservedInstancesOfferings" type="tns:DescribeReservedInstancesOfferingsType"/>
       <xs:complexType name="DescribeReservedInstancesOfferingsType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="reservedInstancesOfferingsSet" type="tns:DescribeReservedInstancesOfferingsSetType"/>
-          <xs:element minOccurs="0" name="instanceType" type="xs:string"/>
-          <xs:element minOccurs="0" name="availabilityZone" type="xs:string"/>
-          <xs:element minOccurs="0" name="productDescription" type="xs:string"/>
+          <xs:element name="reservedInstancesOfferingsSet" type="tns:DescribeReservedInstancesOfferingsSetType" minOccurs="0"/>
+          <xs:element name="instanceType" type="xs:string" minOccurs="0"/>
+          <xs:element name="availabilityZone" type="xs:string" minOccurs="0"/>
+          <xs:element name="productDescription" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeReservedInstancesOfferingsSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeReservedInstancesOfferingsSetItemType"/>
+          <xs:element name="item" type="tns:DescribeReservedInstancesOfferingsSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeReservedInstancesOfferingsSetItemType">
@@ -1460,7 +1460,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeReservedInstancesOfferingsResponseSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeReservedInstancesOfferingsResponseSetItemType"/>
+          <xs:element name="item" type="tns:DescribeReservedInstancesOfferingsResponseSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeReservedInstancesOfferingsResponseSetItemType">
@@ -1491,12 +1491,12 @@
       <xs:element name="DescribeReservedInstances" type="tns:DescribeReservedInstancesType"/>
       <xs:complexType name="DescribeReservedInstancesType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="reservedInstancesSet" type="tns:DescribeReservedInstancesSetType"/>
+          <xs:element name="reservedInstancesSet" type="tns:DescribeReservedInstancesSetType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeReservedInstancesSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeReservedInstancesSetItemType"/>
+          <xs:element name="item" type="tns:DescribeReservedInstancesSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeReservedInstancesSetItemType">
@@ -1513,7 +1513,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeReservedInstancesResponseSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribeReservedInstancesResponseSetItemType"/>
+          <xs:element name="item" type="tns:DescribeReservedInstancesResponseSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeReservedInstancesResponseSetItemType">
@@ -1539,7 +1539,7 @@
       </xs:complexType>
       <xs:complexType name="MonitorInstancesSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="1" name="item" type="tns:MonitorInstancesSetItemType"/>
+          <xs:element name="item" type="tns:MonitorInstancesSetItemType" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="MonitorInstancesSetItemType">
@@ -1557,7 +1557,7 @@
       </xs:complexType>
       <xs:complexType name="MonitorInstancesResponseSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="1" name="item" type="tns:MonitorInstancesResponseSetItemType"/>
+          <xs:element name="item" type="tns:MonitorInstancesResponseSetItemType" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="MonitorInstancesResponseSetItemType">
@@ -1579,7 +1579,7 @@
       </xs:complexType>
       <xs:complexType name="AttachmentSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:AttachmentType"/>
+          <xs:element name="item" type="tns:AttachmentType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="VpnGatewayType">
@@ -1604,8 +1604,8 @@
         <xs:sequence>
           <xs:element name="vpnConnectionId" type="xs:string"/>
           <xs:element name="state" type="xs:string"/>
-          <xs:element minOccurs="0" name="customerGatewayConfiguration" type="xs:string"/>
-          <xs:element minOccurs="0" name="type" type="xs:string"/>
+          <xs:element name="customerGatewayConfiguration" type="xs:string" minOccurs="0"/>
+          <xs:element name="type" type="xs:string" minOccurs="0"/>
           <xs:element name="customerGatewayId" type="xs:string"/>
           <xs:element name="vpnGatewayId" type="xs:string"/>
         </xs:sequence>
@@ -1613,44 +1613,44 @@
       <xs:complexType name="VpcType">
         <xs:sequence>
           <xs:element name="vpcId" type="xs:string"/>
-          <xs:element minOccurs="0" name="state" type="xs:string"/>
-          <xs:element minOccurs="0" name="cidrBlock" type="xs:string"/>
-          <xs:element minOccurs="0" name="dhcpOptionsId" type="xs:string"/>
+          <xs:element name="state" type="xs:string" minOccurs="0"/>
+          <xs:element name="cidrBlock" type="xs:string" minOccurs="0"/>
+          <xs:element name="dhcpOptionsId" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="SubnetType">
         <xs:sequence>
           <xs:element name="subnetId" type="xs:string"/>
-          <xs:element minOccurs="0" name="state" type="xs:string"/>
-          <xs:element minOccurs="0" name="vpcId" type="xs:string"/>
-          <xs:element minOccurs="0" name="cidrBlock" type="xs:string"/>
-          <xs:element minOccurs="0" name="availableIpAddressCount" type="xs:int"/>
-          <xs:element minOccurs="0" name="availabilityZone" type="xs:string"/>
+          <xs:element name="state" type="xs:string" minOccurs="0"/>
+          <xs:element name="vpcId" type="xs:string" minOccurs="0"/>
+          <xs:element name="cidrBlock" type="xs:string" minOccurs="0"/>
+          <xs:element name="availableIpAddressCount" type="xs:int" minOccurs="0"/>
+          <xs:element name="availabilityZone" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="CustomerGatewaySetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:CustomerGatewayType"/>
+          <xs:element name="item" type="tns:CustomerGatewayType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="VpnGatewaySetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:VpnGatewayType"/>
+          <xs:element name="item" type="tns:VpnGatewayType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="VpnConnectionSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:VpnConnectionType"/>
+          <xs:element name="item" type="tns:VpnConnectionType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="VpcSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:VpcType"/>
+          <xs:element name="item" type="tns:VpcType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="SubnetSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:SubnetType"/>
+          <xs:element name="item" type="tns:SubnetType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="CustomerGatewayIdSetItemType">
@@ -1660,7 +1660,7 @@
       </xs:complexType>
       <xs:complexType name="CustomerGatewayIdSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:CustomerGatewayIdSetItemType"/>
+          <xs:element name="item" type="tns:CustomerGatewayIdSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="VpnGatewayIdSetItemType">
@@ -1670,7 +1670,7 @@
       </xs:complexType>
       <xs:complexType name="VpnGatewayIdSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:VpnGatewayIdSetItemType"/>
+          <xs:element name="item" type="tns:VpnGatewayIdSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="VpnConnectionIdSetItemType">
@@ -1680,7 +1680,7 @@
       </xs:complexType>
       <xs:complexType name="VpnConnectionIdSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:VpnConnectionIdSetItemType"/>
+          <xs:element name="item" type="tns:VpnConnectionIdSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="VpcIdSetItemType">
@@ -1690,7 +1690,7 @@
       </xs:complexType>
       <xs:complexType name="VpcIdSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:VpcIdSetItemType"/>
+          <xs:element name="item" type="tns:VpcIdSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="SubnetIdSetItemType">
@@ -1700,7 +1700,7 @@
       </xs:complexType>
       <xs:complexType name="SubnetIdSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:SubnetIdSetItemType"/>
+          <xs:element name="item" type="tns:SubnetIdSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DhcpOptionsIdSetItemType">
@@ -1710,17 +1710,17 @@
       </xs:complexType>
       <xs:complexType name="DhcpOptionsIdSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DhcpOptionsIdSetItemType"/>
+          <xs:element name="item" type="tns:DhcpOptionsIdSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DhcpConfigurationItemSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DhcpConfigurationItemType"/>
+          <xs:element name="item" type="tns:DhcpConfigurationItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DhcpOptionsSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DhcpOptionsType"/>
+          <xs:element name="item" type="tns:DhcpOptionsType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DhcpConfigurationItemType">
@@ -1742,7 +1742,7 @@
       </xs:complexType>
       <xs:complexType name="DhcpValueSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DhcpValueType"/>
+          <xs:element name="item" type="tns:DhcpValueType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="FilterType">
@@ -1753,7 +1753,7 @@
       </xs:complexType>
       <xs:complexType name="FilterSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:FilterType"/>
+          <xs:element name="item" type="tns:FilterType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="ValueType">
@@ -1763,7 +1763,7 @@
       </xs:complexType>
       <xs:complexType name="ValueSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:ValueType"/>
+          <xs:element name="item" type="tns:ValueType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:element name="CreateCustomerGateway" type="tns:CreateCustomerGatewayType"/>
@@ -1834,8 +1834,8 @@
       </xs:complexType>
       <xs:complexType name="DescribeCustomerGatewaysType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="customerGatewaySet" type="tns:CustomerGatewayIdSetType"/>
-          <xs:element minOccurs="0" name="filterSet" type="tns:FilterSetType"/>
+          <xs:element name="customerGatewaySet" type="tns:CustomerGatewayIdSetType" minOccurs="0"/>
+          <xs:element name="filterSet" type="tns:FilterSetType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeCustomerGatewaysResponseType">
@@ -1847,7 +1847,7 @@
       <xs:complexType name="CreateVpnGatewayType">
         <xs:sequence>
           <xs:element name="type" type="xs:string"/>
-          <xs:element minOccurs="0" name="availabilityZone" type="xs:string"/>
+          <xs:element name="availabilityZone" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="CreateVpnGatewayResponseType">
@@ -1869,8 +1869,8 @@
       </xs:complexType>
       <xs:complexType name="DescribeVpnGatewaysType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="vpnGatewaySet" type="tns:VpnGatewayIdSetType"/>
-          <xs:element minOccurs="0" name="filterSet" type="tns:FilterSetType"/>
+          <xs:element name="vpnGatewaySet" type="tns:VpnGatewayIdSetType" minOccurs="0"/>
+          <xs:element name="filterSet" type="tns:FilterSetType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeVpnGatewaysResponseType">
@@ -1905,8 +1905,8 @@
       </xs:complexType>
       <xs:complexType name="DescribeVpnConnectionsType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="vpnConnectionSet" type="tns:VpnConnectionIdSetType"/>
-          <xs:element minOccurs="0" name="filterSet" type="tns:FilterSetType"/>
+          <xs:element name="vpnConnectionSet" type="tns:VpnConnectionIdSetType" minOccurs="0"/>
+          <xs:element name="filterSet" type="tns:FilterSetType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeVpnConnectionsResponseType">
@@ -1952,8 +1952,8 @@
       </xs:complexType>
       <xs:complexType name="DescribeVpcsType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="vpcSet" type="tns:VpcIdSetType"/>
-          <xs:element minOccurs="0" name="filterSet" type="tns:FilterSetType"/>
+          <xs:element name="vpcSet" type="tns:VpcIdSetType" minOccurs="0"/>
+          <xs:element name="filterSet" type="tns:FilterSetType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeVpcsResponseType">
@@ -1977,7 +1977,7 @@
         <xs:sequence>
           <xs:element name="vpcId" type="xs:string"/>
           <xs:element name="cidrBlock" type="xs:string"/>
-          <xs:element minOccurs="0" name="availabilityZone" type="xs:string"/>
+          <xs:element name="availabilityZone" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="CreateSubnetResponseType">
@@ -1988,8 +1988,8 @@
       </xs:complexType>
       <xs:complexType name="DescribeSubnetsType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="subnetSet" type="tns:SubnetIdSetType"/>
-          <xs:element minOccurs="0" name="filterSet" type="tns:FilterSetType"/>
+          <xs:element name="subnetSet" type="tns:SubnetIdSetType" minOccurs="0"/>
+          <xs:element name="filterSet" type="tns:FilterSetType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeSubnetsResponseType">
@@ -2022,7 +2022,7 @@
       </xs:complexType>
       <xs:complexType name="DescribeDhcpOptionsType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="dhcpOptionsSet" type="tns:DhcpOptionsIdSetType"/>
+          <xs:element name="dhcpOptionsSet" type="tns:DhcpOptionsIdSetType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeDhcpOptionsResponseType">
@@ -2071,44 +2071,44 @@
       <xs:complexType name="RequestSpotInstancesType">
         <xs:sequence>
           <xs:element name="spotPrice" type="xs:string"/>
-          <xs:element minOccurs="0" name="instanceCount" type="xs:integer"/>
-          <xs:element minOccurs="0" name="type" type="xs:string"/>
-          <xs:element minOccurs="0" name="validFrom" type="xs:dateTime"/>
-          <xs:element minOccurs="0" name="validUntil" type="xs:dateTime"/>
-          <xs:element minOccurs="0" name="launchGroup" type="xs:string"/>
-          <xs:element minOccurs="0" name="availabilityZoneGroup" type="xs:string"/>
+          <xs:element name="instanceCount" type="xs:integer" minOccurs="0"/>
+          <xs:element name="type" type="xs:string" minOccurs="0"/>
+          <xs:element name="validFrom" type="xs:dateTime" minOccurs="0"/>
+          <xs:element name="validUntil" type="xs:dateTime" minOccurs="0"/>
+          <xs:element name="launchGroup" type="xs:string" minOccurs="0"/>
+          <xs:element name="availabilityZoneGroup" type="xs:string" minOccurs="0"/>
           <xs:element name="launchSpecification" type="tns:LaunchSpecificationRequestType"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="LaunchSpecificationRequestType">
         <xs:sequence>
           <xs:element name="imageId" type="xs:string"/>
-          <xs:element minOccurs="0" name="keyName" type="xs:string"/>
+          <xs:element name="keyName" type="xs:string" minOccurs="0"/>
           <xs:element name="groupSet" type="tns:GroupSetType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="userData" type="tns:UserDataType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="addressingType" type="xs:string"/>
+          <xs:element name="userData" type="tns:UserDataType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="addressingType" type="xs:string" minOccurs="0" maxOccurs="1"/>
           <xs:element name="instanceType" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="placement" type="tns:PlacementRequestType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="kernelId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="ramdiskId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="blockDeviceMapping" type="tns:BlockDeviceMappingType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="monitoring" type="tns:MonitoringInstanceType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="subnetId" type="xs:string"/>
+          <xs:element name="placement" type="tns:PlacementRequestType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="kernelId" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="ramdiskId" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="blockDeviceMapping" type="tns:BlockDeviceMappingType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="monitoring" type="tns:MonitoringInstanceType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="subnetId" type="xs:string" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="LaunchSpecificationResponseType">
         <xs:sequence>
           <xs:element name="imageId" type="xs:string"/>
-          <xs:element minOccurs="0" name="keyName" type="xs:string"/>
+          <xs:element name="keyName" type="xs:string" minOccurs="0"/>
           <xs:element name="groupSet" type="tns:GroupSetType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="addressingType" type="xs:string"/>
+          <xs:element name="addressingType" type="xs:string" minOccurs="0" maxOccurs="1"/>
           <xs:element name="instanceType" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="placement" type="tns:PlacementRequestType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="kernelId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="ramdiskId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="blockDeviceMapping" type="tns:BlockDeviceMappingType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="monitoring" type="tns:MonitoringInstanceType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="subnetId" type="xs:string"/>
+          <xs:element name="placement" type="tns:PlacementRequestType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="kernelId" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="ramdiskId" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="blockDeviceMapping" type="tns:BlockDeviceMappingType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="monitoring" type="tns:MonitoringInstanceType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="subnetId" type="xs:string" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="SpotInstanceRequestSetItemType">
@@ -2117,15 +2117,15 @@
           <xs:element name="spotPrice" type="xs:string"/>
           <xs:element name="type" type="xs:string"/>
           <xs:element name="state" type="xs:string"/>
-          <xs:element minOccurs="0" name="fault" type="tns:SpotInstanceStateFaultType"/>
-          <xs:element minOccurs="0" name="validFrom" type="xs:dateTime"/>
-          <xs:element minOccurs="0" name="validUntil" type="xs:dateTime"/>
-          <xs:element minOccurs="0" name="launchGroup" type="xs:string"/>
-          <xs:element minOccurs="0" name="availabilityZoneGroup" type="xs:string"/>
-          <xs:element minOccurs="0" name="launchSpecification" type="tns:LaunchSpecificationResponseType"/>
-          <xs:element minOccurs="0" name="instanceId" type="xs:string"/>
-          <xs:element minOccurs="0" name="createTime" type="xs:dateTime"/>
-          <xs:element minOccurs="0" name="productDescription" type="xs:string"/>
+          <xs:element name="fault" type="tns:SpotInstanceStateFaultType" minOccurs="0"/>
+          <xs:element name="validFrom" type="xs:dateTime" minOccurs="0"/>
+          <xs:element name="validUntil" type="xs:dateTime" minOccurs="0"/>
+          <xs:element name="launchGroup" type="xs:string" minOccurs="0"/>
+          <xs:element name="availabilityZoneGroup" type="xs:string" minOccurs="0"/>
+          <xs:element name="launchSpecification" type="tns:LaunchSpecificationResponseType" minOccurs="0"/>
+          <xs:element name="instanceId" type="xs:string" minOccurs="0"/>
+          <xs:element name="createTime" type="xs:dateTime" minOccurs="0"/>
+          <xs:element name="productDescription" type="xs:string" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="SpotInstanceStateFaultType">
@@ -2136,13 +2136,13 @@
       </xs:complexType>
       <xs:complexType name="SpotInstanceRequestSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:SpotInstanceRequestSetItemType"/>
+          <xs:element name="item" type="tns:SpotInstanceRequestSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="RequestSpotInstancesResponseType">
         <xs:sequence>
           <xs:element name="requestId" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="1" name="spotInstanceRequestSet" type="tns:SpotInstanceRequestSetType"/>
+          <xs:element name="spotInstanceRequestSet" type="tns:SpotInstanceRequestSetType" minOccurs="1" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribeSpotInstanceRequestsType">
@@ -2152,7 +2152,7 @@
       </xs:complexType>
       <xs:complexType name="SpotInstanceRequestIdSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:SpotInstanceRequestIdSetItemType"/>
+          <xs:element name="item" type="tns:SpotInstanceRequestIdSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="SpotInstanceRequestIdSetItemType">
@@ -2179,7 +2179,7 @@
       </xs:complexType>
       <xs:complexType name="CancelSpotInstanceRequestsResponseSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="1" name="item" type="tns:CancelSpotInstanceRequestsResponseSetItemType"/>
+          <xs:element name="item" type="tns:CancelSpotInstanceRequestsResponseSetItemType" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="CancelSpotInstanceRequestsResponseSetItemType">
@@ -2190,15 +2190,15 @@
       </xs:complexType>
       <xs:complexType name="DescribeSpotPriceHistoryType">
         <xs:sequence>
-          <xs:element minOccurs="0" name="startTime" type="xs:dateTime"/>
-          <xs:element minOccurs="0" name="endTime" type="xs:dateTime"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="instanceTypeSet" type="tns:InstanceTypeSetType"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="productDescriptionSet" type="tns:ProductDescriptionSetType"/>
+          <xs:element name="startTime" type="xs:dateTime" minOccurs="0"/>
+          <xs:element name="endTime" type="xs:dateTime" minOccurs="0"/>
+          <xs:element name="instanceTypeSet" type="tns:InstanceTypeSetType" minOccurs="0" maxOccurs="1"/>
+          <xs:element name="productDescriptionSet" type="tns:ProductDescriptionSetType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="InstanceTypeSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="1" name="item" type="tns:InstanceTypeSetItemType"/>
+          <xs:element name="item" type="tns:InstanceTypeSetItemType" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="InstanceTypeSetItemType">
@@ -2208,7 +2208,7 @@
       </xs:complexType>
       <xs:complexType name="ProductDescriptionSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="1" name="item" type="tns:ProductDescriptionSetItemType"/>
+          <xs:element name="item" type="tns:ProductDescriptionSetItemType" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="ProductDescriptionSetItemType">
@@ -2224,7 +2224,7 @@
       </xs:complexType>
       <xs:complexType name="SpotPriceHistorySetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:SpotPriceHistorySetItemType"/>
+          <xs:element name="item" type="tns:SpotPriceHistorySetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="SpotPriceHistorySetItemType">
@@ -2241,7 +2241,7 @@
           <xs:element name="bucket" type="xs:string"/>
           <xs:element name="prefix" type="xs:string"/>
           <xs:element name="state" type="xs:string"/>
-          <xs:element minOccurs="0" name="fault" type="tns:SpotInstanceStateFaultType"/>
+          <xs:element name="fault" type="tns:SpotInstanceStateFaultType" minOccurs="0"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="CreateSpotDatafeedSubscriptionType">
@@ -2278,12 +2278,12 @@
       <xs:element name="DeactivateLicenseResponse" type="tns:DeactivateLicenseResponseType"/>
       <xs:complexType name="DescribeLicensesType">
         <xs:sequence>
-          <xs:element maxOccurs="1" minOccurs="0" name="licenseIdSet" type="tns:LicenseIdSetType"/>
+          <xs:element name="licenseIdSet" type="tns:LicenseIdSetType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="LicenseIdSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:LicenseIdSetItemType"/>
+          <xs:element name="item" type="tns:LicenseIdSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="LicenseIdSetItemType">
@@ -2299,7 +2299,7 @@
       </xs:complexType>
       <xs:complexType name="LicenseSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:LicenseSetItemType"/>
+          <xs:element name="item" type="tns:LicenseSetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="LicenseSetItemType">
@@ -2312,7 +2312,7 @@
       </xs:complexType>
       <xs:complexType name="LicenseCapacitySetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:LicenseCapacitySetItemType"/>
+          <xs:element name="item" type="tns:LicenseCapacitySetItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="LicenseCapacitySetItemType">
@@ -2320,7 +2320,7 @@
           <xs:element name="capacity" type="xs:int"/>
           <xs:element name="instanceCapacity" type="xs:int"/>
           <xs:element name="state" type="xs:string"/>
-          <xs:element maxOccurs="1" minOccurs="0" name="earliestAllowedDeactivationTime" type="xs:dateTime"/>
+          <xs:element name="earliestAllowedDeactivationTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="ActivateLicenseType">
@@ -2383,7 +2383,7 @@
       </xs:complexType>
       <xs:complexType name="DescribePlacementGroupsInfoType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:DescribePlacementGroupItemType"/>
+          <xs:element name="item" type="tns:DescribePlacementGroupItemType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribePlacementGroupsType">
@@ -2400,7 +2400,7 @@
       </xs:complexType>
       <xs:complexType name="PlacementGroupSetType">
         <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="tns:PlacementGroupInfoType"/>
+          <xs:element name="item" type="tns:PlacementGroupInfoType" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
       </xs:complexType>
       <xs:complexType name="DescribePlacementGroupsResponseType">
@@ -2411,1228 +2411,880 @@
       </xs:complexType>
     </xs:schema>
   </types>
-  <message name="AllocateAddressResponseMsg">
-    <part name="AllocateAddressResponseMsgResp" element="tns:AllocateAddressResponse">
-    </part>
+  <message name="ActivateLicenseRequestMsg">
+    <part name="ActivateLicenseRequestMsgReq" element="tns:ActivateLicense"/>
   </message>
   <message name="ActivateLicenseResponseMsg">
-    <part name="ActivateLicenseResponseMsgResp" element="tns:ActivateLicenseResponse">
-    </part>
-  </message>
-  <message name="DeleteVpnGatewayResponseMsg">
-    <part name="DeleteVpnGatewayResponseMsgResp" element="tns:DeleteVpnGatewayResponse">
-    </part>
-  </message>
-  <message name="ResetSnapshotAttributeRequestMsg">
-    <part name="ResetSnapshotAttributeRequestMsgReq" element="tns:ResetSnapshotAttribute">
-    </part>
-  </message>
-  <message name="RequestSpotInstancesRequestMsg">
-    <part name="RequestSpotInstancesRequestMsgReq" element="tns:RequestSpotInstances">
-    </part>
-  </message>
-  <message name="CreateVolumeRequestMsg">
-    <part name="CreateVolumeRequestMsgReq" element="tns:CreateVolume">
-    </part>
-  </message>
-  <message name="AttachVpnGatewayRequestMsg">
-    <part name="AttachVpnGatewayRequestMsgReq" element="tns:AttachVpnGateway">
-    </part>
-  </message>
-  <message name="GetConsoleOutputResponseMsg">
-    <part name="GetConsoleOutputResponseMsgResp" element="tns:GetConsoleOutputResponse">
-    </part>
-  </message>
-  <message name="ModifyInstanceAttributeResponseMsg">
-    <part name="ModifyInstanceAttributeResponseMsgResp" element="tns:ModifyInstanceAttributeResponse">
-    </part>
-  </message>
-  <message name="AuthorizeSecurityGroupIngressResponseMsg">
-    <part name="AuthorizeSecurityGroupIngressResponseMsgResp" element="tns:AuthorizeSecurityGroupIngressResponse">
-    </part>
-  </message>
-  <message name="CreateKeyPairResponseMsg">
-    <part name="CreateKeyPairResponseMsgResp" element="tns:CreateKeyPairResponse">
-    </part>
-  </message>
-  <message name="DescribeLicensesResponseMsg">
-    <part name="DescribeLicensesResponseMsgResp" element="tns:DescribeLicensesResponse">
-    </part>
-  </message>
-  <message name="ActivateLicenseRequestMsg">
-    <part name="ActivateLicenseRequestMsgReq" element="tns:ActivateLicense">
-    </part>
-  </message>
-  <message name="DescribeImageAttributeResponseMsg">
-    <part name="DescribeImageAttributeResponseMsgResp" element="tns:DescribeImageAttributeResponse">
-    </part>
-  </message>
-  <message name="DeleteVolumeRequestMsg">
-    <part name="DeleteVolumeRequestMsgReq" element="tns:DeleteVolume">
-    </part>
-  </message>
-  <message name="DescribePlacementGroupsResponseMsg">
-    <part name="DescribePlacementGroupsResponseMsgResp" element="tns:DescribePlacementGroupsResponse">
-    </part>
-  </message>
-  <message name="CreateSecurityGroupResponseMsg">
-    <part name="CreateSecurityGroupResponseMsgResp" element="tns:CreateSecurityGroupResponse">
-    </part>
-  </message>
-  <message name="DisassociateAddressRequestMsg">
-    <part name="DisassociateAddressRequestMsgReq" element="tns:DisassociateAddress">
-    </part>
-  </message>
-  <message name="ResetImageAttributeRequestMsg">
-    <part name="ResetImageAttributeRequestMsgReq" element="tns:ResetImageAttribute">
-    </part>
-  </message>
-  <message name="DescribeVolumesRequestMsg">
-    <part name="DescribeVolumesRequestMsgReq" element="tns:DescribeVolumes">
-    </part>
-  </message>
-  <message name="ModifyImageAttributeResponseMsg">
-    <part name="ModifyImageAttributeResponseMsgResp" element="tns:ModifyImageAttributeResponse">
-    </part>
-  </message>
-  <message name="DescribeReservedInstancesResponseMsg">
-    <part name="DescribeReservedInstancesResponseMsgResp" element="tns:DescribeReservedInstancesResponse">
-    </part>
-  </message>
-  <message name="DeleteSecurityGroupResponseMsg">
-    <part name="DeleteSecurityGroupResponseMsgResp" element="tns:DeleteSecurityGroupResponse">
-    </part>
-  </message>
-  <message name="AttachVolumeResponseMsg">
-    <part name="AttachVolumeResponseMsgResp" element="tns:AttachVolumeResponse">
-    </part>
-  </message>
-  <message name="ResetSnapshotAttributeResponseMsg">
-    <part name="ResetSnapshotAttributeResponseMsgResp" element="tns:ResetSnapshotAttributeResponse">
-    </part>
-  </message>
-  <message name="DescribeVpnGatewaysResponseMsg">
-    <part name="DescribeVpnGatewaysResponseMsgResp" element="tns:DescribeVpnGatewaysResponse">
-    </part>
-  </message>
-  <message name="DescribeKeyPairsRequestMsg">
-    <part name="DescribeKeyPairsRequestMsgReq" element="tns:DescribeKeyPairs">
-    </part>
-  </message>
-  <message name="DeleteSnapshotResponseMsg">
-    <part name="DeleteSnapshotResponseMsgResp" element="tns:DeleteSnapshotResponse">
-    </part>
-  </message>
-  <message name="DescribeDhcpOptionsResponseMsg">
-    <part name="DescribeDhcpOptionsResponseMsgResp" element="tns:DescribeDhcpOptionsResponse">
-    </part>
-  </message>
-  <message name="TerminateInstancesRequestMsg">
-    <part name="TerminateInstancesRequestMsgReq" element="tns:TerminateInstances">
-    </part>
-  </message>
-  <message name="StartInstancesResponseMsg">
-    <part name="StartInstancesResponseMsgResp" element="tns:StartInstancesResponse">
-    </part>
-  </message>
-  <message name="DeleteCustomerGatewayRequestMsg">
-    <part name="DeleteCustomerGatewayRequestMsgReq" element="tns:DeleteCustomerGateway">
-    </part>
-  </message>
-  <message name="CreateKeyPairRequestMsg">
-    <part name="CreateKeyPairRequestMsgReq" element="tns:CreateKeyPair">
-    </part>
-  </message>
-  <message name="RunInstancesRequestMsg">
-    <part name="RunInstancesRequestMsgReq" element="tns:RunInstances">
-    </part>
-  </message>
-  <message name="DescribeSpotPriceHistoryRequestMsg">
-    <part name="DescribeSpotPriceHistoryRequestMsgReq" element="tns:DescribeSpotPriceHistory">
-    </part>
-  </message>
-  <message name="PurchaseReservedInstancesOfferingRequestMsg">
-    <part name="PurchaseReservedInstancesOfferingRequestMsgReq" element="tns:PurchaseReservedInstancesOffering">
-    </part>
-  </message>
-  <message name="UnmonitorInstancesRequestMsg">
-    <part name="UnmonitorInstancesRequestMsgReq" element="tns:UnmonitorInstances">
-    </part>
-  </message>
-  <message name="DescribeVolumesResponseMsg">
-    <part name="DescribeVolumesResponseMsgResp" element="tns:DescribeVolumesResponse">
-    </part>
-  </message>
-  <message name="CancelBundleTaskRequestMsg">
-    <part name="CancelBundleTaskRequestMsgReq" element="tns:CancelBundleTask">
-    </part>
-  </message>
-  <message name="DeactivateLicenseResponseMsg">
-    <part name="DeactivateLicenseResponseMsgResp" element="tns:DeactivateLicenseResponse">
-    </part>
-  </message>
-  <message name="DescribeSnapshotsRequestMsg">
-    <part name="DescribeSnapshotsRequestMsgReq" element="tns:DescribeSnapshots">
-    </part>
-  </message>
-  <message name="DeleteSubnetRequestMsg">
-    <part name="DeleteSubnetRequestMsgReq" element="tns:DeleteSubnet">
-    </part>
-  </message>
-  <message name="CreateDhcpOptionsRequestMsg">
-    <part name="CreateDhcpOptionsRequestMsgReq" element="tns:CreateDhcpOptions">
-    </part>
-  </message>
-  <message name="CreatePlacementGroupRequestMsg">
-    <part name="CreatePlacementGroupRequestMsgReq" element="tns:CreatePlacementGroup">
-    </part>
-  </message>
-  <message name="CreateDhcpOptionsResponseMsg">
-    <part name="CreateDhcpOptionsResponseMsgResp" element="tns:CreateDhcpOptionsResponse">
-    </part>
-  </message>
-  <message name="RebootInstancesResponseMsg">
-    <part name="RebootInstancesResponseMsgResp" element="tns:RebootInstancesResponse">
-    </part>
-  </message>
-  <message name="DescribeSpotInstanceRequestsRequestMsg">
-    <part name="DescribeSpotInstanceRequestsRequestMsgReq" element="tns:DescribeSpotInstanceRequests">
-    </part>
-  </message>
-  <message name="DeleteSnapshotRequestMsg">
-    <part name="DeleteSnapshotRequestMsgReq" element="tns:DeleteSnapshot">
-    </part>
-  </message>
-  <message name="CreateVpnConnectionRequestMsg">
-    <part name="CreateVpnConnectionRequestMsgReq" element="tns:CreateVpnConnection">
-    </part>
-  </message>
-  <message name="DetachVolumeRequestMsg">
-    <part name="DetachVolumeRequestMsgReq" element="tns:DetachVolume">
-    </part>
-  </message>
-  <message name="DescribeSubnetsResponseMsg">
-    <part name="DescribeSubnetsResponseMsgResp" element="tns:DescribeSubnetsResponse">
-    </part>
-  </message>
-  <message name="DescribeReservedInstancesOfferingsResponseMsg">
-    <part name="DescribeReservedInstancesOfferingsResponseMsgResp" element="tns:DescribeReservedInstancesOfferingsResponse">
-    </part>
-  </message>
-  <message name="CancelSpotInstanceRequestsRequestMsg">
-    <part name="CancelSpotInstanceRequestsRequestMsgReq" element="tns:CancelSpotInstanceRequests">
-    </part>
-  </message>
-  <message name="DescribeCustomerGatewaysResponseMsg">
-    <part name="DescribeCustomerGatewaysResponseMsgResp" element="tns:DescribeCustomerGatewaysResponse">
-    </part>
-  </message>
-  <message name="ModifyImageAttributeRequestMsg">
-    <part name="ModifyImageAttributeRequestMsgReq" element="tns:ModifyImageAttribute">
-    </part>
-  </message>
-  <message name="DescribeVpcsResponseMsg">
-    <part name="DescribeVpcsResponseMsgResp" element="tns:DescribeVpcsResponse">
-    </part>
-  </message>
-  <message name="ReleaseAddressResponseMsg">
-    <part name="ReleaseAddressResponseMsgResp" element="tns:ReleaseAddressResponse">
-    </part>
-  </message>
-  <message name="DescribeAddressesRequestMsg">
-    <part name="DescribeAddressesRequestMsgReq" element="tns:DescribeAddresses">
-    </part>
-  </message>
-  <message name="TerminateInstancesResponseMsg">
-    <part name="TerminateInstancesResponseMsgResp" element="tns:TerminateInstancesResponse">
-    </part>
-  </message>
-  <message name="RegisterImageRequestMsg">
-    <part name="RegisterImageRequestMsgReq" element="tns:RegisterImage">
-    </part>
-  </message>
-  <message name="BundleInstanceRequestMsg">
-    <part name="BundleInstanceRequestMsgReq" element="tns:BundleInstance">
-    </part>
-  </message>
-  <message name="BundleInstanceResponseMsg">
-    <part name="BundleInstanceResponseMsgResp" element="tns:BundleInstanceResponse">
-    </part>
-  </message>
-  <message name="CreateVpnGatewayRequestMsg">
-    <part name="CreateVpnGatewayRequestMsgReq" element="tns:CreateVpnGateway">
-    </part>
-  </message>
-  <message name="DeleteKeyPairResponseMsg">
-    <part name="DeleteKeyPairResponseMsgResp" element="tns:DeleteKeyPairResponse">
-    </part>
-  </message>
-  <message name="DescribeImageAttributeRequestMsg">
-    <part name="DescribeImageAttributeRequestMsgReq" element="tns:DescribeImageAttribute">
-    </part>
-  </message>
-  <message name="StopInstancesResponseMsg">
-    <part name="StopInstancesResponseMsgResp" element="tns:StopInstancesResponse">
-    </part>
-  </message>
-  <message name="DetachVolumeResponseMsg">
-    <part name="DetachVolumeResponseMsgResp" element="tns:DetachVolumeResponse">
-    </part>
-  </message>
-  <message name="DeletePlacementGroupRequestMsg">
-    <part name="DeletePlacementGroupRequestMsgReq" element="tns:DeletePlacementGroup">
-    </part>
-  </message>
-  <message name="CreateSubnetRequestMsg">
-    <part name="CreateSubnetRequestMsgReq" element="tns:CreateSubnet">
-    </part>
-  </message>
-  <message name="CreateSnapshotResponseMsg">
-    <part name="CreateSnapshotResponseMsgResp" element="tns:CreateSnapshotResponse">
-    </part>
-  </message>
-  <message name="DescribeKeyPairsResponseMsg">
-    <part name="DescribeKeyPairsResponseMsgResp" element="tns:DescribeKeyPairsResponse">
-    </part>
-  </message>
-  <message name="AuthorizeSecurityGroupIngressRequestMsg">
-    <part name="AuthorizeSecurityGroupIngressRequestMsgReq" element="tns:AuthorizeSecurityGroupIngress">
-    </part>
-  </message>
-  <message name="DescribeSpotDatafeedSubscriptionResponseMsg">
-    <part name="DescribeSpotDatafeedSubscriptionResponseMsgResp" element="tns:DescribeSpotDatafeedSubscriptionResponse">
-    </part>
-  </message>
-  <message name="DescribeSecurityGroupsResponseMsg">
-    <part name="DescribeSecurityGroupsResponseMsgResp" element="tns:DescribeSecurityGroupsResponse">
-    </part>
-  </message>
-  <message name="MonitorInstancesRequestMsg">
-    <part name="MonitorInstancesRequestMsgReq" element="tns:MonitorInstances">
-    </part>
-  </message>
-  <message name="DeregisterImageRequestMsg">
-    <part name="DeregisterImageRequestMsgReq" element="tns:DeregisterImage">
-    </part>
-  </message>
-  <message name="DescribeVpnGatewaysRequestMsg">
-    <part name="DescribeVpnGatewaysRequestMsgReq" element="tns:DescribeVpnGateways">
-    </part>
-  </message>
-  <message name="DescribeSnapshotsResponseMsg">
-    <part name="DescribeSnapshotsResponseMsgResp" element="tns:DescribeSnapshotsResponse">
-    </part>
-  </message>
-  <message name="AssociateAddressResponseMsg">
-    <part name="AssociateAddressResponseMsgResp" element="tns:AssociateAddressResponse">
-    </part>
-  </message>
-  <message name="RequestSpotInstancesResponseMsg">
-    <part name="RequestSpotInstancesResponseMsgResp" element="tns:RequestSpotInstancesResponse">
-    </part>
-  </message>
-  <message name="DescribeAvailabilityZonesRequestMsg">
-    <part name="DescribeAvailabilityZonesRequestMsgReq" element="tns:DescribeAvailabilityZones">
-    </part>
-  </message>
-  <message name="CreateSnapshotRequestMsg">
-    <part name="CreateSnapshotRequestMsgReq" element="tns:CreateSnapshot">
-    </part>
-  </message>
-  <message name="DescribeImagesRequestMsg">
-    <part name="DescribeImagesRequestMsgReq" element="tns:DescribeImages">
-    </part>
-  </message>
-  <message name="CreateVpcRequestMsg">
-    <part name="CreateVpcRequestMsgReq" element="tns:CreateVpc">
-    </part>
-  </message>
-  <message name="DescribeLicensesRequestMsg">
-    <part name="DescribeLicensesRequestMsgReq" element="tns:DescribeLicenses">
-    </part>
-  </message>
-  <message name="DescribeInstancesResponseMsg">
-    <part name="DescribeInstancesResponseMsgResp" element="tns:DescribeInstancesResponse">
-    </part>
-  </message>
-  <message name="DescribeSpotDatafeedSubscriptionRequestMsg">
-    <part name="DescribeSpotDatafeedSubscriptionRequestMsgReq" element="tns:DescribeSpotDatafeedSubscription">
-    </part>
-  </message>
-  <message name="CreateImageRequestMsg">
-    <part name="CreateImageRequestMsgReq" element="tns:CreateImage">
-    </part>
-  </message>
-  <message name="ConfirmProductInstanceRequestMsg">
-    <part name="ConfirmProductInstanceRequestMsgReq" element="tns:ConfirmProductInstance">
-    </part>
-  </message>
-  <message name="CreateSpotDatafeedSubscriptionResponseMsg">
-    <part name="CreateSpotDatafeedSubscriptionResponseMsgResp" element="tns:CreateSpotDatafeedSubscriptionResponse">
-    </part>
-  </message>
-  <message name="UnmonitorInstancesResponseMsg">
-    <part name="UnmonitorInstancesResponseMsgResp" element="tns:UnmonitorInstancesResponse">
-    </part>
-  </message>
-  <message name="DescribeRegionsResponseMsg">
-    <part name="DescribeRegionsResponseMsgResp" element="tns:DescribeRegionsResponse">
-    </part>
-  </message>
-  <message name="StopInstancesRequestMsg">
-    <part name="StopInstancesRequestMsgReq" element="tns:StopInstances">
-    </part>
-  </message>
-  <message name="RevokeSecurityGroupIngressResponseMsg">
-    <part name="RevokeSecurityGroupIngressResponseMsgResp" element="tns:RevokeSecurityGroupIngressResponse">
-    </part>
-  </message>
-  <message name="DescribeSnapshotAttributeRequestMsg">
-    <part name="DescribeSnapshotAttributeRequestMsgReq" element="tns:DescribeSnapshotAttribute">
-    </part>
-  </message>
-  <message name="DisassociateAddressResponseMsg">
-    <part name="DisassociateAddressResponseMsgResp" element="tns:DisassociateAddressResponse">
-    </part>
-  </message>
-  <message name="DescribeSpotInstanceRequestsResponseMsg">
-    <part name="DescribeSpotInstanceRequestsResponseMsgResp" element="tns:DescribeSpotInstanceRequestsResponse">
-    </part>
-  </message>
-  <message name="DeleteDhcpOptionsResponseMsg">
-    <part name="DeleteDhcpOptionsResponseMsgResp" element="tns:DeleteDhcpOptionsResponse">
-    </part>
-  </message>
-  <message name="DeleteSecurityGroupRequestMsg">
-    <part name="DeleteSecurityGroupRequestMsgReq" element="tns:DeleteSecurityGroup">
-    </part>
-  </message>
-  <message name="DescribeVpnConnectionsResponseMsg">
-    <part name="DescribeVpnConnectionsResponseMsgResp" element="tns:DescribeVpnConnectionsResponse">
-    </part>
-  </message>
-  <message name="CreateSecurityGroupRequestMsg">
-    <part name="CreateSecurityGroupRequestMsgReq" element="tns:CreateSecurityGroup">
-    </part>
-  </message>
-  <message name="DeleteVolumeResponseMsg">
-    <part name="DeleteVolumeResponseMsgResp" element="tns:DeleteVolumeResponse">
-    </part>
-  </message>
-  <message name="DeletePlacementGroupResponseMsg">
-    <part name="DeletePlacementGroupResponseMsgResp" element="tns:DeletePlacementGroupResponse">
-    </part>
-  </message>
-  <message name="RegisterImageResponseMsg">
-    <part name="RegisterImageResponseMsgResp" element="tns:RegisterImageResponse">
-    </part>
-  </message>
-  <message name="DescribeBundleTasksResponseMsg">
-    <part name="DescribeBundleTasksResponseMsgResp" element="tns:DescribeBundleTasksResponse">
-    </part>
-  </message>
-  <message name="ResetInstanceAttributeResponseMsg">
-    <part name="ResetInstanceAttributeResponseMsgResp" element="tns:ResetInstanceAttributeResponse">
-    </part>
-  </message>
-  <message name="RunInstancesResponseMsg">
-    <part name="RunInstancesResponseMsgResp" element="tns:RunInstancesResponse">
-    </part>
-  </message>
-  <message name="DeleteVpcRequestMsg">
-    <part name="DeleteVpcRequestMsgReq" element="tns:DeleteVpc">
-    </part>
-  </message>
-  <message name="ResetInstanceAttributeRequestMsg">
-    <part name="ResetInstanceAttributeRequestMsgReq" element="tns:ResetInstanceAttribute">
-    </part>
-  </message>
-  <message name="DescribeDhcpOptionsRequestMsg">
-    <part name="DescribeDhcpOptionsRequestMsgReq" element="tns:DescribeDhcpOptions">
-    </part>
+    <part name="ActivateLicenseResponseMsgResp" element="tns:ActivateLicenseResponse"/>
   </message>
   <message name="AllocateAddressRequestMsg">
-    <part name="AllocateAddressRequestMsgReq" element="tns:AllocateAddress">
-    </part>
+    <part name="AllocateAddressRequestMsgReq" element="tns:AllocateAddress"/>
   </message>
-  <message name="DeleteSpotDatafeedSubscriptionRequestMsg">
-    <part name="DeleteSpotDatafeedSubscriptionRequestMsgReq" element="tns:DeleteSpotDatafeedSubscription">
-    </part>
-  </message>
-  <message name="DescribeImagesResponseMsg">
-    <part name="DescribeImagesResponseMsgResp" element="tns:DescribeImagesResponse">
-    </part>
-  </message>
-  <message name="CreatePlacementGroupResponseMsg">
-    <part name="CreatePlacementGroupResponseMsgResp" element="tns:CreatePlacementGroupResponse">
-    </part>
+  <message name="AllocateAddressResponseMsg">
+    <part name="AllocateAddressResponseMsgResp" element="tns:AllocateAddressResponse"/>
   </message>
   <message name="AssociateAddressRequestMsg">
-    <part name="AssociateAddressRequestMsgReq" element="tns:AssociateAddress">
-    </part>
+    <part name="AssociateAddressRequestMsgReq" element="tns:AssociateAddress"/>
   </message>
-  <message name="GetPasswordDataResponseMsg">
-    <part name="GetPasswordDataResponseMsgResp" element="tns:GetPasswordDataResponse">
-    </part>
-  </message>
-  <message name="DescribeSpotPriceHistoryResponseMsg">
-    <part name="DescribeSpotPriceHistoryResponseMsgResp" element="tns:DescribeSpotPriceHistoryResponse">
-    </part>
-  </message>
-  <message name="MonitorInstancesResponseMsg">
-    <part name="MonitorInstancesResponseMsgResp" element="tns:MonitorInstancesResponse">
-    </part>
-  </message>
-  <message name="DescribeReservedInstancesOfferingsRequestMsg">
-    <part name="DescribeReservedInstancesOfferingsRequestMsgReq" element="tns:DescribeReservedInstancesOfferings">
-    </part>
-  </message>
-  <message name="CreateVpcResponseMsg">
-    <part name="CreateVpcResponseMsgResp" element="tns:CreateVpcResponse">
-    </part>
-  </message>
-  <message name="CreateVolumeResponseMsg">
-    <part name="CreateVolumeResponseMsgResp" element="tns:CreateVolumeResponse">
-    </part>
-  </message>
-  <message name="GetPasswordDataRequestMsg">
-    <part name="GetPasswordDataRequestMsgReq" element="tns:GetPasswordData">
-    </part>
-  </message>
-  <message name="ModifyInstanceAttributeRequestMsg">
-    <part name="ModifyInstanceAttributeRequestMsgReq" element="tns:ModifyInstanceAttribute">
-    </part>
-  </message>
-  <message name="AssociateDhcpOptionsResponseMsg">
-    <part name="AssociateDhcpOptionsResponseMsgResp" element="tns:AssociateDhcpOptionsResponse">
-    </part>
-  </message>
-  <message name="DescribeInstanceAttributeResponseMsg">
-    <part name="DescribeInstanceAttributeResponseMsgResp" element="tns:DescribeInstanceAttributeResponse">
-    </part>
-  </message>
-  <message name="AttachVolumeRequestMsg">
-    <part name="AttachVolumeRequestMsgReq" element="tns:AttachVolume">
-    </part>
-  </message>
-  <message name="CreateCustomerGatewayResponseMsg">
-    <part name="CreateCustomerGatewayResponseMsgResp" element="tns:CreateCustomerGatewayResponse">
-    </part>
-  </message>
-  <message name="PurchaseReservedInstancesOfferingResponseMsg">
-    <part name="PurchaseReservedInstancesOfferingResponseMsgResp" element="tns:PurchaseReservedInstancesOfferingResponse">
-    </part>
-  </message>
-  <message name="DeleteSpotDatafeedSubscriptionResponseMsg">
-    <part name="DeleteSpotDatafeedSubscriptionResponseMsgResp" element="tns:DeleteSpotDatafeedSubscriptionResponse">
-    </part>
-  </message>
-  <message name="DeactivateLicenseRequestMsg">
-    <part name="DeactivateLicenseRequestMsgReq" element="tns:DeactivateLicense">
-    </part>
-  </message>
-  <message name="DescribeSnapshotAttributeResponseMsg">
-    <part name="DescribeSnapshotAttributeResponseMsgResp" element="tns:DescribeSnapshotAttributeResponse">
-    </part>
+  <message name="AssociateAddressResponseMsg">
+    <part name="AssociateAddressResponseMsgResp" element="tns:AssociateAddressResponse"/>
   </message>
   <message name="AssociateDhcpOptionsRequestMsg">
-    <part name="AssociateDhcpOptionsRequestMsgReq" element="tns:AssociateDhcpOptions">
-    </part>
+    <part name="AssociateDhcpOptionsRequestMsgReq" element="tns:AssociateDhcpOptions"/>
   </message>
-  <message name="DeleteVpnGatewayRequestMsg">
-    <part name="DeleteVpnGatewayRequestMsgReq" element="tns:DeleteVpnGateway">
-    </part>
+  <message name="AssociateDhcpOptionsResponseMsg">
+    <part name="AssociateDhcpOptionsResponseMsgResp" element="tns:AssociateDhcpOptionsResponse"/>
   </message>
-  <message name="DescribeVpcsRequestMsg">
-    <part name="DescribeVpcsRequestMsgReq" element="tns:DescribeVpcs">
-    </part>
+  <message name="AttachVolumeRequestMsg">
+    <part name="AttachVolumeRequestMsgReq" element="tns:AttachVolume"/>
   </message>
-  <message name="DeleteVpnConnectionRequestMsg">
-    <part name="DeleteVpnConnectionRequestMsgReq" element="tns:DeleteVpnConnection">
-    </part>
+  <message name="AttachVolumeResponseMsg">
+    <part name="AttachVolumeResponseMsgResp" element="tns:AttachVolumeResponse"/>
   </message>
-  <message name="DescribeInstancesRequestMsg">
-    <part name="DescribeInstancesRequestMsgReq" element="tns:DescribeInstances">
-    </part>
-  </message>
-  <message name="StartInstancesRequestMsg">
-    <part name="StartInstancesRequestMsgReq" element="tns:StartInstances">
-    </part>
-  </message>
-  <message name="DeleteDhcpOptionsRequestMsg">
-    <part name="DeleteDhcpOptionsRequestMsgReq" element="tns:DeleteDhcpOptions">
-    </part>
-  </message>
-  <message name="DescribeBundleTasksRequestMsg">
-    <part name="DescribeBundleTasksRequestMsgReq" element="tns:DescribeBundleTasks">
-    </part>
-  </message>
-  <message name="RebootInstancesRequestMsg">
-    <part name="RebootInstancesRequestMsgReq" element="tns:RebootInstances">
-    </part>
-  </message>
-  <message name="CancelSpotInstanceRequestsResponseMsg">
-    <part name="CancelSpotInstanceRequestsResponseMsgResp" element="tns:CancelSpotInstanceRequestsResponse">
-    </part>
-  </message>
-  <message name="GetConsoleOutputRequestMsg">
-    <part name="GetConsoleOutputRequestMsgReq" element="tns:GetConsoleOutput">
-    </part>
-  </message>
-  <message name="ReleaseAddressRequestMsg">
-    <part name="ReleaseAddressRequestMsgReq" element="tns:ReleaseAddress">
-    </part>
-  </message>
-  <message name="DescribePlacementGroupsRequestMsg">
-    <part name="DescribePlacementGroupsRequestMsgReq" element="tns:DescribePlacementGroups">
-    </part>
-  </message>
-  <message name="RevokeSecurityGroupIngressRequestMsg">
-    <part name="RevokeSecurityGroupIngressRequestMsgReq" element="tns:RevokeSecurityGroupIngress">
-    </part>
-  </message>
-  <message name="DeleteVpnConnectionResponseMsg">
-    <part name="DeleteVpnConnectionResponseMsgResp" element="tns:DeleteVpnConnectionResponse">
-    </part>
-  </message>
-  <message name="DescribeRegionsRequestMsg">
-    <part name="DescribeRegionsRequestMsgReq" element="tns:DescribeRegions">
-    </part>
-  </message>
-  <message name="CreateImageResponseMsg">
-    <part name="CreateImageResponseMsgResp" element="tns:CreateImageResponse">
-    </part>
-  </message>
-  <message name="DeleteKeyPairRequestMsg">
-    <part name="DeleteKeyPairRequestMsgReq" element="tns:DeleteKeyPair">
-    </part>
-  </message>
-  <message name="DescribeSubnetsRequestMsg">
-    <part name="DescribeSubnetsRequestMsgReq" element="tns:DescribeSubnets">
-    </part>
-  </message>
-  <message name="DescribeSecurityGroupsRequestMsg">
-    <part name="DescribeSecurityGroupsRequestMsgReq" element="tns:DescribeSecurityGroups">
-    </part>
-  </message>
-  <message name="DescribeCustomerGatewaysRequestMsg">
-    <part name="DescribeCustomerGatewaysRequestMsgReq" element="tns:DescribeCustomerGateways">
-    </part>
-  </message>
-  <message name="ResetImageAttributeResponseMsg">
-    <part name="ResetImageAttributeResponseMsgResp" element="tns:ResetImageAttributeResponse">
-    </part>
-  </message>
-  <message name="CreateSpotDatafeedSubscriptionRequestMsg">
-    <part name="CreateSpotDatafeedSubscriptionRequestMsgReq" element="tns:CreateSpotDatafeedSubscription">
-    </part>
+  <message name="AttachVpnGatewayRequestMsg">
+    <part name="AttachVpnGatewayRequestMsgReq" element="tns:AttachVpnGateway"/>
   </message>
   <message name="AttachVpnGatewayResponseMsg">
-    <part name="AttachVpnGatewayResponseMsgResp" element="tns:AttachVpnGatewayResponse">
-    </part>
+    <part name="AttachVpnGatewayResponseMsgResp" element="tns:AttachVpnGatewayResponse"/>
   </message>
-  <message name="DetachVpnGatewayRequestMsg">
-    <part name="DetachVpnGatewayRequestMsgReq" element="tns:DetachVpnGateway">
-    </part>
+  <message name="AuthorizeSecurityGroupIngressRequestMsg">
+    <part name="AuthorizeSecurityGroupIngressRequestMsgReq" element="tns:AuthorizeSecurityGroupIngress"/>
   </message>
-  <message name="CreateCustomerGatewayRequestMsg">
-    <part name="CreateCustomerGatewayRequestMsgReq" element="tns:CreateCustomerGateway">
-    </part>
+  <message name="AuthorizeSecurityGroupIngressResponseMsg">
+    <part name="AuthorizeSecurityGroupIngressResponseMsgResp" element="tns:AuthorizeSecurityGroupIngressResponse"/>
   </message>
-  <message name="DetachVpnGatewayResponseMsg">
-    <part name="DetachVpnGatewayResponseMsgResp" element="tns:DetachVpnGatewayResponse">
-    </part>
+  <message name="BundleInstanceRequestMsg">
+    <part name="BundleInstanceRequestMsgReq" element="tns:BundleInstance"/>
   </message>
-  <message name="ModifySnapshotAttributeRequestMsg">
-    <part name="ModifySnapshotAttributeRequestMsgReq" element="tns:ModifySnapshotAttribute">
-    </part>
+  <message name="BundleInstanceResponseMsg">
+    <part name="BundleInstanceResponseMsgResp" element="tns:BundleInstanceResponse"/>
   </message>
-  <message name="DescribeInstanceAttributeRequestMsg">
-    <part name="DescribeInstanceAttributeRequestMsgReq" element="tns:DescribeInstanceAttribute">
-    </part>
-  </message>
-  <message name="DeleteSubnetResponseMsg">
-    <part name="DeleteSubnetResponseMsgResp" element="tns:DeleteSubnetResponse">
-    </part>
-  </message>
-  <message name="DescribeAddressesResponseMsg">
-    <part name="DescribeAddressesResponseMsgResp" element="tns:DescribeAddressesResponse">
-    </part>
-  </message>
-  <message name="DescribeReservedInstancesRequestMsg">
-    <part name="DescribeReservedInstancesRequestMsgReq" element="tns:DescribeReservedInstances">
-    </part>
-  </message>
-  <message name="DeleteVpcResponseMsg">
-    <part name="DeleteVpcResponseMsgResp" element="tns:DeleteVpcResponse">
-    </part>
-  </message>
-  <message name="CreateVpnConnectionResponseMsg">
-    <part name="CreateVpnConnectionResponseMsgResp" element="tns:CreateVpnConnectionResponse">
-    </part>
-  </message>
-  <message name="DeleteCustomerGatewayResponseMsg">
-    <part name="DeleteCustomerGatewayResponseMsgResp" element="tns:DeleteCustomerGatewayResponse">
-    </part>
-  </message>
-  <message name="DescribeAvailabilityZonesResponseMsg">
-    <part name="DescribeAvailabilityZonesResponseMsgResp" element="tns:DescribeAvailabilityZonesResponse">
-    </part>
-  </message>
-  <message name="DeregisterImageResponseMsg">
-    <part name="DeregisterImageResponseMsgResp" element="tns:DeregisterImageResponse">
-    </part>
-  </message>
-  <message name="DescribeVpnConnectionsRequestMsg">
-    <part name="DescribeVpnConnectionsRequestMsgReq" element="tns:DescribeVpnConnections">
-    </part>
-  </message>
-  <message name="CreateVpnGatewayResponseMsg">
-    <part name="CreateVpnGatewayResponseMsgResp" element="tns:CreateVpnGatewayResponse">
-    </part>
-  </message>
-  <message name="ConfirmProductInstanceResponseMsg">
-    <part name="ConfirmProductInstanceResponseMsgResp" element="tns:ConfirmProductInstanceResponse">
-    </part>
-  </message>
-  <message name="CreateSubnetResponseMsg">
-    <part name="CreateSubnetResponseMsgResp" element="tns:CreateSubnetResponse">
-    </part>
-  </message>
-  <message name="ModifySnapshotAttributeResponseMsg">
-    <part name="ModifySnapshotAttributeResponseMsgResp" element="tns:ModifySnapshotAttributeResponse">
-    </part>
+  <message name="CancelBundleTaskRequestMsg">
+    <part name="CancelBundleTaskRequestMsgReq" element="tns:CancelBundleTask"/>
   </message>
   <message name="CancelBundleTaskResponseMsg">
-    <part name="CancelBundleTaskResponseMsgResp" element="tns:CancelBundleTaskResponse">
-    </part>
+    <part name="CancelBundleTaskResponseMsgResp" element="tns:CancelBundleTaskResponse"/>
+  </message>
+  <message name="CancelSpotInstanceRequestsRequestMsg">
+    <part name="CancelSpotInstanceRequestsRequestMsgReq" element="tns:CancelSpotInstanceRequests"/>
+  </message>
+  <message name="CancelSpotInstanceRequestsResponseMsg">
+    <part name="CancelSpotInstanceRequestsResponseMsgResp" element="tns:CancelSpotInstanceRequestsResponse"/>
+  </message>
+  <message name="ConfirmProductInstanceRequestMsg">
+    <part name="ConfirmProductInstanceRequestMsgReq" element="tns:ConfirmProductInstance"/>
+  </message>
+  <message name="ConfirmProductInstanceResponseMsg">
+    <part name="ConfirmProductInstanceResponseMsgResp" element="tns:ConfirmProductInstanceResponse"/>
+  </message>
+  <message name="CreateCustomerGatewayRequestMsg">
+    <part name="CreateCustomerGatewayRequestMsgReq" element="tns:CreateCustomerGateway"/>
+  </message>
+  <message name="CreateCustomerGatewayResponseMsg">
+    <part name="CreateCustomerGatewayResponseMsgResp" element="tns:CreateCustomerGatewayResponse"/>
+  </message>
+  <message name="CreateDhcpOptionsRequestMsg">
+    <part name="CreateDhcpOptionsRequestMsgReq" element="tns:CreateDhcpOptions"/>
+  </message>
+  <message name="CreateDhcpOptionsResponseMsg">
+    <part name="CreateDhcpOptionsResponseMsgResp" element="tns:CreateDhcpOptionsResponse"/>
+  </message>
+  <message name="CreateImageRequestMsg">
+    <part name="CreateImageRequestMsgReq" element="tns:CreateImage"/>
+  </message>
+  <message name="CreateImageResponseMsg">
+    <part name="CreateImageResponseMsgResp" element="tns:CreateImageResponse"/>
+  </message>
+  <message name="CreateKeyPairRequestMsg">
+    <part name="CreateKeyPairRequestMsgReq" element="tns:CreateKeyPair"/>
+  </message>
+  <message name="CreateKeyPairResponseMsg">
+    <part name="CreateKeyPairResponseMsgResp" element="tns:CreateKeyPairResponse"/>
+  </message>
+  <message name="CreatePlacementGroupRequestMsg">
+    <part name="CreatePlacementGroupRequestMsgReq" element="tns:CreatePlacementGroup"/>
+  </message>
+  <message name="CreatePlacementGroupResponseMsg">
+    <part name="CreatePlacementGroupResponseMsgResp" element="tns:CreatePlacementGroupResponse"/>
+  </message>
+  <message name="CreateSecurityGroupRequestMsg">
+    <part name="CreateSecurityGroupRequestMsgReq" element="tns:CreateSecurityGroup"/>
+  </message>
+  <message name="CreateSecurityGroupResponseMsg">
+    <part name="CreateSecurityGroupResponseMsgResp" element="tns:CreateSecurityGroupResponse"/>
+  </message>
+  <message name="CreateSnapshotRequestMsg">
+    <part name="CreateSnapshotRequestMsgReq" element="tns:CreateSnapshot"/>
+  </message>
+  <message name="CreateSnapshotResponseMsg">
+    <part name="CreateSnapshotResponseMsgResp" element="tns:CreateSnapshotResponse"/>
+  </message>
+  <message name="CreateSpotDatafeedSubscriptionRequestMsg">
+    <part name="CreateSpotDatafeedSubscriptionRequestMsgReq" element="tns:CreateSpotDatafeedSubscription"/>
+  </message>
+  <message name="CreateSpotDatafeedSubscriptionResponseMsg">
+    <part name="CreateSpotDatafeedSubscriptionResponseMsgResp" element="tns:CreateSpotDatafeedSubscriptionResponse"/>
+  </message>
+  <message name="CreateSubnetRequestMsg">
+    <part name="CreateSubnetRequestMsgReq" element="tns:CreateSubnet"/>
+  </message>
+  <message name="CreateSubnetResponseMsg">
+    <part name="CreateSubnetResponseMsgResp" element="tns:CreateSubnetResponse"/>
+  </message>
+  <message name="CreateVolumeRequestMsg">
+    <part name="CreateVolumeRequestMsgReq" element="tns:CreateVolume"/>
+  </message>
+  <message name="CreateVolumeResponseMsg">
+    <part name="CreateVolumeResponseMsgResp" element="tns:CreateVolumeResponse"/>
+  </message>
+  <message name="CreateVpcRequestMsg">
+    <part name="CreateVpcRequestMsgReq" element="tns:CreateVpc"/>
+  </message>
+  <message name="CreateVpcResponseMsg">
+    <part name="CreateVpcResponseMsgResp" element="tns:CreateVpcResponse"/>
+  </message>
+  <message name="CreateVpnConnectionRequestMsg">
+    <part name="CreateVpnConnectionRequestMsgReq" element="tns:CreateVpnConnection"/>
+  </message>
+  <message name="CreateVpnConnectionResponseMsg">
+    <part name="CreateVpnConnectionResponseMsgResp" element="tns:CreateVpnConnectionResponse"/>
+  </message>
+  <message name="CreateVpnGatewayRequestMsg">
+    <part name="CreateVpnGatewayRequestMsgReq" element="tns:CreateVpnGateway"/>
+  </message>
+  <message name="CreateVpnGatewayResponseMsg">
+    <part name="CreateVpnGatewayResponseMsgResp" element="tns:CreateVpnGatewayResponse"/>
+  </message>
+  <message name="DeactivateLicenseRequestMsg">
+    <part name="DeactivateLicenseRequestMsgReq" element="tns:DeactivateLicense"/>
+  </message>
+  <message name="DeactivateLicenseResponseMsg">
+    <part name="DeactivateLicenseResponseMsgResp" element="tns:DeactivateLicenseResponse"/>
+  </message>
+  <message name="DeleteCustomerGatewayRequestMsg">
+    <part name="DeleteCustomerGatewayRequestMsgReq" element="tns:DeleteCustomerGateway"/>
+  </message>
+  <message name="DeleteCustomerGatewayResponseMsg">
+    <part name="DeleteCustomerGatewayResponseMsgResp" element="tns:DeleteCustomerGatewayResponse"/>
+  </message>
+  <message name="DeleteDhcpOptionsRequestMsg">
+    <part name="DeleteDhcpOptionsRequestMsgReq" element="tns:DeleteDhcpOptions"/>
+  </message>
+  <message name="DeleteDhcpOptionsResponseMsg">
+    <part name="DeleteDhcpOptionsResponseMsgResp" element="tns:DeleteDhcpOptionsResponse"/>
+  </message>
+  <message name="DeleteKeyPairRequestMsg">
+    <part name="DeleteKeyPairRequestMsgReq" element="tns:DeleteKeyPair"/>
+  </message>
+  <message name="DeleteKeyPairResponseMsg">
+    <part name="DeleteKeyPairResponseMsgResp" element="tns:DeleteKeyPairResponse"/>
+  </message>
+  <message name="DeletePlacementGroupRequestMsg">
+    <part name="DeletePlacementGroupRequestMsgReq" element="tns:DeletePlacementGroup"/>
+  </message>
+  <message name="DeletePlacementGroupResponseMsg">
+    <part name="DeletePlacementGroupResponseMsgResp" element="tns:DeletePlacementGroupResponse"/>
+  </message>
+  <message name="DeleteSecurityGroupRequestMsg">
+    <part name="DeleteSecurityGroupRequestMsgReq" element="tns:DeleteSecurityGroup"/>
+  </message>
+  <message name="DeleteSecurityGroupResponseMsg">
+    <part name="DeleteSecurityGroupResponseMsgResp" element="tns:DeleteSecurityGroupResponse"/>
+  </message>
+  <message name="DeleteSnapshotRequestMsg">
+    <part name="DeleteSnapshotRequestMsgReq" element="tns:DeleteSnapshot"/>
+  </message>
+  <message name="DeleteSnapshotResponseMsg">
+    <part name="DeleteSnapshotResponseMsgResp" element="tns:DeleteSnapshotResponse"/>
+  </message>
+  <message name="DeleteSpotDatafeedSubscriptionRequestMsg">
+    <part name="DeleteSpotDatafeedSubscriptionRequestMsgReq" element="tns:DeleteSpotDatafeedSubscription"/>
+  </message>
+  <message name="DeleteSpotDatafeedSubscriptionResponseMsg">
+    <part name="DeleteSpotDatafeedSubscriptionResponseMsgResp" element="tns:DeleteSpotDatafeedSubscriptionResponse"/>
+  </message>
+  <message name="DeleteSubnetRequestMsg">
+    <part name="DeleteSubnetRequestMsgReq" element="tns:DeleteSubnet"/>
+  </message>
+  <message name="DeleteSubnetResponseMsg">
+    <part name="DeleteSubnetResponseMsgResp" element="tns:DeleteSubnetResponse"/>
+  </message>
+  <message name="DeleteVolumeRequestMsg">
+    <part name="DeleteVolumeRequestMsgReq" element="tns:DeleteVolume"/>
+  </message>
+  <message name="DeleteVolumeResponseMsg">
+    <part name="DeleteVolumeResponseMsgResp" element="tns:DeleteVolumeResponse"/>
+  </message>
+  <message name="DeleteVpcRequestMsg">
+    <part name="DeleteVpcRequestMsgReq" element="tns:DeleteVpc"/>
+  </message>
+  <message name="DeleteVpcResponseMsg">
+    <part name="DeleteVpcResponseMsgResp" element="tns:DeleteVpcResponse"/>
+  </message>
+  <message name="DeleteVpnConnectionRequestMsg">
+    <part name="DeleteVpnConnectionRequestMsgReq" element="tns:DeleteVpnConnection"/>
+  </message>
+  <message name="DeleteVpnConnectionResponseMsg">
+    <part name="DeleteVpnConnectionResponseMsgResp" element="tns:DeleteVpnConnectionResponse"/>
+  </message>
+  <message name="DeleteVpnGatewayRequestMsg">
+    <part name="DeleteVpnGatewayRequestMsgReq" element="tns:DeleteVpnGateway"/>
+  </message>
+  <message name="DeleteVpnGatewayResponseMsg">
+    <part name="DeleteVpnGatewayResponseMsgResp" element="tns:DeleteVpnGatewayResponse"/>
+  </message>
+  <message name="DeregisterImageRequestMsg">
+    <part name="DeregisterImageRequestMsgReq" element="tns:DeregisterImage"/>
+  </message>
+  <message name="DeregisterImageResponseMsg">
+    <part name="DeregisterImageResponseMsgResp" element="tns:DeregisterImageResponse"/>
+  </message>
+  <message name="DescribeAddressesRequestMsg">
+    <part name="DescribeAddressesRequestMsgReq" element="tns:DescribeAddresses"/>
+  </message>
+  <message name="DescribeAddressesResponseMsg">
+    <part name="DescribeAddressesResponseMsgResp" element="tns:DescribeAddressesResponse"/>
+  </message>
+  <message name="DescribeAvailabilityZonesRequestMsg">
+    <part name="DescribeAvailabilityZonesRequestMsgReq" element="tns:DescribeAvailabilityZones"/>
+  </message>
+  <message name="DescribeAvailabilityZonesResponseMsg">
+    <part name="DescribeAvailabilityZonesResponseMsgResp" element="tns:DescribeAvailabilityZonesResponse"/>
+  </message>
+  <message name="DescribeBundleTasksRequestMsg">
+    <part name="DescribeBundleTasksRequestMsgReq" element="tns:DescribeBundleTasks"/>
+  </message>
+  <message name="DescribeBundleTasksResponseMsg">
+    <part name="DescribeBundleTasksResponseMsgResp" element="tns:DescribeBundleTasksResponse"/>
+  </message>
+  <message name="DescribeCustomerGatewaysRequestMsg">
+    <part name="DescribeCustomerGatewaysRequestMsgReq" element="tns:DescribeCustomerGateways"/>
+  </message>
+  <message name="DescribeCustomerGatewaysResponseMsg">
+    <part name="DescribeCustomerGatewaysResponseMsgResp" element="tns:DescribeCustomerGatewaysResponse"/>
+  </message>
+  <message name="DescribeDhcpOptionsRequestMsg">
+    <part name="DescribeDhcpOptionsRequestMsgReq" element="tns:DescribeDhcpOptions"/>
+  </message>
+  <message name="DescribeDhcpOptionsResponseMsg">
+    <part name="DescribeDhcpOptionsResponseMsgResp" element="tns:DescribeDhcpOptionsResponse"/>
+  </message>
+  <message name="DescribeImageAttributeRequestMsg">
+    <part name="DescribeImageAttributeRequestMsgReq" element="tns:DescribeImageAttribute"/>
+  </message>
+  <message name="DescribeImageAttributeResponseMsg">
+    <part name="DescribeImageAttributeResponseMsgResp" element="tns:DescribeImageAttributeResponse"/>
+  </message>
+  <message name="DescribeImagesRequestMsg">
+    <part name="DescribeImagesRequestMsgReq" element="tns:DescribeImages"/>
+  </message>
+  <message name="DescribeImagesResponseMsg">
+    <part name="DescribeImagesResponseMsgResp" element="tns:DescribeImagesResponse"/>
+  </message>
+  <message name="DescribeInstanceAttributeRequestMsg">
+    <part name="DescribeInstanceAttributeRequestMsgReq" element="tns:DescribeInstanceAttribute"/>
+  </message>
+  <message name="DescribeInstanceAttributeResponseMsg">
+    <part name="DescribeInstanceAttributeResponseMsgResp" element="tns:DescribeInstanceAttributeResponse"/>
+  </message>
+  <message name="DescribeInstancesRequestMsg">
+    <part name="DescribeInstancesRequestMsgReq" element="tns:DescribeInstances"/>
+  </message>
+  <message name="DescribeInstancesResponseMsg">
+    <part name="DescribeInstancesResponseMsgResp" element="tns:DescribeInstancesResponse"/>
+  </message>
+  <message name="DescribeKeyPairsRequestMsg">
+    <part name="DescribeKeyPairsRequestMsgReq" element="tns:DescribeKeyPairs"/>
+  </message>
+  <message name="DescribeKeyPairsResponseMsg">
+    <part name="DescribeKeyPairsResponseMsgResp" element="tns:DescribeKeyPairsResponse"/>
+  </message>
+  <message name="DescribeLicensesRequestMsg">
+    <part name="DescribeLicensesRequestMsgReq" element="tns:DescribeLicenses"/>
+  </message>
+  <message name="DescribeLicensesResponseMsg">
+    <part name="DescribeLicensesResponseMsgResp" element="tns:DescribeLicensesResponse"/>
+  </message>
+  <message name="DescribePlacementGroupsRequestMsg">
+    <part name="DescribePlacementGroupsRequestMsgReq" element="tns:DescribePlacementGroups"/>
+  </message>
+  <message name="DescribePlacementGroupsResponseMsg">
+    <part name="DescribePlacementGroupsResponseMsgResp" element="tns:DescribePlacementGroupsResponse"/>
+  </message>
+  <message name="DescribeRegionsRequestMsg">
+    <part name="DescribeRegionsRequestMsgReq" element="tns:DescribeRegions"/>
+  </message>
+  <message name="DescribeRegionsResponseMsg">
+    <part name="DescribeRegionsResponseMsgResp" element="tns:DescribeRegionsResponse"/>
+  </message>
+  <message name="DescribeReservedInstancesRequestMsg">
+    <part name="DescribeReservedInstancesRequestMsgReq" element="tns:DescribeReservedInstances"/>
+  </message>
+  <message name="DescribeReservedInstancesResponseMsg">
+    <part name="DescribeReservedInstancesResponseMsgResp" element="tns:DescribeReservedInstancesResponse"/>
+  </message>
+  <message name="DescribeReservedInstancesOfferingsRequestMsg">
+    <part name="DescribeReservedInstancesOfferingsRequestMsgReq" element="tns:DescribeReservedInstancesOfferings"/>
+  </message>
+  <message name="DescribeReservedInstancesOfferingsResponseMsg">
+    <part name="DescribeReservedInstancesOfferingsResponseMsgResp" element="tns:DescribeReservedInstancesOfferingsResponse"/>
+  </message>
+  <message name="DescribeSecurityGroupsRequestMsg">
+    <part name="DescribeSecurityGroupsRequestMsgReq" element="tns:DescribeSecurityGroups"/>
+  </message>
+  <message name="DescribeSecurityGroupsResponseMsg">
+    <part name="DescribeSecurityGroupsResponseMsgResp" element="tns:DescribeSecurityGroupsResponse"/>
+  </message>
+  <message name="DescribeSnapshotAttributeRequestMsg">
+    <part name="DescribeSnapshotAttributeRequestMsgReq" element="tns:DescribeSnapshotAttribute"/>
+  </message>
+  <message name="DescribeSnapshotAttributeResponseMsg">
+    <part name="DescribeSnapshotAttributeResponseMsgResp" element="tns:DescribeSnapshotAttributeResponse"/>
+  </message>
+  <message name="DescribeSnapshotsRequestMsg">
+    <part name="DescribeSnapshotsRequestMsgReq" element="tns:DescribeSnapshots"/>
+  </message>
+  <message name="DescribeSnapshotsResponseMsg">
+    <part name="DescribeSnapshotsResponseMsgResp" element="tns:DescribeSnapshotsResponse"/>
+  </message>
+  <message name="DescribeSpotDatafeedSubscriptionRequestMsg">
+    <part name="DescribeSpotDatafeedSubscriptionRequestMsgReq" element="tns:DescribeSpotDatafeedSubscription"/>
+  </message>
+  <message name="DescribeSpotDatafeedSubscriptionResponseMsg">
+    <part name="DescribeSpotDatafeedSubscriptionResponseMsgResp" element="tns:DescribeSpotDatafeedSubscriptionResponse"/>
+  </message>
+  <message name="DescribeSpotInstanceRequestsRequestMsg">
+    <part name="DescribeSpotInstanceRequestsRequestMsgReq" element="tns:DescribeSpotInstanceRequests"/>
+  </message>
+  <message name="DescribeSpotInstanceRequestsResponseMsg">
+    <part name="DescribeSpotInstanceRequestsResponseMsgResp" element="tns:DescribeSpotInstanceRequestsResponse"/>
+  </message>
+  <message name="DescribeSpotPriceHistoryRequestMsg">
+    <part name="DescribeSpotPriceHistoryRequestMsgReq" element="tns:DescribeSpotPriceHistory"/>
+  </message>
+  <message name="DescribeSpotPriceHistoryResponseMsg">
+    <part name="DescribeSpotPriceHistoryResponseMsgResp" element="tns:DescribeSpotPriceHistoryResponse"/>
+  </message>
+  <message name="DescribeSubnetsRequestMsg">
+    <part name="DescribeSubnetsRequestMsgReq" element="tns:DescribeSubnets"/>
+  </message>
+  <message name="DescribeSubnetsResponseMsg">
+    <part name="DescribeSubnetsResponseMsgResp" element="tns:DescribeSubnetsResponse"/>
+  </message>
+  <message name="DescribeVolumesRequestMsg">
+    <part name="DescribeVolumesRequestMsgReq" element="tns:DescribeVolumes"/>
+  </message>
+  <message name="DescribeVolumesResponseMsg">
+    <part name="DescribeVolumesResponseMsgResp" element="tns:DescribeVolumesResponse"/>
+  </message>
+  <message name="DescribeVpcsRequestMsg">
+    <part name="DescribeVpcsRequestMsgReq" element="tns:DescribeVpcs"/>
+  </message>
+  <message name="DescribeVpcsResponseMsg">
+    <part name="DescribeVpcsResponseMsgResp" element="tns:DescribeVpcsResponse"/>
+  </message>
+  <message name="DescribeVpnConnectionsRequestMsg">
+    <part name="DescribeVpnConnectionsRequestMsgReq" element="tns:DescribeVpnConnections"/>
+  </message>
+  <message name="DescribeVpnConnectionsResponseMsg">
+    <part name="DescribeVpnConnectionsResponseMsgResp" element="tns:DescribeVpnConnectionsResponse"/>
+  </message>
+  <message name="DescribeVpnGatewaysRequestMsg">
+    <part name="DescribeVpnGatewaysRequestMsgReq" element="tns:DescribeVpnGateways"/>
+  </message>
+  <message name="DescribeVpnGatewaysResponseMsg">
+    <part name="DescribeVpnGatewaysResponseMsgResp" element="tns:DescribeVpnGatewaysResponse"/>
+  </message>
+  <message name="DetachVolumeRequestMsg">
+    <part name="DetachVolumeRequestMsgReq" element="tns:DetachVolume"/>
+  </message>
+  <message name="DetachVolumeResponseMsg">
+    <part name="DetachVolumeResponseMsgResp" element="tns:DetachVolumeResponse"/>
+  </message>
+  <message name="DetachVpnGatewayRequestMsg">
+    <part name="DetachVpnGatewayRequestMsgReq" element="tns:DetachVpnGateway"/>
+  </message>
+  <message name="DetachVpnGatewayResponseMsg">
+    <part name="DetachVpnGatewayResponseMsgResp" element="tns:DetachVpnGatewayResponse"/>
+  </message>
+  <message name="DisassociateAddressRequestMsg">
+    <part name="DisassociateAddressRequestMsgReq" element="tns:DisassociateAddress"/>
+  </message>
+  <message name="DisassociateAddressResponseMsg">
+    <part name="DisassociateAddressResponseMsgResp" element="tns:DisassociateAddressResponse"/>
+  </message>
+  <message name="GetConsoleOutputRequestMsg">
+    <part name="GetConsoleOutputRequestMsgReq" element="tns:GetConsoleOutput"/>
+  </message>
+  <message name="GetConsoleOutputResponseMsg">
+    <part name="GetConsoleOutputResponseMsgResp" element="tns:GetConsoleOutputResponse"/>
+  </message>
+  <message name="GetPasswordDataRequestMsg">
+    <part name="GetPasswordDataRequestMsgReq" element="tns:GetPasswordData"/>
+  </message>
+  <message name="GetPasswordDataResponseMsg">
+    <part name="GetPasswordDataResponseMsgResp" element="tns:GetPasswordDataResponse"/>
+  </message>
+  <message name="ModifyImageAttributeRequestMsg">
+    <part name="ModifyImageAttributeRequestMsgReq" element="tns:ModifyImageAttribute"/>
+  </message>
+  <message name="ModifyImageAttributeResponseMsg">
+    <part name="ModifyImageAttributeResponseMsgResp" element="tns:ModifyImageAttributeResponse"/>
+  </message>
+  <message name="ModifyInstanceAttributeRequestMsg">
+    <part name="ModifyInstanceAttributeRequestMsgReq" element="tns:ModifyInstanceAttribute"/>
+  </message>
+  <message name="ModifyInstanceAttributeResponseMsg">
+    <part name="ModifyInstanceAttributeResponseMsgResp" element="tns:ModifyInstanceAttributeResponse"/>
+  </message>
+  <message name="ModifySnapshotAttributeRequestMsg">
+    <part name="ModifySnapshotAttributeRequestMsgReq" element="tns:ModifySnapshotAttribute"/>
+  </message>
+  <message name="ModifySnapshotAttributeResponseMsg">
+    <part name="ModifySnapshotAttributeResponseMsgResp" element="tns:ModifySnapshotAttributeResponse"/>
+  </message>
+  <message name="MonitorInstancesRequestMsg">
+    <part name="MonitorInstancesRequestMsgReq" element="tns:MonitorInstances"/>
+  </message>
+  <message name="MonitorInstancesResponseMsg">
+    <part name="MonitorInstancesResponseMsgResp" element="tns:MonitorInstancesResponse"/>
+  </message>
+  <message name="PurchaseReservedInstancesOfferingRequestMsg">
+    <part name="PurchaseReservedInstancesOfferingRequestMsgReq" element="tns:PurchaseReservedInstancesOffering"/>
+  </message>
+  <message name="PurchaseReservedInstancesOfferingResponseMsg">
+    <part name="PurchaseReservedInstancesOfferingResponseMsgResp" element="tns:PurchaseReservedInstancesOfferingResponse"/>
+  </message>
+  <message name="RebootInstancesRequestMsg">
+    <part name="RebootInstancesRequestMsgReq" element="tns:RebootInstances"/>
+  </message>
+  <message name="RebootInstancesResponseMsg">
+    <part name="RebootInstancesResponseMsgResp" element="tns:RebootInstancesResponse"/>
+  </message>
+  <message name="RegisterImageRequestMsg">
+    <part name="RegisterImageRequestMsgReq" element="tns:RegisterImage"/>
+  </message>
+  <message name="RegisterImageResponseMsg">
+    <part name="RegisterImageResponseMsgResp" element="tns:RegisterImageResponse"/>
+  </message>
+  <message name="ReleaseAddressRequestMsg">
+    <part name="ReleaseAddressRequestMsgReq" element="tns:ReleaseAddress"/>
+  </message>
+  <message name="ReleaseAddressResponseMsg">
+    <part name="ReleaseAddressResponseMsgResp" element="tns:ReleaseAddressResponse"/>
+  </message>
+  <message name="RequestSpotInstancesRequestMsg">
+    <part name="RequestSpotInstancesRequestMsgReq" element="tns:RequestSpotInstances"/>
+  </message>
+  <message name="RequestSpotInstancesResponseMsg">
+    <part name="RequestSpotInstancesResponseMsgResp" element="tns:RequestSpotInstancesResponse"/>
+  </message>
+  <message name="ResetImageAttributeRequestMsg">
+    <part name="ResetImageAttributeRequestMsgReq" element="tns:ResetImageAttribute"/>
+  </message>
+  <message name="ResetImageAttributeResponseMsg">
+    <part name="ResetImageAttributeResponseMsgResp" element="tns:ResetImageAttributeResponse"/>
+  </message>
+  <message name="ResetInstanceAttributeRequestMsg">
+    <part name="ResetInstanceAttributeRequestMsgReq" element="tns:ResetInstanceAttribute"/>
+  </message>
+  <message name="ResetInstanceAttributeResponseMsg">
+    <part name="ResetInstanceAttributeResponseMsgResp" element="tns:ResetInstanceAttributeResponse"/>
+  </message>
+  <message name="ResetSnapshotAttributeRequestMsg">
+    <part name="ResetSnapshotAttributeRequestMsgReq" element="tns:ResetSnapshotAttribute"/>
+  </message>
+  <message name="ResetSnapshotAttributeResponseMsg">
+    <part name="ResetSnapshotAttributeResponseMsgResp" element="tns:ResetSnapshotAttributeResponse"/>
+  </message>
+  <message name="RevokeSecurityGroupIngressRequestMsg">
+    <part name="RevokeSecurityGroupIngressRequestMsgReq" element="tns:RevokeSecurityGroupIngress"/>
+  </message>
+  <message name="RevokeSecurityGroupIngressResponseMsg">
+    <part name="RevokeSecurityGroupIngressResponseMsgResp" element="tns:RevokeSecurityGroupIngressResponse"/>
+  </message>
+  <message name="RunInstancesRequestMsg">
+    <part name="RunInstancesRequestMsgReq" element="tns:RunInstances"/>
+  </message>
+  <message name="RunInstancesResponseMsg">
+    <part name="RunInstancesResponseMsgResp" element="tns:RunInstancesResponse"/>
+  </message>
+  <message name="StartInstancesRequestMsg">
+    <part name="StartInstancesRequestMsgReq" element="tns:StartInstances"/>
+  </message>
+  <message name="StartInstancesResponseMsg">
+    <part name="StartInstancesResponseMsgResp" element="tns:StartInstancesResponse"/>
+  </message>
+  <message name="StopInstancesRequestMsg">
+    <part name="StopInstancesRequestMsgReq" element="tns:StopInstances"/>
+  </message>
+  <message name="StopInstancesResponseMsg">
+    <part name="StopInstancesResponseMsgResp" element="tns:StopInstancesResponse"/>
+  </message>
+  <message name="TerminateInstancesRequestMsg">
+    <part name="TerminateInstancesRequestMsgReq" element="tns:TerminateInstances"/>
+  </message>
+  <message name="TerminateInstancesResponseMsg">
+    <part name="TerminateInstancesResponseMsgResp" element="tns:TerminateInstancesResponse"/>
+  </message>
+  <message name="UnmonitorInstancesRequestMsg">
+    <part name="UnmonitorInstancesRequestMsgReq" element="tns:UnmonitorInstances"/>
+  </message>
+  <message name="UnmonitorInstancesResponseMsg">
+    <part name="UnmonitorInstancesResponseMsgResp" element="tns:UnmonitorInstancesResponse"/>
   </message>
   <portType name="AmazonEC2PortType">
     <operation name="ActivateLicense">
-      <input message="tns:ActivateLicenseRequestMsg">
-    </input>
-      <output message="tns:ActivateLicenseResponseMsg">
-    </output>
+      <input message="tns:ActivateLicenseRequestMsg"/>
+      <output message="tns:ActivateLicenseResponseMsg"/>
     </operation>
     <operation name="AllocateAddress">
-      <input message="tns:AllocateAddressRequestMsg">
-    </input>
-      <output message="tns:AllocateAddressResponseMsg">
-    </output>
+      <input message="tns:AllocateAddressRequestMsg"/>
+      <output message="tns:AllocateAddressResponseMsg"/>
     </operation>
     <operation name="AssociateAddress">
-      <input message="tns:AssociateAddressRequestMsg">
-    </input>
-      <output message="tns:AssociateAddressResponseMsg">
-    </output>
+      <input message="tns:AssociateAddressRequestMsg"/>
+      <output message="tns:AssociateAddressResponseMsg"/>
     </operation>
     <operation name="AssociateDhcpOptions">
-      <input message="tns:AssociateDhcpOptionsRequestMsg">
-    </input>
-      <output message="tns:AssociateDhcpOptionsResponseMsg">
-    </output>
+      <input message="tns:AssociateDhcpOptionsRequestMsg"/>
+      <output message="tns:AssociateDhcpOptionsResponseMsg"/>
     </operation>
     <operation name="AttachVolume">
-      <input message="tns:AttachVolumeRequestMsg">
-    </input>
-      <output message="tns:AttachVolumeResponseMsg">
-    </output>
+      <input message="tns:AttachVolumeRequestMsg"/>
+      <output message="tns:AttachVolumeResponseMsg"/>
     </operation>
     <operation name="AttachVpnGateway">
-      <input message="tns:AttachVpnGatewayRequestMsg">
-    </input>
-      <output message="tns:AttachVpnGatewayResponseMsg">
-    </output>
+      <input message="tns:AttachVpnGatewayRequestMsg"/>
+      <output message="tns:AttachVpnGatewayResponseMsg"/>
     </operation>
     <operation name="AuthorizeSecurityGroupIngress">
-      <input message="tns:AuthorizeSecurityGroupIngressRequestMsg">
-    </input>
-      <output message="tns:AuthorizeSecurityGroupIngressResponseMsg">
-    </output>
+      <input message="tns:AuthorizeSecurityGroupIngressRequestMsg"/>
+      <output message="tns:AuthorizeSecurityGroupIngressResponseMsg"/>
     </operation>
     <operation name="BundleInstance">
-      <input message="tns:BundleInstanceRequestMsg">
-    </input>
-      <output message="tns:BundleInstanceResponseMsg">
-    </output>
+      <input message="tns:BundleInstanceRequestMsg"/>
+      <output message="tns:BundleInstanceResponseMsg"/>
     </operation>
     <operation name="CancelBundleTask">
-      <input message="tns:CancelBundleTaskRequestMsg">
-    </input>
-      <output message="tns:CancelBundleTaskResponseMsg">
-    </output>
+      <input message="tns:CancelBundleTaskRequestMsg"/>
+      <output message="tns:CancelBundleTaskResponseMsg"/>
     </operation>
     <operation name="CancelSpotInstanceRequests">
-      <input message="tns:CancelSpotInstanceRequestsRequestMsg">
-    </input>
-      <output message="tns:CancelSpotInstanceRequestsResponseMsg">
-    </output>
+      <input message="tns:CancelSpotInstanceRequestsRequestMsg"/>
+      <output message="tns:CancelSpotInstanceRequestsResponseMsg"/>
     </operation>
     <operation name="ConfirmProductInstance">
-      <input message="tns:ConfirmProductInstanceRequestMsg">
-    </input>
-      <output message="tns:ConfirmProductInstanceResponseMsg">
-    </output>
+      <input message="tns:ConfirmProductInstanceRequestMsg"/>
+      <output message="tns:ConfirmProductInstanceResponseMsg"/>
     </operation>
     <operation name="CreateCustomerGateway">
-      <input message="tns:CreateCustomerGatewayRequestMsg">
-    </input>
-      <output message="tns:CreateCustomerGatewayResponseMsg">
-    </output>
+      <input message="tns:CreateCustomerGatewayRequestMsg"/>
+      <output message="tns:CreateCustomerGatewayResponseMsg"/>
     </operation>
     <operation name="CreateDhcpOptions">
-      <input message="tns:CreateDhcpOptionsRequestMsg">
-    </input>
-      <output message="tns:CreateDhcpOptionsResponseMsg">
-    </output>
+      <input message="tns:CreateDhcpOptionsRequestMsg"/>
+      <output message="tns:CreateDhcpOptionsResponseMsg"/>
     </operation>
     <operation name="CreateImage">
-      <input message="tns:CreateImageRequestMsg">
-    </input>
-      <output message="tns:CreateImageResponseMsg">
-    </output>
+      <input message="tns:CreateImageRequestMsg"/>
+      <output message="tns:CreateImageResponseMsg"/>
     </operation>
     <operation name="CreateKeyPair">
-      <input message="tns:CreateKeyPairRequestMsg">
-    </input>
-      <output message="tns:CreateKeyPairResponseMsg">
-    </output>
+      <input message="tns:CreateKeyPairRequestMsg"/>
+      <output message="tns:CreateKeyPairResponseMsg"/>
     </operation>
     <operation name="CreatePlacementGroup">
-      <input message="tns:CreatePlacementGroupRequestMsg">
-    </input>
-      <output message="tns:CreatePlacementGroupResponseMsg">
-    </output>
+      <input message="tns:CreatePlacementGroupRequestMsg"/>
+      <output message="tns:CreatePlacementGroupResponseMsg"/>
     </operation>
     <operation name="CreateSecurityGroup">
-      <input message="tns:CreateSecurityGroupRequestMsg">
-    </input>
-      <output message="tns:CreateSecurityGroupResponseMsg">
-    </output>
+      <input message="tns:CreateSecurityGroupRequestMsg"/>
+      <output message="tns:CreateSecurityGroupResponseMsg"/>
     </operation>
     <operation name="CreateSnapshot">
-      <input message="tns:CreateSnapshotRequestMsg">
-    </input>
-      <output message="tns:CreateSnapshotResponseMsg">
-    </output>
+      <input message="tns:CreateSnapshotRequestMsg"/>
+      <output message="tns:CreateSnapshotResponseMsg"/>
     </operation>
     <operation name="CreateSpotDatafeedSubscription">
-      <input message="tns:CreateSpotDatafeedSubscriptionRequestMsg">
-    </input>
-      <output message="tns:CreateSpotDatafeedSubscriptionResponseMsg">
-    </output>
+      <input message="tns:CreateSpotDatafeedSubscriptionRequestMsg"/>
+      <output message="tns:CreateSpotDatafeedSubscriptionResponseMsg"/>
     </operation>
     <operation name="CreateSubnet">
-      <input message="tns:CreateSubnetRequestMsg">
-    </input>
-      <output message="tns:CreateSubnetResponseMsg">
-    </output>
+      <input message="tns:CreateSubnetRequestMsg"/>
+      <output message="tns:CreateSubnetResponseMsg"/>
     </operation>
     <operation name="CreateVolume">
-      <input message="tns:CreateVolumeRequestMsg">
-    </input>
-      <output message="tns:CreateVolumeResponseMsg">
-    </output>
+      <input message="tns:CreateVolumeRequestMsg"/>
+      <output message="tns:CreateVolumeResponseMsg"/>
     </operation>
     <operation name="CreateVpc">
-      <input message="tns:CreateVpcRequestMsg">
-    </input>
-      <output message="tns:CreateVpcResponseMsg">
-    </output>
+      <input message="tns:CreateVpcRequestMsg"/>
+      <output message="tns:CreateVpcResponseMsg"/>
     </operation>
     <operation name="CreateVpnConnection">
-      <input message="tns:CreateVpnConnectionRequestMsg">
-    </input>
-      <output message="tns:CreateVpnConnectionResponseMsg">
-    </output>
+      <input message="tns:CreateVpnConnectionRequestMsg"/>
+      <output message="tns:CreateVpnConnectionResponseMsg"/>
     </operation>
     <operation name="CreateVpnGateway">
-      <input message="tns:CreateVpnGatewayRequestMsg">
-    </input>
-      <output message="tns:CreateVpnGatewayResponseMsg">
-    </output>
+      <input message="tns:CreateVpnGatewayRequestMsg"/>
+      <output message="tns:CreateVpnGatewayResponseMsg"/>
     </operation>
     <operation name="DeactivateLicense">
-      <input message="tns:DeactivateLicenseRequestMsg">
-    </input>
-      <output message="tns:DeactivateLicenseResponseMsg">
-    </output>
+      <input message="tns:DeactivateLicenseRequestMsg"/>
+      <output message="tns:DeactivateLicenseResponseMsg"/>
     </operation>
     <operation name="DeleteCustomerGateway">
-      <input message="tns:DeleteCustomerGatewayRequestMsg">
-    </input>
-      <output message="tns:DeleteCustomerGatewayResponseMsg">
-    </output>
+      <input message="tns:DeleteCustomerGatewayRequestMsg"/>
+      <output message="tns:DeleteCustomerGatewayResponseMsg"/>
     </operation>
     <operation name="DeleteDhcpOptions">
-      <input message="tns:DeleteDhcpOptionsRequestMsg">
-    </input>
-      <output message="tns:DeleteDhcpOptionsResponseMsg">
-    </output>
+      <input message="tns:DeleteDhcpOptionsRequestMsg"/>
+      <output message="tns:DeleteDhcpOptionsResponseMsg"/>
     </operation>
     <operation name="DeleteKeyPair">
-      <input message="tns:DeleteKeyPairRequestMsg">
-    </input>
-      <output message="tns:DeleteKeyPairResponseMsg">
-    </output>
+      <input message="tns:DeleteKeyPairRequestMsg"/>
+      <output message="tns:DeleteKeyPairResponseMsg"/>
     </operation>
     <operation name="DeletePlacementGroup">
-      <input message="tns:DeletePlacementGroupRequestMsg">
-    </input>
-      <output message="tns:DeletePlacementGroupResponseMsg">
-    </output>
+      <input message="tns:DeletePlacementGroupRequestMsg"/>
+      <output message="tns:DeletePlacementGroupResponseMsg"/>
     </operation>
     <operation name="DeleteSecurityGroup">
-      <input message="tns:DeleteSecurityGroupRequestMsg">
-    </input>
-      <output message="tns:DeleteSecurityGroupResponseMsg">
-    </output>
+      <input message="tns:DeleteSecurityGroupRequestMsg"/>
+      <output message="tns:DeleteSecurityGroupResponseMsg"/>
     </operation>
     <operation name="DeleteSnapshot">
-      <input message="tns:DeleteSnapshotRequestMsg">
-    </input>
-      <output message="tns:DeleteSnapshotResponseMsg">
-    </output>
+      <input message="tns:DeleteSnapshotRequestMsg"/>
+      <output message="tns:DeleteSnapshotResponseMsg"/>
     </operation>
     <operation name="DeleteSpotDatafeedSubscription">
-      <input message="tns:DeleteSpotDatafeedSubscriptionRequestMsg">
-    </input>
-      <output message="tns:DeleteSpotDatafeedSubscriptionResponseMsg">
-    </output>
+      <input message="tns:DeleteSpotDatafeedSubscriptionRequestMsg"/>
+      <output message="tns:DeleteSpotDatafeedSubscriptionResponseMsg"/>
     </operation>
     <operation name="DeleteSubnet">
-      <input message="tns:DeleteSubnetRequestMsg">
-    </input>
-      <output message="tns:DeleteSubnetResponseMsg">
-    </output>
+      <input message="tns:DeleteSubnetRequestMsg"/>
+      <output message="tns:DeleteSubnetResponseMsg"/>
     </operation>
     <operation name="DeleteVolume">
-      <input message="tns:DeleteVolumeRequestMsg">
-    </input>
-      <output message="tns:DeleteVolumeResponseMsg">
-    </output>
+      <input message="tns:DeleteVolumeRequestMsg"/>
+      <output message="tns:DeleteVolumeResponseMsg"/>
     </operation>
     <operation name="DeleteVpc">
-      <input message="tns:DeleteVpcRequestMsg">
-    </input>
-      <output message="tns:DeleteVpcResponseMsg">
-    </output>
+      <input message="tns:DeleteVpcRequestMsg"/>
+      <output message="tns:DeleteVpcResponseMsg"/>
     </operation>
     <operation name="DeleteVpnConnection">
-      <input message="tns:DeleteVpnConnectionRequestMsg">
-    </input>
-      <output message="tns:DeleteVpnConnectionResponseMsg">
-    </output>
+      <input message="tns:DeleteVpnConnectionRequestMsg"/>
+      <output message="tns:DeleteVpnConnectionResponseMsg"/>
     </operation>
     <operation name="DeleteVpnGateway">
-      <input message="tns:DeleteVpnGatewayRequestMsg">
-    </input>
-      <output message="tns:DeleteVpnGatewayResponseMsg">
-    </output>
+      <input message="tns:DeleteVpnGatewayRequestMsg"/>
+      <output message="tns:DeleteVpnGatewayResponseMsg"/>
     </operation>
     <operation name="DeregisterImage">
-      <input message="tns:DeregisterImageRequestMsg">
-    </input>
-      <output message="tns:DeregisterImageResponseMsg">
-    </output>
+      <input message="tns:DeregisterImageRequestMsg"/>
+      <output message="tns:DeregisterImageResponseMsg"/>
     </operation>
     <operation name="DescribeAddresses">
-      <input message="tns:DescribeAddressesRequestMsg">
-    </input>
-      <output message="tns:DescribeAddressesResponseMsg">
-    </output>
+      <input message="tns:DescribeAddressesRequestMsg"/>
+      <output message="tns:DescribeAddressesResponseMsg"/>
     </operation>
     <operation name="DescribeAvailabilityZones">
-      <input message="tns:DescribeAvailabilityZonesRequestMsg">
-    </input>
-      <output message="tns:DescribeAvailabilityZonesResponseMsg">
-    </output>
+      <input message="tns:DescribeAvailabilityZonesRequestMsg"/>
+      <output message="tns:DescribeAvailabilityZonesResponseMsg"/>
     </operation>
     <operation name="DescribeBundleTasks">
-      <input message="tns:DescribeBundleTasksRequestMsg">
-    </input>
-      <output message="tns:DescribeBundleTasksResponseMsg">
-    </output>
+      <input message="tns:DescribeBundleTasksRequestMsg"/>
+      <output message="tns:DescribeBundleTasksResponseMsg"/>
     </operation>
     <operation name="DescribeCustomerGateways">
-      <input message="tns:DescribeCustomerGatewaysRequestMsg">
-    </input>
-      <output message="tns:DescribeCustomerGatewaysResponseMsg">
-    </output>
+      <input message="tns:DescribeCustomerGatewaysRequestMsg"/>
+      <output message="tns:DescribeCustomerGatewaysResponseMsg"/>
     </operation>
     <operation name="DescribeDhcpOptions">
-      <input message="tns:DescribeDhcpOptionsRequestMsg">
-    </input>
-      <output message="tns:DescribeDhcpOptionsResponseMsg">
-    </output>
+      <input message="tns:DescribeDhcpOptionsRequestMsg"/>
+      <output message="tns:DescribeDhcpOptionsResponseMsg"/>
     </operation>
     <operation name="DescribeImageAttribute">
-      <input message="tns:DescribeImageAttributeRequestMsg">
-    </input>
-      <output message="tns:DescribeImageAttributeResponseMsg">
-    </output>
+      <input message="tns:DescribeImageAttributeRequestMsg"/>
+      <output message="tns:DescribeImageAttributeResponseMsg"/>
     </operation>
     <operation name="DescribeImages">
-      <input message="tns:DescribeImagesRequestMsg">
-    </input>
-      <output message="tns:DescribeImagesResponseMsg">
-    </output>
+      <input message="tns:DescribeImagesRequestMsg"/>
+      <output message="tns:DescribeImagesResponseMsg"/>
     </operation>
     <operation name="DescribeInstanceAttribute">
-      <input message="tns:DescribeInstanceAttributeRequestMsg">
-    </input>
-      <output message="tns:DescribeInstanceAttributeResponseMsg">
-    </output>
+      <input message="tns:DescribeInstanceAttributeRequestMsg"/>
+      <output message="tns:DescribeInstanceAttributeResponseMsg"/>
     </operation>
     <operation name="DescribeInstances">
-      <input message="tns:DescribeInstancesRequestMsg">
-    </input>
-      <output message="tns:DescribeInstancesResponseMsg">
-    </output>
+      <input message="tns:DescribeInstancesRequestMsg"/>
+      <output message="tns:DescribeInstancesResponseMsg"/>
     </operation>
     <operation name="DescribeKeyPairs">
-      <input message="tns:DescribeKeyPairsRequestMsg">
-    </input>
-      <output message="tns:DescribeKeyPairsResponseMsg">
-    </output>
+      <input message="tns:DescribeKeyPairsRequestMsg"/>
+      <output message="tns:DescribeKeyPairsResponseMsg"/>
     </operation>
     <operation name="DescribeLicenses">
-      <input message="tns:DescribeLicensesRequestMsg">
-    </input>
-      <output message="tns:DescribeLicensesResponseMsg">
-    </output>
+      <input message="tns:DescribeLicensesRequestMsg"/>
+      <output message="tns:DescribeLicensesResponseMsg"/>
     </operation>
     <operation name="DescribePlacementGroups">
-      <input message="tns:DescribePlacementGroupsRequestMsg">
-    </input>
-      <output message="tns:DescribePlacementGroupsResponseMsg">
-    </output>
+      <input message="tns:DescribePlacementGroupsRequestMsg"/>
+      <output message="tns:DescribePlacementGroupsResponseMsg"/>
     </operation>
     <operation name="DescribeRegions">
-      <input message="tns:DescribeRegionsRequestMsg">
-    </input>
-      <output message="tns:DescribeRegionsResponseMsg">
-    </output>
+      <input message="tns:DescribeRegionsRequestMsg"/>
+      <output message="tns:DescribeRegionsResponseMsg"/>
     </operation>
     <operation name="DescribeReservedInstances">
-      <input message="tns:DescribeReservedInstancesRequestMsg">
-    </input>
-      <output message="tns:DescribeReservedInstancesResponseMsg">
-    </output>
+      <input message="tns:DescribeReservedInstancesRequestMsg"/>
+      <output message="tns:DescribeReservedInstancesResponseMsg"/>
     </operation>
     <operation name="DescribeReservedInstancesOfferings">
-      <input message="tns:DescribeReservedInstancesOfferingsRequestMsg">
-    </input>
-      <output message="tns:DescribeReservedInstancesOfferingsResponseMsg">
-    </output>
+      <input message="tns:DescribeReservedInstancesOfferingsRequestMsg"/>
+      <output message="tns:DescribeReservedInstancesOfferingsResponseMsg"/>
     </operation>
     <operation name="DescribeSecurityGroups">
-      <input message="tns:DescribeSecurityGroupsRequestMsg">
-    </input>
-      <output message="tns:DescribeSecurityGroupsResponseMsg">
-    </output>
+      <input message="tns:DescribeSecurityGroupsRequestMsg"/>
+      <output message="tns:DescribeSecurityGroupsResponseMsg"/>
     </operation>
     <operation name="DescribeSnapshotAttribute">
-      <input message="tns:DescribeSnapshotAttributeRequestMsg">
-    </input>
-      <output message="tns:DescribeSnapshotAttributeResponseMsg">
-    </output>
+      <input message="tns:DescribeSnapshotAttributeRequestMsg"/>
+      <output message="tns:DescribeSnapshotAttributeResponseMsg"/>
     </operation>
     <operation name="DescribeSnapshots">
-      <input message="tns:DescribeSnapshotsRequestMsg">
-    </input>
-      <output message="tns:DescribeSnapshotsResponseMsg">
-    </output>
+      <input message="tns:DescribeSnapshotsRequestMsg"/>
+      <output message="tns:DescribeSnapshotsResponseMsg"/>
     </operation>
     <operation name="DescribeSpotDatafeedSubscription">
-      <input message="tns:DescribeSpotDatafeedSubscriptionRequestMsg">
-    </input>
-      <output message="tns:DescribeSpotDatafeedSubscriptionResponseMsg">
-    </output>
+      <input message="tns:DescribeSpotDatafeedSubscriptionRequestMsg"/>
+      <output message="tns:DescribeSpotDatafeedSubscriptionResponseMsg"/>
     </operation>
     <operation name="DescribeSpotInstanceRequests">
-      <input message="tns:DescribeSpotInstanceRequestsRequestMsg">
-    </input>
-      <output message="tns:DescribeSpotInstanceRequestsResponseMsg">
-    </output>
+      <input message="tns:DescribeSpotInstanceRequestsRequestMsg"/>
+      <output message="tns:DescribeSpotInstanceRequestsResponseMsg"/>
     </operation>
     <operation name="DescribeSpotPriceHistory">
-      <input message="tns:DescribeSpotPriceHistoryRequestMsg">
-    </input>
-      <output message="tns:DescribeSpotPriceHistoryResponseMsg">
-    </output>
+      <input message="tns:DescribeSpotPriceHistoryRequestMsg"/>
+      <output message="tns:DescribeSpotPriceHistoryResponseMsg"/>
     </operation>
     <operation name="DescribeSubnets">
-      <input message="tns:DescribeSubnetsRequestMsg">
-    </input>
-      <output message="tns:DescribeSubnetsResponseMsg">
-    </output>
+      <input message="tns:DescribeSubnetsRequestMsg"/>
+      <output message="tns:DescribeSubnetsResponseMsg"/>
     </operation>
     <operation name="DescribeVolumes">
-      <input message="tns:DescribeVolumesRequestMsg">
-    </input>
-      <output message="tns:DescribeVolumesResponseMsg">
-    </output>
+      <input message="tns:DescribeVolumesRequestMsg"/>
+      <output message="tns:DescribeVolumesResponseMsg"/>
     </operation>
     <operation name="DescribeVpcs">
-      <input message="tns:DescribeVpcsRequestMsg">
-    </input>
-      <output message="tns:DescribeVpcsResponseMsg">
-    </output>
+      <input message="tns:DescribeVpcsRequestMsg"/>
+      <output message="tns:DescribeVpcsResponseMsg"/>
     </operation>
     <operation name="DescribeVpnConnections">
-      <input message="tns:DescribeVpnConnectionsRequestMsg">
-    </input>
-      <output message="tns:DescribeVpnConnectionsResponseMsg">
-    </output>
+      <input message="tns:DescribeVpnConnectionsRequestMsg"/>
+      <output message="tns:DescribeVpnConnectionsResponseMsg"/>
     </operation>
     <operation name="DescribeVpnGateways">
-      <input message="tns:DescribeVpnGatewaysRequestMsg">
-    </input>
-      <output message="tns:DescribeVpnGatewaysResponseMsg">
-    </output>
+      <input message="tns:DescribeVpnGatewaysRequestMsg"/>
+      <output message="tns:DescribeVpnGatewaysResponseMsg"/>
     </operation>
     <operation name="DetachVolume">
-      <input message="tns:DetachVolumeRequestMsg">
-    </input>
-      <output message="tns:DetachVolumeResponseMsg">
-    </output>
+      <input message="tns:DetachVolumeRequestMsg"/>
+      <output message="tns:DetachVolumeResponseMsg"/>
     </operation>
     <operation name="DetachVpnGateway">
-      <input message="tns:DetachVpnGatewayRequestMsg">
-    </input>
-      <output message="tns:DetachVpnGatewayResponseMsg">
-    </output>
+      <input message="tns:DetachVpnGatewayRequestMsg"/>
+      <output message="tns:DetachVpnGatewayResponseMsg"/>
     </operation>
     <operation name="DisassociateAddress">
-      <input message="tns:DisassociateAddressRequestMsg">
-    </input>
-      <output message="tns:DisassociateAddressResponseMsg">
-    </output>
+      <input message="tns:DisassociateAddressRequestMsg"/>
+      <output message="tns:DisassociateAddressResponseMsg"/>
     </operation>
     <operation name="GetConsoleOutput">
-      <input message="tns:GetConsoleOutputRequestMsg">
-    </input>
-      <output message="tns:GetConsoleOutputResponseMsg">
-    </output>
+      <input message="tns:GetConsoleOutputRequestMsg"/>
+      <output message="tns:GetConsoleOutputResponseMsg"/>
     </operation>
     <operation name="GetPasswordData">
-      <input message="tns:GetPasswordDataRequestMsg">
-    </input>
-      <output message="tns:GetPasswordDataResponseMsg">
-    </output>
+      <input message="tns:GetPasswordDataRequestMsg"/>
+      <output message="tns:GetPasswordDataResponseMsg"/>
     </operation>
     <operation name="ModifyImageAttribute">
-      <input message="tns:ModifyImageAttributeRequestMsg">
-    </input>
-      <output message="tns:ModifyImageAttributeResponseMsg">
-    </output>
+      <input message="tns:ModifyImageAttributeRequestMsg"/>
+      <output message="tns:ModifyImageAttributeResponseMsg"/>
     </operation>
     <operation name="ModifyInstanceAttribute">
-      <input message="tns:ModifyInstanceAttributeRequestMsg">
-    </input>
-      <output message="tns:ModifyInstanceAttributeResponseMsg">
-    </output>
+      <input message="tns:ModifyInstanceAttributeRequestMsg"/>
+      <output message="tns:ModifyInstanceAttributeResponseMsg"/>
     </operation>
     <operation name="ModifySnapshotAttribute">
-      <input message="tns:ModifySnapshotAttributeRequestMsg">
-    </input>
-      <output message="tns:ModifySnapshotAttributeResponseMsg">
-    </output>
+      <input message="tns:ModifySnapshotAttributeRequestMsg"/>
+      <output message="tns:ModifySnapshotAttributeResponseMsg"/>
     </operation>
     <operation name="MonitorInstances">
-      <input message="tns:MonitorInstancesRequestMsg">
-    </input>
-      <output message="tns:MonitorInstancesResponseMsg">
-    </output>
+      <input message="tns:MonitorInstancesRequestMsg"/>
+      <output message="tns:MonitorInstancesResponseMsg"/>
     </operation>
     <operation name="PurchaseReservedInstancesOffering">
-      <input message="tns:PurchaseReservedInstancesOfferingRequestMsg">
-    </input>
-      <output message="tns:PurchaseReservedInstancesOfferingResponseMsg">
-    </output>
+      <input message="tns:PurchaseReservedInstancesOfferingRequestMsg"/>
+      <output message="tns:PurchaseReservedInstancesOfferingResponseMsg"/>
     </operation>
     <operation name="RebootInstances">
-      <input message="tns:RebootInstancesRequestMsg">
-    </input>
-      <output message="tns:RebootInstancesResponseMsg">
-    </output>
+      <input message="tns:RebootInstancesRequestMsg"/>
+      <output message="tns:RebootInstancesResponseMsg"/>
     </operation>
     <operation name="RegisterImage">
-      <input message="tns:RegisterImageRequestMsg">
-    </input>
-      <output message="tns:RegisterImageResponseMsg">
-    </output>
+      <input message="tns:RegisterImageRequestMsg"/>
+      <output message="tns:RegisterImageResponseMsg"/>
     </operation>
     <operation name="ReleaseAddress">
-      <input message="tns:ReleaseAddressRequestMsg">
-    </input>
-      <output message="tns:ReleaseAddressResponseMsg">
-    </output>
+      <input message="tns:ReleaseAddressRequestMsg"/>
+      <output message="tns:ReleaseAddressResponseMsg"/>
     </operation>
     <operation name="RequestSpotInstances">
-      <input message="tns:RequestSpotInstancesRequestMsg">
-    </input>
-      <output message="tns:RequestSpotInstancesResponseMsg">
-    </output>
+      <input message="tns:RequestSpotInstancesRequestMsg"/>
+      <output message="tns:RequestSpotInstancesResponseMsg"/>
     </operation>
     <operation name="ResetImageAttribute">
-      <input message="tns:ResetImageAttributeRequestMsg">
-    </input>
-      <output message="tns:ResetImageAttributeResponseMsg">
-    </output>
+      <input message="tns:ResetImageAttributeRequestMsg"/>
+      <output message="tns:ResetImageAttributeResponseMsg"/>
     </operation>
     <operation name="ResetInstanceAttribute">
-      <input message="tns:ResetInstanceAttributeRequestMsg">
-    </input>
-      <output message="tns:ResetInstanceAttributeResponseMsg">
-    </output>
+      <input message="tns:ResetInstanceAttributeRequestMsg"/>
+      <output message="tns:ResetInstanceAttributeResponseMsg"/>
     </operation>
     <operation name="ResetSnapshotAttribute">
-      <input message="tns:ResetSnapshotAttributeRequestMsg">
-    </input>
-      <output message="tns:ResetSnapshotAttributeResponseMsg">
-    </output>
+      <input message="tns:ResetSnapshotAttributeRequestMsg"/>
+      <output message="tns:ResetSnapshotAttributeResponseMsg"/>
     </operation>
     <operation name="RevokeSecurityGroupIngress">
-      <input message="tns:RevokeSecurityGroupIngressRequestMsg">
-    </input>
-      <output message="tns:RevokeSecurityGroupIngressResponseMsg">
-    </output>
+      <input message="tns:RevokeSecurityGroupIngressRequestMsg"/>
+      <output message="tns:RevokeSecurityGroupIngressResponseMsg"/>
     </operation>
     <operation name="RunInstances">
-      <input message="tns:RunInstancesRequestMsg">
-    </input>
-      <output message="tns:RunInstancesResponseMsg">
-    </output>
+      <input message="tns:RunInstancesRequestMsg"/>
+      <output message="tns:RunInstancesResponseMsg"/>
     </operation>
     <operation name="StartInstances">
-      <input message="tns:StartInstancesRequestMsg">
-    </input>
-      <output message="tns:StartInstancesResponseMsg">
-    </output>
+      <input message="tns:StartInstancesRequestMsg"/>
+      <output message="tns:StartInstancesResponseMsg"/>
     </operation>
     <operation name="StopInstances">
-      <input message="tns:StopInstancesRequestMsg">
-    </input>
-      <output message="tns:StopInstancesResponseMsg">
-    </output>
+      <input message="tns:StopInstancesRequestMsg"/>
+      <output message="tns:StopInstancesResponseMsg"/>
     </operation>
     <operation name="TerminateInstances">
-      <input message="tns:TerminateInstancesRequestMsg">
-    </input>
-      <output message="tns:TerminateInstancesResponseMsg">
-    </output>
+      <input message="tns:TerminateInstancesRequestMsg"/>
+      <output message="tns:TerminateInstancesResponseMsg"/>
     </operation>
     <operation name="UnmonitorInstances">
-      <input message="tns:UnmonitorInstancesRequestMsg">
-    </input>
-      <output message="tns:UnmonitorInstancesResponseMsg">
-    </output>
+      <input message="tns:UnmonitorInstancesRequestMsg"/>
+      <output message="tns:UnmonitorInstancesResponseMsg"/>
     </operation>
   </portType>
-  <binding name="AmazonEC2Binding" type="tns:AmazonEC2PortType">
-    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+  <binding type="tns:AmazonEC2PortType" name="AmazonEC2Binding">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
     <operation name="ActivateLicense">
       <soap:operation soapAction="ActivateLicense"/>
       <input>
@@ -4418,7 +4070,7 @@
     </operation>
   </binding>
   <service name="AmazonEC2">
-    <port name="AmazonEC2Port" binding="tns:AmazonEC2Binding">
+    <port binding="tns:AmazonEC2Binding" name="AmazonEC2Port">
       <soap:address location="https://ec2.amazonaws.com/"/>
     </port>
   </service>
