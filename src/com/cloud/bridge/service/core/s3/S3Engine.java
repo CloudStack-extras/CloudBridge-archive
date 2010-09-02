@@ -719,6 +719,7 @@ public class S3Engine {
 	private S3ListBucketObjectEntry[] composeListBucketContentEntries(List<SObject> l, String prefix, String delimiter, int maxKeys, boolean enableVersion) 
 	{
 		List<S3ListBucketObjectEntry> entries = new ArrayList<S3ListBucketObjectEntry>();
+		SObjectItem latest = null;
 		int count = 0;
 		
 		for(SObject sobject : l) 
@@ -733,25 +734,27 @@ public class S3Engine {
 			{
 				// -> this supports the REST call GET /?versions
 				String deletionMarker = sobject.getDeletionMark();
-                if (null != deletionMarker) 
+                if ( null != deletionMarker ) 
                 {
-                	// -> ToDo we don't save the timestamp when something is deleted
-                	S3ListBucketObjectEntry entry = new S3ListBucketObjectEntry();
-            		entry.setKey(sobject.getNameKey());
-            		entry.setVersion( deletionMarker );
-            		entry.setIsLatest( true );
-            		entry.setIsDeletionMarker( true );
-            		entry.setLastModified( Calendar.getInstance( TimeZone.getTimeZone("GMT") ));
-            		entry.setOwnerCanonicalId(sobject.getOwnerCanonicalId());
-            		entry.setOwnerDisplayName("");
-            		entries.add( entry );
+                	 // -> ToDo we don't save the timestamp when something is deleted
+                	 S3ListBucketObjectEntry entry = new S3ListBucketObjectEntry();
+            		 entry.setKey(sobject.getNameKey());
+            		 entry.setVersion( deletionMarker );
+            		 entry.setIsLatest( true );
+            		 entry.setIsDeletionMarker( true );
+            		 entry.setLastModified( Calendar.getInstance( TimeZone.getTimeZone("GMT") ));
+            		 entry.setOwnerCanonicalId(sobject.getOwnerCanonicalId());
+            		 entry.setOwnerDisplayName("");
+            		 entries.add( entry );
+            		 latest = null;
                 }
+                else latest = sobject.getLatestVersion( false );
 				
 				Iterator<SObjectItem> it = sobject.getItems().iterator();
-				while(it.hasNext()) 
+				while( it.hasNext()) 
 				{
 					SObjectItem item = (SObjectItem)it.next();
-					entries.add(toListEntry(sobject, item));
+					entries.add( toListEntry( sobject, item, latest ));
 				}
 			} 
 			else 
@@ -770,7 +773,7 @@ public class S3Engine {
 					}
 				}
 				if (lastestItem != null) {
-					entries.add(toListEntry(sobject, lastestItem));
+					entries.add( toListEntry( sobject, lastestItem, null ));
 				}
 			}
 			
@@ -782,7 +785,7 @@ public class S3Engine {
 		return null;
 	}
     
-	private static S3ListBucketObjectEntry toListEntry(SObject sobject, SObjectItem item) 
+	private static S3ListBucketObjectEntry toListEntry( SObject sobject, SObjectItem item, SObjectItem latest ) 
 	{
 		S3ListBucketObjectEntry entry = new S3ListBucketObjectEntry();
 		entry.setKey(sobject.getNameKey());
@@ -793,6 +796,8 @@ public class S3Engine {
 		entry.setLastModified(DateHelper.toCalendar(item.getLastModifiedTime()));
 		entry.setOwnerCanonicalId(sobject.getOwnerCanonicalId());
 		entry.setOwnerDisplayName("");
+		
+		if (null != latest && item == latest) entry.setIsLatest( true );
 		return entry;
 	}
     

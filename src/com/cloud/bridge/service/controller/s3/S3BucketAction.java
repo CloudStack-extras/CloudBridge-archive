@@ -290,16 +290,14 @@ public class S3BucketAction implements ServletAction {
 		
 		engineRequest.setBucketName((String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY));
 		engineRequest.setDelimiter(request.getParameter("delimiter"));
-		engineRequest.setMarker( keyMarker );   // ToDo ? similar to 'marker'?
+		engineRequest.setMarker( keyMarker );  
 		engineRequest.setPrefix(request.getParameter("prefix"));
-	    // ToDo - version-id-marker
+	    // ToDo - version-id-marker, ignored for now
 		
 		int maxKeys = Converter.toInt(request.getParameter("max-keys"), 1000);
 		engineRequest.setMaxKeys(maxKeys);
 		S3ListBucketResponse engineResponse = ServiceProvider.getInstance().getS3Engine().listBucketContents( engineRequest, true );
 		
-		// ToDo - handle delete markers
-
 		// -> the SOAP version produces different XML
 		StringBuffer xml = new StringBuffer();
         xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
