@@ -41,7 +41,6 @@ import org.w3c.dom.Node;
 import com.amazon.s3.GetBucketAccessControlPolicyResponse;
 import com.amazon.s3.ListAllMyBucketsResponse;
 import com.amazon.s3.ListBucketResponse;
-import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.model.SBucket;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.service.S3Constants;
@@ -124,6 +123,10 @@ public class S3BucketAction implements ServletAction {
 				} 
 				else if(queryString.equalsIgnoreCase("versioning")) {
 					 executeGetBucketVersioning(request, response);
+					 return;
+				} 
+				else if(queryString.equalsIgnoreCase("versions")) {
+					 executeGetBucketObjectVersions(request, response);
 					 return;
 				} 
 				else if(queryString.equalsIgnoreCase("logging")) {
@@ -276,8 +279,12 @@ public class S3BucketAction implements ServletAction {
     	S3RestServlet.endResponse(response, xml.toString());
 	}
 	
+	public void executeGetBucketObjectVersions(HttpServletRequest request, HttpServletResponse response) throws IOException
+	{   // ToDo 
+	}
+	
 	public void executeGetBucketLogging(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		// TODO 
+		// TODO -- this is a beta feature of S3
 	}
 	
 	public void executeGetBucketLocation(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -401,7 +408,7 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void executePutBucketLogging(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		// TODO
+		// TODO -- this is a S3 beta feature
 	}
 	
 	public void executeDeleteBucket(HttpServletRequest request, HttpServletResponse response) throws IOException 
