@@ -27,6 +27,8 @@ public class S3ListBucketObjectEntry {
 	@XElement(name="Key")
 	protected String key;
 	
+	protected String version;
+	
 	@XElement(name="LastModified")
 	protected Calendar lastModified;
 	
@@ -51,6 +53,14 @@ public class S3ListBucketObjectEntry {
 
 	public void setKey(String key) {
 		this.key = key;
+	}
+
+	public String getVersion() {
+		return version;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
 	}
 
 	public String getETag() {

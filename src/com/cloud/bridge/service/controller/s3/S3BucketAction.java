@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -50,6 +51,7 @@ import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.ServletAction;
 import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
+import com.cloud.bridge.service.core.s3.S3CanonicalUser;
 import com.cloud.bridge.service.core.s3.S3CreateBucketConfiguration;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
 import com.cloud.bridge.service.core.s3.S3CreateBucketResponse;
@@ -57,6 +59,7 @@ import com.cloud.bridge.service.core.s3.S3DeleteBucketRequest;
 import com.cloud.bridge.service.core.s3.S3GetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsResponse;
+import com.cloud.bridge.service.core.s3.S3ListBucketObjectEntry;
 import com.cloud.bridge.service.core.s3.S3ListBucketRequest;
 import com.cloud.bridge.service.core.s3.S3ListBucketResponse;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
@@ -191,7 +194,7 @@ public class S3BucketAction implements ServletAction {
 		
 		int maxKeys = Converter.toInt(request.getParameter("max-keys"), 1000);
 		engineRequest.setMaxKeys(maxKeys);
-		S3ListBucketResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);
+		S3ListBucketResponse engineResponse = ServiceProvider.getInstance().getS3Engine().listBucketContents( engineRequest, false );
 		
 		// -> serialize using the apache's Axiom classes
 		ListBucketResponse oneBucket = S3SoapServiceImpl.toListBucketResponse( engineResponse );
@@ -280,7 +283,70 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void executeGetBucketObjectVersions(HttpServletRequest request, HttpServletResponse response) throws IOException
-	{   // ToDo 
+	{   
+		S3ListBucketRequest engineRequest = new S3ListBucketRequest();
+		String keyMarker       = request.getParameter("key-marker");
+		String versionIdMarker = request.getParameter("version-id-marker");
+		
+		engineRequest.setBucketName((String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY));
+		engineRequest.setDelimiter(request.getParameter("delimiter"));
+		engineRequest.setMarker( keyMarker );   // ToDo ? similar to 'marker'?
+		engineRequest.setPrefix(request.getParameter("prefix"));
+	    // ToDo - version-id-marker
+		
+		int maxKeys = Converter.toInt(request.getParameter("max-keys"), 1000);
+		engineRequest.setMaxKeys(maxKeys);
+		S3ListBucketResponse engineResponse = ServiceProvider.getInstance().getS3Engine().listBucketContents( engineRequest, true );
+		
+		// ToDo - handle delete markers
+
+		// -> the SOAP version produces different XML
+		StringBuffer xml = new StringBuffer();
+        xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
+        xml.append( "<ListVersionsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
+        xml.append( "<Name>" ).append( engineResponse.getBucketName()).append( "</Name>" );
+        
+        if ( null == keyMarker )
+        	 xml.append( "<KeyMarker/>" );
+        else xml.append( "<KeyMarker>" ).append( keyMarker ).append( "</KeyMarker" ); 
+  
+        if ( null == versionIdMarker )
+       	     xml.append( "<VersionIdMarker/>" );
+        else xml.append( "<VersionIdMarker>" ).append( keyMarker ).append( "</VersionIdMarker" ); 
+
+        xml.append( "<MaxKeys>" ).append( engineResponse.getMaxKeys()).append( "</MaxKeys>" );
+        xml.append( "<IsTruncated>" ).append( engineResponse.isTruncated()).append( "</IsTruncated>" );
+        
+        S3ListBucketObjectEntry[] versions = engineResponse.getContents();
+        for( int i=0; null != versions && i < versions.length; i++ )
+        {
+System.out.println( "*** got data3: " + versions.length + " " + i );
+
+        	 S3CanonicalUser owner = versions[i].getOwner();
+        	 String displayName = owner.getDisplayName();
+        	 String id          = owner.getID();
+        	 
+        	 xml.append( "<Version>" );
+             xml.append( "<Key>" ).append( versions[i].getKey()).append( "</Key>" );
+             xml.append( "<VersionId>" ).append( versions[i].getVersion()).append( "</VersionId>" );
+             xml.append( "<IsLatest>" ).append( "false" ).append( "</IsLatest>" );
+             xml.append( "<LastModified>" ).append( DatatypeConverter.printDateTime( versions[i].getLastModified())).append( "</LastModified>" );
+             xml.append( "<ETag>" ).append( versions[i].getETag()).append( "</ETag>" );
+             xml.append( "<Size>" ).append( versions[i].getSize()).append( "</Size>" );
+             xml.append( "<StorageClass>" ).append( versions[i].getStorageClass()).append( "</StorageClass>" );
+             xml.append( "<Owner>" );
+                 xml.append( "<ID>" ).append( id ).append( "</ID>" );
+                 if ( null == displayName )
+                	  xml.append( "<DisplayName/>" );
+                 else xml.append( "<DisplayName>" ).append( owner.getDisplayName()).append( "</DisplayName>" );
+             xml.append( "</Owner>" );
+        	 xml.append( "</Version>" );
+        }
+        xml.append( "</ListVersionsResult>" );
+      
+		response.setStatus(200);
+	    response.setContentType("text/xml; charset=UTF-8");
+    	S3RestServlet.endResponse(response, xml.toString());
 	}
 	
 	public void executeGetBucketLogging(HttpServletRequest request, HttpServletResponse response) throws IOException {

@@ -4,7 +4,7 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's S3 API User's Guide</H1>
-9/1/2010
+9/2/2010
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#part1">Part 1. Cloud.com's Specific Implementation Details</A></LI>
@@ -36,6 +36,10 @@ A HTTP 200 result code is returned on success and a 401 on failure.
 <H3 id="endpoints">Endpoints</H3>
 For SOAP access the endpoint is:  
 <pre>http://&lt;fqdn-or-ip>:&lt;port>/bridge/services/AmazonS3</pre>
+
+For the SOAP PutObject function with a DIME attachment <A href="#ref3">[3]</A>:
+<pre>http://&lt;fqdn-or-ip>:&lt;port>/bridge/dime/AmazonS3</pre>
+
 For REST access the endpoint is:
 <pre>http://&lt;fqdn-or-ip>:&lt;port>/bridge/rest/AmazonS3</pre>
 <P>
@@ -53,8 +57,7 @@ that compose a set of rules to be evaluated.
 <P>
 <font size=+1><I>GET Bucket Object Versions</I></font>
 <P>
-This REST call is not yet implemented (i.e., "GET /?versions").   
-It provides the caller with an inventory of all versions of a specific object along with it's associated meta data.
+The implementation of this REST call (i.e., "GET /?versions") does not yet support the "version-id-marker" parameter.
 <P>
 <font size=+1><I>Copy Object</I></font>
 <P>
@@ -105,6 +108,7 @@ SetObjectAccessControlPolicy
 <OL>
 <LI id="ref1"><A href="http://cloud.com/community/kb">Cloud.com's Developer API</A></LI>
 <LI id="ref2"><A href="http://aws.amazon.com/documentation/s3/">Amazon's S3 API</A></LI>
+<LI id="ref3"><A href="http://msdn.microsoft.com/en-us/magazine/cc188797.aspx">DIME</A></LI>
 </OL>
 </BODY>
 </HTML>

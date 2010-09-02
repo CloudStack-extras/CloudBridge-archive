@@ -40,7 +40,27 @@ public class SObjectDao extends EntityDao<SObject> {
 		StringBuffer sb = new StringBuffer();
 		List<Object> params = new ArrayList<Object>();
 
-		sb.append("from SObject o left join fetch o.items where deletionMark=0 and o.bucket=?");
+		sb.append("from SObject o left join fetch o.items where deletionMark is null and o.bucket=?");
+		params.add(new EntityParam(bucket));
+		
+		if(prefix != null && !prefix.isEmpty()) {
+			sb.append(" and o.nameKey like ?");
+			params.add(new String(prefix + "%"));
+		}
+		
+		if(marker != null && !marker.isEmpty()) {
+			sb.append(" and o.nameKey > ?");
+			params.add(marker);
+		}
+		
+		return queryEntities(sb.toString(), 0, maxKeys, params.toArray());
+	}
+	
+	public List<SObject> listAllBucketObjects(SBucket bucket, String prefix, String marker, int maxKeys) {
+		StringBuffer sb = new StringBuffer();
+		List<Object> params = new ArrayList<Object>();
+
+		sb.append("from SObject o left join fetch o.items where o.bucket=?");
 		params.add(new EntityParam(bucket));
 		
 		if(prefix != null && !prefix.isEmpty()) {

@@ -162,7 +162,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	
 	public ListBucketResponse listBucket (ListBucket listBucket) {
 		// after authentication, we should setup user context
-		return toListBucketResponse(engine.handleRequest(toEngineListBucketRequest(listBucket)));
+		return toListBucketResponse(engine.listBucketContents(toEngineListBucketRequest(listBucket), false));
     }
 	
 	private S3ListBucketRequest toEngineListBucketRequest(ListBucket listBucket) {

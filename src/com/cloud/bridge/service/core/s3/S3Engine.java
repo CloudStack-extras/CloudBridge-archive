@@ -182,7 +182,7 @@ public class S3Engine {
     	return response;
     }
     
-    public S3ListBucketResponse handleRequest(S3ListBucketRequest request) 
+    public S3ListBucketResponse listBucketContents(S3ListBucketRequest request, boolean includeVersions) 
     {
     	S3ListBucketResponse response = new S3ListBucketResponse();
 		String bucketName = request.getBucketName();
@@ -204,7 +204,12 @@ public class S3Engine {
 		
 		// when we query, request one more item so that we know how to set isTruncated flag 
 		SObjectDao sobjectDao = new SObjectDao();
-		List<SObject> l = sobjectDao.listBucketObjects(sbucket, prefix, marker, maxKeys + 1);   
+		List<SObject> l = null;
+		
+		if ( includeVersions )
+             l = sobjectDao.listAllBucketObjects(sbucket, prefix, marker, maxKeys + 1);   
+		else l = sobjectDao.listBucketObjects(sbucket, prefix, marker, maxKeys + 1);   
+		
 		response.setBucketName(bucketName);
 		response.setMarker(marker);
 		response.setMaxKeys(maxKeys);
@@ -216,7 +221,7 @@ public class S3Engine {
 		}
 
 		// SOAP response does not support versioning
-		response.setContents(composeListBucketContentEntries(l, prefix, delimiter, maxKeys, false));
+		response.setContents(composeListBucketContentEntries(l, prefix, delimiter, maxKeys, includeVersions));
 		response.setCommonPrefixes(composeListBucketPrefixEntries(l, prefix, delimiter, maxKeys));
 		return response;
     }
@@ -724,15 +729,16 @@ public class S3Engine {
 			
 			if (enableVersion) 
 			{
+				// -> this supports the REST call GET /?versions
 				Iterator<SObjectItem> it = sobject.getItems().iterator();
 				while(it.hasNext()) 
 				{
-					// TODO, should add version info
 					SObjectItem item = (SObjectItem)it.next();
 					entries.add(toListEntry(sobject, item));
 				}
 			} 
-			else {
+			else 
+			{
 				// this should be able to be optimized
 				Iterator<SObjectItem> it = sobject.getItems().iterator();
 				SObjectItem lastestItem = null;
@@ -761,11 +767,12 @@ public class S3Engine {
     
 	private static S3ListBucketObjectEntry toListEntry(SObject sobject, SObjectItem item) 
 	{
-		// TODO, should add version info	
 		S3ListBucketObjectEntry entry = new S3ListBucketObjectEntry();
 		entry.setKey(sobject.getNameKey());
+		entry.setVersion( item.getVersion());
 		entry.setETag(item.getMd5());
 		entry.setSize(item.getStoredSize());
+		entry.setStorageClass( "STANDARD" );
 		entry.setLastModified(DateHelper.toCalendar(item.getLastModifiedTime()));
 		entry.setOwnerCanonicalId(sobject.getOwnerCanonicalId());
 		entry.setOwnerDisplayName("");
