@@ -23,6 +23,7 @@ public class S3ListBucketRequest extends S3Request {
 	protected String prefix;
 	protected String marker;
 	protected String delimiter;
+	protected String versionIdMarker;
 	protected int maxKeys;
 
 	public S3ListBucketRequest() {
@@ -60,7 +61,15 @@ public class S3ListBucketRequest extends S3Request {
 	public void setDelimiter(String delimiter) {
 		this.delimiter = delimiter;
 	}
+
+	public String getVersionIdMarker() {
+		return versionIdMarker;
+	}
 	
+	public void setVersionIdMarker(String versionIdMarker) {
+		this.versionIdMarker = versionIdMarker;
+	}
+
 	public int getMaxKeys() {
 		return maxKeys;
 	}

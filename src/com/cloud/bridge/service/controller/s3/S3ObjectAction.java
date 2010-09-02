@@ -105,7 +105,7 @@ public class S3ObjectAction implements ServletAction {
 		    	 
 			     if ( queryString != null && queryString.length() > 0 ) 
 			     {
-				      if ( queryString.equalsIgnoreCase("acl")) executeGetObjectAcl(request, response);
+				      if ( queryString.startsWith("acl")) executeGetObjectAcl(request, response);
 				 } 
 			     else executeGetObject(request, response);
 		     }
@@ -113,7 +113,7 @@ public class S3ObjectAction implements ServletAction {
 			
 			     if ( queryString != null && queryString.length() > 0 ) 
 			     {
-				     if ( queryString.equalsIgnoreCase("acl")) executePutObjectAcl(request, response);
+				     if ( queryString.startsWith("acl")) executePutObjectAcl(request, response);
 				 } 
 			     else executePutObject(request, response);
 		}

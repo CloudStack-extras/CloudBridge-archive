@@ -209,8 +209,8 @@ public class S3Engine {
 		List<SObject> l = null;
 		
 		if ( includeVersions )
-             l = sobjectDao.listAllBucketObjects(sbucket, prefix, marker, maxKeys + 1);   
-		else l = sobjectDao.listBucketObjects(sbucket, prefix, marker, maxKeys + 1);   
+             l = sobjectDao.listAllBucketObjects( sbucket, prefix, marker, maxKeys+1 );   
+		else l = sobjectDao.listBucketObjects( sbucket, prefix, marker, maxKeys+1 );   
 		
 		response.setBucketName(bucketName);
 		response.setMarker(marker);
@@ -223,8 +223,8 @@ public class S3Engine {
 		}
 
 		// SOAP response does not support versioning
-		response.setContents(composeListBucketContentEntries(l, prefix, delimiter, maxKeys, includeVersions));
-		response.setCommonPrefixes(composeListBucketPrefixEntries(l, prefix, delimiter, maxKeys));
+		response.setContents( composeListBucketContentEntries(l, prefix, delimiter, maxKeys, includeVersions, request.getVersionIdMarker()));
+		response.setCommonPrefixes( composeListBucketPrefixEntries(l, prefix, delimiter, maxKeys));
 		return response;
     }
     
@@ -716,13 +716,22 @@ public class S3Engine {
 		return null;
 	}
 	
-	private S3ListBucketObjectEntry[] composeListBucketContentEntries(List<SObject> l, String prefix, String delimiter, int maxKeys, boolean enableVersion) 
+	/**
+	 * The 'versionIdMarker' parameter only makes sense if enableVersion is true.   
+	 * versionIdMarker is the starting point to return information back.  So for example if an
+	 * object has versions 1,2,3,4,5 and the versionIdMarker is '3', then 3,4,5 will be returned
+	 * by this function.   If the versionIdMarker is null then all versions are returned.
+	 * 
+	 * ToDo - how does the versionIdMarker work when there is a deletion marker in the object?
+	 */
+	private S3ListBucketObjectEntry[] composeListBucketContentEntries(List<SObject> l, String prefix, String delimiter, int maxKeys, boolean enableVersion, String versionIdMarker) 
 	{
 		List<S3ListBucketObjectEntry> entries = new ArrayList<S3ListBucketObjectEntry>();
-		SObjectItem latest = null;
+		SObjectItem latest  = null;
+		boolean hitIdMarker = false;
 		int count = 0;
 		
-		for(SObject sobject : l) 
+		for( SObject sobject : l ) 
 		{
 			if (delimiter != null && !delimiter.isEmpty()) 
 			{
@@ -732,6 +741,8 @@ public class S3Engine {
 			
 			if (enableVersion) 
 			{
+				hitIdMarker = (null == versionIdMarker ? true : false);
+
 				// -> this supports the REST call GET /?versions
 				String deletionMarker = sobject.getDeletionMark();
                 if ( null != deletionMarker ) 
@@ -754,7 +765,15 @@ public class S3Engine {
 				while( it.hasNext()) 
 				{
 					SObjectItem item = (SObjectItem)it.next();
-					entries.add( toListEntry( sobject, item, latest ));
+					
+					if ( !hitIdMarker ) 
+					{
+						 if (item.getVersion().equalsIgnoreCase( versionIdMarker )) {
+							 hitIdMarker = true;
+							 entries.add( toListEntry( sobject, item, latest ));
+						 }
+					}
+					else entries.add( toListEntry( sobject, item, latest ));
 				}
 			} 
 			else 
@@ -772,17 +791,16 @@ public class S3Engine {
 						lastestItem = item;
 					}
 				}
-				if (lastestItem != null) {
-					entries.add( toListEntry( sobject, lastestItem, null ));
-				}
+				if (lastestItem != null) entries.add( toListEntry( sobject, lastestItem, null ));
 			}
 			
 			count++;
 			if(count >= maxKeys) break;
 		}
 		
-		if(entries.size() > 0) return entries.toArray(new S3ListBucketObjectEntry[0]);
-		return null;
+		if ( entries.size() > 0 ) 
+			 return entries.toArray(new S3ListBucketObjectEntry[0]);
+		else return null;
 	}
     
 	private static S3ListBucketObjectEntry toListEntry( SObject sobject, SObjectItem item, SObjectItem latest ) 

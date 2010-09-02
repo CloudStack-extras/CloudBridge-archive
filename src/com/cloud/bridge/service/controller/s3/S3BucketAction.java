@@ -99,15 +99,15 @@ public class S3BucketAction implements ServletAction {
 			String queryString = request.getQueryString();
 			if (queryString != null && queryString.length() > 0) 
 			{
-				if ( queryString.equalsIgnoreCase("acl")) {
+				if ( queryString.startsWith("acl")) {
 					 executePutBucketAcl(request, response);
 					 return;
 				} 
-				else if(queryString.equalsIgnoreCase("versioning")) {
+				else if(queryString.startsWith("versioning")) {
 					 executePutBucketVersioning(request, response);
 					 return;
 				} 
-				else if(queryString.equalsIgnoreCase("logging")) {
+				else if(queryString.startsWith("logging")) {
 					 executePutBucketLogging(request, response);
 					 return;
 				}
@@ -120,23 +120,23 @@ public class S3BucketAction implements ServletAction {
 			String queryString = request.getQueryString();
 			if (queryString != null && queryString.length() > 0) 
 			{
-				if ( queryString.equalsIgnoreCase("acl")) {
+				if ( queryString.startsWith("acl")) {
 					 executeGetBucketAcl(request, response);
 					 return;
 				} 
-				else if(queryString.equalsIgnoreCase("versioning")) {
+				else if(queryString.startsWith("versioning")) {
 					 executeGetBucketVersioning(request, response);
 					 return;
 				} 
-				else if(queryString.equalsIgnoreCase("versions")) {
+				else if(queryString.startsWith("versions")) {
 					 executeGetBucketObjectVersions(request, response);
 					 return;
 				} 
-				else if(queryString.equalsIgnoreCase("logging")) {
+				else if(queryString.startsWith("logging")) {
 					 executeGetBucketLogging(request, response);
 					 return;
 				} 
-				else if(queryString.equalsIgnoreCase("location")) {
+				else if(queryString.startsWith("location")) {
 					 executeGetBucketLocation(request, response);
 					 return;
 				}
@@ -292,7 +292,7 @@ public class S3BucketAction implements ServletAction {
 		engineRequest.setDelimiter(request.getParameter("delimiter"));
 		engineRequest.setMarker( keyMarker );  
 		engineRequest.setPrefix(request.getParameter("prefix"));
-	    // ToDo - version-id-marker, ignored for now
+		engineRequest.setVersionIdMarker( versionIdMarker );
 		
 		int maxKeys = Converter.toInt(request.getParameter("max-keys"), 1000);
 		engineRequest.setMaxKeys(maxKeys);
