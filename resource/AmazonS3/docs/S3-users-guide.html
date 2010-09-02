@@ -23,8 +23,8 @@
 <P></BR>
 <H2 id="part1">Part 1. Cloud.com's Specific Implementation Details</H2>
 <H3 id="registration">User Registration</H3>
-The S3 service needs to be given the user's Cloud.com API access and secret keys <A href="#ref1">[1]</A> so that it
-can make Cloud.com API calls on the user's behalf.   This is done by re-using an EC2 provided REST command.   Once
+The S3 service uses the user's Cloud.com API access and secret keys <A href="#ref1">[1]</A> to implement both
+the REST and SOAP authentication algorithms.  This is done by re-using an EC2 provided REST command.   Once
 this URL is invoked the user has registered for both the S3 service and the EC2 REST service.
 <pre>
 http://&lt;fqdn-or-ip>:&lt;port>/bridge/rest/AmazonEC2?Action=SetUserKeys&accesskey=&lt;key>&secretkey=&lt;key>
@@ -46,16 +46,19 @@ For REST access the endpoint is:
 The largest missing S3 feature is bucket polcies.   
 Bucket policies are used with ACLs to define access rights to objects in a bucket.   
 A bucket policy takes precedence over existing ACLs and are used to: 
-(a) allow/deny bucket-level permissions (ACLs cannot deny access), 
-(b) deny access on any object in a bucket, and 
-(c) grant access on objects in a bucket.
-Bucket polies are written in JSON with an Amazon defined set of strings (i.e., "access policy language" <A href="#ref2">[2]</A>) 
+(a) allow/deny bucket-level permissions (ACLs cannot deny access), and
+(b) allow/deny access on any object in a bucket.
+Bucket polies are written in JSON with an Amazon defined set of strings (i.e., "an access policy language" <A href="#ref2">[2]</A>) 
 that compose a set of rules to be evaluated.
 <P>
-<font size=+1><I>GET Bucket Object versions</I></font>
+<font size=+1><I>GET Bucket Object Versions</I></font>
 <P>
-This REST call is not yet implemented.   It provides the caller with an inventory of all versions of a specific object
-along with any associated meta data.
+This REST call is not yet implemented (i.e., "GET /?versions").   
+It provides the caller with an inventory of all versions of a specific object along with it's associated meta data.
+<P>
+<font size=+1><I>Copy Object</I></font>
+<P>
+The SOAP "CopyObject" and its REST equivalent "PUT Object (Copy)" features are not yet implemented.
 <P></br>
 <H2 id="part2">Part 2. Generic S3 Details</H2>
 <H3 id="functions">List of S3 Functions Implemented</H3>
