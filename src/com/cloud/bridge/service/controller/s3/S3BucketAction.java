@@ -320,27 +320,40 @@ public class S3BucketAction implements ServletAction {
         S3ListBucketObjectEntry[] versions = engineResponse.getContents();
         for( int i=0; null != versions && i < versions.length; i++ )
         {
-System.out.println( "*** got data3: " + versions.length + " " + i );
-
-        	 S3CanonicalUser owner = versions[i].getOwner();
-        	 String displayName = owner.getDisplayName();
-        	 String id          = owner.getID();
+        	 S3CanonicalUser owner    = versions[i].getOwner();
+        	 boolean isDeletionMarker = versions[i].getIsDeletionMarker();
+        	 String displayName       = owner.getDisplayName();
+        	 String id                = owner.getID();
         	 
-        	 xml.append( "<Version>" );
-             xml.append( "<Key>" ).append( versions[i].getKey()).append( "</Key>" );
-             xml.append( "<VersionId>" ).append( versions[i].getVersion()).append( "</VersionId>" );
-             xml.append( "<IsLatest>" ).append( "false" ).append( "</IsLatest>" );
-             xml.append( "<LastModified>" ).append( DatatypeConverter.printDateTime( versions[i].getLastModified())).append( "</LastModified>" );
-             xml.append( "<ETag>" ).append( versions[i].getETag()).append( "</ETag>" );
-             xml.append( "<Size>" ).append( versions[i].getSize()).append( "</Size>" );
-             xml.append( "<StorageClass>" ).append( versions[i].getStorageClass()).append( "</StorageClass>" );
+        	 if ( isDeletionMarker ) 
+        	 { 	  
+        		  xml.append( "<DeleteMarker>" );  	 
+                  xml.append( "<Key>" ).append( versions[i].getKey()).append( "</Key>" );
+                  xml.append( "<VersionId>" ).append( versions[i].getVersion()).append( "</VersionId>" );
+                  xml.append( "<IsLatest>" ).append( versions[i].getIsLatest()).append( "</IsLatest>" );
+                  xml.append( "<LastModified>" ).append( DatatypeConverter.printDateTime( versions[i].getLastModified())).append( "</LastModified>" );
+        	 }
+        	 else
+        	 { 	  xml.append( "<Version>" );  	 
+                  xml.append( "<Key>" ).append( versions[i].getKey()).append( "</Key>" );
+                  xml.append( "<VersionId>" ).append( versions[i].getVersion()).append( "</VersionId>" );
+                  xml.append( "<IsLatest>" ).append( versions[i].getIsLatest()).append( "</IsLatest>" );
+                  xml.append( "<LastModified>" ).append( DatatypeConverter.printDateTime( versions[i].getLastModified())).append( "</LastModified>" );
+                  xml.append( "<ETag>" ).append( versions[i].getETag()).append( "</ETag>" );
+                  xml.append( "<Size>" ).append( versions[i].getSize()).append( "</Size>" );
+                  xml.append( "<StorageClass>" ).append( versions[i].getStorageClass()).append( "</StorageClass>" );
+        	 }
+        	 
              xml.append( "<Owner>" );
-                 xml.append( "<ID>" ).append( id ).append( "</ID>" );
-                 if ( null == displayName )
-                	  xml.append( "<DisplayName/>" );
-                 else xml.append( "<DisplayName>" ).append( owner.getDisplayName()).append( "</DisplayName>" );
+             xml.append( "<ID>" ).append( id ).append( "</ID>" );
+             if ( null == displayName )
+              	  xml.append( "<DisplayName/>" );
+             else xml.append( "<DisplayName>" ).append( owner.getDisplayName()).append( "</DisplayName>" );
              xml.append( "</Owner>" );
-        	 xml.append( "</Version>" );
+        	 
+             if ( isDeletionMarker )
+            	  xml.append( "</DeleteMarker>" ); 
+             else xml.append( "</Version>" );
         }
         xml.append( "</ListVersionsResult>" );
       

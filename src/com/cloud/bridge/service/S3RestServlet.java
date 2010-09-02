@@ -209,9 +209,9 @@ public class S3RestServlet extends HttpServlet {
 				return;
 			}
 			
-			// -> just for testing
-			UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), AWSAccessKey, info.getDescription());
-            return;
+			// -> turn off auth - just for testing
+			//UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), AWSAccessKey, info.getDescription());
+            //return;
             
 		} catch (SignatureException e) {
 			throw new PermissionDeniedException(e);
@@ -219,7 +219,7 @@ public class S3RestServlet extends HttpServlet {
 		} catch (UnsupportedEncodingException e) {
 			throw new PermissionDeniedException(e);
 		}
-		//throw new PermissionDeniedException("Invalid signature");
+		throw new PermissionDeniedException("Invalid signature");
     }
     
     private ServletAction routeRequest(HttpServletRequest request) {
@@ -597,72 +597,7 @@ public class S3RestServlet extends HttpServlet {
 		}
 		return null;
 	}
-	
-	
-    /**
-     * A request is authenticated if the 'Authorization' header is present, for example:
-     *                        AWSAccessKey             Signature
-     * 'Authorization: AWS 0PN5J17HBGZHT7JJ3X82:frJIUN8DYpKDtOLCwo//yllqDzg='
-     *
-     * @param request
-     * 
-     * @return 0  - message is anonymous, 1- message is properly authenticated, 
-     *         -1 - message authentication failed
-     * @throws UnsupportedEncodingException 
-     * @throws SignatureException 
-     */
-    private int isAuthenticated(HttpServletRequest request) 
-        throws SignatureException, UnsupportedEncodingException
-    {
-    	RestAuth auth          = new RestAuth();
-    	String   AWSAccessKey  = null;
-    	String   signature     = null;
-    	String   authorization = null;
-    	String   secretKey     = "TODO-ABCDEFG0123456789";
-    	
-    	// [A] Is it an authenticated request?
-    	if (null != (authorization = request.getHeader( "Authorization" )))
-    	{
-    		int offset = authorization.indexOf( "AWS" );
-    		if (-1 != offset) 
-    		{
-    			String temp = authorization.substring( offset+3 ).trim();
-    			offset = temp.indexOf( ":" );
-    			AWSAccessKey = temp.substring( 0, offset );
-    			signature    = temp.substring( offset+1 );
-    			
-    			// TODO: from AWSAccessKey get the secretKey
-    		}
-    	}
-    	if (null == signature) return 0;
-    	
-    	
-    	// [B] Calculate the signature from the request's headers
-    	auth.setDateHeader( request.getHeader( "Date" ));
-    	auth.setContentTypeHeader( request.getHeader( "Content-Type" ));
-    	auth.setContentMD5Header( request.getHeader( "Content-MD5" ));
-    	auth.setHostHeader( request.getHeader( "Host" ));
-    	auth.setQueryString( request.getQueryString());
-    	auth.addUriPath( request.getPathInfo());
-    	
-    	// -> are their any Amazon specific (i.e. 'x-amz-' ) headers?
-		Enumeration headers = request.getHeaderNames();
-		if (null != headers) 
-		{
-			while(headers.hasMoreElements()) 
-			{
-				String headerName = (String)headers.nextElement();
-				String ignoreCase = headerName.toLowerCase();
-				if (ignoreCase.startsWith( "x-amz-" ))
-					auth.addAmazonHeader( headerName + ":" + request.getHeader( headerName ));
-			}
-		}
-    	
-    	if ( auth.verifySignature( request.getMethod(), secretKey, signature ))
-    	     return 1;
-    	else return -1;
-    }
-    
+	    
     private void logRequest(HttpServletRequest request) {
     	if(logger.isInfoEnabled()) {
     		logger.info("Request method: " + request.getMethod());

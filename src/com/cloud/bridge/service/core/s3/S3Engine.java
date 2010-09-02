@@ -17,6 +17,7 @@ package com.cloud.bridge.service.core.s3;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -25,6 +26,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import javax.activation.DataHandler;
@@ -730,6 +732,21 @@ public class S3Engine {
 			if (enableVersion) 
 			{
 				// -> this supports the REST call GET /?versions
+				String deletionMarker = sobject.getDeletionMark();
+                if (null != deletionMarker) 
+                {
+                	// -> ToDo we don't save the timestamp when something is deleted
+                	S3ListBucketObjectEntry entry = new S3ListBucketObjectEntry();
+            		entry.setKey(sobject.getNameKey());
+            		entry.setVersion( deletionMarker );
+            		entry.setIsLatest( true );
+            		entry.setIsDeletionMarker( true );
+            		entry.setLastModified( Calendar.getInstance( TimeZone.getTimeZone("GMT") ));
+            		entry.setOwnerCanonicalId(sobject.getOwnerCanonicalId());
+            		entry.setOwnerDisplayName("");
+            		entries.add( entry );
+                }
+				
 				Iterator<SObjectItem> it = sobject.getItems().iterator();
 				while(it.hasNext()) 
 				{

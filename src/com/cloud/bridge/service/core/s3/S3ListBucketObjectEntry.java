@@ -28,6 +28,8 @@ public class S3ListBucketObjectEntry {
 	protected String key;
 	
 	protected String version;
+	protected boolean isLatest;
+	protected boolean isDeletionMarker;
 	
 	@XElement(name="LastModified")
 	protected Calendar lastModified;
@@ -45,6 +47,8 @@ public class S3ListBucketObjectEntry {
 	protected String storageClass;
 	
 	public S3ListBucketObjectEntry() {
+		isLatest = false;
+		isDeletionMarker = false;
 	}
 
 	public String getKey() {
@@ -61,6 +65,22 @@ public class S3ListBucketObjectEntry {
 
 	public void setVersion(String version) {
 		this.version = version;
+	}
+
+	public boolean getIsLatest() {
+		return isLatest;
+	}
+
+	public void setIsLatest(boolean isLatest) {
+		this.isLatest = isLatest;
+	}
+
+	public boolean getIsDeletionMarker() {
+		return isDeletionMarker;
+	}
+
+	public void setIsDeletionMarker(boolean isDeletionMarker) {
+		this.isDeletionMarker = isDeletionMarker;
 	}
 
 	public String getETag() {
