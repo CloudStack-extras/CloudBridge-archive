@@ -12,6 +12,7 @@
 
 	<dirname property="base.dir" file="${ant.file.build-root}" />
 	<property name="build.dir" location="${base.dir}" />
+	<property name="db.dir" location="${base.dir}/db/mysql" />
 	<property name="target.dir" location="${base.dir}/target" />
 	<property name="classes.dir" location="${target.dir}/classes" />
 	<property name="jar.dir" location="${target.dir}/jar" />

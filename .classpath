@@ -18,5 +18,6 @@
 	<classpathentry kind="lib" path="lib/jaxb-xjc-2.1.7.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
 	<classpathentry kind="lib" path="rampart-lib/wss4j-1.5.8.jar"/>
+	<classpathentry kind="lib" path="lib/commons-fileupload-1.2.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>
