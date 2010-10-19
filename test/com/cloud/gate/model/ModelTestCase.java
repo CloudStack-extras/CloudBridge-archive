@@ -17,7 +17,6 @@ import com.cloud.bridge.model.SHost;
 import com.cloud.bridge.model.SMeta;
 import com.cloud.bridge.model.SObject;
 import com.cloud.bridge.util.CloudSessionFactory;
-import com.cloud.bridge.util.DateHelper;
 import com.cloud.bridge.util.QueryHelper;
 import com.cloud.gate.testcase.BaseTestCase;
 

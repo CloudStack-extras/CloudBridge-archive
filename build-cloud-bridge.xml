@@ -97,6 +97,11 @@
     	<delete dir="${dist.dir}" />
 		<delete dir="${target.dir}" />
   	</target>
+
+	<target name="clean-tomcat">
+	      <delete dir="${tomcat.home}/webapps/bridge"/>
+	</target>
+
 	
 	<path id="cloud-bridge.classpath">
     	<path refid="thirdparty.classpath" />
