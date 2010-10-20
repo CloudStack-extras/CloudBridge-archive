@@ -42,41 +42,42 @@ import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
+import org.apache.axiom.om.OMAbstractFactory;
+import org.apache.axiom.om.OMFactory;
+import org.apache.axis2.databinding.ADBException;
+import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
 
+import com.amazon.ec2.AttachVolumeResponse;
 import com.amazon.ec2.AuthorizeSecurityGroupIngressResponse;
+import com.amazon.ec2.CreateImageResponse;
 import com.amazon.ec2.CreateSecurityGroupResponse;
+import com.amazon.ec2.CreateSnapshotResponse;
+import com.amazon.ec2.CreateVolumeResponse;
 import com.amazon.ec2.DeleteSecurityGroupResponse;
+import com.amazon.ec2.DeleteSnapshotResponse;
+import com.amazon.ec2.DeleteVolumeResponse;
+import com.amazon.ec2.DeregisterImageResponse;
 import com.amazon.ec2.DescribeAvailabilityZonesResponse;
 import com.amazon.ec2.DescribeImageAttributeResponse;
+import com.amazon.ec2.DescribeImagesResponse;
 import com.amazon.ec2.DescribeInstanceAttributeResponse;
 import com.amazon.ec2.DescribeInstancesResponse;
-import com.amazon.ec2.DescribeImagesResponse;
 import com.amazon.ec2.DescribeSecurityGroupsResponse;
 import com.amazon.ec2.DescribeSnapshotsResponse;
 import com.amazon.ec2.DescribeVolumesResponse;
-import com.amazon.ec2.AttachVolumeResponse;
 import com.amazon.ec2.DetachVolumeResponse;
-import com.amazon.ec2.CreateVolumeResponse;
-import com.amazon.ec2.DeleteVolumeResponse;
+import com.amazon.ec2.ModifyImageAttributeResponse;
+import com.amazon.ec2.RebootInstancesResponse;
+import com.amazon.ec2.RegisterImageResponse;
+import com.amazon.ec2.ResetImageAttributeResponse;
 import com.amazon.ec2.RevokeSecurityGroupIngressResponse;
 import com.amazon.ec2.RunInstancesResponse;
-import com.amazon.ec2.RebootInstancesResponse;
-import com.amazon.ec2.StopInstancesResponse;
 import com.amazon.ec2.StartInstancesResponse;
+import com.amazon.ec2.StopInstancesResponse;
 import com.amazon.ec2.TerminateInstancesResponse;
-import com.amazon.ec2.ModifyImageAttributeResponse;
-import com.amazon.ec2.ResetImageAttributeResponse;
-import com.amazon.ec2.CreateImageResponse;
-import com.amazon.ec2.RegisterImageResponse;
-import com.amazon.ec2.DeregisterImageResponse;
-import com.amazon.ec2.CreateSnapshotResponse;
-import com.amazon.ec2.DeleteSnapshotResponse;
-
 import com.cloud.bridge.model.UserCredentials;
-import com.cloud.bridge.persist.PersistContext;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
-import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
@@ -88,7 +89,6 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshots;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Image;
-import com.cloud.bridge.service.core.ec2.EC2Instance;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
@@ -103,11 +103,6 @@ import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.AuthenticationUtils;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.EC2RestAuth;
-
-import org.apache.axiom.om.OMAbstractFactory;
-import org.apache.axiom.om.OMFactory;
-import org.apache.axis2.databinding.ADBException;
-import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 
 
 public class EC2RestServlet extends HttpServlet {
@@ -705,6 +700,11 @@ public class EC2RestServlet extends HttpServlet {
         if ( null != zoneName && 0 < zoneName.length ) 
         	 EC2request.setZoneName( zoneName[0] );
 		else { response.sendError(530, "Missing AvailabilityZone parameter" ); return; }
+        
+        String[] snapshotId = request.getParameterValues("SnapshotId");
+        if (snapshotId != null && snapshotId.length != 0) {
+        	EC2request.setSnapshotId(snapshotId[0]);
+        }
 
 		// -> execute the request
 		CreateVolumeResponse EC2response = EC2SoapServiceImpl.toCreateVolumeResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
