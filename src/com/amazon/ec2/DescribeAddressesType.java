@@ -3,7 +3,7 @@
  * DescribeAddressesType.java
  *
  * This file was auto-generated from WSDL
- * by the Apache Axis2 version: 1.5.1  Built on : Oct 19, 2009 (10:59:34 EDT)
+ * by the Apache Axis2 version: 1.5  Built on : Apr 30, 2009 (06:07:47 EDT)
  */
             
                 package com.amazon.ec2;
@@ -17,13 +17,13 @@
         implements org.apache.axis2.databinding.ADBBean{
         /* This type was generated from the piece of schema that had
                 name = DescribeAddressesType
-                Namespace URI = http://ec2.amazonaws.com/doc/2010-06-15/
+                Namespace URI = http://ec2.amazonaws.com/doc/2010-08-31/
                 Namespace Prefix = ns1
                 */
             
 
         private static java.lang.String generatePrefix(java.lang.String namespace) {
-            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-06-15/")){
+            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-08-31/")){
                 return "ns1";
             }
             return org.apache.axis2.databinding.utils.BeanUtil.getUniquePrefix();
@@ -56,6 +56,50 @@
                                public void setPublicIpsSet(com.amazon.ec2.DescribeAddressesInfoType param){
                             
                                             this.localPublicIpsSet=param;
+                                    
+
+                               }
+                            
+
+                        /**
+                        * field for FilterSet
+                        */
+
+                        
+                                    protected com.amazon.ec2.FilterSetType localFilterSet ;
+                                
+                           /*  This tracker boolean wil be used to detect whether the user called the set method
+                          *   for this attribute. It will be used to determine whether to include this field
+                           *   in the serialized XML
+                           */
+                           protected boolean localFilterSetTracker = false ;
+                           
+
+                           /**
+                           * Auto generated getter method
+                           * @return com.amazon.ec2.FilterSetType
+                           */
+                           public  com.amazon.ec2.FilterSetType getFilterSet(){
+                               return localFilterSet;
+                           }
+
+                           
+                        
+                            /**
+                               * Auto generated setter method
+                               * @param param FilterSet
+                               */
+                               public void setFilterSet(com.amazon.ec2.FilterSetType param){
+                            
+                                       if (param != null){
+                                          //update the setting tracker
+                                          localFilterSetTracker = true;
+                                       } else {
+                                          localFilterSetTracker = false;
+                                              
+                                       }
+                                   
+                                            this.localFilterSet=param;
                                     
 
                                }
@@ -144,7 +188,7 @@
                   if (serializeType){
                
 
-                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-06-15/");
+                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-08-31/");
                    if ((namespacePrefix != null) && (namespacePrefix.trim().length() > 0)){
                        writeAttribute("xsi","http://www.w3.org/2001/XMLSchema-instance","type",
                            namespacePrefix+":DescribeAddressesType",
@@ -161,9 +205,15 @@
                                             if (localPublicIpsSet==null){
                                                  throw new org.apache.axis2.databinding.ADBException("publicIpsSet cannot be null!!");
                                             }
-                                           localPublicIpsSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","publicIpsSet"),
+                                           localPublicIpsSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","publicIpsSet"),
                                                factory,xmlWriter);
-                                        
+                                         if (localFilterSetTracker){
+                                            if (localFilterSet==null){
+                                                 throw new org.apache.axis2.databinding.ADBException("filterSet cannot be null!!");
+                                            }
+                                           localFilterSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","filterSet"),
+                                               factory,xmlWriter);
+                                        }
                     xmlWriter.writeEndElement();
                
 
@@ -326,7 +376,7 @@
                  java.util.ArrayList attribList = new java.util.ArrayList();
 
                 
-                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
                                                                       "publicIpsSet"));
                             
                             
@@ -334,7 +384,16 @@
                                          throw new org.apache.axis2.databinding.ADBException("publicIpsSet cannot be null!!");
                                     }
                                     elementList.add(localPublicIpsSet);
-                                
+                                 if (localFilterSetTracker){
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
+                                                                      "filterSet"));
+                            
+                            
+                                    if (localFilterSet==null){
+                                         throw new org.apache.axis2.databinding.ADBException("filterSet cannot be null!!");
+                                    }
+                                    elementList.add(localFilterSet);
+                                }
 
                 return new org.apache.axis2.databinding.utils.reader.ADBXMLStreamReaderImpl(qName, elementList.toArray(), attribList.toArray());
             
@@ -413,7 +472,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","publicIpsSet").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","publicIpsSet").equals(reader.getName())){
                                 
                                                 object.setPublicIpsSet(com.amazon.ec2.DescribeAddressesInfoType.Factory.parse(reader));
                                               
@@ -425,7 +484,22 @@
                                     // A start element we are not expecting indicates an invalid parameter was passed
                                     throw new org.apache.axis2.databinding.ADBException("Unexpected subelement " + reader.getLocalName());
                                 }
-                              
+                            
+                                    
+                                    while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
+                                
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","filterSet").equals(reader.getName())){
+                                
+                                                object.setFilterSet(com.amazon.ec2.FilterSetType.Factory.parse(reader));
+                                              
+                                        reader.next();
+                                    
+                              }  // End of if for expected property start element
+                                
+                                    else {
+                                        
+                                    }
+                                  
                             while (!reader.isStartElement() && !reader.isEndElement())
                                 reader.next();
                             

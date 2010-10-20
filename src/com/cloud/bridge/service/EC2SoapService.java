@@ -522,4 +522,24 @@ public class EC2SoapService implements AmazonEC2SkeletonInterface {
 			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
 			return ec2Service.describePlacementGroups(describePlacementGroups);
 		}
+		
+		public DescribeTagsResponse describeTags(DescribeTags describeTags) {
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.describeTags(describeTags);
+		}
+		
+		public CreateTagsResponse createTags(CreateTags createTags) {
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.createTags(createTags);
+		}
+		
+		public DeleteTagsResponse deleteTags(DeleteTags deleteTags) {
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.deleteTags(deleteTags);
+		}
+		
+		public ImportKeyPairResponse importKeyPair(ImportKeyPair importKeyPair) {
+			AmazonEC2SkeletonInterface ec2Service = ServiceProvider.getInstance().getServiceImpl(AmazonEC2SkeletonInterface.class);
+			return ec2Service.importKeyPair(importKeyPair);
+		}
 }

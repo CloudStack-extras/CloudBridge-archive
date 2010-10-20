@@ -3,7 +3,7 @@
  * LicenseSetItemType.java
  *
  * This file was auto-generated from WSDL
- * by the Apache Axis2 version: 1.5.1  Built on : Oct 19, 2009 (10:59:34 EDT)
+ * by the Apache Axis2 version: 1.5  Built on : Apr 30, 2009 (06:07:47 EDT)
  */
             
                 package com.amazon.ec2;
@@ -17,13 +17,13 @@
         implements org.apache.axis2.databinding.ADBBean{
         /* This type was generated from the piece of schema that had
                 name = LicenseSetItemType
-                Namespace URI = http://ec2.amazonaws.com/doc/2010-06-15/
+                Namespace URI = http://ec2.amazonaws.com/doc/2010-08-31/
                 Namespace Prefix = ns1
                 */
             
 
         private static java.lang.String generatePrefix(java.lang.String namespace) {
-            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-06-15/")){
+            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-08-31/")){
                 return "ns1";
             }
             return org.apache.axis2.databinding.utils.BeanUtil.getUniquePrefix();
@@ -151,6 +151,50 @@
                                }
                             
 
+                        /**
+                        * field for TagSet
+                        */
+
+                        
+                                    protected com.amazon.ec2.ResourceTagSetType localTagSet ;
+                                
+                           /*  This tracker boolean wil be used to detect whether the user called the set method
+                          *   for this attribute. It will be used to determine whether to include this field
+                           *   in the serialized XML
+                           */
+                           protected boolean localTagSetTracker = false ;
+                           
+
+                           /**
+                           * Auto generated getter method
+                           * @return com.amazon.ec2.ResourceTagSetType
+                           */
+                           public  com.amazon.ec2.ResourceTagSetType getTagSet(){
+                               return localTagSet;
+                           }
+
+                           
+                        
+                            /**
+                               * Auto generated setter method
+                               * @param param TagSet
+                               */
+                               public void setTagSet(com.amazon.ec2.ResourceTagSetType param){
+                            
+                                       if (param != null){
+                                          //update the setting tracker
+                                          localTagSetTracker = true;
+                                       } else {
+                                          localTagSetTracker = false;
+                                              
+                                       }
+                                   
+                                            this.localTagSet=param;
+                                    
+
+                               }
+                            
+
      /**
      * isReaderMTOMAware
      * @return true if the reader supports MTOM
@@ -234,7 +278,7 @@
                   if (serializeType){
                
 
-                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-06-15/");
+                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-08-31/");
                    if ((namespacePrefix != null) && (namespacePrefix.trim().length() > 0)){
                        writeAttribute("xsi","http://www.w3.org/2001/XMLSchema-instance","type",
                            namespacePrefix+":LicenseSetItemType",
@@ -248,7 +292,7 @@
                
                    }
                
-                                    namespace = "http://ec2.amazonaws.com/doc/2010-06-15/";
+                                    namespace = "http://ec2.amazonaws.com/doc/2010-08-31/";
                                     if (! namespace.equals("")) {
                                         prefix = xmlWriter.getPrefix(namespace);
 
@@ -282,7 +326,7 @@
                                     
                                    xmlWriter.writeEndElement();
                              
-                                    namespace = "http://ec2.amazonaws.com/doc/2010-06-15/";
+                                    namespace = "http://ec2.amazonaws.com/doc/2010-08-31/";
                                     if (! namespace.equals("")) {
                                         prefix = xmlWriter.getPrefix(namespace);
 
@@ -316,7 +360,7 @@
                                     
                                    xmlWriter.writeEndElement();
                              
-                                    namespace = "http://ec2.amazonaws.com/doc/2010-06-15/";
+                                    namespace = "http://ec2.amazonaws.com/doc/2010-08-31/";
                                     if (! namespace.equals("")) {
                                         prefix = xmlWriter.getPrefix(namespace);
 
@@ -353,9 +397,15 @@
                                             if (localCapacitySet==null){
                                                  throw new org.apache.axis2.databinding.ADBException("capacitySet cannot be null!!");
                                             }
-                                           localCapacitySet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","capacitySet"),
+                                           localCapacitySet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","capacitySet"),
                                                factory,xmlWriter);
-                                        
+                                         if (localTagSetTracker){
+                                            if (localTagSet==null){
+                                                 throw new org.apache.axis2.databinding.ADBException("tagSet cannot be null!!");
+                                            }
+                                           localTagSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","tagSet"),
+                                               factory,xmlWriter);
+                                        }
                     xmlWriter.writeEndElement();
                
 
@@ -518,7 +568,7 @@
                  java.util.ArrayList attribList = new java.util.ArrayList();
 
                 
-                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
+                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
                                                                       "licenseId"));
                                  
                                         if (localLicenseId != null){
@@ -527,7 +577,7 @@
                                            throw new org.apache.axis2.databinding.ADBException("licenseId cannot be null!!");
                                         }
                                     
-                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
+                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
                                                                       "type"));
                                  
                                         if (localType != null){
@@ -536,7 +586,7 @@
                                            throw new org.apache.axis2.databinding.ADBException("type cannot be null!!");
                                         }
                                     
-                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
+                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
                                                                       "pool"));
                                  
                                         if (localPool != null){
@@ -545,7 +595,7 @@
                                            throw new org.apache.axis2.databinding.ADBException("pool cannot be null!!");
                                         }
                                     
-                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/",
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
                                                                       "capacitySet"));
                             
                             
@@ -553,7 +603,16 @@
                                          throw new org.apache.axis2.databinding.ADBException("capacitySet cannot be null!!");
                                     }
                                     elementList.add(localCapacitySet);
-                                
+                                 if (localTagSetTracker){
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
+                                                                      "tagSet"));
+                            
+                            
+                                    if (localTagSet==null){
+                                         throw new org.apache.axis2.databinding.ADBException("tagSet cannot be null!!");
+                                    }
+                                    elementList.add(localTagSet);
+                                }
 
                 return new org.apache.axis2.databinding.utils.reader.ADBXMLStreamReaderImpl(qName, elementList.toArray(), attribList.toArray());
             
@@ -632,7 +691,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","licenseId").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","licenseId").equals(reader.getName())){
                                 
                                     java.lang.String content = reader.getElementText();
                                     
@@ -651,7 +710,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","type").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","type").equals(reader.getName())){
                                 
                                     java.lang.String content = reader.getElementText();
                                     
@@ -670,7 +729,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","pool").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","pool").equals(reader.getName())){
                                 
                                     java.lang.String content = reader.getElementText();
                                     
@@ -689,7 +748,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-06-15/","capacitySet").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","capacitySet").equals(reader.getName())){
                                 
                                                 object.setCapacitySet(com.amazon.ec2.LicenseCapacitySetType.Factory.parse(reader));
                                               
@@ -701,7 +760,22 @@
                                     // A start element we are not expecting indicates an invalid parameter was passed
                                     throw new org.apache.axis2.databinding.ADBException("Unexpected subelement " + reader.getLocalName());
                                 }
-                              
+                            
+                                    
+                                    while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
+                                
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","tagSet").equals(reader.getName())){
+                                
+                                                object.setTagSet(com.amazon.ec2.ResourceTagSetType.Factory.parse(reader));
+                                              
+                                        reader.next();
+                                    
+                              }  // End of if for expected property start element
+                                
+                                    else {
+                                        
+                                    }
+                                  
                             while (!reader.isStartElement() && !reader.isEndElement())
                                 reader.next();
                             

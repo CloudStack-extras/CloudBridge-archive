@@ -598,6 +598,26 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	public DescribeTagsResponse describeTags(DescribeTags describeTags) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	public CreateTagsResponse createTags(CreateTags createTags) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	public DeleteTagsResponse deleteTags(DeleteTags deleteTags) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	public ImportKeyPairResponse importKeyPair(ImportKeyPair importKeyPair) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 	/**
 	 * Did not find a matching service offering so for now we just return disabled
