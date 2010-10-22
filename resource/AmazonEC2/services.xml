@@ -6,7 +6,7 @@
         <messageReceivers>
             <messageReceiver mep="http://www.w3.org/ns/wsdl/in-out" class="com.amazon.ec2.AmazonEC2MessageReceiverInOut"/>
         </messageReceivers>
-        <parameter name="ServiceClass">com.amazon.ec2.AmazonEC2Skeleton</parameter>
+        <parameter name="ServiceClass">com.cloud.bridge.service.EC2SoapService</parameter>
         <parameter name="useOriginalwsdl">true</parameter>
         <parameter name="modifyUserWSDLPortAddress">true</parameter>
         <operation name="ModifyInstanceAttribute" mep="http://www.w3.org/ns/wsdl/in-out" namespace="http://ec2.amazonaws.com/doc/2010-08-31/">

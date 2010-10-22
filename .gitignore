@@ -7,3 +7,4 @@ artifacts
 classes
 dist
 build.number
+target
