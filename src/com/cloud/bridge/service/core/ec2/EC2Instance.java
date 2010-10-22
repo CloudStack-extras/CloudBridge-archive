@@ -21,16 +21,18 @@ import com.cloud.bridge.util.EC2RestAuth;
 
 public class EC2Instance {
 
-	private String   id;
-	private String   name;
-	private String   zoneName;
-	private String   templateId;
-    private String   group;
-    private String   state;
-    private String   previousState;
-    private String   ipAddress;
-    private String   instanceType;
-    private Calendar created;
+	private String		id;
+	private String 		name;
+	private String 		zoneName;
+	private String		templateId;
+    private String		group;
+    private String		state;
+    private String		previousState;
+    private String		ipAddress;
+    private String		instanceType;
+    private Calendar	created;
+    private String		accountName;
+    private String		domainId;
     
 	public EC2Instance() {
 		id            = null;
@@ -43,6 +45,8 @@ public class EC2Instance {
 		ipAddress     = null;
 		created       = null;
 		instanceType  = null;
+		accountName   = null;
+		domainId	  = null;
 	}
 	
 	public void setId( String id ) {
@@ -124,4 +128,22 @@ public class EC2Instance {
 	public String getServiceOffering() {
 		return this.instanceType;
 	}
+
+	public String getAccountName() {
+		return accountName;
+	}
+
+	public void setAccountName(String accountName) {
+		this.accountName = accountName;
+	}
+
+	public String getDomainId() {
+		return domainId;
+	}
+
+	public void setDomainId(String domainId) {
+		this.domainId = domainId;
+	}
+	
+	
 }

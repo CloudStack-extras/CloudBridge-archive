@@ -17,8 +17,6 @@
 	<property name="classes.dir" location="${target.dir}/classes" />
 	<property name="jar.dir" location="${target.dir}/jar" />
 	<property name="dep.cache.dir" location="${target.dir}/dep-cache" />
-	<property name="debug" value="true" />
-	<property name="debuglevel" value="lines,vars" />
 	
   	<macrodef name="compile-java">
     	<attribute name="top.dir" description="Top Directory of the source.  We will add src to this to get the source code." />

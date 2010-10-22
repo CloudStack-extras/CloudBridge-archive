@@ -690,21 +690,33 @@ public class EC2RestServlet extends HttpServlet {
     private void createVolume( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {
     	EC2CreateVolume EC2request = new EC2CreateVolume();
-		
-        String[] size = request.getParameterValues( "Size" );
-		if ( null != size && 0 < size.length ) 
-			 EC2request.setSize( size[0] );
-		else { response.sendError(530, "Missing Size parameter" ); return; }
-		
+    	
         String[] zoneName = request.getParameterValues( "AvailabilityZone" );
         if ( null != zoneName && 0 < zoneName.length ) 
         	 EC2request.setZoneName( zoneName[0] );
 		else { response.sendError(530, "Missing AvailabilityZone parameter" ); return; }
-        
+		
+        String[] size = request.getParameterValues( "Size" );
         String[] snapshotId = request.getParameterValues("SnapshotId");
-        if (snapshotId != null && snapshotId.length != 0) {
+        boolean useSnapshot = false;
+        boolean useSize = false;
+        
+        if (null != size && 0 < size.length)
+        	useSize = true;
+        
+        if (snapshotId != null && snapshotId.length != 0)
+        	useSnapshot = true;
+        
+		if (useSize && !useSnapshot) {
+			EC2request.setSize( size[0] );
+		} else if (useSnapshot && !useSize) {
         	EC2request.setSnapshotId(snapshotId[0]);
+        } else if (useSize && useSnapshot) {
+        	response.sendError(530, "Size and SnapshotId parameters are mutually exclusive" ); return;
+        } else {
+        	response.sendError(530, "Size or SnapshotId has to be specified" ); return;
         }
+        
 
 		// -> execute the request
 		CreateVolumeResponse EC2response = EC2SoapServiceImpl.toCreateVolumeResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
@@ -809,7 +821,7 @@ public class EC2RestServlet extends HttpServlet {
 		
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-        CreateSnapshotResponse EC2response = EC2SoapServiceImpl.toCreateSnapshotResponse( engine.createSnapshot( volumeId ), engine.getAccountName());
+        CreateSnapshotResponse EC2response = EC2SoapServiceImpl.toCreateSnapshotResponse( engine.createSnapshot( volumeId ), engine);
 
 		// -> serialize using the apache's Axiom classes
 		OutputStream os = response.getOutputStream();
@@ -1002,7 +1014,7 @@ public class EC2RestServlet extends HttpServlet {
 
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-		RunInstancesResponse EC2response = EC2SoapServiceImpl.toRunInstancesResponse( engine.handleRequest( EC2request ), engine.getAccountName());
+		RunInstancesResponse EC2response = EC2SoapServiceImpl.toRunInstancesResponse( engine.handleRequest( EC2request ), engine);
 
 		// -> serialize using the apache's Axiom classes
 		OutputStream os = response.getOutputStream();
@@ -1200,7 +1212,7 @@ public class EC2RestServlet extends HttpServlet {
 		}		
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-		DescribeImagesResponse EC2response = EC2SoapServiceImpl.toDescribeImagesResponse( engine.handleRequest( EC2request ), engine.getAccountName());
+		DescribeImagesResponse EC2response = EC2SoapServiceImpl.toDescribeImagesResponse( engine.handleRequest( EC2request ));
 
 		// -> serialize using the apache's Axiom classes
 		OutputStream os = response.getOutputStream();
@@ -1259,7 +1271,7 @@ public class EC2RestServlet extends HttpServlet {
 		}		
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-		DescribeInstancesResponse EC2response = EC2SoapServiceImpl.toDescribeInstancesResponse( engine.handleRequest( EC2request ), engine.getAccountName());
+		DescribeInstancesResponse EC2response = EC2SoapServiceImpl.toDescribeInstancesResponse( engine.handleRequest( EC2request ), engine);
 
 		// -> serialize using the apache's Axiom classes
 		OutputStream os = response.getOutputStream();
@@ -1359,7 +1371,7 @@ public class EC2RestServlet extends HttpServlet {
 	    }		
 	    // -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-	    DescribeSnapshotsResponse EC2response = EC2SoapServiceImpl.toDescribeSnapshotsResponse( engine.handleRequest( EC2request ), engine.getAccountName());
+	    DescribeSnapshotsResponse EC2response = EC2SoapServiceImpl.toDescribeSnapshotsResponse( engine.handleRequest( EC2request ));
 
 	    // -> serialize using the apache's Axiom classes
 	    OutputStream os = response.getOutputStream();

@@ -126,69 +126,6 @@
   		</jar>
   	</target>
 
-  	<target name="build-cloud-auth-s3-jar" depends="-init, compile-cloud-bridge" description="Builds cloud-auth s3 module.">
-  		<mkdir dir="${dist.dir}/modules" />
-  		<mkdir dir="${dist.dir}/modules/conf" />
-  		  		  		
-  		<jar jarfile="${dist.dir}/modules/cloud-auth-s3.jar" basedir="${target.dir}/classes/cloud-bridge.jar" excludes="**/*">
-  			<fileset dir="${target.dir}/classes/cloud-bridge.jar">
-  				<include name="**/auth/s3/*.class" />
-  			</fileset>
-  		</jar>
-  		
-		<copy todir="${dist.dir}/modules/conf">
-      		<fileset dir="${base.dir}/conf">
-        		<include name="log4j-cloud.xml"/>
-      		</fileset>
-    	</copy>
-  	</target>
-
-  	<target name="build-cloud-auth-ec2-jar" depends="-init, compile-cloud-bridge" description="Builds cloud-auth ec2 module.">
-  		<mkdir dir="${dist.dir}/modules" />
-  		<mkdir dir="${dist.dir}/modules/conf" />
-  		  		  		
-  		<jar jarfile="${dist.dir}/modules/cloud-auth-ec2.jar" basedir="${target.dir}/classes/cloud-bridge.jar" excludes="**/*">
-  			<fileset dir="${target.dir}/classes/cloud-bridge.jar">
-  				<include name="**/auth/ec2/*.class" />
-  			</fileset>
-  		</jar>
-  		
-		<copy todir="${dist.dir}/modules/conf">
-      		<fileset dir="${base.dir}/conf">
-        		<include name="log4j-cloud.xml"/>
-      		</fileset>
-    	</copy>
-  	</target>
-
-  	<target name="build-cloud-tool" depends="-init, compile-cloud-bridge" description="Builds cloud-bridge command line tool.">
-  		<mkdir dir="${dist.dir}/cloud-tool" />
-  		<mkdir dir="${dist.dir}/cloud-tool/lib" />
-  		<mkdir dir="${dist.dir}/cloud-tool/conf" />
-  		
-  		<jar jarfile="${dist.dir}/cloud-tool/cloud-tool.jar" basedir="${target.dir}/classes/cloud-bridge.jar" excludes="**/*">
-  			<fileset dir="${target.dir}/classes/cloud-bridge.jar">
-  				<include name="**/tool/*.class" />
-  				<include name="**/client/*.class" />
-  			</fileset>
-  		</jar>
-  		
-    	<copy todir="${dist.dir}/cloud-tool/lib">
-      		<fileset dir="${base.dir}/lib">
-        		<include name="*.jar"/>
-      		</fileset>
-    	</copy>
-    	<copy todir="${dist.dir}/cloud-tool">
-      		<fileset dir="${base.dir}/scripts">
-        		<include name="run.sh"/>
-        		<include name="run.bat"/>
-      		</fileset>
-    	</copy>
-    	<copy todir="${dist.dir}/cloud-tool/conf">
-      		<fileset dir="${base.dir}/conf">
-        		<include name="log4j-cloud.xml"/>
-      		</fileset>
-    	</copy>
-  	</target>
 	
   	<target name="build-cloud-bridge-s3" depends="-init, compile-cloud-bridge" description="Builds cloud-bridge S3 AAR file.">
   		<jar jarfile="${dist.dir}/cloud-s3.aar" basedir="${target.dir}/classes/cloud-bridge.jar" excludes="**/*">
@@ -234,7 +171,7 @@
     	<unwar overwrite="true" src="${base.dir}/lib/axis2.war" dest="${deploy.dir}/webapps/bridge"/>
 	</target>
 
-	<target name="build-cloud-bridge" depends="build-cloud-bridge-jar,build-cloud-auth-s3-jar,build-cloud-auth-ec2-jar,build-cloud-bridge-s3,build-cloud-bridge-ec2,build-cloud-auth-s3,build-cloud-auth-ec2,build-cloud-tool">
+	<target name="build-cloud-bridge" depends="build-cloud-bridge-jar,build-cloud-bridge-s3,build-cloud-bridge-ec2,build-cloud-auth-s3,build-cloud-auth-ec2">
 	</target>
 	
   	<target name="deploy-cloud-bridge" depends="build-cloud-bridge-jar, build-cloud-bridge">

@@ -24,7 +24,9 @@ public class EC2RunInstances {
 	private String userData;
 	private int    maxCount;
 	private int    minCount;
-    
+    private int    size;  		// <- in gigs
+	
+	
 	public EC2RunInstances() {
 		instanceType = null;
 		zoneName     = null;
@@ -33,6 +35,7 @@ public class EC2RunInstances {
 		userData     = null;
 		maxCount     = 0;
 		minCount     = 0;
+		size		 = 0;
 	}
 	
 	public void setInstanceType( String instanceType ) {
@@ -90,4 +93,13 @@ public class EC2RunInstances {
 	public int getMinCount() {
 		return this.minCount;
 	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public void setSize(int size) {
+		this.size = size;
+	}
+	
 }

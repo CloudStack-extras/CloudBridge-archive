@@ -7,13 +7,15 @@ public class EC2SecurityGroup {
 
 	private String name;
 	private String description;
-	private String account;
+	private String accountName;
+	private String domainId;
 	private List<EC2IpPermission> permissionSet = new ArrayList<EC2IpPermission>();    
 
 	public EC2SecurityGroup() {
 		name        = null;
 		description = null;
-		account     = null;
+		accountName     = null;
+		domainId		= null;
 	}
 	
 	public void setName( String name ) {
@@ -33,11 +35,11 @@ public class EC2SecurityGroup {
 	}
 	
 	public void setAccount( String account ) {
-		this.account = account;
+		this.accountName = account;
 	}
 	
 	public String getAccount() {
-		return this.account;
+		return this.accountName;
 	}
 	
 	public void addIpPermission( EC2IpPermission param ) {
@@ -47,4 +49,21 @@ public class EC2SecurityGroup {
 	public EC2IpPermission[] getIpPermissionSet() {
 		return permissionSet.toArray(new EC2IpPermission[0]);
 	}
+
+	public String getAccountName() {
+		return accountName;
+	}
+
+	public void setAccountName(String accountName) {
+		this.accountName = accountName;
+	}
+
+	public String getDomainId() {
+		return domainId;
+	}
+
+	public void setDomainId(String domainId) {
+		this.domainId = domainId;
+	}
+	
 }

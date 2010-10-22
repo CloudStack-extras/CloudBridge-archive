@@ -26,17 +26,19 @@ public class EC2Snapshot {
 	private String   volumeId;
 	private int      volumeSize;   // in gigs
     private String   type;
-    private String   account;
     private Calendar created;
+    private String 	 accountName;
+    private String 	 domainId;
     
 	public EC2Snapshot() {
-		id         = null;
-		name       = null;
-		volumeId   = null;
-		volumeSize = 0;
-		type       = null;
-		account    = null;
-		created    = null;
+		id         	= null;
+		name       	= null;
+		volumeId   	= null;
+		volumeSize 	= 0;
+		type       	= null;
+		created    	= null;
+		accountName = null;
+		domainId	= null;
 	}
 	
 	public void setId( String id ) {
@@ -79,13 +81,6 @@ public class EC2Snapshot {
 		return this.type;
 	}
 
-	public void setAccount( String account ) {
-		this.account = account;
-	}
-	
-	public String getAccount() {
-		return this.account;
-	}
 
 	public void setCreated( String created ) {
 		this.created = EC2RestAuth.parseDateString( created );
@@ -94,4 +89,22 @@ public class EC2Snapshot {
 	public Calendar getCreated() {
 		return this.created;
 	}
+
+	public String getAccountName() {
+		return accountName;
+	}
+
+	public void setAccountName(String accountName) {
+		this.accountName = accountName;
+	}
+
+	public String getDomainId() {
+		return domainId;
+	}
+
+	public void setDomainId(String domainId) {
+		this.domainId = domainId;
+	}
+	
+	
 }

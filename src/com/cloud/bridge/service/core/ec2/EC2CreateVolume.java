@@ -23,14 +23,14 @@ import com.cloud.bridge.service.exception.EC2ServiceException;
 public class EC2CreateVolume {
     protected final static Logger logger = Logger.getLogger(EC2CreateVolume.class);
 
-	private int    size;   // <- in gigs
+	private Integer    size;   // <- in gigs
 	private String snapshotId;
 	private String zoneName;
     
 	public EC2CreateVolume() {
-		size       = 0;
 		snapshotId = null;
 		zoneName   = null;
+		size 	   = null;
 	}
 	
 	/**
@@ -38,11 +38,11 @@ public class EC2CreateVolume {
 	 * 
 	 * @param size - valid values are [1 .. 1024] and represent gigBytes
 	 */
-	public void setSize( String size ) {
+	public void setSize(String size) {
 		try {
-		    this.size = Integer.parseInt( size );
+		    this.size = Integer.parseInt(size);
 		}
-		catch( NumberFormatException e ) {
+		catch(NumberFormatException e) {
 			logger.error( "Bad volume Size parameter: " + e.toString());
 			throw new EC2ServiceException( "Bad volume size parameter: " + size + ", expecting [1..1024]", 400 );
 		}
@@ -51,7 +51,7 @@ public class EC2CreateVolume {
 			throw new EC2ServiceException( "Bad volume size parameter: " + size + ", expecting [1..1024]", 400 );
 	}
 	
-	public int getSize() {
+	public Integer getSize() {
 		return this.size;
 	}
 

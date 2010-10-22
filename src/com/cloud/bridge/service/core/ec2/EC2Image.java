@@ -26,6 +26,8 @@ public class EC2Image {
 	private String  osTypeId;
 	private boolean isPublic;
 	private boolean isReady;
+	private String 	accountName;
+	private String 	domainId;
 	
 	public EC2Image() {
 		id          = null;
@@ -34,6 +36,8 @@ public class EC2Image {
 		osTypeId    = null;
 		isPublic    = false;
 		isReady     = false;
+		accountName	= null;
+		domainId 	= null;
 	}
 	
 	public void setId( String id ) {
@@ -83,4 +87,21 @@ public class EC2Image {
 	public boolean getIsReady() {
 		return this.isReady;
 	}
+
+	public String getAccountName() {
+		return accountName;
+	}
+
+	public void setAccountName(String accountName) {
+		this.accountName = accountName;
+	}
+
+	public String getDomainId() {
+		return domainId;
+	}
+
+	public void setDomainId(String domainId) {
+		this.domainId = domainId;
+	}
+	
 }

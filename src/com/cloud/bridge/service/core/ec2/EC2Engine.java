@@ -128,31 +128,22 @@ public class EC2Engine {
    	        }
    	        
    	        M1Small = new OfferingBundle();
-   	        M1Small.setDiskOfferingId(    EC2Prop.getProperty( "m1.small.diskId", null ));
             M1Small.setServiceOfferingId( EC2Prop.getProperty( "m1.small.serviceId", null ));
             M1Large = new OfferingBundle();
-            M1Large.setDiskOfferingId(    EC2Prop.getProperty( "m1.large.diskId", null ));
             M1Large.setServiceOfferingId( EC2Prop.getProperty( "m1.large.serviceId", null ));
             M1Xlarge = new OfferingBundle();
-            M1Xlarge.setDiskOfferingId(    EC2Prop.getProperty( "m1.xlarge.diskId", null ));
             M1Xlarge.setServiceOfferingId( EC2Prop.getProperty( "m1.xlarge.serviceId", null ));
             C1Medium = new OfferingBundle();
-            C1Medium.setDiskOfferingId(    EC2Prop.getProperty( "c1.medium.diskId", null ));
             C1Medium.setServiceOfferingId( EC2Prop.getProperty( "c1.medium.serviceId", null ));
             C1Xlarge = new OfferingBundle();
-            C1Xlarge.setDiskOfferingId(    EC2Prop.getProperty( "c1.xlarge.diskId", null ));
             C1Xlarge.setServiceOfferingId( EC2Prop.getProperty( "c1.xlarge.serviceId", null ));
             M2Xlarge = new OfferingBundle();
-            M2Xlarge.setDiskOfferingId(    EC2Prop.getProperty( "m2.xlarge.diskId", null ));
             M2Xlarge.setServiceOfferingId( EC2Prop.getProperty( "m2.xlarge.serviceId", null ));
             M22Xlarge = new OfferingBundle();
-            M22Xlarge.setDiskOfferingId(    EC2Prop.getProperty( "m2.2xlarge.diskId", null ));
             M22Xlarge.setServiceOfferingId( EC2Prop.getProperty( "m2.2xlarge.serviceId", null ));
             M24Xlarge = new OfferingBundle();
-            M24Xlarge.setDiskOfferingId(    EC2Prop.getProperty( "m2.4xlarge.diskId", null ));
             M24Xlarge.setServiceOfferingId( EC2Prop.getProperty( "m2.4xlarge.serviceId", null ));
             CC14xlarge = new OfferingBundle();
-            CC14xlarge.setDiskOfferingId(    EC2Prop.getProperty( "cc1.4xlarge.diskId", null ));
             CC14xlarge.setServiceOfferingId( EC2Prop.getProperty( "cc1.4xlarge.serviceId", null ));
             
             cloudStackVersion = getCloudStackVersion(EC2Prop);
@@ -217,37 +208,6 @@ public class EC2Engine {
     		throw new InternalErrorException( e.toString());
     	}
     }
- 
-    /**
-     * For several API calls we have to return the owner ID.  For that we simply 
-     * call "listAccounts" with the callers Cloud keys and use the first match.  For
-     * most users this will work since they will only be able to access their own 
-     * account.
-     * 
-     * @return the unique account name matching the currently used Cloud API access & secret keys
-     *         or an empty string is returned (which is required in the XML responses).
-     */
-    public String getAccountName() 
-    {
-    	try {
-	        String query = new String( "command=listAccounts" );
-            Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listAccounts", true );
-	        NodeList match = cloudResp.getElementsByTagName( "name" ); 
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     return new String( item.getFirstChild().getNodeValue());
-            }
- 	        else return "";
-            
-       	} catch( EC2ServiceException error ) {
-     		logger.error( "getAccountName - " + error.toString());
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "getAccountName - " + e.toString());
-    		throw new InternalErrorException( e.toString());
-    	}
-    }
 
     /**
      * Remember to pre-sort the parameters in alphabetical order.
@@ -265,7 +225,7 @@ public class EC2Engine {
 	        		                   "&description=" + safeURLencode( request.getDescription()) + 
 	        		                   "&name="        + safeURLencode( request.getName()));
 	        
-            resolveURL( genAPIURL( query, genQuerySignature( query )), "createNetworkGroup", true );
+            resolveURL(genAPIURL(query, genQuerySignature(query)), "createNetworkGroup", true );
       		return true;
      		
        	} catch( EC2ServiceException error ) {
@@ -284,7 +244,7 @@ public class EC2Engine {
 
    	    try {
 	        String query = new String( "command=deleteNetworkGroup&name=" + safeURLencode( request.getName()));        
-            resolveURL( genAPIURL( query, genQuerySignature( query )), "deleteNetworkGroup", true );
+            resolveURL( genAPIURL( query, genQuerySignature(query)), "deleteNetworkGroup", true );
      		return true;
     		
       	} catch( EC2ServiceException error ) {
@@ -369,7 +329,7 @@ public class EC2Engine {
    	   	    	   sorted.append( userList );
    	    	   }
 
-	           Document cloudResp = resolveURL( genAPIURL( url.toString(), genQuerySignature( sorted.toString())), command, true );
+	           Document cloudResp = resolveURL(genAPIURL(url.toString(), genQuerySignature(sorted.toString())), command, true );
                NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
 		       if ( 0 < match.getLength()) {
 		    	    Node item = match.item(0);
@@ -462,7 +422,7 @@ public class EC2Engine {
 
     	try {
 	        String query = new String( "command=createSnapshot&volumeId=" + volumeId );
-            Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "createSnapshot", true );
+            Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createSnapshot", true );
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
@@ -491,7 +451,7 @@ public class EC2Engine {
     {
     	try {
 	        String query = new String( "command=deleteSnapshot&id=" + snapshotId );
-            Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "deleteSnapshot", true );
+            Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteSnapshot", true );
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
@@ -525,7 +485,7 @@ public class EC2Engine {
 	                                   "&id="          + request.getId() +
 	                                   "&name="        + safeURLencode( imageSet[0].getName()));
 
-            resolveURL( genAPIURL( query, genQuerySignature( query )), "updateTemplate", true );
+            resolveURL(genAPIURL(query, genQuerySignature(query)), "updateTemplate", true );
             return true;
 	        
    	    } catch( EC2ServiceException error ) {
@@ -625,7 +585,7 @@ public class EC2Engine {
   	        		                   "&name="        + safeURLencode( request.getName()) +
   	        		                   "&osTypeId="    + osTypeId +
   	        		                   "&volumeId="    + volumeId );
- 		    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "createTemplate", true );
+ 		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createTemplate", true );
  		    
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
  	        if ( 0 < match.getLength()) {
@@ -674,7 +634,7 @@ public class EC2Engine {
 	       		                       "&url="         + safeURLencode( request.getLocation()) +
 	       		                       "&zoneId="      + toZoneId( request.getZoneName()));
 
-		    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "registerTemplate", true );
+		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "registerTemplate", true );
 		    
 		    EC2CreateImageResponse image = new EC2CreateImageResponse(); 
             NodeList match = cloudResp.getElementsByTagName( "id" ); 
@@ -702,7 +662,7 @@ public class EC2Engine {
     {
     	try {
 	        String query = new String( "command=deleteTemplate&id=" + image.getId());
-            Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "deleteTemplate", true );
+            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "deleteTemplate", true );
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
@@ -791,7 +751,7 @@ public class EC2Engine {
    	        params.append( "&virtualMachineId=" + request.getInstanceId());
    	        String query = params.toString();
 
-  		    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "attachVolume", true );
+  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "attachVolume", true );
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
@@ -829,7 +789,7 @@ public class EC2Engine {
  	            if (0 < volSet.length) request.setInstanceId( volSet[0].getInstanceId());
  	        }
 
-  		    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "detachVolume", true );
+  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "detachVolume", true );
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
@@ -851,39 +811,26 @@ public class EC2Engine {
     }
    
     public EC2Volume handleRequest(EC2CreateVolume request) 
-    {
-    	String offerId    = null;
-    	String snapshotId = null;
-    	
+    { 	
     	try {
-    		if (null == (snapshotId = request.getSnapshotId())) 
-    		{
-    		    // -> match up the required volume size with the existing disk offerings
-    		    DiskOfferings offerings = listDiskOfferings();
-    		    DiskOffer[] availDisks  = offerings.getOfferSet();
-    		    for( int i=0; i < availDisks.length; i++ ) 
-    		    {
-    			     // -> both values here are in GBs, (for now we just take the first that fits)
-    			     if (availDisks[i].getSize() >= request.getSize()) {
-    				     offerId = availDisks[i].getId();
-    				     break;
-    			     }
-    		    }
-    			if (null == offerId) throw new EC2ServiceException( "NoMatchingDiskOffering", 400 );
-    		}
     		
     		// -> no volume name is given in the Amazon request but is required in the cloud API
     		String volName = safeURLencode( UUID.randomUUID().toString());
     		
 	        StringBuffer params = new StringBuffer();
    	        params.append( "command=createVolume" );
-   	        if (null != offerId) params.append( "&diskOfferingId=" + offerId );
    	        params.append( "&name=" + volName );
-   	        if (null != snapshotId) params.append( "&snapshotId=" + snapshotId ); 	        
+   	        
+    		//Either snapshotId or size has to be passed in
+    		String snapshotId = request.getSnapshotId();
+    		Integer size = request.getSize();
+   	        if (null != snapshotId) params.append( "&snapshotId=" + snapshotId );
+   	        if (null != size) params.append( "&size=" + size.toString());
+   	        
    	        params.append( "&zoneId=" + toZoneId( request.getZoneName()));
    	        String query = params.toString();
 
-  		    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "createVolume", true );
+  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createVolume", true );
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
@@ -910,7 +857,7 @@ public class EC2Engine {
    	        params.append( "&id=" + request.getId());
    	        String query = params.toString();
 
-  		    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "deleteVolume", true );
+  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteVolume", true );
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
@@ -950,7 +897,7 @@ public class EC2Engine {
      		   if (vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
 
      	       String query = new String( "command=rebootVirtualMachine&id=" + vms[i].getId());
-     		   resolveURL( genAPIURL( query, genQuerySignature( query )), "rebootVirtualMachine", true );
+     		   resolveURL(genAPIURL(query, genQuerySignature(query)), "rebootVirtualMachine", true );
      		}
      		return true;
      		
@@ -1004,8 +951,9 @@ public class EC2Engine {
 	        OfferingBundle offer = instanceTypeToOfferBundle( request.getInstanceType());
     	    StringBuffer params = new StringBuffer();
        	    params.append( "command=deployVirtualMachine" );
-       	    params.append( "&diskOfferingId=" + offer.getDiskOfferingId());
-       	    if (null != request.getGroupId()) params.append( "&group=" + request.getGroupId());
+//       	    params.append( "&diskOfferingId=" + offer.getDiskOfferingId());
+       	    params.append("&size=" + String.valueOf(request.getSize()));
+       	    if (null != request.getGroupId()) params.append("&group=" + request.getGroupId());
        	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
        	    params.append( "&templateId=" + request.getTemplateId());
        	    if (null != request.getUserData()) params.append( "&userData=" + safeURLencode( request.getUserData()));
@@ -1017,7 +965,7 @@ public class EC2Engine {
        	    
        	    params.append( "&zoneId=" + toZoneId( request.getZoneName()));
        	    String query      = params.toString();
-            String apiCommand = genAPIURL( query, genQuerySignature( query ));
+            String apiCommand = genAPIURL(query, genQuerySignature(query));
  		
      		for( int i=0; i < createInstances; i++ ) 
      		{
@@ -1085,7 +1033,7 @@ public class EC2Engine {
      		   if (vms[i].getState().equalsIgnoreCase( "Running" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
 
      	       String query = new String( "command=startVirtualMachine&id=" + vms[i].getId());
-     		   Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "startVirtualMachine", true );
+     		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "startVirtualMachine", true );
      		   
     	       NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
      	       if (0 < match.getLength()) {
@@ -1144,7 +1092,7 @@ public class EC2Engine {
        	       if ( request.getDestroyInstances())
      	            query = new String( "command=destroyVirtualMachine&id=" + vms[i].getId());
    	           else query = new String( "command=stopVirtualMachine&id="    + vms[i].getId());
-     		   Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), query, true );
+     		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
      		   
     	       NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
     	       if (0 < match.getLength()) {
@@ -1183,7 +1131,7 @@ public class EC2Engine {
     	vms[0].setPreviousState( "running" );
 
         String query = new String( "command=stopVirtualMachine&id=" + instanceId );
-	    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), query, true );
+	    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
 		   
         NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
         if ( 0 < match.getLength()) {
@@ -1207,7 +1155,7 @@ public class EC2Engine {
 	    vms[0].setPreviousState( "stopped" );
 
         String query = new String( "command=startVirtualMachine&id=" + instanceId );
-        Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), query, true );
+        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
 	   
         NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
         if ( 0 < match.getLength()) {
@@ -1239,7 +1187,7 @@ public class EC2Engine {
 		
 	 		 // -> get the user limits on instances
 	     	 String   query     = new String( "command=listResourceLimits&resourceType=0" );
-	 		 Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listResourceLimits", true );
+	 		 Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listResourceLimits", true );
 	 		    
 	  		 match = cloudResp.getElementsByTagName( "max" ); 
 		     if ( 0 < match.getLength()) 
@@ -1275,7 +1223,7 @@ public class EC2Engine {
         while( true ) 
         {
 	      String query = "command=queryAsyncJobResult&jobId=" + jobId;
-	      Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "queryAsyncJobResult", true );
+	      Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
 	      
 		  match = cloudResp.getElementsByTagName( "jobstatus" ); 
 	      if ( 0 < match.getLength()) {
@@ -1336,7 +1284,7 @@ public class EC2Engine {
  	      if (null != jobIds[j]) 
  	      {
  		      String query = "command=queryAsyncJobResult&jobId=" + jobIds[j];
- 		      Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "queryAsyncJobResult", true );
+ 		      Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
 
 			  match = cloudResp.getElementsByTagName( "jobstatus" ); 
 		      if ( 0 < match.getLength()) {
@@ -1434,7 +1382,7 @@ public class EC2Engine {
         while( true ) 
         {
 		  String query = "command=queryAsyncJobResult&jobId=" + jobId;
- 		  Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "queryAsyncJobResult", true );
+ 		  Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
 
 		  match = cloudResp.getElementsByTagName( "jobstatus" ); 
 	      if ( 0 < match.getLength()) {
@@ -1497,7 +1445,7 @@ public class EC2Engine {
         while( true ) 
         {
   		   String query = "command=queryAsyncJobResult&jobId=" + jobId;
- 		   Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "queryAsyncJobResult", true );
+ 		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
 
 	       match = cloudResp.getElementsByTagName( "jobstatus" ); 
            if ( 0 < match.getLength()) {
@@ -1541,7 +1489,7 @@ public class EC2Engine {
  	            match = cloudResp.getElementsByTagName( "account" ); 
 	            if (0 < match.getLength()) {
 	                item = match.item(0);
-	                shot.setAccount( item.getFirstChild().getNodeValue());
+	                shot.setAccountName( item.getFirstChild().getNodeValue());
 	            }
  	            match = cloudResp.getElementsByTagName( "created" ); 
 	            if (0 < match.getLength()) {
@@ -1659,7 +1607,7 @@ public class EC2Engine {
    	    if (null != instanceId) params.append( "&virtualMachineId=" + instanceId );
    	    String query = params.toString();
 
-       	Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listVolumes", true );
+       	Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listVolumes", true );
 		NodeList match     = cloudResp.getElementsByTagName( "volume" ); 
 		int length = match.getLength();
 		    
@@ -1745,7 +1693,8 @@ public class EC2Engine {
  		else if (instanceType.equalsIgnoreCase( "cc1.4xlarge")) found = CC14xlarge;
  		else throw new EC2ServiceException( "Unsupported - unknown: " + instanceType, 501 );
  		     
- 		if ( null == found.getDiskOfferingId() || null == found.getServiceOfferingId())
+// 		if ( null == found.getDiskOfferingId() || null == found.getServiceOfferingId())
+ 	 	if (found.getServiceOfferingId() == null)
  			 throw new EC2ServiceException( "Unsupported - not configured properly: " + instanceType, 500 );
  		else return found;
  	}
@@ -1761,15 +1710,15 @@ public class EC2Engine {
  	{	
  		serviceOfferingId = serviceOfferingId.trim();
  		
- 		     if (M1Small.getServiceOfferingId().equals( serviceOfferingId    )) return "m1.small";
- 		else if (M1Large.getServiceOfferingId().equals( serviceOfferingId    )) return "m1.large";
- 		else if (M1Xlarge.getServiceOfferingId().equals( serviceOfferingId   )) return "m1.xlarge";
- 		else if (C1Medium.getServiceOfferingId().equals( serviceOfferingId   )) return "c1.medium";
- 		else if (C1Xlarge.getServiceOfferingId().equals( serviceOfferingId   )) return "c1.xlarge";
- 		else if (M2Xlarge.getServiceOfferingId().equals( serviceOfferingId   )) return "m2.xlarge";
- 		else if (M22Xlarge.getServiceOfferingId().equals( serviceOfferingId  )) return "m2.2xlarge";
- 		else if (M24Xlarge.getServiceOfferingId().equals( serviceOfferingId  )) return "m2.4xlarge";
- 		else if (CC14xlarge.getServiceOfferingId().equals( serviceOfferingId )) return "cc1.4xlarge";
+ 		     if (M1Small.getServiceOfferingId().equals( serviceOfferingId)) return "m1.small";
+ 		else if (M1Large.getServiceOfferingId().equals( serviceOfferingId)) return "m1.large";
+ 		else if (M1Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "m1.xlarge";
+ 		else if (C1Medium.getServiceOfferingId().equals( serviceOfferingId)) return "c1.medium";
+ 		else if (C1Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "c1.xlarge";
+ 		else if (M2Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "m2.xlarge";
+ 		else if (M22Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "m2.2xlarge";
+ 		else if (M24Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "m2.4xlarge";
+ 		else if (CC14xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "cc1.4xlarge";
  		else {
  			 logger.warn( "No instanceType match for serverOfferingId: [" + serviceOfferingId + "]" );
  			 return "m1.small";
@@ -1789,7 +1738,7 @@ public class EC2Engine {
    	    Node   parent = null;
    	    String id     = null;
    	
-		Document cloudResp = resolveURL( genAPIURL( "command=listOsTypes", genQuerySignature( "command=listOsTypes" )), "listOsTypes", true );
+		Document cloudResp = resolveURL(genAPIURL("command=listOsTypes", genQuerySignature("command=listOsTypes")), "listOsTypes", true );
 	    NodeList match     = cloudResp.getElementsByTagName( "ostype" ); 
 	    
 	    int length = match.getLength();
@@ -1836,7 +1785,7 @@ public class EC2Engine {
        	String name   = null;
        	
        	String   sortedQuery = new String( "available=true&command=listZones" );   // -> used to generate the signature
- 		Document cloudResp   = resolveURL( genAPIURL( "command=listZones&available=true", genQuerySignature( sortedQuery )), "listZones", true );
+ 		Document cloudResp   = resolveURL(genAPIURL( "command=listZones&available=true", genQuerySignature(sortedQuery)), "listZones", true );
 		NodeList match       = cloudResp.getElementsByTagName( "zone" ); 
 		int length = match.getLength();
 		    
@@ -1892,7 +1841,7 @@ public class EC2Engine {
    	    if (null != instanceId) params.append( "&id=" + instanceId );
    	    String query = params.toString();
 
-       	Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listVirtualMachines", true );
+       	Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "listVirtualMachines", true );
 	    NodeList match     = cloudResp.getElementsByTagName( "virtualmachine" ); 
 	    int      length    = match.getLength();
 
@@ -1923,6 +1872,8 @@ public class EC2Engine {
    			            else if (name.equalsIgnoreCase( "state"     )) vm.setState( value );
    			            else if (name.equalsIgnoreCase( "created"   )) vm.setCreated( value );
    			            else if (name.equalsIgnoreCase( "ipaddress" )) vm.setIpAddress( value );
+   			            else if (name.equalsIgnoreCase( "account" 	)) vm.setAccountName(value);
+   			            else if (name.equalsIgnoreCase( "domainid" 	)) vm.setDomainId(value);
    			            else if (name.equalsIgnoreCase( "serviceofferingid" )) vm.setServiceOffering( serviceOfferingIdToInstanceType( value ));
 	    			}
 	    	    }
@@ -1952,7 +1903,7 @@ public class EC2Engine {
    	    params.append( "&templateFilter=executable" );   // -> a required parameter
    	    String query = params.toString();
 
-       	Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listTemplates", true );
+       	Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listTemplates", true );
 	    NodeList match     = cloudResp.getElementsByTagName( "template" ); 
 	    int      length    = match.getLength();
 
@@ -1980,6 +1931,8 @@ public class EC2Engine {
 	    			    else if (name.equalsIgnoreCase( "ostypeid"   )) template.setOsTypeId( value );
 	    			    else if (name.equalsIgnoreCase( "ispublic"   )) template.setIsPublic( value.equalsIgnoreCase( "true" ));
 	    			    else if (name.equalsIgnoreCase( "isready"    )) template.setIsReady( value.equalsIgnoreCase( "true" ));
+	    			    else if (name.equalsIgnoreCase( "account"   )) template.setAccountName( value );
+	    			    else if (name.equalsIgnoreCase( "domainid"   )) template.setDomainId(value);
 	    			}
 	    	    }
     			images.addImage( template );
@@ -1997,7 +1950,7 @@ public class EC2Engine {
    	    DiskOfferings offerings = new DiskOfferings();
     	Node parent  = null;
 	    String query = new String( "command=listDiskOfferings" );
-   	    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listDiskOfferings", true );
+   	    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listDiskOfferings", true );
         NodeList match     = cloudResp.getElementsByTagName( "diskoffering" ); 
         int      length    = match.getLength();
 
@@ -2039,7 +1992,7 @@ public class EC2Engine {
 	    ServiceOfferings offerings = new ServiceOfferings();
 	    Node parent = null;
         String query = new String( "command=listServiceOfferings" );
-	    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listServiceOfferings", true );
+	    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listServiceOfferings", true );
         NodeList match     = cloudResp.getElementsByTagName( "serviceoffering" ); 
         int      length    = match.getLength();
 
@@ -2079,7 +2032,7 @@ public class EC2Engine {
     {
     	EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
     	Node parent = null; 	
-	    Document cloudResp = resolveURL( genAPIURL( "command=listNetworkGroups", genQuerySignature( "command=listNetworkGroups" )), "listNetworkGroups", true );
+	    Document cloudResp = resolveURL(genAPIURL( "command=listNetworkGroups", genQuerySignature("command=listNetworkGroups")), "listNetworkGroups", true );
         NodeList match = cloudResp.getElementsByTagName( "networkgroup" ); 
 	    int     length = match.getLength();
 	       
@@ -2132,7 +2085,7 @@ public class EC2Engine {
         throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
     {
 	    Node parent = null; 	
-        Document cloudResp = resolveURL( genAPIURL( "command=listVlanIpRanges&vlantype=DirectAttached", genQuerySignature( "command=listVlanIpRanges&vlantype=DirectAttached" )), "listVlanIpRanges", true );
+        Document cloudResp = resolveURL(genAPIURL("command=listVlanIpRanges&vlantype=DirectAttached", genQuerySignature( "command=listVlanIpRanges&vlantype=DirectAttached")), "listVlanIpRanges", true );
         NodeList match = cloudResp.getElementsByTagName( "vlaniprange" ); 
         int     length = match.getLength();
        
@@ -2211,7 +2164,7 @@ public class EC2Engine {
     {
     	EC2DescribeSnapshotsResponse snapshots = new EC2DescribeSnapshotsResponse();
     	Node parent = null; 	
-	    Document cloudResp = resolveURL( genAPIURL( "command=listSnapshots", genQuerySignature( "command=listSnapshots" )), "listSnapshots", true );
+	    Document cloudResp = resolveURL(genAPIURL("command=listSnapshots", genQuerySignature("command=listSnapshots")), "listSnapshots", true );
         NodeList match = cloudResp.getElementsByTagName( "snapshot" ); 
 	    int     length = match.getLength();
 	       
@@ -2237,6 +2190,8 @@ public class EC2Engine {
 	    			     else if (name.equalsIgnoreCase( "volumeid"     )) shot.setVolumeId( value );
 	    			     else if (name.equalsIgnoreCase( "snapshottype" )) shot.setType( value );
 	    			     else if (name.equalsIgnoreCase( "created"      )) shot.setCreated( value );
+	    			     else if (name.equalsIgnoreCase( "account"      )) shot.setAccountName(value);
+	    			     else if (name.equalsIgnoreCase( "domainId"      )) shot.setDomainId(value);
 	    			 } 
 	    	    }
 	 		    // -> are we asking about specific snapshots?
@@ -2272,7 +2227,7 @@ public class EC2Engine {
     	
     	try {
   		    String query = "command=queryAsyncJobResult&jobId=" + jobId;
-  		    Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "queryAsyncJobResult", true );
+  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
 		    
 		    match = cloudResp.getElementsByTagName( "jobstatus" ); 
 	        if (0 < match.getLength()) {
@@ -2332,7 +2287,7 @@ public class EC2Engine {
     	return request;
     }
     
-    private String genAPIURL( String query, String signature ) throws UnsupportedEncodingException 
+    private String genAPIURL( String query, String signature) throws UnsupportedEncodingException 
     {
 		UserContext ctx = UserContext.current();
 		if ( null != ctx ) {
@@ -2419,9 +2374,10 @@ public class EC2Engine {
 	}
 	
 	private String getServerURL() 
-	{
+	{	
 		if ( null == cloudAPIPort ) 
 			 return new String( "http://" + managementServer + "/client/api?" );
 		else return new String( "http://" + managementServer + ":" + cloudAPIPort + "/client/api?" );
+		
 	}
 }

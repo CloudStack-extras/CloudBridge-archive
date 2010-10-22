@@ -202,7 +202,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 
 	public CreateSnapshotResponse createSnapshot(CreateSnapshot createSnapshot) {
 		CreateSnapshotType cst = createSnapshot.getCreateSnapshot();
-		return toCreateSnapshotResponse( engine.createSnapshot( cst.getVolumeId()), engine.getAccountName());
+		return toCreateSnapshotResponse( engine.createSnapshot( cst.getVolumeId()), engine);
 	}
 
 	public CreateSpotDatafeedSubscriptionResponse createSpotDatafeedSubscription(CreateSpotDatafeedSubscription createSpotDatafeedSubscription) {
@@ -383,7 +383,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		    }
 		}    
 
-		return toDescribeImagesResponse( engine.handleRequest( request ), engine.getAccountName());
+		return toDescribeImagesResponse( engine.handleRequest( request ));
 	}
 
 	public DescribeInstanceAttributeResponse describeInstanceAttribute(DescribeInstanceAttribute describeInstanceAttribute) {
@@ -410,7 +410,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		if (null != items) {  // -> can be empty
 			for( int i=0; i < items.length; i++ ) request.addInstanceId( items[i].getInstanceId());
 		}
-		return toDescribeInstancesResponse( engine.handleRequest( request ), engine.getAccountName());
+		return toDescribeInstancesResponse( engine.handleRequest( request ), engine);
 	}
 
 	public DescribeKeyPairsResponse describeKeyPairs(DescribeKeyPairs describeKeyPairs) {
@@ -461,7 +461,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			    for( int i=0; i < items.length; i++ ) request.addSnapshotId( items[i].getSnapshotId());
             }
 		}
-		return toDescribeSnapshotsResponse( engine.handleRequest( request ), engine.getAccountName());
+		return toDescribeSnapshotsResponse(engine.handleRequest(request));
 	}
 
 	public DescribeSpotDatafeedSubscriptionResponse describeSpotDatafeedSubscription(
@@ -732,7 +732,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			GroupItemType[] items = gst.getItem();
 			if (null != items && 0 < items.length) request.setGroupId( items[0].getGroupId());
 		}
-		return toRunInstancesResponse( engine.handleRequest( request ), engine.getAccountName());
+		return toRunInstancesResponse( engine.handleRequest( request ), engine);
 	}
 	
 	public StartInstancesResponse startInstances(StartInstances startInstances) {
@@ -851,18 +851,22 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;		
 	}
 	
-	public static DescribeImagesResponse toDescribeImagesResponse(EC2DescribeImagesResponse engineResponse, String accountName ) {
+	public static DescribeImagesResponse toDescribeImagesResponse(EC2DescribeImagesResponse engineResponse ) {
 		DescribeImagesResponse response = new DescribeImagesResponse();
 		DescribeImagesResponseType param1 = new DescribeImagesResponseType();
 		DescribeImagesResponseInfoType param2 = new DescribeImagesResponseInfoType();
-
+		
 		EC2Image[] images = engineResponse.getImageSet();
  	    for( int i=0; i < images.length; i++ ) {
+ 	    	String accountName = images[i].getAccountName();
+			String domainId = images[i].getDomainId();
+			String ownerId = domainId + ":" + accountName;
+			
 		    DescribeImagesResponseItemType param3 = new DescribeImagesResponseItemType();
 		    param3.setImageId( images[i].getId());
 		    param3.setImageLocation( "" );
 		    param3.setImageState( (images[i].getIsReady() ? "available" : "unavailable" ));
-		    param3.setImageOwnerId( accountName );    
+		    param3.setImageOwnerId(ownerId);    
 		    param3.setIsPublic( images[i].getIsPublic());
 
 		    ProductCodesSetType param4 = new ProductCodesSetType();
@@ -1010,16 +1014,20 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 	
-	public static DescribeInstancesResponse toDescribeInstancesResponse(EC2DescribeInstancesResponse engineResponse, String accountName ) {
+	public static DescribeInstancesResponse toDescribeInstancesResponse(EC2DescribeInstancesResponse engineResponse, EC2Engine engine) {
 	    DescribeInstancesResponse response = new DescribeInstancesResponse();
 	    DescribeInstancesResponseType param1 = new DescribeInstancesResponseType();
 	    ReservationSetType param2 = new ReservationSetType();
 
 		EC2Instance[] instances = engineResponse.getInstanceSet();
 		for( int i=0; i < instances.length; i++ ) {
+			String accountName = instances[i].getAccountName();
+			String domainId = instances[i].getDomainId();
+			String ownerId = domainId + ":" + accountName;
+		
 			ReservationInfoType param3 = new ReservationInfoType();
 	        param3.setReservationId( instances[i].getId());   // -> an id we could track down if needed
-	        param3.setOwnerId( accountName );
+	        param3.setOwnerId(ownerId);
 	        param3.setRequesterId( "" );
 	        
 			GroupSetType  param4 = new GroupSetType();
@@ -1237,12 +1245,11 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 
-	public static RunInstancesResponse toRunInstancesResponse(EC2RunInstancesResponse engineResponse, String accountName ) {
+	public static RunInstancesResponse toRunInstancesResponse(EC2RunInstancesResponse engineResponse, EC2Engine engine ) {
 	    RunInstancesResponse response = new RunInstancesResponse();
 	    RunInstancesResponseType param1 = new RunInstancesResponseType();
 
 	    param1.setReservationId( "" );
-	    param1.setOwnerId( accountName );
 	    
 		GroupSetType  param2 = new GroupSetType();
 		GroupItemType param3 = new GroupItemType();
@@ -1256,6 +1263,11 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        RunningInstancesItemType param7 = new RunningInstancesItemType();
 	        param7.setInstanceId( instances[i].getId());
 	        param7.setImageId( instances[i].getTemplateId());
+	        
+	        String accountName = instances[i].getAccountName();
+			String domainId = instances[i].getDomainId();
+			String ownerId = domainId + ":" + accountName;
+		
 	        
 	        InstanceStateType param8 = new InstanceStateType();
 	        param8.setCode( toAmazonCode( instances[i].getState()));
@@ -1436,7 +1448,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 	
-	public static DescribeSnapshotsResponse toDescribeSnapshotsResponse(EC2DescribeSnapshotsResponse engineResponse, String accountName ) {
+	public static DescribeSnapshotsResponse toDescribeSnapshotsResponse(EC2DescribeSnapshotsResponse engineResponse) {
 	    DescribeSnapshotsResponse response = new DescribeSnapshotsResponse();
 	    DescribeSnapshotsResponseType param1 = new DescribeSnapshotsResponseType();
 	    DescribeSnapshotsSetResponseType param2 = new DescribeSnapshotsSetResponseType();
@@ -1448,6 +1460,10 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	         param3.setVolumeId( snapshots[i].getVolumeId());
 	         param3.setStatus( snapshots[i].getType());
 	         
+	         String accountName = snapshots[i].getAccountName();
+	         String domainId = snapshots[i].getDomainId();
+				String ownerId = domainId + ":" + accountName;
+	         
 	         // -> CloudStack seems to have issues with timestamp formats so just in case
 		     Calendar cal = snapshots[i].getCreated();
 		     if ( null == cal ) {
@@ -1457,7 +1473,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	         param3.setStartTime( cal );
 	         
 	         param3.setProgress( "0" );
-	         param3.setOwnerId( accountName );
+	         param3.setOwnerId(ownerId);
 	         Integer volSize = new Integer( snapshots[i].getVolumeSize());
 	         param3.setVolumeSize( volSize.toString());
 	         param3.setDescription( snapshots[i].getName());
@@ -1481,9 +1497,13 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 	
-	public static CreateSnapshotResponse toCreateSnapshotResponse(EC2Snapshot engineResponse, String accountName ) {
+	public static CreateSnapshotResponse toCreateSnapshotResponse(EC2Snapshot engineResponse, EC2Engine engine ) {
 		CreateSnapshotResponse response = new CreateSnapshotResponse();
 		CreateSnapshotResponseType param1 = new CreateSnapshotResponseType();
+		
+		String accountName = engineResponse.getAccountName();
+		String domainId = engineResponse.getDomainId();
+		String ownerId = domainId + ":" + accountName;
 
 		param1.setSnapshotId( engineResponse.getId());
 		param1.setVolumeId( engineResponse.getVolumeId());
@@ -1498,7 +1518,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		param1.setStartTime( cal );
 		
 		param1.setProgress( "100" );
-		param1.setOwnerId( accountName );
+		param1.setOwnerId(ownerId);
         Integer volSize = new Integer( engineResponse.getVolumeSize());
         param1.setVolumeSize( volSize.toString());
         param1.setDescription( engineResponse.getName());
@@ -1515,7 +1535,11 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		EC2SecurityGroup[] groups = engineResponse.getGroupSet();
 	    for( int i=0; i < groups.length; i++ ) {
 		     SecurityGroupItemType param3 = new SecurityGroupItemType();
-		     param3.setOwnerId( groups[i].getAccount());
+		     String accountName = groups[i].getAccountName();
+			 String domainId = groups[i].getDomainId();
+			 String ownerId = domainId + ":" + accountName;
+		     
+		     param3.setOwnerId(ownerId);
 		     param3.setGroupName( groups[i].getName());
 		     String desc = groups[i].getDescription();
 		     param3.setGroupDescription((null != desc ? desc : ""));

@@ -34,7 +34,6 @@ public class EC2Volume {
     
 	public EC2Volume() {
 		id         = null;
-		size       = 0;
 		zoneName   = null;
 		instanceId = null;
 		device     = null;

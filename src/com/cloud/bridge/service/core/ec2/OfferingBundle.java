@@ -17,21 +17,10 @@ package com.cloud.bridge.service.core.ec2;
 
 public class OfferingBundle {
 
-	private String diskOfferingId;
 	private String serviceOfferingId;
 
 	public OfferingBundle() {
-		diskOfferingId    = null;
 		serviceOfferingId = null;
-	}
-	
-	public void setDiskOfferingId( String id ) {
-		diskOfferingId = id;
-		if (null != diskOfferingId) diskOfferingId = diskOfferingId.trim();
-	}
-	
-	public String getDiskOfferingId() {
-		return diskOfferingId;
 	}
 	
 	public void setServiceOfferingId( String id ) {
