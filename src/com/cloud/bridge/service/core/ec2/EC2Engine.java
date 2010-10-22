@@ -1491,6 +1491,11 @@ public class EC2Engine {
 	                item = match.item(0);
 	                shot.setAccountName( item.getFirstChild().getNodeValue());
 	            }
+	            match = cloudResp.getElementsByTagName( "domainid" ); 
+	            if (0 < match.getLength()) {
+                    item = match.item(0);
+                    shot.setDomainId(item.getFirstChild().getNodeValue());
+                }
  	            match = cloudResp.getElementsByTagName( "created" ); 
 	            if (0 < match.getLength()) {
 	                item = match.item(0);
