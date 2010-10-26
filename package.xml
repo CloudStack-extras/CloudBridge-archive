@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Copyright 2010 Cloud.com, Inc. All Rights Reserved -->
+
+<project name="Cloud Bridge Package" basedir=".">
+  <description>
+        This is a package.xml with tools to package the cloud bridge distribution
+    </description>
+
+  <dirname property="base.dir" file="${ant.file.Cloud Bridge Package}/.." />
+  <property name="dist.dir" location="${base.dir}/dist" />
+  <property name="db.dir" location="${base.dir}/db/mysql" />
+  <property name="services.dir" location="${base.dir}/services" />
+  <property name="modules.dir" location="${base.dir}/modules" />
+  <property name="thirdparty.dir" location="${base.dir}/lib" />
+  <property name="rampart.dir" location="${base.dir}/rampart-lib" />
+  <property name="conf.dir" location="${base.dir}/conf" />
+  <property name="jar.dir" location="${target.dir}/jar" />
+
+  <target name="package-cloud-bridge">
+    <tstamp>
+      <format property="package.date" pattern="yyyy-MM-dd" />
+    </tstamp>
+    <zip destfile="${dist.dir}/cloud-bridge-${package.date}.zip" duplicate="preserve">
+		<zipfileset dir="${db.dir}" prefix="cloud-bridge-${package.date}/db"  filemode="777">
+			<include name="*" />
+		</zipfileset>
+  
+		<zipfileset dir="${modules.dir}" prefix="cloud-bridge-${package.date}/modules">
+			<include name="*mar" />
+		</zipfileset>
+		<zipfileset dir="${dist.dir}" prefix="cloud-bridge-${package.date}/modules">
+			<include name="cloud-auth-ec2.mar" />
+			<include name="cloud-auth-s3.mar" />
+		</zipfileset>
+		
+		<zipfileset dir="${dist.dir}" prefix="cloud-bridge-${package.date}/services">
+			<include name="cloud-ec2.aar" />
+			<include name="cloud-s3.aar" />
+		</zipfileset>
+		
+		<zipfileset dir="${thirdparty.dir}" prefix="cloud-bridge-${package.date}/lib">
+			<include name="*jar" />
+			<exclude name="apache-tomcat-6.0.18.tar.gz" />
+		</zipfileset>
+		
+		<zipfileset dir="${rampart.dir}" prefix="cloud-bridge-${package.date}/rampart-lib">
+			<include name="*jar" />
+		</zipfileset>
+		
+		<zipfileset dir="${jar.dir}" prefix="cloud-bridge-${package.date}">
+			<include name="cloud-bridge.jar" />
+		</zipfileset>
+		
+		<zipfileset dir="${conf.dir}" prefix="cloud-bridge-${package.date}/conf">
+			<include name="*" />
+		</zipfileset>
+		
+		<zipfileset dir="${base.dir}/resource/Axis2" prefix="cloud-bridge-${package.date}">
+			<include name="*" />
+		</zipfileset>
+		
+		<zipfileset dir="${base.dir}/resource/AmazonEC2" prefix="cloud-bridge-${package.date}/classes">
+			<include name="crypto.properties" />
+			<include name="xes.keystore" />
+		</zipfileset>
+		
+		<zipfileset dir="${base.dir}" prefix="cloud-bridge-${package.date}" filemode="777">
+			<include name="install.sh" />
+			<include name="deploy-cloud-bridge.sh" />
+		</zipfileset>
+		
+		<zipfileset dir="${base.dir}/web" prefix="cloud-bridge-${package.date}">
+			<include name="web.xml" />
+		</zipfileset>
+		
+		<zipfileset dir="${base.dir}/lib" prefix="cloud-bridge-${package.date}">
+			<include name="axis2.war" />
+			<include name="apache-tomcat-6.0.18.tar.gz" />
+		</zipfileset>
+		
+     </zip>
+  </target>
+
+</project>

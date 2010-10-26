@@ -4,7 +4,7 @@ target
 waf-*
 *~
 artifacts
-classes
 dist
 build.number
+classes
 target

@@ -23,23 +23,14 @@ cloudAPIPort=8080
 WSDLVersion=2010-08-31
 keystore=xes.keystore
 keystorePass=apache
-m1.small.diskId=1
 m1.small.serviceId=1
-m1.large.diskId=3
 m1.large.serviceId=3
-m1.xlarge.diskId=3
 m1.xlarge.serviceId=3
-c1.medium.diskId=2
 c1.medium.serviceId=2
-c1.xlarge.diskId=3
 c1.xlarge.serviceId=3
-m2.xlarge.diskId=3
 m2.xlarge.serviceId=3
-m2.2xlarge.diskId=3
 m2.2xlarge.serviceId=3
-m2.4xlarge.diskId=3
 m2.4xlarge.serviceId=3
-cc1.4xlarge.diskId=3
 cc1.4xlarge.serviceId=3
 dbName=clouds3
 dbUser=root
@@ -78,11 +69,10 @@ API calls: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine.  Defa
 <P>
 All the remaining fields provide a mapping betweeen Amazon's instance type values of:  
 { "m1.small", "m1.large", "m1.xlarge", "c1.medium", "c1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge" },</BR>
-and the disk and service offering IDs found from the following Cloud.com API calls': listDiskOfferings and listServiceOfferings.
-For example, the parameter "m1.large.diskId=3" (listed above) states that the Amazon "m1.large" instance
-type maps to Cloud.com's disk offering ID 3.   And that the parameter "m1.large.serviceId=3" (listed
+and service offering IDs found from the following Cloud.com API calls': listServiceOfferings.
+For example, the parameter "m1.large.serviceId=3" (listed
 above) states that the Amazon "m1.large" instance type also maps to the Cloud.com's service offerint ID 3.
-Cloud.com's disk and servicing offerings are configurable and thus can be different per installation, and they
+Cloud.com's service offerings are configurable and thus can be different per installation, and they
 can also be viewed from the Cloud.com's Admin UI.
 <P>
 <H2 id="party">2. Required 3rd Party Software</H2>

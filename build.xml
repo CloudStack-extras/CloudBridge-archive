@@ -68,6 +68,7 @@
   	</macrodef>
 	
     <import file="build-cloud-bridge.xml" optional="true" />
+    <import file="package.xml" optional="true" />
 </project>
 
 
