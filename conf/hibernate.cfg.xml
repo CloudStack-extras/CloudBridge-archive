@@ -4,7 +4,7 @@
 <hibernate-configuration>
 <session-factory>
 	<property name="hibernate.connection.driver_class">com.mysql.jdbc.Driver</property>
-	<property name="hibernate.connection.url">jdbc:mysql://localhost/clouds3</property>
+	<property name="hibernate.connection.url">jdbc:mysql://localhost/cloudbridge</property>
 	<property name="hibernate.connection.username">cloud</property>
     <property name="hibernate.connection.password">cloud</property>
     <property name="hibernate.connection.pool_size">20</property>

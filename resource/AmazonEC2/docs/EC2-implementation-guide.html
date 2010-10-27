@@ -32,7 +32,7 @@ m2.xlarge.serviceId=3
 m2.2xlarge.serviceId=3
 m2.4xlarge.serviceId=3
 cc1.4xlarge.serviceId=3
-dbName=clouds3
+dbName=cloudsbridge
 dbUser=root
 dbPassword=
 pollInterval1=100
@@ -94,13 +94,13 @@ stored in the following keystore:
 The keytool <A href="#ref2">[2]</A> command line tool can be used to delete certificates no longer in use.
 <P>
 As a result of the SetUserKeys REST call <A href="#ref1">[1]</A>, entries are inserted into 
-the "usercredentials" table of the "clouds3" MySql database.  
+the "usercredentials" table of the "cloudbridge" MySql database.  
 The MySql command line client can be used to delete usercredentials entries no longer in use.
 <P>
 <H2 id="install">4. Installation Instructions</H2>
 <P>
 On the very first install an EC2/S3 MySql database is created by running the following
-scripts in the given order: clouds3_db.sql, clouds3_schema.sql, clouds3_index.sql
+scripts in the given order: cloudsbridge_db.sql, cloudsbridge_schema.sql, cloudbridge_index.sql
 <P>
 After a successful installation the following directory and file structure should exist:
 <pre>

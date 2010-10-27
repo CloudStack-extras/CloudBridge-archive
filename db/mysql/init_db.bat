@@ -1,4 +1,4 @@
-mysql --user=root --password < clouds3_db.sql
-mysql --user=root --password < clouds3_schema.sql
-mysql --user=root --password < clouds3_index.sql
+mysql --user=root --password < cloudbridge_db.sql
+mysql --user=root --password < cloudbridge_schema.sql
+mysql --user=root --password < cloudbridge_index.sql
 

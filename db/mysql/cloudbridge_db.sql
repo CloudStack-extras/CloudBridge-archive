@@ -24,11 +24,11 @@ DROP PROCEDURE IF EXISTS `mysql`.`cloud_create_user_if_not_exists` ;
 
 SET SQL_MODE=@OLD_SQL_MODE;
 
-DROP DATABASE IF EXISTS clouds3;
-CREATE DATABASE clouds3;
+DROP DATABASE IF EXISTS cloudbridge;
+CREATE DATABASE cloudbridge;
   
-GRANT ALL ON clouds3.* to `cloud`@`localhost` identified by 'cloud';
-GRANT ALL ON clouds3.* to `cloud`@`%` identified by 'cloud';
+GRANT ALL ON cloudbridge.* to `cloud`@`localhost` identified by 'cloud';
+GRANT ALL ON cloudbridge.* to `cloud`@`%` identified by 'cloud';
 
 GRANT process ON *.* TO `cloud`@`localhost`;
 GRANT process ON *.* TO `cloud`@`%`;

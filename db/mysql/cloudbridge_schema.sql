@@ -1,4 +1,4 @@
-USE clouds3;
+USE cloudbridge;
 
 SET foreign_key_checks = 0;
 

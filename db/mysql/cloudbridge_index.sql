@@ -1,4 +1,4 @@
-USE clouds3;
+USE cloudbridge;
 
 ALTER TABLE shost ADD UNIQUE shost_uq_host(Host, HostType, ExportRoot);
 ALTER TABLE shost ADD CONSTRAINT FOREIGN KEY shost_fk_mhost_id(MHostID) REFERENCES mhost(ID);

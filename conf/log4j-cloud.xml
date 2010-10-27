@@ -9,7 +9,7 @@
 
    <!-- A time/date based rolling appender -->
    <appender name="FILE" class="org.apache.log4j.DailyRollingFileAppender">
-      <param name="File" value="logs/clouds3.log"/>
+      <param name="File" value="logs/cloudsbridge.log"/>
       <param name="Append" value="true"/>
       <param name="Threshold" value="DEBUG"/>
 
