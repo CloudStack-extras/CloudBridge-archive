@@ -1268,7 +1268,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			String domainId = instances[i].getDomainId();
 			String ownerId = domainId + ":" + accountName;
 		
-	        
+	        param1.setOwnerId(ownerId);
+			
 	        InstanceStateType param8 = new InstanceStateType();
 	        param8.setCode( toAmazonCode( instances[i].getState()));
 	        param8.setName( toAmazonStateName( instances[i].getState()));

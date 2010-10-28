@@ -1011,6 +1011,11 @@ public class EC2RestServlet extends HttpServlet {
         String[] zoneName = request.getParameterValues( "Placement.AvailabilityZone" );
 		if ( null != zoneName && 0 < zoneName.length ) 
 			 EC2request.setZoneName( zoneName[0] );
+		
+		String[] size = request.getParameterValues("size");
+		if (size != null) {
+		    EC2request.setSize(Integer.valueOf(size[0]));
+		}
 
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();

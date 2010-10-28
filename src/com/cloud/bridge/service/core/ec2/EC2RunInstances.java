@@ -24,7 +24,7 @@ public class EC2RunInstances {
 	private String userData;
 	private int    maxCount;
 	private int    minCount;
-    private int    size;  		// <- in gigs
+    private Integer    size;  		// <- in gigs
 	
 	
 	public EC2RunInstances() {
@@ -94,11 +94,11 @@ public class EC2RunInstances {
 		return this.minCount;
 	}
 
-	public int getSize() {
+	public Integer getSize() {
 		return size;
 	}
 
-	public void setSize(int size) {
+	public void setSize(Integer size) {
 		this.size = size;
 	}
 	

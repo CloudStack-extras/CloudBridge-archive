@@ -951,10 +951,10 @@ public class EC2Engine {
 	        OfferingBundle offer = instanceTypeToOfferBundle( request.getInstanceType());
     	    StringBuffer params = new StringBuffer();
        	    params.append( "command=deployVirtualMachine" );
-//       	    params.append( "&diskOfferingId=" + offer.getDiskOfferingId());
-       	    params.append("&size=" + String.valueOf(request.getSize()));
+
        	    if (null != request.getGroupId()) params.append("&group=" + request.getGroupId());
        	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
+            params.append("&size=" + String.valueOf(request.getSize()));
        	    params.append( "&templateId=" + request.getTemplateId());
        	    if (null != request.getUserData()) params.append( "&userData=" + safeURLencode( request.getUserData()));
        	    
@@ -1353,6 +1353,17 @@ public class EC2Engine {
 	   	               item = match.item(0);
 	   	               vms[j].setIpAddress( item.getFirstChild().getNodeValue());
 	    	       }
+	    	       match = cloudResp.getElementsByTagName("account");
+	    	       if (0 < match.getLength()) {
+                       item = match.item(0);
+                       vms[j].setAccountName( item.getFirstChild().getNodeValue());
+                   }
+	    	       match = cloudResp.getElementsByTagName("domainid");
+                   if (0 < match.getLength()) {
+                       item = match.item(0);
+                       vms[j].setDomainId( item.getFirstChild().getNodeValue());
+                   }
+	    	       
 	               waitCount--;
 			       jobIds[j] = null;
 			       break;
