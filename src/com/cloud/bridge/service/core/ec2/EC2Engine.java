@@ -25,6 +25,8 @@ import org.w3c.dom.NodeList;
 
 import org.xml.sax.SAXException;
 
+import com.cloud.bridge.model.SSHKey;
+import com.cloud.bridge.persist.dao.SSHKeysDao;
 import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImagesResponse;
@@ -40,6 +42,7 @@ import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.util.ConfigurationHelper;
+import com.cloud.bridge.util.SSHKeysHelper;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -49,6 +52,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.security.SignatureException;
 import java.text.ParseException;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -1120,6 +1124,101 @@ public class EC2Engine {
     	}
     }
 
+    
+    public List<SSHKey> describeKeyPairs() {
+    	SSHKeysDao keys = new SSHKeysDao();
+    	return keys.getKeysByUser(getUniqueAccountName());
+    }
+    
+    public EC2SSHKeyPair importKeyPair(final String keyName, final String publicKey, final String fingerprint) {
+    	String accountName = getUniqueAccountName();
+		SSHKeysDao keys = new SSHKeysDao();
+		SSHKey key = keys.getKeyByName(keyName, accountName);
+		if (key != null)
+			throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_Duplicate
+					, "The keypair '" + keyName + "' already exists.");
+			
+		key = new SSHKey(accountName, keyName, publicKey, fingerprint);
+		keys.save(key);	
+		
+		return new EC2SSHKeyPair() {{
+			setKeyName(keyName);
+			setPublicKey(publicKey);
+			setFingerprint(fingerprint);
+		}};
+    }
+    
+    public EC2SSHKeyPair createKeyPair(final String keyName) {
+		String accountName = getUniqueAccountName();
+		final SSHKeysHelper sshKeys = new SSHKeysHelper();
+		
+		SSHKeysDao keys = new SSHKeysDao();
+		SSHKey key = keys.getKeyByName(keyName, accountName);
+		if (key != null)
+			throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_Duplicate
+					, "The keypair '" + keyName + "' already exists.");
+				
+		key = new SSHKey(accountName, keyName, sshKeys.getPublicKey()
+				, sshKeys.getPublicKeyFingerPrint());
+		keys.save(key);		
+    	
+    	return new EC2SSHKeyPair() {{
+    		setKeyName(keyName);
+    		setPrivateKey(sshKeys.getPrivateKey());
+    		setPublicKey(sshKeys.getPublicKey());
+    		setFingerprint(sshKeys.getPublicKeyFingerPrint());
+    	}};
+    }
+    
+    public boolean deleteKeyPair(String keyName) {
+		SSHKeysDao keys = new SSHKeysDao();
+		SSHKey key = keys.getKeyByName(keyName, getUniqueAccountName());
+		
+		if (key == null)
+			return false;
+		else {
+			keys.delete(key);
+			return true;
+		}
+    }
+    
+    /**
+     * @return A unique account identifier composed of accountName:domainId.
+     */
+    private String getUniqueAccountName() {
+    	try {
+	        String query = new String( "command=listAccounts" );
+            Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listAccounts", true );
+	        NodeList match = cloudResp.getElementsByTagName( "name" );
+	        String accountName = null;
+ 	        if ( 0 < match.getLength()) {
+	    	     Node item = match.item(0);
+	    	     accountName = new String( item.getFirstChild().getNodeValue());
+            }
+ 	        
+ 	        match = cloudResp.getElementsByTagName("domainid");
+ 	        String domainId = null;
+ 	        if ( 0 < match.getLength()) {
+	    	     Node item = match.item(0);
+	    	     domainId = new String( item.getFirstChild().getNodeValue());
+ 	        }
+ 	        
+ 	        if (accountName != null && domainId != null)
+ 	        	return accountName.concat(":").concat(domainId);
+ 	        else
+ 	        	throw new EC2ServiceException("Error getting account name and domain id");
+ 	         
+       	} catch( EC2ServiceException error ) {
+     		logger.error( "getAccountName - " + error.toString());
+    		throw error;
+    		
+    	} catch( Exception e ) {
+    		logger.error( "getAccountName - " + e.toString());
+    		throw new InternalErrorException( e.toString());
+    	}
+    }
+    
+    
     /**
      * Wait until one specific VM has stopped
      */

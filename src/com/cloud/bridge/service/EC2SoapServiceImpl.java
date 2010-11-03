@@ -18,9 +18,11 @@ package com.cloud.bridge.service;
 import org.apache.log4j.Logger;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.UUID;
 
 import com.amazon.ec2.*;
+import com.cloud.bridge.model.SSHKey;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateImageResponse;
@@ -45,6 +47,7 @@ import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
 import com.cloud.bridge.service.core.ec2.EC2RunInstancesResponse;
+import com.cloud.bridge.service.core.ec2.EC2SSHKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2Snapshot;
 import com.cloud.bridge.service.core.ec2.EC2StartInstances;
@@ -53,6 +56,7 @@ import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
 import com.cloud.bridge.service.exception.EC2ServiceException;
+import com.cloud.bridge.util.SSHKeysHelper;
 
 
 public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
@@ -186,11 +190,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toCreateImageResponse( engine.handleRequest( request ));
 	}
 
-	public CreateKeyPairResponse createKeyPair(CreateKeyPair createKeyPair) {
-		// ToDO: no matching function in the Cloud API
-		return null;
-	}
-
 	public CreateSecurityGroupResponse createSecurityGroup(CreateSecurityGroup createSecurityGroup) {
         CreateSecurityGroupType sgt = createSecurityGroup.getCreateSecurityGroup();
         EC2SecurityGroup request = new EC2SecurityGroup();
@@ -246,11 +245,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	public DeleteDhcpOptionsResponse deleteDhcpOptions(DeleteDhcpOptions deleteDhcpOptions) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DeleteKeyPairResponse deleteKeyPair(DeleteKeyPair deleteKeyPair) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -411,11 +405,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			for( int i=0; i < items.length; i++ ) request.addInstanceId( items[i].getInstanceId());
 		}
 		return toDescribeInstancesResponse( engine.handleRequest( request ), engine);
-	}
-
-	public DescribeKeyPairsResponse describeKeyPairs(DescribeKeyPairs describeKeyPairs) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public DescribeRegionsResponse describeRegions(DescribeRegions describeRegions) {
@@ -614,10 +603,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return null;
 	}
 	
-	public ImportKeyPairResponse importKeyPair(ImportKeyPair importKeyPair) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	/**
 	 * Did not find a matching service offering so for now we just return disabled
@@ -1636,5 +1621,73 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		param1.setRequestId( UUID.randomUUID().toString());
 		response.setRevokeSecurityGroupIngressResponse( param1 );
         return response;
+	}
+	
+	public DescribeKeyPairsResponse describeKeyPairs(DescribeKeyPairs describeKeyPairs) {
+		return toDescribeKeyPairs(engine.describeKeyPairs());
+	}
+	
+	public static DescribeKeyPairsResponse toDescribeKeyPairs(final List<SSHKey> keyList) {
+		return new DescribeKeyPairsResponse() {{
+			setDescribeKeyPairsResponse(new DescribeKeyPairsResponseType() {{ 
+				setRequestId(UUID.randomUUID().toString());
+				setKeySet(new DescribeKeyPairsResponseInfoType());
+				if (keyList != null && keyList.size() > 0) {
+					for (final SSHKey key : keyList) { 
+						getKeySet().addItem(new DescribeKeyPairsResponseItemType() {{
+							setKeyName(key.getKeyName());
+							setKeyFingerprint(key.getFingerprint());
+						}});
+					}
+				}
+			}});
+		}};
+	}
+	
+	public ImportKeyPairResponse importKeyPair(ImportKeyPair importKeyPair) {
+		String keyName = importKeyPair.getImportKeyPair().getKeyName();
+		String publicKey = SSHKeysHelper.getPublicKeyFromKeyMaterial(
+				importKeyPair.getImportKeyPair().getPublicKeyMaterial());
+		String fingerprint = SSHKeysHelper.getPublicKeyFingerprint(publicKey);
+
+		return toImportKeyPair(engine.importKeyPair(keyName, publicKey, fingerprint));
+	}
+	
+	public static ImportKeyPairResponse toImportKeyPair(final EC2SSHKeyPair key) {
+		return new ImportKeyPairResponse() {{
+			setImportKeyPairResponse(new ImportKeyPairResponseType() {{
+				setRequestId(UUID.randomUUID().toString());
+				setKeyName(key.getKeyName());
+				setKeyFingerprint(key.getFingerprint());
+			}});
+		}}; 
+	}
+	
+	public CreateKeyPairResponse createKeyPair(CreateKeyPair createKeyPair) {
+		return toCreateKeyPair(engine.createKeyPair(createKeyPair.getCreateKeyPair().getKeyName()));
+	}
+	
+	public static CreateKeyPairResponse toCreateKeyPair(final EC2SSHKeyPair key) {
+		return new CreateKeyPairResponse() {{
+			setCreateKeyPairResponse(new CreateKeyPairResponseType() {{
+				setRequestId(UUID.randomUUID().toString());
+				setKeyName(key.getKeyName());
+				setKeyFingerprint(key.getFingerprint());
+				setKeyMaterial(key.getPrivateKey());
+			}});
+		}};
+	}
+	
+	public DeleteKeyPairResponse deleteKeyPair(DeleteKeyPair deleteKeyPair) {
+		return toDeleteKeyPair(engine.deleteKeyPair(deleteKeyPair.getDeleteKeyPair().getKeyName()));
+	}
+	
+	public static DeleteKeyPairResponse toDeleteKeyPair(final boolean success) {
+		return new DeleteKeyPairResponse() {{
+			setDeleteKeyPairResponse(new DeleteKeyPairResponseType() {{
+				setRequestId(UUID.randomUUID().toString());
+				set_return(success);
+			}});
+		}};
 	}
 }

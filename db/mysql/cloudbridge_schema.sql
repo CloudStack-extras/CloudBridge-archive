@@ -128,6 +128,17 @@ CREATE TABLE acl (
 	PRIMARY KEY(ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE sshkeys (
+        ID BIGINT NOT NULL AUTO_INCREMENT,
+
+        AccountName VARCHAR(256) NOT NULL,
+        KeyName VARCHAR(512) NOT NULL,
+        PublicKey VARCHAR(1024) NOT NULL,
+        Fingerprint VARCHAR(256) NOT NULL,
+
+        PRIMARY KEY (ID)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 -- each account has to have a separate <AccessKey,SecretKey>
 -- each account has to have a separate <CertUniqueID,AccessKey> mappings
 CREATE TABLE usercredentials (

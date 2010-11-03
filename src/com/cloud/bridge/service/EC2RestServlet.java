@@ -32,6 +32,7 @@ import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -47,6 +48,7 @@ import javax.xml.stream.XMLStreamWriter;
 import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axis2.AxisFault;
+import org.apache.axis2.databinding.ADBBean;
 import org.apache.axis2.databinding.ADBException;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
@@ -54,9 +56,11 @@ import org.apache.log4j.Logger;
 import com.amazon.ec2.AttachVolumeResponse;
 import com.amazon.ec2.AuthorizeSecurityGroupIngressResponse;
 import com.amazon.ec2.CreateImageResponse;
+import com.amazon.ec2.CreateKeyPairResponse;
 import com.amazon.ec2.CreateSecurityGroupResponse;
 import com.amazon.ec2.CreateSnapshotResponse;
 import com.amazon.ec2.CreateVolumeResponse;
+import com.amazon.ec2.DeleteKeyPairResponse;
 import com.amazon.ec2.DeleteSecurityGroupResponse;
 import com.amazon.ec2.DeleteSnapshotResponse;
 import com.amazon.ec2.DeleteVolumeResponse;
@@ -66,10 +70,12 @@ import com.amazon.ec2.DescribeImageAttributeResponse;
 import com.amazon.ec2.DescribeImagesResponse;
 import com.amazon.ec2.DescribeInstanceAttributeResponse;
 import com.amazon.ec2.DescribeInstancesResponse;
+import com.amazon.ec2.DescribeKeyPairsResponse;
 import com.amazon.ec2.DescribeSecurityGroupsResponse;
 import com.amazon.ec2.DescribeSnapshotsResponse;
 import com.amazon.ec2.DescribeVolumesResponse;
 import com.amazon.ec2.DetachVolumeResponse;
+import com.amazon.ec2.ImportKeyPairResponse;
 import com.amazon.ec2.ModifyImageAttributeResponse;
 import com.amazon.ec2.RebootInstancesResponse;
 import com.amazon.ec2.RegisterImageResponse;
@@ -106,6 +112,7 @@ import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.AuthenticationUtils;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.EC2RestAuth;
+import com.cloud.bridge.util.SSHKeysHelper;
 
 
 public class EC2RestServlet extends HttpServlet {
@@ -228,6 +235,10 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "TerminateInstances"        )) terminateInstances(request, response); 
     	    else if (action.equalsIgnoreCase( "SetCertificate"            )) setCertificate(request, response);
        	    else if (action.equalsIgnoreCase( "DeleteCertificate"         )) deleteCertificate(request, response);
+       	    else if (action.equalsIgnoreCase( "CreateKeyPair"             )) createKeyPair(request, response);
+       	    else if (action.equalsIgnoreCase( "ImportKeyPair"             )) importKeyPair(request, response);
+       	    else if (action.equalsIgnoreCase( "DeleteKeyPair"             )) deleteKeyPair(request, response);
+       	    else if (action.equalsIgnoreCase( "DescribeKeyPairs"          )) describeKeyPairs(request, response);
     	    else {
         		logger.error("Unsupported action " + action);
         		response.setStatus(501);
@@ -1425,6 +1436,57 @@ public class EC2RestServlet extends HttpServlet {
         os.close();
     }
 
+    private void describeKeyPairs(HttpServletRequest request, HttpServletResponse response) 
+			throws ADBException, XMLStreamException, IOException {
+    	DescribeKeyPairsResponse EC2Response = EC2SoapServiceImpl.toDescribeKeyPairs(
+    			ServiceProvider.getInstance().getEC2Engine().describeKeyPairs());
+    	serializeResponse(response, EC2Response);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void importKeyPair(HttpServletRequest request, HttpServletResponse response) 
+			throws ADBException, XMLStreamException, IOException {
+    	String keyName = "";
+    	String publicKeyMaterial = "";
+    	Map<String, String[]> params = request.getParameterMap();
+    	if (params.get("KeyName") != null && params.get("KeyName").length > 0)
+    		keyName = params.get("KeyName")[0];
+    	if (params.get("PublicKeyMaterial") != null && params.get("PublicKeyMaterial").length > 0)
+    		publicKeyMaterial = params.get("PublicKeyMaterial")[0];
+    	String publicKey = SSHKeysHelper.getPublicKeyFromKeyMaterial(publicKeyMaterial);
+    	String fingerprint = SSHKeysHelper.getPublicKeyFingerprint(publicKey);
+
+    	ImportKeyPairResponse EC2Response = EC2SoapServiceImpl.toImportKeyPair(
+    			ServiceProvider.getInstance().getEC2Engine().importKeyPair(keyName, publicKey, fingerprint));
+    	serializeResponse(response, EC2Response);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void createKeyPair(HttpServletRequest request, HttpServletResponse response)
+    		throws ADBException, XMLStreamException, IOException { 
+    	String keyName = "";	
+    	Map<String, String[]> params = request.getParameterMap();
+    	if (params.get("KeyName") != null && params.get("KeyName").length > 0)
+    		keyName = params.get("KeyName")[0];
+
+    	CreateKeyPairResponse EC2Response = EC2SoapServiceImpl.toCreateKeyPair(
+    			ServiceProvider.getInstance().getEC2Engine().createKeyPair(keyName));
+    	serializeResponse(response, EC2Response);	
+    }
+
+    @SuppressWarnings("unchecked")
+    private void deleteKeyPair(HttpServletRequest request, HttpServletResponse response)
+			throws ADBException, XMLStreamException, IOException {
+    	String keyName = "";	
+    	Map<String, String[]> params = request.getParameterMap();
+    	if (params.get("KeyName") != null && params.get("KeyName").length > 0)
+    		keyName = params.get("KeyName")[0];
+
+    	DeleteKeyPairResponse EC2Response = EC2SoapServiceImpl.toDeleteKeyPair(
+    			ServiceProvider.getInstance().getEC2Engine().deleteKeyPair(keyName));
+    	serializeResponse(response, EC2Response);
+    }
+    
     /**
      * This function implements the EC2 REST authentication algorithm.   It uses the given
      * "AWSAccessKeyId" parameter to look up the Cloud.com account holder's secret key which is
@@ -1589,7 +1651,10 @@ public class EC2RestServlet extends HttpServlet {
     		}
     	}
     }
-    
+     
+    /**
+	 * Send out an error response according to Amazon convention.
+     */
     private void faultResponse(HttpServletResponse response, String errorCode, String errorMessage) {
         try {
 			OutputStreamWriter out = new OutputStreamWriter(response.getOutputStream());
@@ -1607,5 +1672,22 @@ public class EC2RestServlet extends HttpServlet {
 		} catch (IOException e) {
     		logger.error("Unexpected exception " + e.getMessage(), e);
 		}
+    }
+    
+    /**
+	 * Serialize Axis beans to XML output. 
+     */
+    private void serializeResponse(HttpServletResponse response, ADBBean EC2Response) 
+			throws ADBException, XMLStreamException, IOException {
+    	OutputStream os = response.getOutputStream();
+    	response.setStatus(200);	
+    	response.setContentType("text/xml; charset=UTF-8");
+    	XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
+    	MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
+    	MTOMWriter.setDefaultNamespace("http://ec2.amazonaws.com/doc/" + wsdlVersion + "/");
+		EC2Response.serialize( null, factory, MTOMWriter );
+		xmlWriter.flush();
+		xmlWriter.close();
+		os.close();
     }
 }
