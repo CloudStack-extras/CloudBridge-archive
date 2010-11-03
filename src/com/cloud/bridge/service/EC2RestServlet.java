@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.security.KeyStore;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
@@ -32,6 +33,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Properties;
+import java.util.UUID;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -44,6 +46,7 @@ import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMFactory;
+import org.apache.axis2.AxisFault;
 import org.apache.axis2.databinding.ADBException;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
@@ -232,10 +235,14 @@ public class EC2RestServlet extends HttpServlet {
     	    }
     	         
         } catch( EC2ServiceException e ) {
-    		logger.error("EC2ServiceException: " + e.getMessage(), e);
-    		response.setStatus( e.getErrorCode());
-        	endResponse(response, e.toString());
-        	
+    		response.setStatus(e.getErrorCode());
+    		
+    		if (e.getCause() != null && e.getCause() instanceof AxisFault)
+    			faultResponse(response, ((AxisFault)e.getCause()).getFaultCode().getLocalPart(), e.getMessage());
+    		else {
+        		logger.error("EC2ServiceException: " + e.getMessage(), e);
+    			endResponse(response, e.toString());
+    		}
         } catch( PermissionDeniedException e ) {
     		logger.error("Unexpected exception: " + e.getMessage(), e);
     		response.setStatus(403);
@@ -1581,5 +1588,24 @@ public class EC2RestServlet extends HttpServlet {
     			}
     		}
     	}
+    }
+    
+    private void faultResponse(HttpServletResponse response, String errorCode, String errorMessage) {
+        try {
+			OutputStreamWriter out = new OutputStreamWriter(response.getOutputStream());
+	        response.setContentType("text/xml; charset=UTF-8");
+	        out.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+	        out.write("<Response><Errors><Error><Code>");
+	        out.write(errorCode);
+	        out.write("</Code><Message>");
+	        out.write(errorMessage);
+	        out.write("</Message></Error></Errors><RequestID>");
+	        out.write(UUID.randomUUID().toString());
+	        out.write("</RequestID></Response>");
+	        out.flush();
+	        out.close();
+		} catch (IOException e) {
+    		logger.error("Unexpected exception " + e.getMessage(), e);
+		}
     }
 }

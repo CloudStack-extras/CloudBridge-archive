@@ -218,7 +218,7 @@ public class EC2Engine {
     public boolean createSecurityGroup(EC2SecurityGroup request) 
     {
 		if (null == request.getDescription() || null == request.getName()) 
-			 throw new EC2ServiceException( "Both name & description are required", 400 );
+			 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both name & description are required");
 
     	try {
 	        String query = new String( "command=createNetworkGroup" +
@@ -240,7 +240,7 @@ public class EC2Engine {
     
     public boolean deleteSecurityGroup(EC2SecurityGroup request) 
     {
-		if (null == request.getName()) throw new EC2ServiceException( "Name is a required parameter", 400 );
+		if (null == request.getName()) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Name is a required parameter");
 
    	    try {
 	        String query = new String( "command=deleteNetworkGroup&name=" + safeURLencode( request.getName()));        
@@ -282,7 +282,7 @@ public class EC2Engine {
      */
     public boolean securityGroupRequest(EC2AuthorizeRevokeSecurityGroup request, String command ) 
     {
-		if (null == request.getName()) throw new EC2ServiceException( "Name is a required parameter", 400 );
+		if (null == request.getName()) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Name is a required parameter");
     	
 		StringBuffer url    = new StringBuffer();   // -> used to derive URL for Cloud Stack
 		StringBuffer sorted = new StringBuffer();   // -> used for signature generation
@@ -334,7 +334,7 @@ public class EC2Engine {
 		       if ( 0 < match.getLength()) {
 		    	    Node item = match.item(0);
 		    	    String jobId = new String( item.getFirstChild().getNodeValue());
-		    	    if (!waitForAsynch( jobId )) throw new EC2ServiceException( command + " failed" );
+		    	    if (!waitForAsynch( jobId )) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, command + " failed" );
 	 	        } 
 	 	        else throw new InternalErrorException( "InternalError" );
 
@@ -561,7 +561,7 @@ public class EC2Engine {
             		 {
             			 needsRestart = true;
             			 if (!stopVirtualMachine( request.getInstanceId()))
-            		         throw new EC2ServiceException( "CreateImage - instance must be in a stopped state", 400 );
+            		         throw new EC2ServiceException(EC2ServiceException.ClientError.IncorrectState, "CreateImage - instance must be in a stopped state");
             		 }           		 
             		 volumeId = volSet[i].getId();
             		 break;
@@ -600,7 +600,8 @@ public class EC2Engine {
  	        if (needsRestart) 
  	        {
    			    if (!startVirtualMachine( request.getInstanceId()))
-		            throw new EC2ServiceException( "CreateImage - restarting instance " + request.getInstanceId() + " failed", 400 );
+		            throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError
+		            		,"CreateImage - restarting instance " + request.getInstanceId() + " failed");
  	        }
  	        return response;
     	    
@@ -623,7 +624,7 @@ public class EC2Engine {
     	try {
     		if (null == request.getFormat()   || null == request.getName() || null == request.getOsTypeName() ||
     		    null == request.getLocation() || null == request.getZoneName())
-    			throw new EC2ServiceException( "Missing parameter - location/architecture/name", 400 );
+    			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Missing parameter - location/architecture/name");
     			
             // -> the parameters must be in sorted order for proper signature generation
 	        String query = new String( "command=registerTemplate" +
@@ -936,7 +937,7 @@ public class EC2Engine {
  	        
      	    if (canCreateInstances < request.getMinCount()) {
     		    logger.info( "EC2 RunInstances - min count too big (" + request.getMinCount() + "), " + canCreateInstances + " left to allocate");
-    		    throw new EC2ServiceException( "InstanceLimitExceeded - only " + canCreateInstances + " instance(s) left to allocate", 400 );	
+    		    throw new EC2ServiceException(EC2ServiceException.ClientError.InstanceLimitExceeded ,"Only " + canCreateInstances + " instance(s) left to allocate");	
      	    }
 
      	    if ( canCreateInstances < request.getMaxCount()) 
@@ -993,8 +994,10 @@ public class EC2Engine {
         		}
         	}
 
-         	if (0 == countCreated) throw new EC2ServiceException( "InsufficientInstanceCapacity" );
-            return instances;
+         	if (0 == countCreated) 
+         		throw new EC2ServiceException(EC2ServiceException.ServerError.InsufficientInstanceCapacity, "Insufficient Instance Capacity" );
+            
+         	return instances;
             
     	} catch( EC2ServiceException error ) {
     		logger.error( "EC2 RunInstances - " + error.toString());
@@ -1138,7 +1141,7 @@ public class EC2Engine {
    	         Node item = match.item(0);
    	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
         }
-        else throw new EC2ServiceException( "Internal Server Error", 500 );
+        else throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError ,"Internal Server Error");
 		
 	    vms = waitForStartStop( vms, jobIds, 1, "stopped" );
 	    return vms[0].getState().equalsIgnoreCase( "stopped" );    	
@@ -1162,7 +1165,7 @@ public class EC2Engine {
 	         Node item = match.item(0);
 	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
         }
-        else throw new EC2ServiceException( "Internal Server Error", 500 );
+        else throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError ,"Internal Server Error");
 	
         vms = waitForStartStop( vms, jobIds, 1, "running" );
         return vms[0].getState().equalsIgnoreCase( "running" );    	
@@ -1244,9 +1247,9 @@ public class EC2Engine {
                if ( 0 < match.getLength()) {
     	            item = match.item(0);
     	            if (null != item && null != item.getFirstChild())
-    	        	    throw new EC2ServiceException( "InternalError - template action failed: " + item.getFirstChild().getNodeValue(), 500 );
+    	        	    throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Template action failed: " + item.getFirstChild().getNodeValue());
                }
-               throw new EC2ServiceException( "InternalError - template action failed", 500 );
+               throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Template action failed");
 	    	   
 		  case 1:  // Successfully completed
       	       match = cloudResp.getElementsByTagName( "id" ); 
@@ -1414,9 +1417,9 @@ public class EC2Engine {
                if ( 0 < match.getLength()) {
     	            item = match.item(0);
     	            if (null != item && null != item.getFirstChild())
-    	        	    throw new EC2ServiceException( "InternalError - volume action failed: " + item.getFirstChild().getNodeValue(), 500 );
+    	        	    throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Volume action failed: " + item.getFirstChild().getNodeValue());
                }
-               throw new EC2ServiceException( "InternalError - volume action failed", 500 );
+               throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Volume action failed");
 	    	   
 		  case 1:  // Successfully completed
       	       match = cloudResp.getElementsByTagName( "id" ); 
@@ -1477,9 +1480,9 @@ public class EC2Engine {
                 if ( 0 < match.getLength()) {
         	         item = match.item(0);
         	         if (null != item && null != item.getFirstChild())
-        	         	 throw new EC2ServiceException( "InternalError - snapshot action failed: " + item.getFirstChild().getNodeValue(), 500 );
+        	         	 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Snapshot action failed: " + item.getFirstChild().getNodeValue());
                 }
-                throw new EC2ServiceException( "InternalError - snapshot action failed", 500 );
+                throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Snapshot action failed");
     	   
 	       case 1:  // Successfully completed
   	            match = cloudResp.getElementsByTagName( "id" ); 
@@ -1681,7 +1684,7 @@ public class EC2Engine {
  		}
  		zones = listZones( interestedZones );
 	    
- 		if (null == zones.getZoneIdAt( 0 )) throw new EC2ServiceException( "Unknown zoneName value - " + zoneName, 400 );
+ 		if (null == zones.getZoneIdAt( 0 )) throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidParameterValue, "Unknown zoneName value - " + zoneName);
  		return zones.getZoneIdAt( 0 );
  	}
  	
@@ -1707,11 +1710,11 @@ public class EC2Engine {
  		else if (instanceType.equalsIgnoreCase( "m2.2xlarge" )) found = M22Xlarge;
  		else if (instanceType.equalsIgnoreCase( "m2.4xlarge" )) found = M24Xlarge;
  		else if (instanceType.equalsIgnoreCase( "cc1.4xlarge")) found = CC14xlarge;
- 		else throw new EC2ServiceException( "Unsupported - unknown: " + instanceType, 501 );
+ 		else throw new EC2ServiceException(EC2ServiceException.ClientError.Unsupported, "Unknown: " + instanceType);
  		     
 // 		if ( null == found.getDiskOfferingId() || null == found.getServiceOfferingId())
  	 	if (found.getServiceOfferingId() == null)
- 			 throw new EC2ServiceException( "Unsupported - not configured properly: " + instanceType, 500 );
+ 			 throw new EC2ServiceException(EC2ServiceException.ClientError.Unsupported, "Not configured properly: " + instanceType);
  		else return found;
  	}
  	
@@ -1781,7 +1784,7 @@ public class EC2Engine {
     	        }
 	        }
         }
-		throw new EC2ServiceException( "Unknown osTypeName value - " + osTypeName, 400 );
+		throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidParameterValue, "Unknown osTypeName value - " + osTypeName);
     }
 
     /**
@@ -2298,7 +2301,7 @@ public class EC2Engine {
     	else if (device.equalsIgnoreCase( "/dev/xvdh" )) request.setDeviceId( 7 );  
     	else if (device.equalsIgnoreCase( "/dev/xvdi" )) request.setDeviceId( 8 );  
     	else if (device.equalsIgnoreCase( "/dev/xvdj" )) request.setDeviceId( 9 );  
-    	else throw new EC2ServiceException( device + " is not supported" );
+    	else throw new EC2ServiceException(EC2ServiceException.ClientError.Unsupported, device + " is not supported" );
     	     
     	return request;
     }
@@ -2374,8 +2377,8 @@ public class EC2Engine {
         if (400 <= code.intValue()) 
         {
         	if ( null != (errorMsg = connect.getResponseMessage()))
-        		 throw new EC2ServiceException( code.toString() + " " + errorMsg, code );
-        	else throw new EC2ServiceException( command + " cloud API HTTP Error: " + code.toString(), code );
+        		 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, code.toString() + " " + errorMsg);
+        	else throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, command + " cloud API HTTP Error: " + code.toString());
         }
 		DocumentBuilder db = dbf.newDocumentBuilder();
 		return db.parse( connect.getInputStream());
