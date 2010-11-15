@@ -4,9 +4,9 @@
 <hibernate-configuration>
 <session-factory>
 	<property name="hibernate.connection.driver_class">com.mysql.jdbc.Driver</property>
-	<property name="hibernate.connection.url">jdbc:mysql://localhost/cloudbridge</property>
-	<property name="hibernate.connection.username">cloud</property>
-    <property name="hibernate.connection.password">cloud</property>
+	<property name="hibernate.connection.url">jdbc:mysql://mysql.dev.greenqloud.com:3306/clouds3</property>
+	<property name="hibernate.connection.username">greenqloud</property>
+    <property name="hibernate.connection.password">tolvusky</property>
     <property name="hibernate.connection.pool_size">20</property>
 	<property name="hibernate.connection.autocommit">false</property>
 	
