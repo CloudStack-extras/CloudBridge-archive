@@ -2151,7 +2151,7 @@ public class EC2Engine {
     	EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
     	Node parent = null; 	
 	    Document cloudResp = resolveURL(genAPIURL( "command=listNetworkGroups", genQuerySignature("command=listNetworkGroups")), "listNetworkGroups", true );
-        NodeList match = cloudResp.getElementsByTagName( "networkgroup" ); 
+        NodeList match = cloudResp.getElementsByTagName( "securitygroup" ); 
 	    int     length = match.getLength();
 	       
 	    for( int i=0; i < length; i++ ) 
