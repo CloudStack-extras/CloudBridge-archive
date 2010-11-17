@@ -2477,6 +2477,8 @@ public class EC2Engine {
         {
         	if ( null != (errorMsg = connect.getResponseMessage()))
         		 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, code.toString() + " " + errorMsg);
+        	else if ( null != (errorMsg = connect.getHeaderField("X-Description")))
+        		 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, code.toString() + " " + errorMsg);
         	else throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, command + " cloud API HTTP Error: " + code.toString());
         }
 		DocumentBuilder db = dbf.newDocumentBuilder();
