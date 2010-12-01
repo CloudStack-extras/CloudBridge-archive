@@ -885,6 +885,11 @@ public class EC2RestServlet extends HttpServlet {
 		    EC2request.setSize(Integer.valueOf(size[0]));
 		}
 
+		String[] keyName = request.getParameterValues("KeyName");
+		if (keyName != null) {
+			EC2request.setKeyName(keyName[0]);
+		}
+		
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 		RunInstancesResponse EC2response = EC2SoapServiceImpl.toRunInstancesResponse( engine.handleRequest( EC2request ), engine);

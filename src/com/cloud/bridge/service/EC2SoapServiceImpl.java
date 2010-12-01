@@ -704,6 +704,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		GroupSetType gst = rit.getGroupSet();
 		String type = rit.getInstanceType();	
 		UserDataType userData = rit.getUserData();
+		String keyName = rit.getKeyName();
 		
 		request.setTemplateId( rit.getImageId());
 		request.setMinCount( rit.getMinCount());
@@ -711,6 +712,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		if (null != type    ) request.setInstanceType( type );
 		if (null != prt     ) request.setZoneName( prt.getAvailabilityZone());
 		if (null != userData) request.setUserData( userData.getData());
+		if (null != keyName ) request.setKeyName( keyName );
 		
 		// -> we can only support one group per instance
 		if (null != gst) {

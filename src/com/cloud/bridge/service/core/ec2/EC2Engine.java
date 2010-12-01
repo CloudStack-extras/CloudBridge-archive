@@ -958,6 +958,15 @@ public class EC2Engine {
        	    params.append( "command=deployVirtualMachine" );
 
        	    if (null != request.getGroupId()) params.append("&group=" + request.getGroupId());
+       	    if (null != request.getKeyName()) {
+       			SSHKeysDao keys = new SSHKeysDao();
+       			SSHKey key = keys.getKeyByName(request.getKeyName(), getUniqueAccountName());
+       			if (key == null)
+       				throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_NotFound
+       						, "The keypair '" + request.getKeyName() + "' does not exists.");
+       			
+       			params.append("&publicKey=" + safeURLencode(key.getPublicKey()));
+       	    }
        	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
             params.append("&size=" + String.valueOf(request.getSize()));
        	    params.append( "&templateId=" + request.getTemplateId());
