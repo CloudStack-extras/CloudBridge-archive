@@ -40,6 +40,7 @@ import org.w3c.dom.NodeList;
 
 import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.persist.PersistContext;
+import com.cloud.bridge.persist.dao.UserCredentialsDao;
 import com.cloud.bridge.service.controller.s3.S3BucketAction;
 import com.cloud.bridge.service.controller.s3.S3ObjectAction;
 import com.cloud.bridge.service.core.s3.S3AccessControlList;
@@ -49,14 +50,16 @@ import com.cloud.bridge.service.core.s3.S3Grant;
 import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3PutObjectResponse;
+import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
+import com.cloud.bridge.util.AuthenticationUtils;
 import com.cloud.bridge.util.HeaderParam;
 import com.cloud.bridge.util.MultiPartDimeInputStream;
 import com.cloud.bridge.util.RestAuth;
 import com.cloud.bridge.util.S3SoapAuth;
 
 /**
- * @author Kelven Yang
+ * @author Kelven Yang, Mark Joseph
  */
 public class S3RestServlet extends HttpServlet {
 	private static final long serialVersionUID = -6168996266762804877L;
@@ -101,6 +104,25 @@ public class S3RestServlet extends HttpServlet {
     {
         try {
         	logRequest(request);
+        	
+        	// Our extensions to the S3 REST API for simple management actions
+        	// -> unauthenticated calls, should still be done over HTTPS
+        	String cloudAction = request.getParameter( "CloudAction" );
+            if (null != cloudAction) 
+            {
+    	        if (cloudAction.equalsIgnoreCase( "SetUserKeys" )) {
+    	            setUserKeys(request, response);
+    	            return;
+    	        }
+
+    	        if (cloudAction.equalsIgnoreCase( "CloudS3Version" )) {
+    	            cloudS3Version(request, response);
+    	            return;
+    	        }
+    	    }
+
+            
+    	    // -> authenticated calls
         	if (!method.equalsIgnoreCase( "POST" )) {
         	    S3AuthParams params = extractRequestHeaders( request );
         		authenticateRequest( request, params );
@@ -135,6 +157,75 @@ public class S3RestServlet extends HttpServlet {
 			}
 			PersistContext.closeSession();
         }
+    }
+ 
+    /**
+     * Provide an easy way to determine the version of the implementation running.
+     * 
+     * This is an unauthenticated REST call.
+     */
+    private void cloudS3Version( HttpServletRequest request, HttpServletResponse response ) {
+        String version = new String( "<?xml version=\"1.0\" encoding=\"utf-8\"?><CloudS3Version>1.04</CloudS3Version>" );       		
+		response.setStatus(200);
+        endResponse(response, version);
+    }
+
+    /**
+     * This request registers the user Cloud.com account holder to the S3 service.   The Cloud.com
+     * account holder saves his API access and secret keys with the S3 service so that 
+     * each rest call he makes can be verified was originated from him.   The given API access
+     * and secret key are saved into the "usercredentials" database table.   
+     * 
+     * This is an unauthenticated REST call.   The only required parameters are 'accesskey' and
+     * 'secretkey'. 
+     * 
+     * To verify that the given keys represent an existing account they are used to execute the
+     * Cloud.com's listAccounts API function.   If the keys do not represent a valid account the
+     * listAccounts function will fail.
+     * 
+     * A user can call this REST function any number of times, on each call the Cloud.com secret
+     * key is simply over writes any previously stored value.
+     * 
+     * As with all REST calls HTTPS should be used to ensure their security.
+     */
+    private void setUserKeys( HttpServletRequest request, HttpServletResponse response ) {
+    	String[] accessKey = null;
+    	String[] secretKey = null;
+    	
+    	try {
+		    // -> all these parameters are required
+            accessKey = request.getParameterValues( "accesskey" );
+		    if ( null == accessKey || 0 == accessKey.length ) { 
+		         response.sendError(530, "Missing accesskey parameter" ); 
+		         return; 
+		    }
+
+            secretKey = request.getParameterValues( "secretkey" );
+            if ( null == secretKey || 0 == secretKey.length ) {
+                 response.sendError(530, "Missing secretkey parameter" ); 
+                 return; 
+            }
+        } catch( Exception e ) {
+		    logger.error("SetUserKeys exception " + e.getMessage(), e);
+    		response.setStatus(500);
+        	endResponse(response, "SetUserKeys exception " + e.getMessage());
+		    return;
+        }
+
+        try {
+            // -> use the keys to see if the account actually exists
+    	    //ServiceProvider.getInstance().getEC2Engine().validateAccount( accessKey[0], secretKey[0] );
+    	    UserCredentialsDao credentialDao = new UserCredentialsDao();
+    	    credentialDao.setUserKeys( accessKey[0], secretKey[0] ); 
+    	    
+        } catch( Exception e ) {
+   		    logger.error("SetUserKeys " + e.getMessage(), e);
+    		response.setStatus(401);
+        	endResponse(response, e.toString());
+        	return;
+        }
+    	response.setStatus(200);	
+        endResponse(response, "User keys set successfully");
     }
     
     /**

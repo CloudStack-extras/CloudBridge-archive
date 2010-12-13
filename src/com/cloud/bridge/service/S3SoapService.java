@@ -25,8 +25,7 @@ import com.amazon.s3.*;
 public class S3SoapService implements AmazonS3SkeletonInterface {
     protected final static Logger logger = Logger.getLogger(S3SoapService.class);
     
-	public GetBucketLoggingStatusResponse getBucketLoggingStatus(
-          GetBucketLoggingStatus getBucketLoggingStatus0) {
+	public GetBucketLoggingStatusResponse getBucketLoggingStatus(GetBucketLoggingStatus getBucketLoggingStatus0) {
 		AmazonS3SkeletonInterface s3Service = ServiceProvider.getInstance().getServiceImpl(AmazonS3SkeletonInterface.class);
 		return s3Service.getBucketLoggingStatus(getBucketLoggingStatus0);
     }

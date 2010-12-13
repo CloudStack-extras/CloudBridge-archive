@@ -22,6 +22,8 @@
 	/>
 
 	<!-- directories for build and distribution -->
+	<property name="catalina.dir" value="c:\apache-tomcat-6.0.29" />
+	
   	<property name="dist.dir" location="${base.dir}/dist" />
   	<property name="build.dir" location="${base.dir}/" />
   	<property name="buildnumber.dir" location="${build.dir}/" />
@@ -35,7 +37,7 @@
 	<property file="${build.dir}/build-cloud-bridge.properties" />
 	<property name="version" value="${company.major.version}.${company.minor.version}.${company.patch.version}" />
 		
-  	<property name="tomcat.home" location="${env.CATALINA_HOME}" />
+  	<property name="tomcat.home" location="${catalina.dir}" />
   	<property name="deploy.dir" location="${tomcat.home}" />
   	<echo level="info" message="deploy home: ${deploy.dir}" />
 	

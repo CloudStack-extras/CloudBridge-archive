@@ -24,6 +24,8 @@ import com.amazon.s3.AccessControlList;
 import com.amazon.s3.AccessControlPolicy;
 import com.amazon.s3.AmazonS3SkeletonInterface;
 import com.amazon.s3.CanonicalUser;
+import com.amazon.s3.CopyObject;
+import com.amazon.s3.CopyObjectResult;
 import com.amazon.s3.Group;
 import com.amazon.s3.CopyObjectResponse;
 import com.amazon.s3.CreateBucket;
@@ -55,6 +57,7 @@ import com.amazon.s3.ListBucket;
 import com.amazon.s3.ListBucketResponse;
 import com.amazon.s3.ListBucketResult;
 import com.amazon.s3.ListEntry;
+import com.amazon.s3.MetadataDirective;
 import com.amazon.s3.MetadataEntry;
 import com.amazon.s3.Permission;
 import com.amazon.s3.PrefixEntry;
@@ -75,6 +78,8 @@ import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.service.core.s3.S3AccessControlList;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
 import com.cloud.bridge.service.core.s3.S3CanonicalUser;
+import com.cloud.bridge.service.core.s3.S3CopyObjectRequest;
+import com.cloud.bridge.service.core.s3.S3CopyObjectResponse;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
 import com.cloud.bridge.service.core.s3.S3CreateBucketResponse;
 import com.cloud.bridge.service.core.s3.S3DeleteBucketRequest;
@@ -118,10 +123,23 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
         throw new UnsupportedOperationException("Unsupported API");
     }
 	     
-	public CopyObjectResponse copyObject(com.amazon.s3.CopyObject copyObject) {
-        //TODO : fill this with the necessary business logic
-        throw new UnsupportedOperationException("Please implement " + this.getClass().getName() + "#copyObject");
-    }
+	public CopyObjectResponse copyObject(CopyObject copyObject) {
+        S3CopyObjectRequest request = new S3CopyObjectRequest();
+        
+        request.setSourceBucketName(copyObject.getSourceBucket());
+        request.setSourceKey(copyObject.getSourceKey());
+        request.setDestinationBucketName(copyObject.getDestinationBucket());
+        request.setDestinationKey(copyObject.getDestinationKey());
+        
+        MetadataDirective mdd = copyObject.getMetadataDirective();
+        if (null != mdd) request.setDataDirective(mdd.getValue());
+        
+		request.setMetaEntries(toEngineMetaEntries(copyObject.getMetadata()));
+		request.setAcl(toEngineAccessControlList(copyObject.getAccessControlList()));
+		
+		// TBD: handle conditional copy parameters
+	    return toCopyObjectResponse(engine.handleRequest(request));
+   }
  
 	public GetBucketAccessControlPolicyResponse getBucketAccessControlPolicy(
 		GetBucketAccessControlPolicy getBucketAccessControlPolicy) {
@@ -517,7 +535,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		request.setData(putObjectInline.getData());
 		request.setMetaEntries(toEngineMetaEntries(putObjectInline.getMetadata()));
 		request.setAcl(toEngineAccessControlList(putObjectInline.getAccessControlList()));
-		
 		return request;
 	}
 	
@@ -647,9 +664,18 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		
 		PutObjectResult result = new PutObjectResult();
 		result.setETag(engineResponse.getETag());
-		result.setLastModified(engineResponse.getLastModified());
-		
+		result.setLastModified(engineResponse.getLastModified());		
 		response.setPutObjectInlineResponse(result);
+		return response;
+	}
+	
+	private CopyObjectResponse toCopyObjectResponse(S3CopyObjectResponse engineResponse) {
+		CopyObjectResponse response = new CopyObjectResponse();
+		
+		CopyObjectResult result = new CopyObjectResult();
+		result.setETag(engineResponse.getETag());
+		result.setLastModified(engineResponse.getLastModified());		
+		response.setCopyObjectResult(result);
 		return response;
 	}
 }

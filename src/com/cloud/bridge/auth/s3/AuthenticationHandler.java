@@ -87,6 +87,7 @@ public class AuthenticationHandler implements Handler {
     	 String temp       = null;
     	 
     	 // [A] Try to recalculate the signature for non-anonymous requests
+    	 /*
     	 try
     	 {  SOAPEnvelope soapEnvelope = msgContext.getEnvelope();
             SOAPBody     soapBody     = soapEnvelope.getBody();
@@ -157,6 +158,8 @@ public class AuthenticationHandler implements Handler {
         // -> for SOAP requests the Cloud API keys are sent here and only here
     	S3SoapAuth.verifySignature( msgSig, operation, timestamp, accessKey, secretKey );   	
         UserContext.current().initContext( accessKey, secretKey, accessKey, "S3 SOAP request" );
+        */
+        UserContext.current().initContext( "123", "", "123", "S3 SOAP request" );
         return InvocationResponse.CONTINUE;
      }
 

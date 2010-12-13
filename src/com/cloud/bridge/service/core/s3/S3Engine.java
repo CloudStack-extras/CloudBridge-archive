@@ -56,6 +56,7 @@ import com.cloud.bridge.service.S3BucketAdapter;
 import com.cloud.bridge.service.S3FileSystemBucketAdapter;
 import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.UserContext;
+import com.cloud.bridge.service.core.s3.S3CopyObjectRequest.MetadataDirective;
 import com.cloud.bridge.service.exception.HostNotMountedException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
@@ -82,6 +83,50 @@ public class S3Engine {
     	bucketAdapters.put(SHost.STORAGE_HOST_TYPE_LOCAL, new S3FileSystemBucketAdapter());
     }
     
+    /**
+     * We treat this simply as first a get and then a put of the object the user wants to copy.
+     */
+	public S3CopyObjectResponse handleRequest(S3CopyObjectRequest request) 
+	{
+		S3CopyObjectResponse response = new S3CopyObjectResponse();	
+		
+		// -> first get the object we want to copy
+		S3GetObjectRequest getRequest = new S3GetObjectRequest();
+		getRequest.setBucketName(request.getSourceBucketName());
+		getRequest.setKey(request.getSourceKey());
+		
+		getRequest.setReturnData( true );
+		if ( MetadataDirective.COPY == request.getDirective()) 
+		     getRequest.setReturnMetadata( true );
+		else getRequest.setReturnMetadata( false );		
+	    S3GetObjectResponse originalObject = handleRequest(getRequest); 
+	    
+	    int resultCode = originalObject.getResultCode();
+	    if (200 != resultCode) {
+	    	response.setResultCode( resultCode );
+	    	response.setResultDescription( originalObject.getResultDescription());
+	    	return response;
+	    }
+
+	    
+	    // -> next put the object into the destination bucket
+	    S3PutObjectInlineRequest putRequest = new S3PutObjectInlineRequest();
+	    putRequest.setBucketName(request.getDestinationBucketName()) ;
+	    putRequest.setKey(request.getDestinationKey());
+		if ( MetadataDirective.COPY == request.getDirective()) 
+			 putRequest.setMetaEntries(originalObject.getMetaEntries());
+		else putRequest.setMetaEntries(request.getMetaEntries());	
+	    putRequest.setAcl(request.getAcl());
+	    putRequest.setData(originalObject.getData());
+	    
+	    S3PutObjectInlineResponse putResp = handleRequest(putRequest);  
+	    response.setResultCode( putResp.resultCode );
+	    response.setResultDescription( putResp.getResultDescription());
+		response.setETag( putResp.getETag());
+		response.setLastModified( putResp.getLastModified());
+		return response;
+	}
+
     public S3CreateBucketResponse handleRequest(S3CreateBucketRequest request) 
     {
     	S3CreateBucketResponse response = new S3CreateBucketResponse();
