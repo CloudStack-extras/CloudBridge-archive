@@ -69,7 +69,7 @@ public class ServiceProvider {
     private boolean useSubDomain = false;			// use DNS sub domain for bucket name
     private String serviceEndpoint = null;
     private S3Engine engine;
-    private EC2Engine EC2_engine;
+    private EC2Engine EC2_engine = null;
     
     protected ServiceProvider() {
     	// register service implementation object

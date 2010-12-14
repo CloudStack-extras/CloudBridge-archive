@@ -130,10 +130,10 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
         request.setSourceKey(copyObject.getSourceKey());
         request.setDestinationBucketName(copyObject.getDestinationBucket());
         request.setDestinationKey(copyObject.getDestinationKey());
-        
+    
         MetadataDirective mdd = copyObject.getMetadataDirective();
         if (null != mdd) request.setDataDirective(mdd.getValue());
-        
+
 		request.setMetaEntries(toEngineMetaEntries(copyObject.getMetadata()));
 		request.setAcl(toEngineAccessControlList(copyObject.getAccessControlList()));
 		
@@ -672,6 +672,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 	private CopyObjectResponse toCopyObjectResponse(S3CopyObjectResponse engineResponse) {
 		CopyObjectResponse response = new CopyObjectResponse();
 		
+		System.out.println( "entered copyObject response 1" );
 		CopyObjectResult result = new CopyObjectResult();
 		result.setETag(engineResponse.getETag());
 		result.setLastModified(engineResponse.getLastModified());		

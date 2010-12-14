@@ -29,8 +29,6 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import javax.activation.DataHandler;
-
 import org.apache.log4j.Logger;
 import org.hibernate.LockMode;
 import org.hibernate.Session;
@@ -94,13 +92,14 @@ public class S3Engine {
 		S3GetObjectRequest getRequest = new S3GetObjectRequest();
 		getRequest.setBucketName(request.getSourceBucketName());
 		getRequest.setKey(request.getSourceKey());
-		
+
+		getRequest.setInlineData( true );
 		getRequest.setReturnData( true );
 		if ( MetadataDirective.COPY == request.getDirective()) 
 		     getRequest.setReturnMetadata( true );
 		else getRequest.setReturnMetadata( false );		
 	    S3GetObjectResponse originalObject = handleRequest(getRequest); 
-	    
+	
 	    int resultCode = originalObject.getResultCode();
 	    if (200 != resultCode) {
 	    	response.setResultCode( resultCode );
@@ -362,6 +361,7 @@ public class S3Engine {
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 		String itemFileName = tupleObjectItem.getSecond().getStoredPath();
 		InputStream is = null;
+
 		try {
 			// explicit transaction control to avoid holding transaction during file-copy process
 			PersistContext.commitTransaction();
@@ -371,7 +371,7 @@ public class S3Engine {
 			response.setETag(md5Checksum);
 			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
 	        response.setVersion( tupleObjectItem.getSecond().getVersion());
-			
+		
 			SObjectItemDao itemDao = new SObjectItemDao();
 			SObjectItem item = itemDao.get( tupleObjectItem.getSecond().getId());
 			item.setMd5(md5Checksum);
