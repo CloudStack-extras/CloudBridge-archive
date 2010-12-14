@@ -18,6 +18,7 @@ package com.cloud.bridge.service;
 import java.io.IOException;
 import java.util.Calendar;
 
+import org.apache.axis2.AxisFault;
 import org.apache.log4j.Logger;
 
 import com.amazon.s3.AccessControlList;
@@ -78,6 +79,7 @@ import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.service.core.s3.S3AccessControlList;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
 import com.cloud.bridge.service.core.s3.S3CanonicalUser;
+import com.cloud.bridge.service.core.s3.S3ConditionalHeaders;
 import com.cloud.bridge.service.core.s3.S3CopyObjectRequest;
 import com.cloud.bridge.service.core.s3.S3CopyObjectResponse;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
@@ -123,7 +125,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
         throw new UnsupportedOperationException("Unsupported API");
     }
 	     
-	public CopyObjectResponse copyObject(CopyObject copyObject) {
+	public CopyObjectResponse copyObject(CopyObject copyObject) throws AxisFault {
         S3CopyObjectRequest request = new S3CopyObjectRequest();
         
         request.setSourceBucketName(copyObject.getSourceBucket());
@@ -137,7 +139,13 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		request.setMetaEntries(toEngineMetaEntries(copyObject.getMetadata()));
 		request.setAcl(toEngineAccessControlList(copyObject.getAccessControlList()));
 		
-		// TBD: handle conditional copy parameters
+		S3ConditionalHeaders conds = new S3ConditionalHeaders();
+		conds.setModifiedSince(copyObject.getCopySourceIfModifiedSince());
+		conds.setUnModifiedSince(copyObject.getCopySourceIfUnmodifiedSince());
+		conds.setMatch(copyObject.getCopySourceIfMatch());
+		conds.setNoneMatch(copyObject.getCopySourceIfNoneMatch());
+		request.setConditions(conds);
+		
 	    return toCopyObjectResponse(engine.handleRequest(request));
    }
  
@@ -669,13 +677,19 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return response;
 	}
 	
-	private CopyObjectResponse toCopyObjectResponse(S3CopyObjectResponse engineResponse) {
+	private CopyObjectResponse toCopyObjectResponse(S3CopyObjectResponse engineResponse) throws AxisFault {
 		CopyObjectResponse response = new CopyObjectResponse();
+		int resultCode = engineResponse.getResultCode();
+
+		CopyObjectResult result = new CopyObjectResult();		
+		if ( 300 <= resultCode )
+		{
+		     String description = engineResponse.getResultDescription();
+			 throw new AxisFault( "" + resultCode, (null == description ? "" : description));
+		}
 		
-		System.out.println( "entered copyObject response 1" );
-		CopyObjectResult result = new CopyObjectResult();
 		result.setETag(engineResponse.getETag());
-		result.setLastModified(engineResponse.getLastModified());		
+		result.setLastModified(engineResponse.getLastModified());		 
 		response.setCopyObjectResult(result);
 		return response;
 	}

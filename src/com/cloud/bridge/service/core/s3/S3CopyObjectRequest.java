@@ -17,6 +17,7 @@ public class S3CopyObjectRequest extends S3Request {
 	protected MetadataDirective directive;
 	protected S3MetaDataEntry[] metaEntries;
 	protected S3AccessControlList acl;
+	protected S3ConditionalHeaders conds;
 
 	public S3CopyObjectRequest() {
 		super();
@@ -81,5 +82,13 @@ public class S3CopyObjectRequest extends S3Request {
 	
 	public void setAcl(S3AccessControlList acl) {
 		this.acl = acl;
+	}
+	
+	public void setConditions(S3ConditionalHeaders conds) {
+		this.conds = conds;
+	}
+	
+	public S3ConditionalHeaders getConditions() {
+		return conds;
 	}
 }

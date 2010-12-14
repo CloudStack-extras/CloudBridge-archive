@@ -20,7 +20,6 @@ import java.sql.SQLException;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPBody;
 import org.apache.log4j.Logger;
-import org.apache.axis2.addressing.EndpointReference;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.engine.Handler;
 import org.apache.axis2.AxisFault;
@@ -87,7 +86,6 @@ public class AuthenticationHandler implements Handler {
     	 String temp       = null;
     	 
     	 // [A] Try to recalculate the signature for non-anonymous requests
-    	 /*
     	 try
     	 {  SOAPEnvelope soapEnvelope = msgContext.getEnvelope();
             SOAPBody     soapBody     = soapEnvelope.getBody();
@@ -158,8 +156,6 @@ public class AuthenticationHandler implements Handler {
         // -> for SOAP requests the Cloud API keys are sent here and only here
     	S3SoapAuth.verifySignature( msgSig, operation, timestamp, accessKey, secretKey );   	
         UserContext.current().initContext( accessKey, secretKey, accessKey, "S3 SOAP request" );
-        */
-        UserContext.current().initContext( "123", "", "123", "S3 SOAP request" );
         return InvocationResponse.CONTINUE;
      }
 

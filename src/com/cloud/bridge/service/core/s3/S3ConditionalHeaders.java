@@ -18,6 +18,14 @@ public class S3ConditionalHeaders {
 		ifNoneMatch = null;
 	}
 	
+	public void setModifiedSince( Calendar ifModifiedSince ) {
+		if (null != ifModifiedSince) modifiedSince = ifModifiedSince.getTime();
+	}
+	
+	public void setUnModifiedSince( Calendar ifUnmodifiedSince ) {
+		if (null != ifUnmodifiedSince) unmodifiedSince = ifUnmodifiedSince.getTime();
+	}
+	
 	public void setModifiedSince( String ifModifiedSince ) {
 		DateFormat formatter = null;
         Calendar cal = Calendar.getInstance();
@@ -40,6 +48,10 @@ public class S3ConditionalHeaders {
 		} catch( Exception e ) {}		
 	}
 	
+	public void setMatch( String[] ifMatch ) {
+	    this.ifMatch = ifMatch;	
+	}
+	
 	/**
 	 * Takes the header value from HTTP "If-Match", for example is:
 	 * If-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"
@@ -60,6 +72,10 @@ public class S3ConditionalHeaders {
 				 this.ifMatch[i] = temp;
 			 }
 		}
+	}
+	
+	public void setNoneMatch( String[] ifNoneMatch ) {
+        this.ifNoneMatch = ifNoneMatch;		
 	}
 	
 	public void setNoneMatch( String ifNoneMatch ) {

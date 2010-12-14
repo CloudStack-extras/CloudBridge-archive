@@ -29,6 +29,9 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.log4j.Logger;
 import org.hibernate.LockMode;
 import org.hibernate.Session;
@@ -86,7 +89,7 @@ public class S3Engine {
      */
 	public S3CopyObjectResponse handleRequest(S3CopyObjectRequest request) 
 	{
-		S3CopyObjectResponse response = new S3CopyObjectResponse();	
+		S3CopyObjectResponse response = new S3CopyObjectResponse();
 		
 		// -> first get the object we want to copy
 		S3GetObjectRequest getRequest = new S3GetObjectRequest();
@@ -106,6 +109,14 @@ public class S3Engine {
 	    	response.setResultDescription( originalObject.getResultDescription());
 	    	return response;
 	    }
+	    
+	    // -> handle all the CopySourceIf... conditions
+		resultCode = conditionPassed( request.getConditions(), originalObject.getLastModified().getTime(), originalObject.getETag());
+	    if (200 != resultCode) {
+			response.setResultCode( resultCode );
+	    	response.setResultDescription( "Precondition Failed" );			
+			return response;
+		}
 
 	    
 	    // -> next put the object into the destination bucket
@@ -1099,7 +1110,7 @@ public class S3Engine {
         {
             S3Grant defaultGrant = new S3Grant();
             defaultGrant.setGrantee(SAcl.GRANTEE_USER);
-            defaultGrant.setCanonicalUserID( userId);
+            defaultGrant.setCanonicalUserID( userId );
             defaultGrant.setPermission( permission );
             defaultAcl.addGrant( defaultGrant );       
             aclDao.save( target, targetId, defaultAcl );
@@ -1178,5 +1189,14 @@ public class S3Engine {
            if (requestedPermission == (permission & requestedPermission)) return true;
         }
         return false;
+	}
+	
+	private int conditionPassed( S3ConditionalHeaders ifCond, Date lastModified, String ETag ) 
+	{	
+		if (0 > ifCond.ifModifiedSince(   lastModified )) return 304;
+		if (0 > ifCond.ifUnmodifiedSince( lastModified )) return 412;
+		if (0 > ifCond.ifMatchEtag( ETag ))  			  return 412;
+		if (0 > ifCond.ifNoneMatchEtag( ETag ))  		  return 412;
+		else 		                                      return 200;
 	}
 }

@@ -278,7 +278,9 @@ public class ServiceProvider {
                 		  logger.warn("Unhandled exception " + e.getMessage(), e);
                 		  
                 		  // rethrow the exception to Axis
-                		  throw e;
+                		  if ( null != e.getCause())
+                		       throw e.getCause();
+                		  else throw e;
                 	  } finally {
                 		  PersistContext.closeSession();
                 	  }
