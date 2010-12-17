@@ -29,9 +29,6 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.log4j.Logger;
 import org.hibernate.LockMode;
 import org.hibernate.Session;
@@ -91,10 +88,11 @@ public class S3Engine {
 	{
 		S3CopyObjectResponse response = new S3CopyObjectResponse();
 		
-		// -> first get the object we want to copy
+		// [A] Get the object we want to copy
 		S3GetObjectRequest getRequest = new S3GetObjectRequest();
 		getRequest.setBucketName(request.getSourceBucketName());
 		getRequest.setKey(request.getSourceKey());
+		getRequest.setVersion(request.getVersion());
 
 		getRequest.setInlineData( true );
 		getRequest.setReturnData( true );
@@ -110,23 +108,26 @@ public class S3Engine {
 	    	return response;
 	    }
 	    
-	    // -> handle all the CopySourceIf... conditions
+	    // [B] Handle all the CopySourceIf... conditions
 		resultCode = conditionPassed( request.getConditions(), originalObject.getLastModified().getTime(), originalObject.getETag());
 	    if (200 != resultCode) {
 			response.setResultCode( resultCode );
 	    	response.setResultDescription( "Precondition Failed" );			
 			return response;
 		}
+	    
+	    response.setCopyVersion( originalObject.getVersion());
 
 	    
-	    // -> next put the object into the destination bucket
+	    // [C] Put the object into the destination bucket
 	    S3PutObjectInlineRequest putRequest = new S3PutObjectInlineRequest();
 	    putRequest.setBucketName(request.getDestinationBucketName()) ;
 	    putRequest.setKey(request.getDestinationKey());
 		if ( MetadataDirective.COPY == request.getDirective()) 
 			 putRequest.setMetaEntries(originalObject.getMetaEntries());
 		else putRequest.setMetaEntries(request.getMetaEntries());	
-	    putRequest.setAcl(request.getAcl());
+	    putRequest.setAcl(request.getAcl());                    // -> if via a SOAP call
+	    putRequest.setCannedAccess(request.getCannedAccess());  // -> if via a REST call 
 	    putRequest.setData(originalObject.getData());
 	    
 	    S3PutObjectInlineResponse putResp = handleRequest(putRequest);  
@@ -134,6 +135,7 @@ public class S3Engine {
 	    response.setResultDescription( putResp.getResultDescription());
 		response.setETag( putResp.getETag());
 		response.setLastModified( putResp.getLastModified());
+		response.setPutVersion( putResp.getVersion());
 		return response;
 	}
 

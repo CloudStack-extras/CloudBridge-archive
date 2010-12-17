@@ -677,7 +677,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return response;
 	}
 	
-	private CopyObjectResponse toCopyObjectResponse(S3CopyObjectResponse engineResponse) throws AxisFault {
+	public static CopyObjectResponse toCopyObjectResponse(S3CopyObjectResponse engineResponse) throws AxisFault {
 		CopyObjectResponse response = new CopyObjectResponse();
 		int resultCode = engineResponse.getResultCode();
 

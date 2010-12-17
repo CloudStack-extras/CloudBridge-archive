@@ -14,13 +14,16 @@ public class S3CopyObjectRequest extends S3Request {
 	protected String sourceKey;
 	protected String destinationBucketName;
 	protected String destinationKey;
+	protected String version;
 	protected MetadataDirective directive;
 	protected S3MetaDataEntry[] metaEntries;
 	protected S3AccessControlList acl;
+	protected String cannedAccessPolicy;    // -> REST only sets an acl with a simple keyword
 	protected S3ConditionalHeaders conds;
 
 	public S3CopyObjectRequest() {
 		super();
+		version   = null;
 		directive = MetadataDirective.COPY;
 	}
 	
@@ -56,6 +59,14 @@ public class S3CopyObjectRequest extends S3Request {
 		destinationKey = key;
 	}
 	
+	public String getVersion() {
+		return version;
+	}
+	
+	public void setVersion(String version) {
+		this.version = version;
+	}
+
 	public MetadataDirective getDirective() {
 	    return directive;	
 	}
@@ -82,6 +93,14 @@ public class S3CopyObjectRequest extends S3Request {
 	
 	public void setAcl(S3AccessControlList acl) {
 		this.acl = acl;
+	}
+	
+	public String getCannedAccess() {
+		return cannedAccessPolicy;
+	}
+
+	public void setCannedAccess(String cannedAccessPolicy) {
+		this.cannedAccessPolicy = cannedAccessPolicy;
 	}
 	
 	public void setConditions(S3ConditionalHeaders conds) {

@@ -38,6 +38,8 @@ import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
+
+import com.amazon.s3.CopyObjectResponse;
 import com.amazon.s3.GetObjectAccessControlPolicyResponse;
 import com.cloud.bridge.service.S3Constants;
 import com.cloud.bridge.service.S3RestServlet;
@@ -47,6 +49,8 @@ import com.cloud.bridge.service.ServletAction;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
 import com.cloud.bridge.service.core.s3.S3AuthParams;
 import com.cloud.bridge.service.core.s3.S3ConditionalHeaders;
+import com.cloud.bridge.service.core.s3.S3CopyObjectRequest;
+import com.cloud.bridge.service.core.s3.S3CopyObjectResponse;
 import com.cloud.bridge.service.core.s3.S3DeleteObjectRequest;
 import com.cloud.bridge.service.core.s3.S3GetObjectAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3GetObjectRequest;
@@ -78,28 +82,32 @@ public class S3ObjectAction implements ServletAction {
 
 	}
 
-	public void execute(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	public void execute(HttpServletRequest request, HttpServletResponse response) 
+	    throws IOException, XMLStreamException 
 	{
 		String method      = request.getMethod();
 		String queryString = request.getQueryString();
+		String copy        = null;
 		
 	    response.addHeader( "x-amz-request-id", UUID.randomUUID().toString());	
 
-		     if (method.equalsIgnoreCase( "GET" )) {
-		    	 
-			     if ( queryString != null && queryString.length() > 0 ) 
-			     {
-				      if ( queryString.startsWith("acl")) executeGetObjectAcl(request, response);
-				 } 
-			     else executeGetObject(request, response);
-		     }
-		else if (method.equalsIgnoreCase( "PUT" )) {
-			
-			     if ( queryString != null && queryString.length() > 0 ) 
-			     {
-				     if ( queryString.startsWith("acl")) executePutObjectAcl(request, response);
-				 } 
-			     else executePutObject(request, response);
+	    if ( method.equalsIgnoreCase( "GET" )) 
+	    {		    	 
+			 if ( queryString != null && queryString.length() > 0 ) 
+			 {
+				  if ( queryString.startsWith("acl")) executeGetObjectAcl(request, response);
+			 } 
+			 else executeGetObject(request, response);
+		}
+		else if (method.equalsIgnoreCase( "PUT" )) 
+		{			
+			 if ( queryString != null && queryString.length() > 0 ) {
+				  if ( queryString.startsWith("acl")) executePutObjectAcl(request, response);
+			 } 
+			 else if ( null != (copy = request.getHeader( "x-amz-copy-source" ))) {
+				  executeCopyObject(request, response, copy.trim());
+			 }
+ 		     else executePutObject(request, response);
 		}
 		else if (method.equalsIgnoreCase( "DELETE" )) {
 			     executeDeleteObject(request, response);
@@ -111,6 +119,78 @@ public class S3ObjectAction implements ServletAction {
 			     executePostObject(request, response);
 		}
 		else throw new IllegalArgumentException( "Unsupported method in REST request");
+	}
+
+	
+	private void executeCopyObject(HttpServletRequest request, HttpServletResponse response, String copy) 
+	    throws IOException, XMLStreamException 
+	{
+        S3CopyObjectRequest engineRequest = new S3CopyObjectRequest();
+        String versionId = null;
+        
+		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String key        = (String)request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		String sourceBucketName = null;
+		String sourceKey        = null;
+
+		// [A] Parse the x-amz-copy-source header into usable pieces
+		// -> is there a ?versionId= value
+		int index = copy.indexOf( '?' );
+		if (-1 != index)
+		{
+			versionId = copy.substring( index+1 );
+			if (versionId.startsWith( "versionId=" )) engineRequest.setVersion( versionId.substring( 10 ));
+			copy = copy.substring( 0, index );
+		}
+		
+		// -> the value of copy should look like: "/bucket-name/object-name"
+		index = copy.indexOf( '/' );
+		if ( 0 != index )
+			 throw new IllegalArgumentException( "Invalid x-amz-copy-sourse header value [" + copy + "]" );
+		else copy = copy.substring( 1 );
+		
+		index = copy.indexOf( '/' );
+		if ( -1 == index )
+			 throw new IllegalArgumentException( "Invalid x-amz-copy-sourse header value [" + copy + "]" );
+		
+		sourceBucketName = copy.substring( 0, index );
+		sourceKey        = copy.substring( index+1 );
+			
+		
+		// [B] Set the object used in the SOAP request so it can do the bulk of the work for us
+        engineRequest.setSourceBucketName( sourceBucketName );
+        engineRequest.setSourceKey( sourceKey );
+        engineRequest.setDestinationBucketName( bucketName );
+        engineRequest.setDestinationKey( key );
+    
+        engineRequest.setDataDirective( request.getHeader( "x-amz-metadata-directive" ));
+		engineRequest.setMetaEntries( extractMetaData( request ));
+		engineRequest.setCannedAccess( request.getHeader( "x-amz-acl" ));
+		engineRequest.setConditions( conditionalRequest( request, true ));
+		
+		
+		// [C] Do the actual work and return the result
+		S3CopyObjectResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );		
+		
+        versionId = engineResponse.getCopyVersion();
+        if (null != versionId) response.addHeader( "x-amz-copy-source-version-id", versionId );
+        versionId = engineResponse.getPutVersion();
+        if (null != versionId) response.addHeader( "x-amz-version-id", versionId );
+	     
+		// -> serialize using the apache's Axiom classes
+		CopyObjectResponse allBuckets = S3SoapServiceImpl.toCopyObjectResponse( engineResponse );
+
+		OutputStream os = response.getOutputStream();
+		response.setStatus(200);	
+	    response.setContentType("text/xml; charset=UTF-8");
+		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
+		String documentStart = new String( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" );
+		os.write( documentStart.getBytes());
+		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
+        allBuckets.serialize( new QName( "http://s3.amazonaws.com/doc/2006-03-01/", "CopyObjectResponse", "ns1" ), factory, MTOMWriter );
+        xmlWriter.flush();
+        xmlWriter.close();
+        os.close();
 	}
 
 	private void executeGetObjectAcl(HttpServletRequest request, HttpServletResponse response) throws IOException 
@@ -151,7 +231,7 @@ public class S3ObjectAction implements ServletAction {
 		
 		// -> reuse the Access Control List parsing code that was added to support DIME
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
-		String key        = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		String key        = (String)request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 		try {
 		    putRequest = S3RestServlet.toEnginePutObjectRequest( request.getInputStream());
 		}
@@ -235,7 +315,7 @@ public class S3ObjectAction implements ServletAction {
 		long contentLength = Converter.toLong(request.getHeader("Content-Length"), 0);
 
 		String bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
-		String key = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		String key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
 		engineRequest.setBucketName(bucket);
 		engineRequest.setKey(key);
@@ -491,20 +571,28 @@ public class S3ObjectAction implements ServletAction {
 		return engineRequest;
 	}
 	
-	private S3ConditionalHeaders conditionalRequest( HttpServletRequest request ) 
+	private S3ConditionalHeaders conditionalRequest( HttpServletRequest request, boolean isCopy ) 
 	{
 		S3ConditionalHeaders headers = new S3ConditionalHeaders();
 		
-		headers.setModifiedSince( request.getHeader( "If-Modified-Since" ));
-		headers.setUnModifiedSince( request.getHeader( "If-Unmodified-Since" ));
-		headers.setMatch( request.getHeader( "If-Match" ));
-		headers.setNoneMatch( request.getHeader( "If-None-Match" ));
+		if (isCopy) {
+			headers.setModifiedSince( request.getHeader( "x-amz-copy-source-if-modified-since" ));	
+			headers.setUnModifiedSince( request.getHeader( "x-amz-copy-source-if-unmodified-since" ));	
+			headers.setMatch( request.getHeader( "x-amz-copy-source-if-match" ));	
+			headers.setNoneMatch( request.getHeader( "x-amz-copy-source-if-none-match" ));	
+		}
+		else {
+		    headers.setModifiedSince( request.getHeader( "If-Modified-Since" ));
+		    headers.setUnModifiedSince( request.getHeader( "If-Unmodified-Since" ));
+		    headers.setMatch( request.getHeader( "If-Match" ));
+		    headers.setNoneMatch( request.getHeader( "If-None-Match" ));
+		}
         return headers;
 	}
 	
 	private boolean conditionPassed( HttpServletRequest request, HttpServletResponse response, Date lastModified, String ETag ) 
 	{	
-		S3ConditionalHeaders ifCond = conditionalRequest( request );
+		S3ConditionalHeaders ifCond = conditionalRequest( request, false );
 		
 		if (0 > ifCond.ifModifiedSince( lastModified )) {
 			response.setStatus( 304 );
