@@ -129,7 +129,7 @@ public class S3Engine {
 	    putRequest.setAcl(request.getAcl());                    // -> if via a SOAP call
 	    putRequest.setCannedAccess(request.getCannedAccess());  // -> if via a REST call 
 	    putRequest.setData(originalObject.getData());
-	    
+
 	    S3PutObjectInlineResponse putResp = handleRequest(putRequest);  
 	    response.setResultCode( putResp.resultCode );
 	    response.setResultDescription( putResp.getResultDescription());
@@ -558,7 +558,7 @@ public class S3Engine {
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
 			return response;  		
     	}
-		
+	
 		accessAllowed( "SObject", item.getId(), SAcl.PERMISSION_READ );
 		
 		// -> extract the meta data that corresponds the specific versioned item 
