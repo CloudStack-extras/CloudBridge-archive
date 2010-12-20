@@ -353,7 +353,8 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return toGetObjectExtendedResponse(engine.handleRequest(toEngineGetObjectRequest(getObjectExtended)));
     }
 	
-	private S3GetObjectRequest toEngineGetObjectRequest(GetObject getObject) {
+	private S3GetObjectRequest toEngineGetObjectRequest(GetObject getObject) 
+	{
 		S3GetObjectRequest request = new S3GetObjectRequest();
 		
 		request.setAccessKey(getObject.getAWSAccessKeyId());
@@ -378,12 +379,15 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		request.setReturnMetadata(getObjectExtended.getGetMetadata());
 		request.setInlineData(getObjectExtended.getInlineData());
 		
+		S3ConditionalHeaders conds = new S3ConditionalHeaders();
+		conds.setModifiedSince(getObjectExtended.getIfModifiedSince());
+		conds.setUnModifiedSince(getObjectExtended.getIfUnmodifiedSince());
+		conds.setMatch(getObjectExtended.getIfMatch());
+		conds.setNoneMatch(getObjectExtended.getIfNoneMatch());
+		request.setConditions(conds);
+
 		request.setByteRangeStart(getObjectExtended.getByteRangeStart());
 		request.setByteRangeEnd(getObjectExtended.getByteRangeEnd());
-		request.setIfMatch(getObjectExtended.getIfMatch());
-		request.setIfModifiedSince(getObjectExtended.getIfModifiedSince());
-		request.setIfUnmodifiedSince(getObjectExtended.getIfUnmodifiedSince());
-		request.setIfNoneMatch(getObjectExtended.getIfNoneMatch());
 		request.setReturnCompleteObjectOnConditionFailure(getObjectExtended.getReturnCompleteObjectOnConditionFailure());
 		return request;
 	}
@@ -424,7 +428,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		param1.setDescription( engineResponse.getResultDescription());
 		result.setStatus( param1 );
 
-		if ( 200 == resultCode )
+		if ( 200 == resultCode || 206 == resultCode )
 		{
 		     result.setData(engineResponse.getData());
 		     result.setETag( engineResponse.getETag());

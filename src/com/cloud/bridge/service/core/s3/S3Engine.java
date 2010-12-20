@@ -93,6 +93,7 @@ public class S3Engine {
 		getRequest.setBucketName(request.getSourceBucketName());
 		getRequest.setKey(request.getSourceKey());
 		getRequest.setVersion(request.getVersion());
+		getRequest.setConditions( request.getConditions());
 
 		getRequest.setInlineData( true );
 		getRequest.setReturnData( true );
@@ -107,19 +108,11 @@ public class S3Engine {
 	    	response.setResultDescription( originalObject.getResultDescription());
 	    	return response;
 	    }
-	    
-	    // [B] Handle all the CopySourceIf... conditions
-		resultCode = conditionPassed( request.getConditions(), originalObject.getLastModified().getTime(), originalObject.getETag());
-	    if (200 != resultCode) {
-			response.setResultCode( resultCode );
-	    	response.setResultDescription( "Precondition Failed" );			
-			return response;
-		}
-	    
+	    	    
 	    response.setCopyVersion( originalObject.getVersion());
 
 	    
-	    // [C] Put the object into the destination bucket
+	    // [B] Put the object into the destination bucket
 	    S3PutObjectInlineRequest putRequest = new S3PutObjectInlineRequest();
 	    putRequest.setBucketName(request.getDestinationBucketName()) ;
 	    putRequest.setKey(request.getDestinationKey());
@@ -514,10 +507,19 @@ public class S3Engine {
     	return policy;
     }
     
+    /**
+     * Implements both GetObject and GetObjectExtended.
+     * 
+     * @param request
+     * @return
+     */
     public S3GetObjectResponse handleRequest(S3GetObjectRequest request) 
     {
     	S3GetObjectResponse response = new S3GetObjectResponse();
-    	int resultCode = 200;
+    	boolean ifRange = false;
+		long bytesStart = request.getByteRangeStart();
+		long bytesEnd   = request.getByteRangeEnd();
+    	int resultCode  = 200;
 
     	// [A] Verify that the bucket and the object exist
 		SBucketDao bucketDao = new SBucketDao();
@@ -559,8 +561,28 @@ public class S3Engine {
 			return response;  		
     	}
 	
-		accessAllowed( "SObject", item.getId(), SAcl.PERMISSION_READ );
 		
+	    // [C] Handle all the IFModifiedSince ... conditions, and access privileges
+		accessAllowed( "SObject", item.getId(), SAcl.PERMISSION_READ );
+
+		// -> http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.27 (HTTP If-Range header)
+		if (request.isReturnCompleteObjectOnConditionFailure() && (0 <= bytesStart && 0 <= bytesEnd)) ifRange = true;
+
+		resultCode = conditionPassed( request.getConditions(), item.getLastModifiedTime(), item.getMd5(), ifRange );
+	    if ( -1 == resultCode ) {
+	    	// -> If-Range implementation, we have to return the entire object
+	    	resultCode = 200;
+	    	bytesStart = -1;
+	    	bytesEnd = -1;
+	    }
+	    else if (200 != resultCode) {
+			response.setResultCode( resultCode );
+	    	response.setResultDescription( "Precondition Failed" );			
+			return response;
+		}
+
+
+		// [D] Return the contents of the object inline	
 		// -> extract the meta data that corresponds the specific versioned item 
 		SMetaDao metaDao = new SMetaDao();
 		List<SMeta> itemMetaData = metaDao.getByTarget( "SObjectItem", item.getId());
@@ -578,15 +600,9 @@ public class S3Engine {
 		    }
 		    response.setMetaEntries( metaEntries );
 		}
-		
-		
-    	// TODO logic of IfMatch IfNoneMatch, IfModifiedSince, IfUnmodifiedSince (already done in the REST half)  	
-		
-		// [C] Return the contents of the object inline
+		    
 		//  -> support a single byte range
-		long bytesStart = request.getByteRangeStart();
-		long bytesEnd   = request.getByteRangeEnd();
-		if ( 0 <= bytesStart && 0 <= bytesEnd) {
+		if ( 0 <= bytesStart && 0 <= bytesEnd ) {
 		     response.setContentLength( bytesEnd - bytesStart );	
 		     resultCode = 206;
 		}
@@ -602,7 +618,7 @@ public class S3Engine {
     			Tuple<SHost, String> tupleSHostInfo = getBucketStorageHost(sbucket);
 				S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleSHostInfo.getFirst());
 				
-				if ( request.getByteRangeStart() >= 0 && request.getByteRangeEnd() >= 0)
+				if ( 0 <= bytesStart && 0 <= bytesEnd )
 					 response.setData(bucketAdapter.loadObjectRange(tupleSHostInfo.getSecond(), 
 						   request.getBucketName(), item.getStoredPath(), bytesStart, bytesEnd ));
 				else response.setData(bucketAdapter.loadObject(tupleSHostInfo.getSecond(), request.getBucketName(), item.getStoredPath()));
@@ -1193,12 +1209,32 @@ public class S3Engine {
         return false;
 	}
 	
-	private int conditionPassed( S3ConditionalHeaders ifCond, Date lastModified, String ETag ) 
+	/**
+	 * ifRange is true and IfUnmodifiedSince or IfMatch fails then we return the entire object (indicated by
+	 * returning a -1 as the function result.
+	 * 
+	 * @param ifCond - conditional get defined by these tests
+	 * @param lastModified - value used on ifModifiedSince or ifUnmodifiedSince
+	 * @param ETag - value used on ifMatch and ifNoneMatch
+	 * @param ifRange - using an If-Range HTTP functionality 
+	 * @return -1 means return the entire object with an HTTP 200 (not a subrange)
+	 */
+	private int conditionPassed( S3ConditionalHeaders ifCond, Date lastModified, String ETag, boolean ifRange ) 
 	{	
-		if (0 > ifCond.ifModifiedSince(   lastModified )) return 304;
-		if (0 > ifCond.ifUnmodifiedSince( lastModified )) return 412;
-		if (0 > ifCond.ifMatchEtag( ETag ))  			  return 412;
-		if (0 > ifCond.ifNoneMatchEtag( ETag ))  		  return 412;
-		else 		                                      return 200;
+		if (null == ifCond) return 200;
+		
+		if (0 > ifCond.ifModifiedSince( lastModified )) 
+			return 304;
+		
+		if (0 > ifCond.ifUnmodifiedSince( lastModified )) 
+			return (ifRange ? -1 : 412);
+		
+		if (0 > ifCond.ifMatchEtag( ETag ))  			  
+			return (ifRange ? -1 : 412);
+		
+		if (0 > ifCond.ifNoneMatchEtag( ETag ))  		  
+			return 412;
+		
+		return 200;
 	}
 }
