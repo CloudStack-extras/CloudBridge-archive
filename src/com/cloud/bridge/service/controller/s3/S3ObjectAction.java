@@ -95,28 +95,44 @@ public class S3ObjectAction implements ServletAction {
 	    {		    	 
 			 if ( queryString != null && queryString.length() > 0 ) 
 			 {
-				  if ( queryString.startsWith("acl")) executeGetObjectAcl(request, response);
+				       if (queryString.startsWith("acl"))      executeGetObjectAcl(request, response);
+				  else if (queryString.startsWith("uploadId")) executeListUploadParts(request, response);
 			 } 
 			 else executeGetObject(request, response);
 		}
 		else if (method.equalsIgnoreCase( "PUT" )) 
 		{			
-			 if ( queryString != null && queryString.length() > 0 ) {
-				  if ( queryString.startsWith("acl")) executePutObjectAcl(request, response);
+			 if ( queryString != null && queryString.length() > 0 ) 
+			 {
+				       if (queryString.startsWith("acl"))        executePutObjectAcl(request, response);
+				  else if (queryString.startsWith("partNumber")) executeUploadPart(request, response);
 			 } 
-			 else if ( null != (copy = request.getHeader( "x-amz-copy-source" ))) {
+			 else if ( null != (copy = request.getHeader( "x-amz-copy-source" ))) 
+			 {
 				  executeCopyObject(request, response, copy.trim());
 			 }
  		     else executePutObject(request, response);
 		}
-		else if (method.equalsIgnoreCase( "DELETE" )) {
-			     executeDeleteObject(request, response);
+		else if (method.equalsIgnoreCase( "DELETE" )) 
+		{
+			 if ( queryString != null && queryString.length() > 0 ) 
+			 {
+			      if (queryString.startsWith("uploadId")) executeAbortMultipartUpload(request, response);			     
+			 } 
+			 else executeDeleteObject(request, response);
 		}
-		else if (method.equalsIgnoreCase( "HEAD" )) {
-			     executeHeadObject(request, response);
+		else if (method.equalsIgnoreCase( "HEAD" )) 
+		{
+			 executeHeadObject(request, response);
 		}
-		else if (method.equalsIgnoreCase( "POST" )) {
-			     executePostObject(request, response);
+		else if (method.equalsIgnoreCase( "POST" )) 
+		{	
+			 if ( queryString != null && queryString.length() > 0 ) 
+			 {
+			           if (queryString.startsWith("uploads"))  executeInitiateMultipartUpload(request, response);	
+			      else if (queryString.startsWith("uploadId")) executeCompleteMultipartUpload(request, response);			     
+			 } 
+			 else executePostObject(request, response);
 		}
 		else throw new IllegalArgumentException( "Unsupported method in REST request");
 	}
@@ -545,13 +561,101 @@ public class S3ObjectAction implements ServletAction {
 		if (null != version) response.addHeader( "x-amz-version-id", version );		
 	}
 
+	private void executeInitiateMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException 
+	{
+		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		String   cannedAccess = request.getHeader( "x-amz-acl" );
+		S3MetaDataEntry[] meta = extractMetaData( request );
+		
+		// TODO - for the bucket and key start the upload process	
+		response.setStatus(501);
+	}
+	
+	private void executeUploadPart( HttpServletRequest request, HttpServletResponse response ) throws IOException 
+	{
+		String continueHeader = request.getHeader( "Expect" );
+		if (continueHeader != null && continueHeader.equalsIgnoreCase("100-continue")) {
+			S3RestServlet.writeResponse(response, "HTTP/1.1 100 Continue\r\n");
+		}
+
+		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		int sizeInBytes = -1;
+		int partNumber  = -1;
+		int uploadId    = -1;
+
+		String md5 = request.getHeader( "Content-MD5" );
+
+		String temp = request.getHeader( "Content-Length" );
+		if (null != temp) sizeInBytes = Integer.parseInt( temp );
+		
+		temp = request.getParameter("uploadId");
+    	if (null != temp) uploadId = Integer.parseInt( temp );
+
+		temp = request.getParameter("partNumber");
+    	if (null != temp) partNumber = Integer.parseInt( temp );
+
+		// TODO - upload one part of a message in a multipart upload process
+		response.setStatus(501);
+	}
+	
+	private void executeCompleteMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException 
+	{
+		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		int uploadId    = -1;
+
+		String temp = request.getParameter("uploadId");
+    	if (null != temp) uploadId = Integer.parseInt( temp );
+
+		// TODO  parse the XML body part
+		
+		// TODO - reassemble all the download parts and create the new object into the bucket
+		response.setStatus(501);
+	}
+	
+	private void executeAbortMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException 
+	{
+		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		int uploadId    = -1;
+
+		String temp = request.getParameter("uploadId");
+    	if (null != temp) uploadId = Integer.parseInt( temp );
+
+		// TODO - cancel a multipart upload and remove all its parts
+		response.setStatus(501);
+	}
+	
+	private void executeListUploadParts( HttpServletRequest request, HttpServletResponse response ) throws IOException 
+	{
+		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		int uploadId    = -1;
+		int maxParts    = -1;
+		int partMarker  = -1;
+
+		String temp = request.getParameter("uploadId");
+    	if (null != temp) uploadId = Integer.parseInt( temp );
+
+		temp = request.getParameter("max-parts");
+    	if (null != temp) maxParts = Integer.parseInt( temp );
+
+		temp = request.getParameter("part-number-marker");
+    	if (null != temp) partMarker = Integer.parseInt( temp );
+
+		// TODO - list all the parts currently uploaded in the multipart process
+		response.setStatus(501);
+	}
+	
 	/**
 	 * Support the "Range: bytes=0-399" header with just one byte range.
 	 * @param request
 	 * @param engineRequest
 	 * @return
 	 */
-	private S3GetObjectRequest setRequestByteRange(HttpServletRequest request, S3GetObjectRequest engineRequest ) 
+	private S3GetObjectRequest setRequestByteRange( HttpServletRequest request, S3GetObjectRequest engineRequest ) 
 	{
 		String temp = request.getHeader( "Range" );
 		if (null == temp) return engineRequest;

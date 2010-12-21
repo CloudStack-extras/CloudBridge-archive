@@ -140,6 +140,10 @@ public class S3BucketAction implements ServletAction {
 					 executeGetBucketLocation(request, response);
 					 return;
 				}
+				else if(queryString.startsWith("uploads")) {
+					 executeListMultipartUploads(request, response);
+					 return;
+				}
 			}
 			
 			String bucketAtr = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
@@ -362,6 +366,7 @@ public class S3BucketAction implements ServletAction {
 	
 	public void executeGetBucketLogging(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		// TODO -- this is a beta feature of S3
+		response.setStatus(501);
 	}
 	
 	public void executeGetBucketLocation(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -486,6 +491,7 @@ public class S3BucketAction implements ServletAction {
 	
 	public void executePutBucketLogging(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		// TODO -- this is a S3 beta feature
+		response.setStatus(501);
 	}
 	
 	public void executeDeleteBucket(HttpServletRequest request, HttpServletResponse response) throws IOException 
@@ -495,5 +501,18 @@ public class S3BucketAction implements ServletAction {
 		S3Response engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);  
 		response.setStatus(engineResponse.getResultCode());
 		response.flushBuffer();
+	}
+	
+	public void executeListMultipartUploads(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	{
+		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String delimiter      = request.getParameter("delimiter");
+		String maxUploads     = request.getParameter("max-uploads");
+		String keyMarker      = request.getParameter("key-marker");
+		String prefix         = request.getParameter("prefix");
+		String uploadIdMarker = request.getParameter("upload-id-marker");
+
+		// TODO - list for the bucket all the uploads in progress
+		response.setStatus(501);
 	}
 }
