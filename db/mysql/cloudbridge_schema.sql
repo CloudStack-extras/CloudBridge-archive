@@ -11,9 +11,6 @@ DROP TABLE IF EXISTS sobject_item;
 DROP TABLE IF EXISTS meta;
 DROP TABLE IF EXISTS acl;
 DROP TABLE IF EXISTS usercredentials;
-DROP TABLE IF EXISTS multipart_uploads;
-DROP TABLE IF EXISTS multipart_meta;
-DROP TABLE IF EXISTS multipart_parts;
 
 -- storage host
 CREATE TABLE shost (							
@@ -140,51 +137,6 @@ CREATE TABLE usercredentials (
 	SecretKey VARCHAR(150) NOT NULL,
 	CertUniqueId VARCHAR(200),
 
-	PRIMARY KEY(ID)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
--- We need to keep track of the multipart uploads and all the parts of each upload until they
--- are completed or aborted.
--- The AccessKey is where we store the AWS account id
---
-CREATE TABLE multipart_uploads (
-	ID BIGINT NOT NULL AUTO_INCREMENT,
-	
-	AccessKey  VARCHAR(150) NOT NULL,
-	BucketName VARCHAR(64)  NOT NULL,
-	NameKey    VARCHAR(255) NOT NULL,
-	x_amz_acl  VARCHAR(64)  NULL,
-
-	PRIMARY KEY(ID)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
--- We need to store all the meta data for an object being mutlipart uploaded 
--- UploadID is a foreign key to an entry in the mutipart_uploads table
---
-CREATE TABLE multipart_meta (
-	ID BIGINT NOT NULL AUTO_INCREMENT,
-	
-	UploadID BIGINT NOT NULL,  
-	Name  VARCHAR(64) NOT NULL,
-	Value VARCHAR(256),
-	
-	PRIMARY KEY(ID)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
--- Each part of a multipart upload gets a row in this table
--- UploadId is a foreign key to an entry in the mutipart_uploads table
---
-CREATE TABLE multipart_parts (
-	ID BIGINT NOT NULL AUTO_INCREMENT,
-	
-	UploadID BIGINT NOT NULL,  
-	partNumber INT NOT NULL,
-	MD5 VARCHAR(128),
- 	StoredPath VARCHAR(256),					-- relative to mount point of the root
- 	StoredSize BIGINT NOT NULL DEFAULT 0,
-	
-	CreateTime DATETIME,
-	
 	PRIMARY KEY(ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
