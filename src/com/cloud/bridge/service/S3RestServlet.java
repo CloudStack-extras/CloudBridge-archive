@@ -232,7 +232,7 @@ public class S3RestServlet extends HttpServlet {
      * We are using the S3AuthParams class to hide where the header values are coming
      * from so that the authenticateRequest call can be made from several places.
      */
-    private S3AuthParams extractRequestHeaders( HttpServletRequest request ) {
+    public static S3AuthParams extractRequestHeaders( HttpServletRequest request ) {
     	S3AuthParams params = new S3AuthParams();
     	   	
 		Enumeration headers = request.getHeaderNames();
@@ -301,14 +301,14 @@ public class S3RestServlet extends HttpServlet {
 			}
 			
 			// -> turn off auth - just for testing
-			//UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), AWSAccessKey, info.getDescription());
+			//UserContext.current().initContext("Mark", "123", "Mark", "testing");
             //return;
             
 		} catch (SignatureException e) {
 			throw new PermissionDeniedException(e);
 			
 		} catch (UnsupportedEncodingException e) {
-			throw new PermissionDeniedException(e);
+	    	throw new PermissionDeniedException(e);
 		}
 		throw new PermissionDeniedException("Invalid signature");
     }

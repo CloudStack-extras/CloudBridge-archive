@@ -20,6 +20,8 @@ CREATE TABLE multipart_uploads (
 	BucketName VARCHAR(64)  NOT NULL,
 	NameKey    VARCHAR(255) NOT NULL,
 	x_amz_acl  VARCHAR(64)  NULL,
+	
+	CreateTime DATETIME,
 
 	PRIMARY KEY(ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

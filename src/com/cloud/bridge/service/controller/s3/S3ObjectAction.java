@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
@@ -28,6 +29,7 @@ import java.util.UUID;
 import javax.activation.DataHandler;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLOutputFactory;
@@ -41,13 +43,17 @@ import org.apache.log4j.Logger;
 
 import com.amazon.s3.CopyObjectResponse;
 import com.amazon.s3.GetObjectAccessControlPolicyResponse;
+import com.cloud.bridge.persist.dao.MultipartLoadDao;
+import com.cloud.bridge.persist.dao.UserCredentialsDao;
 import com.cloud.bridge.service.S3Constants;
 import com.cloud.bridge.service.S3RestServlet;
 import com.cloud.bridge.service.S3SoapServiceImpl;
 import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.ServletAction;
+import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
 import com.cloud.bridge.service.core.s3.S3AuthParams;
+import com.cloud.bridge.service.core.s3.S3CanonicalUser;
 import com.cloud.bridge.service.core.s3.S3ConditionalHeaders;
 import com.cloud.bridge.service.core.s3.S3CopyObjectRequest;
 import com.cloud.bridge.service.core.s3.S3CopyObjectResponse;
@@ -55,6 +61,7 @@ import com.cloud.bridge.service.core.s3.S3DeleteObjectRequest;
 import com.cloud.bridge.service.core.s3.S3GetObjectAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3GetObjectRequest;
 import com.cloud.bridge.service.core.s3.S3GetObjectResponse;
+import com.cloud.bridge.service.core.s3.S3ListBucketObjectEntry;
 import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3PutObjectInlineRequest;
 import com.cloud.bridge.service.core.s3.S3PutObjectInlineResponse;
@@ -561,15 +568,50 @@ public class S3ObjectAction implements ServletAction {
 		if (null != version) response.addHeader( "x-amz-version-id", version );		
 	}
 
-	private void executeInitiateMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException 
-	{
+	/**
+	 * Save all the information about the multipart upload request in the database so once it is finished
+	 * (in the future) we can create the real S3 object.
+	 * 
+	 * @throws IOException
+	 */
+	private void executeInitiateMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException
+    {
+		// -> this request is via a POST which typically has its auth parameters inside the message
+		try {
+	        S3RestServlet.authenticateRequest( request, S3RestServlet.extractRequestHeaders( request ));
+	    }
+		catch( Exception e ) {
+			throw new IOException( e.toString());
+		}
+
 		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 		String   cannedAccess = request.getHeader( "x-amz-acl" );
 		S3MetaDataEntry[] meta = extractMetaData( request );
+		int uploadId = -1;
 		
-		// TODO - for the bucket and key start the upload process	
-		response.setStatus(501);
+        try {
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
+    	    uploadId = uploadDao.initiateUpload( UserContext.current().getAccessKey(), bucket, key, cannedAccess, meta );
+    	    
+        } catch( Exception e ) {
+			logger.error( "executeInitiateMultipartUpload exception: " + e.toString());
+    		response.setStatus(500);
+        	return;
+        }
+        
+        // -> there is no SOAP version of this function
+		StringBuffer xml = new StringBuffer();
+        xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
+        xml.append( "<InitiateMultipartUploadResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
+        xml.append( "<Bucket>" ).append( bucket ).append( "</Bucket>" );
+        xml.append( "<Key>" ).append( key ).append( "</Key>" );
+        xml.append( "<UploadId>" ).append( uploadId ).append( "</UploadId>" );
+        xml.append( "</InitiateMultipartUploadResult>" );
+      
+		response.setStatus(200);
+	    response.setContentType("text/xml; charset=UTF-8");
+    	S3RestServlet.endResponse(response, xml.toString());
 	}
 	
 	private void executeUploadPart( HttpServletRequest request, HttpServletResponse response ) throws IOException 
@@ -600,8 +642,16 @@ public class S3ObjectAction implements ServletAction {
 		response.setStatus(501);
 	}
 	
-	private void executeCompleteMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException 
+	private void executeCompleteMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException
 	{
+		// -> this request is via a POST which typically has its auth parameters inside the message
+		try {
+	        S3RestServlet.authenticateRequest( request, S3RestServlet.extractRequestHeaders( request ));
+	    }
+		catch( Exception e ) {
+			throw new IOException( e.toString());
+		}
+
 		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 		int uploadId    = -1;
@@ -623,7 +673,7 @@ public class S3ObjectAction implements ServletAction {
 
 		String temp = request.getParameter("uploadId");
     	if (null != temp) uploadId = Integer.parseInt( temp );
-
+    	
 		// TODO - cancel a multipart upload and remove all its parts
 		response.setStatus(501);
 	}
