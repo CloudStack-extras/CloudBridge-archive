@@ -9,6 +9,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Properties;
 
@@ -17,6 +18,7 @@ import org.apache.log4j.Logger;
 import com.cloud.bridge.model.UserCredentials;
 import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
+import com.cloud.bridge.service.core.s3.S3MultipartPart;
 import com.cloud.bridge.util.ConfigurationHelper;
 
 public class MultipartLoadDao {
@@ -159,6 +161,53 @@ public class MultipartLoadDao {
             closeConnection();
         }
     }
+	
+	/**
+	 * Return info on a range of upload parts that have already been stored in disk,
+	 * 
+	 * @param uploadId
+	 * @param maxParts
+	 * @param startAt
+	 * @return an array of S3MultipartPart objects
+	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	 */
+	public S3MultipartPart[] getUploadParts( int uploadId, int maxParts, int startAt ) 
+	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	{
+		S3MultipartPart[] parts = new S3MultipartPart[maxParts];
+	    PreparedStatement statement = null;
+	    int i = 0;
+		
+        openConnection();	
+        try {
+		    statement = conn.prepareStatement ( "SELECT partNumber, MD5, StoredSize, CreateTime  " +
+		    		                            "FROM   multipart_parts " +
+		    		                            "WHERE  UploadID=? " +
+		    		                            "AND    ID > ? AND ID < ?" );
+	        statement.setInt( 1, uploadId );
+	        statement.setInt( 2, startAt  );
+	        statement.setInt( 3, startAt + maxParts + 1 );
+		    ResultSet rs = statement.executeQuery();
+		    
+		    while (rs.next() && i < maxParts) 
+		    {
+		    	Calendar tod = Calendar.getInstance();
+		    	tod.setTime( rs.getDate( "CreateTime" ));
+		    	
+		    	parts[i] = new S3MultipartPart();
+		    	parts[i].setPartNumber( rs.getInt( "partNumber" ));
+		    	parts[i].setEtag( rs.getString( "MD5" ));
+		    	parts[i].setLastModified( tod );
+		    	parts[i].setSize( rs.getInt( "StoredSize" ));
+		    	i++;
+		    }
+            statement.close();			    
+            return parts;
+        
+        } finally {
+            closeConnection();
+        }
+	}
         
 	/**
 	 * A multipart upload request can have zero to many meta data entries to be applied to the

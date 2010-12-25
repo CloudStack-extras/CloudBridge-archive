@@ -75,7 +75,7 @@ public class S3Engine {
     protected final static Logger logger = Logger.getLogger(S3Engine.class);
     
     private final int LOCK_ACQUIRING_TIMEOUT_SECONDS = 10;		// ten seconds
-	
+
     private final Map<Integer, S3BucketAdapter> bucketAdapters = new HashMap<Integer, S3BucketAdapter>();
     
     public S3Engine() {
