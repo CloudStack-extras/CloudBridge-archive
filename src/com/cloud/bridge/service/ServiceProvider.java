@@ -68,6 +68,7 @@ public class ServiceProvider {
     private Properties properties;
     private boolean useSubDomain = false;			// use DNS sub domain for bucket name
     private String serviceEndpoint = null;
+    private String multipartDir = null;  // illegal bucket name used as a folder for storing multiparts
     private S3Engine engine;
     private EC2Engine EC2_engine = null;
     
@@ -116,6 +117,10 @@ public class ServiceProvider {
     
     public String getServiceEndpoint() {
     	return serviceEndpoint;
+    }
+    
+    public String getMultipartDir() {
+    	return multipartDir;
     }
     
     public Properties getStartupProperties() {
@@ -180,8 +185,9 @@ public class ServiceProvider {
     	PersistContext.flush();
 
     	String localStorageRoot = properties.getProperty("storage.root");
-    	if(localStorageRoot != null)
-    		setupLocalStorage(localStorageRoot);
+    	if (localStorageRoot != null) setupLocalStorage(localStorageRoot);
+
+    	multipartDir = properties.getProperty("storage.multipartDir");
     	
     	timer.schedule(getHeartbeatTask(), HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL);
     	

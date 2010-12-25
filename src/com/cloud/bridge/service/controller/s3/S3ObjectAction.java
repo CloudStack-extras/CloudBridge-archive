@@ -17,6 +17,7 @@ package com.cloud.bridge.service.controller.s3;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.sql.SQLException;
@@ -43,8 +44,12 @@ import org.apache.log4j.Logger;
 
 import com.amazon.s3.CopyObjectResponse;
 import com.amazon.s3.GetObjectAccessControlPolicyResponse;
+import com.cloud.bridge.model.SBucket;
+import com.cloud.bridge.model.SHost;
 import com.cloud.bridge.persist.dao.MultipartLoadDao;
+import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
+import com.cloud.bridge.service.S3BucketAdapter;
 import com.cloud.bridge.service.S3Constants;
 import com.cloud.bridge.service.S3RestServlet;
 import com.cloud.bridge.service.S3SoapServiceImpl;
@@ -58,6 +63,7 @@ import com.cloud.bridge.service.core.s3.S3ConditionalHeaders;
 import com.cloud.bridge.service.core.s3.S3CopyObjectRequest;
 import com.cloud.bridge.service.core.s3.S3CopyObjectResponse;
 import com.cloud.bridge.service.core.s3.S3DeleteObjectRequest;
+import com.cloud.bridge.service.core.s3.S3Engine;
 import com.cloud.bridge.service.core.s3.S3GetObjectAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3GetObjectRequest;
 import com.cloud.bridge.service.core.s3.S3GetObjectResponse;
@@ -68,10 +74,12 @@ import com.cloud.bridge.service.core.s3.S3PutObjectInlineResponse;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.core.s3.S3SetObjectAccessControlPolicyRequest;
+import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.util.Converter;
 import com.cloud.bridge.util.DateHelper;
 import com.cloud.bridge.util.HeaderParam;
 import com.cloud.bridge.util.ServletRequestDataSource;
+import com.cloud.bridge.util.Tuple;
 
 /**
  * @author Kelven Yang
@@ -620,26 +628,32 @@ public class S3ObjectAction implements ServletAction {
 		if (continueHeader != null && continueHeader.equalsIgnoreCase("100-continue")) {
 			S3RestServlet.writeResponse(response, "HTTP/1.1 100 Continue\r\n");
 		}
-
+		
 		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
-		int sizeInBytes = -1;
 		int partNumber  = -1;
 		int uploadId    = -1;
 
+		long contentLength = Converter.toLong(request.getHeader("Content-Length"), 0);
+
 		String md5 = request.getHeader( "Content-MD5" );
 
-		String temp = request.getHeader( "Content-Length" );
-		if (null != temp) sizeInBytes = Integer.parseInt( temp );
-		
-		temp = request.getParameter("uploadId");
+		String temp = request.getParameter("uploadId");
     	if (null != temp) uploadId = Integer.parseInt( temp );
 
 		temp = request.getParameter("partNumber");
     	if (null != temp) partNumber = Integer.parseInt( temp );
+    	
+		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
+		engineRequest.setBucketName(bucket);
+		engineRequest.setKey(key);
+		engineRequest.setContentLength(contentLength);
+		DataHandler dataHandler = new DataHandler(new ServletRequestDataSource(request));
+		engineRequest.setData(dataHandler);
 
-		// TODO - upload one part of a message in a multipart upload process
-		response.setStatus(501);
+		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().saveUploadPart( engineRequest, uploadId, partNumber ); 
+		response.setHeader("ETag", engineResponse.getETag());
+		response.setStatus(engineResponse.getResultCode());
 	}
 	
 	private void executeCompleteMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException

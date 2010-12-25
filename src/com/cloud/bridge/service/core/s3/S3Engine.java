@@ -44,6 +44,7 @@ import com.cloud.bridge.model.SObjectItem;
 import com.cloud.bridge.persist.PersistContext;
 import com.cloud.bridge.persist.dao.MHostDao;
 import com.cloud.bridge.persist.dao.MHostMountDao;
+import com.cloud.bridge.persist.dao.MultipartLoadDao;
 import com.cloud.bridge.persist.dao.SAclDao;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.persist.dao.SHostDao;
@@ -346,6 +347,66 @@ public class S3Engine {
     	return policy;
     }
     
+    /**
+     * Save the object fragment in a special (i.e., hidden) directory inside the same mount point as 
+     * the bucket location that the final object will be stored in.
+     * 
+     * @param request
+     * @param uploadId
+     * @param partNumber
+     * @return S3PutObjectInlineResponse
+     */
+    public S3PutObjectInlineResponse saveUploadPart(S3PutObjectInlineRequest request, int uploadId, int partNumber) 
+    {
+    	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
+		String bucketName = request.getBucketName();
+
+		// -> we need to look up the final bucket to figure out which mount point to use to save the part in
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
+		
+		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
+		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
+		String itemFileName = new String( uploadId + "-" + partNumber );
+		InputStream is = null;
+
+		try {
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
+    	    if (null == uploadDao.multipartExits( uploadId )) {
+    	    	response.setResultCode(404);
+    	    	response.setResultDescription("uploadId does not exist");
+    	    	return response;
+    	    }
+
+			is = request.getDataInputStream();
+			String md5Checksum = bucketAdapter.saveObject(is, tupleBucketHost.getSecond(), ServiceProvider.getInstance().getMultipartDir(), itemFileName);
+			response.setETag(md5Checksum);		
+    	    uploadDao.saveUploadPart( uploadId, partNumber, md5Checksum, itemFileName, (int)request.getContentLength());
+        	response.setResultCode(200);
+
+		} catch (IOException e) {
+			logger.error("UploadPart failed due to " + e.getMessage(), e);
+			response.setResultCode(500);
+		} catch (OutOfStorageException e) {
+			logger.error("UploadPart failed due to " + e.getMessage(), e);
+			response.setResultCode(500);
+		} catch (Exception e) {
+			logger.error("UploadPart failed due to " + e.getMessage(), e);	
+			response.setResultCode(500);
+		} finally {
+			if(is != null) {
+				try {
+					is.close();
+				} catch (IOException e) {
+					logger.error("UploadPart unable to close stream from data handler.", e);
+				}
+			}
+		}
+    	
+		return response;
+    }
+    
     public S3PutObjectInlineResponse handleRequest(S3PutObjectInlineRequest request) 
     {
     	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
@@ -393,7 +454,7 @@ public class S3Engine {
 				try {
 					is.close();
 				} catch (IOException e) {
-					logger.error("Unable to close stream from data handler.", e);
+					logger.error("PutObjectInline unable to close stream from data handler.", e);
 				}
 			}
 		}

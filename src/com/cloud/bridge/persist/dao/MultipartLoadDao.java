@@ -47,7 +47,33 @@ public class MultipartLoadDao {
 	}
 	
 	/**
-	 * Create a new "in-process" multpart upload entry to keep track of its state.
+	 * If a multipart upload exists with the uploadId value then return a non-null creation date.
+	 * 
+	 * @param uploadId
+	 * @return creation date of the multipart upload
+	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
+	 */
+	public Date multipartExits( int uploadId ) 
+	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	{
+	    PreparedStatement statement = null;
+        Date tod = null;
+		
+        openConnection();	
+        try {            
+		    statement = conn.prepareStatement ( "SELECT CreateTime FROM multipart_uploads WHERE ID=?" );
+	        statement.setInt( 1, uploadId );
+	        ResultSet rs = statement.executeQuery();
+		    if (rs.next()) tod = rs.getDate( "CreateTime" );
+            return tod;
+        
+        } finally {
+            closeConnection();
+        }
+	}
+	
+	/**
+	 * Create a new "in-process" multipart upload entry to keep track of its state.
 	 * 
 	 * @param accessKey
 	 * @param bucketName
@@ -90,6 +116,7 @@ public class MultipartLoadDao {
 		    	uploadId = rs.getInt( "ID" );
 		        saveMultipartMeta( uploadId, meta );
 		    }
+            statement.close();			    
             return uploadId;
         
         } finally {
@@ -97,6 +124,42 @@ public class MultipartLoadDao {
         }
 	}
 	
+	/**
+	 * Remember all the individual parts that make up the entire multipart upload so that once
+	 * the upload is complete all the parts can be glued together into a single object.
+	 * 
+	 * @param uploadId
+	 * @param partNumber
+	 * @param md5
+	 * @param storedPath
+	 * @param size
+	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	 */
+	public void saveUploadPart( int uploadId, int partNumber, String md5, String storedPath, int size ) 
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+    {
+        PreparedStatement statement = null;
+	
+        openConnection();	
+        try {
+            Date tod = new Date();
+            java.sql.Date sqlDate = new java.sql.Date( tod.getTime());
+
+	        statement = conn.prepareStatement ( "INSERT INTO multipart_parts (UploadID, partNumber, MD5, StoredPath, StoredSize, CreateTime) VALUES (?,?,?,?,?,?)" );
+            statement.setInt(    1, uploadId );
+            statement.setInt(    2, partNumber );
+            statement.setString( 3, md5 );
+            statement.setString( 4, storedPath );   
+            statement.setInt(    5, size );
+            statement.setDate(   6, sqlDate );
+            int count = statement.executeUpdate();
+            statement.close();	
+            
+        } finally {
+            closeConnection();
+        }
+    }
+        
 	/**
 	 * A multipart upload request can have zero to many meta data entries to be applied to the
 	 * final object.   We need to remember all of the objects meta data until the multipart is complete.

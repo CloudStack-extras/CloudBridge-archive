@@ -31,6 +31,7 @@ public class FileRangeInputStream extends InputStream {
 	
 	public FileRangeInputStream(File file, long startPos, long endPos) throws IOException {
 		fileLength = file.length();
+		
 		if(startPos > fileLength)
 			startPos = fileLength;
 		
