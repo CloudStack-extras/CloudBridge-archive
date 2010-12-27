@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.UUID;
 
 import com.amazon.ec2.*;
-import com.cloud.bridge.model.SSHKey;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateImageResponse;
@@ -1626,16 +1625,18 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 	
 	public DescribeKeyPairsResponse describeKeyPairs(DescribeKeyPairs describeKeyPairs) {
+		// TODO: Handle filters for key-name and fingerprint
+		
 		return toDescribeKeyPairs(engine.describeKeyPairs());
 	}
 	
-	public static DescribeKeyPairsResponse toDescribeKeyPairs(final List<SSHKey> keyList) {
+	public static DescribeKeyPairsResponse toDescribeKeyPairs(final List<EC2SSHKeyPair> keyList) {
 		return new DescribeKeyPairsResponse() {{
 			setDescribeKeyPairsResponse(new DescribeKeyPairsResponseType() {{ 
 				setRequestId(UUID.randomUUID().toString());
 				setKeySet(new DescribeKeyPairsResponseInfoType());
 				if (keyList != null && keyList.size() > 0) {
-					for (final SSHKey key : keyList) { 
+					for (final EC2SSHKeyPair key : keyList) { 
 						getKeySet().addItem(new DescribeKeyPairsResponseItemType() {{
 							setKeyName(key.getKeyName());
 							setKeyFingerprint(key.getFingerprint());
@@ -1650,9 +1651,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		String keyName = importKeyPair.getImportKeyPair().getKeyName();
 		String publicKey = SSHKeysHelper.getPublicKeyFromKeyMaterial(
 				importKeyPair.getImportKeyPair().getPublicKeyMaterial());
-		String fingerprint = SSHKeysHelper.getPublicKeyFingerprint(publicKey);
 
-		return toImportKeyPair(engine.importKeyPair(keyName, publicKey, fingerprint));
+		return toImportKeyPair(engine.importKeyPair(keyName, publicKey));
 	}
 	
 	public static ImportKeyPairResponse toImportKeyPair(final EC2SSHKeyPair key) {

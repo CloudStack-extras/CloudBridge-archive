@@ -1163,6 +1163,8 @@ public class EC2RestServlet extends HttpServlet {
 
     private void describeKeyPairs(HttpServletRequest request, HttpServletResponse response) 
 			throws ADBException, XMLStreamException, IOException {
+		// TODO: Handle filters for key-name and finger print
+
     	DescribeKeyPairsResponse EC2Response = EC2SoapServiceImpl.toDescribeKeyPairs(
     			ServiceProvider.getInstance().getEC2Engine().describeKeyPairs());
     	serializeResponse(response, EC2Response);
@@ -1179,10 +1181,9 @@ public class EC2RestServlet extends HttpServlet {
     	if (params.get("PublicKeyMaterial") != null && params.get("PublicKeyMaterial").length > 0)
     		publicKeyMaterial = params.get("PublicKeyMaterial")[0];
     	String publicKey = SSHKeysHelper.getPublicKeyFromKeyMaterial(publicKeyMaterial);
-    	String fingerprint = SSHKeysHelper.getPublicKeyFingerprint(publicKey);
 
     	ImportKeyPairResponse EC2Response = EC2SoapServiceImpl.toImportKeyPair(
-    			ServiceProvider.getInstance().getEC2Engine().importKeyPair(keyName, publicKey, fingerprint));
+    			ServiceProvider.getInstance().getEC2Engine().importKeyPair(keyName, publicKey));
     	serializeResponse(response, EC2Response);
     }
 

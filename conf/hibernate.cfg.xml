@@ -34,7 +34,6 @@
     <mapping resource="com/cloud/bridge/model/SObjectItem.hbm.xml"/>
     <mapping resource="com/cloud/bridge/model/SMeta.hbm.xml"/>
     <mapping resource="com/cloud/bridge/model/SAcl.hbm.xml"/>
-    <mapping resource="com/cloud/bridge/model/SSHKey.hbm.xml"/>
 </session-factory>
 </hibernate-configuration>
 

@@ -25,8 +25,6 @@ import org.w3c.dom.NodeList;
 
 import org.xml.sax.SAXException;
 
-import com.cloud.bridge.model.SSHKey;
-import com.cloud.bridge.persist.dao.SSHKeysDao;
 import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImagesResponse;
@@ -42,7 +40,6 @@ import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.util.ConfigurationHelper;
-import com.cloud.bridge.util.SSHKeysHelper;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -52,6 +49,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.security.SignatureException;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
@@ -958,15 +956,8 @@ public class EC2Engine {
        	    params.append( "command=deployVirtualMachine" );
 
        	    if (null != request.getGroupId()) params.append("&group=" + request.getGroupId());
-       	    if (null != request.getKeyName()) {
-       			SSHKeysDao keys = new SSHKeysDao();
-       			SSHKey key = keys.getKeyByName(request.getKeyName(), getUniqueAccountName());
-       			if (key == null)
-       				throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_NotFound
-       						, "The keypair '" + request.getKeyName() + "' does not exists.");
-       			
-       			params.append("&publicKey=" + safeURLencode(key.getPublicKey()));
-       	    }
+       	    if (null != request.getKeyName()) params.append("&publicKey=" + safeURLencode(request.getKeyName()));
+       
        	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
             params.append("&size=" + String.valueOf(request.getSize()));
        	    params.append( "&templateId=" + request.getTemplateId());
@@ -1134,99 +1125,150 @@ public class EC2Engine {
     }
 
     
-    public List<SSHKey> describeKeyPairs() {
-    	SSHKeysDao keys = new SSHKeysDao();
-    	return keys.getKeysByUser(getUniqueAccountName());
-    }
-    
-    public EC2SSHKeyPair importKeyPair(final String keyName, final String publicKey, final String fingerprint) {
-    	String accountName = getUniqueAccountName();
-		SSHKeysDao keys = new SSHKeysDao();
-		SSHKey key = keys.getKeyByName(keyName, accountName);
-		if (key != null)
-			throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_Duplicate
-					, "The keypair '" + keyName + "' already exists.");
-			
-		key = new SSHKey(accountName, keyName, publicKey, fingerprint);
-		keys.save(key);	
-		
-		return new EC2SSHKeyPair() {{
-			setKeyName(keyName);
-			setPublicKey(publicKey);
-			setFingerprint(fingerprint);
-		}};
-    }
-    
-    public EC2SSHKeyPair createKeyPair(final String keyName) {
-		String accountName = getUniqueAccountName();
-		final SSHKeysHelper sshKeys = new SSHKeysHelper();
-		
-		SSHKeysDao keys = new SSHKeysDao();
-		SSHKey key = keys.getKeyByName(keyName, accountName);
-		if (key != null)
-			throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_Duplicate
-					, "The keypair '" + keyName + "' already exists.");
-				
-		key = new SSHKey(accountName, keyName, sshKeys.getPublicKey()
-				, sshKeys.getPublicKeyFingerPrint());
-		keys.save(key);		
+    public List<EC2SSHKeyPair> describeKeyPairs() {
+    	String query = "command=listSSHKeyPairs";
+    	Document response = null;
     	
-    	return new EC2SSHKeyPair() {{
-    		setKeyName(keyName);
-    		setPrivateKey(sshKeys.getPrivateKey());
-    		setPublicKey(sshKeys.getPublicKey());
-    		setFingerprint(sshKeys.getPublicKeyFingerPrint());
-    	}};
+    	try {
+			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listSSHKeyPairs", true);
+		} catch (EC2ServiceException e) {
+			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());
+		} catch (Exception e) {
+			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+		}
+		
+		List<EC2SSHKeyPair> returnList = new ArrayList<EC2SSHKeyPair>();
+		NodeList match = response.getElementsByTagName("keypair"); 
+	   
+		for (int i=0; i < match.getLength(); i++) {
+			EC2SSHKeyPair keyPair = new EC2SSHKeyPair();
+			Node parent = null;
+			
+			if ((parent = match.item(i)) != null) { 
+				NodeList children = parent.getChildNodes();
+	    		
+				for( int j=0; j < children.getLength(); j++ ) {
+					Node child = children.item(j);
+	    			String name = child.getNodeName();
+	    			
+	    			if (child.getFirstChild() != null) {
+	    				if (name.equalsIgnoreCase("name"))
+	    					keyPair.setKeyName(child.getFirstChild().getNodeValue());
+	    				else if (name.equalsIgnoreCase("fingerprint"))
+	    					keyPair.setFingerprint(child.getFirstChild().getNodeValue());
+	    			} 
+				}
+			}
+			
+			if (keyPair.getKeyName() != null && keyPair.getFingerprint() != null)
+				returnList.add(keyPair);
+		}
+    	
+		return returnList;
+    }
+    
+    public EC2SSHKeyPair importKeyPair(String keyName, String publicKey) {   	
+    	String query = "command=registerSSHKeyPair";
+    	Document response = null;
+    	
+    	try {
+        	query += "&name=".concat(URLEncoder.encode(keyName, "utf8"));
+        	query += "&publickey=".concat(URLEncoder.encode(publicKey, "utf8"));
+			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "registerSSHKeyPair", true);
+		} catch (EC2ServiceException e) {
+			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+
+			if (e.getMessage().startsWith("431")) // Needs improvement
+				throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
+			else
+				throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());
+			
+		} catch (Exception e) {
+			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+		}
+
+		EC2SSHKeyPair keyPair = new EC2SSHKeyPair();		
+		NodeList pair = response.getElementsByTagName("keypair");
+		if (pair.getLength() > 0 && pair.item(0) != null && pair.item(0).hasChildNodes()) {
+			NodeList values = pair.item(0).getChildNodes();
+			for (int i = 0; i < values.getLength(); i++) {
+				Node value = values.item(i);
+    			if (value.getFirstChild() != null) {
+    				if (value.getNodeName().equals("name")) 
+    					keyPair.setKeyName(value.getFirstChild().getNodeValue());
+    				if (value.getNodeName().equals("fingerprint")) 
+    					keyPair.setFingerprint(value.getFirstChild().getNodeValue());
+    			}
+			}
+		}
+
+    	return keyPair;
+    }
+    
+    public EC2SSHKeyPair createKeyPair(String keyName) {
+    	String query = "command=createSSHKeyPair";
+    	Document response = null;
+    	
+    	try {
+        	query += "&name=".concat(URLEncoder.encode(keyName, "utf8"));
+			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "createSSHKeyPair", true);
+		} catch (EC2ServiceException e) {
+			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+
+			if (e.getMessage().startsWith("431")) // Needs improvement
+				throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
+			else
+				throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());
+			
+		} catch (Exception e) {
+			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+		}
+		
+		EC2SSHKeyPair keyPair = new EC2SSHKeyPair();		
+		NodeList pair = response.getElementsByTagName("keypair");
+		if (pair.getLength() > 0 && pair.item(0) != null && pair.item(0).hasChildNodes()) {
+			NodeList values = pair.item(0).getChildNodes();
+			for (int i = 0; i < values.getLength(); i++) {
+				Node value = values.item(i);
+    			if (value.getFirstChild() != null) {
+    				if (value.getNodeName().equals("name")) 
+    					keyPair.setKeyName(value.getFirstChild().getNodeValue());
+    				if (value.getNodeName().equals("fingerprint")) 
+    					keyPair.setFingerprint(value.getFirstChild().getNodeValue());
+    				if (value.getNodeName().equals("privatekey"))
+    					keyPair.setPrivateKey(value.getFirstChild().getNodeValue());
+    			}
+			}
+		}
+
+    	return keyPair;	
     }
     
     public boolean deleteKeyPair(String keyName) {
-		SSHKeysDao keys = new SSHKeysDao();
-		SSHKey key = keys.getKeyByName(keyName, getUniqueAccountName());
-		
-		if (key == null)
-			return false;
-		else {
-			keys.delete(key);
-			return true;
-		}
-    }
-    
-    /**
-     * @return A unique account identifier composed of accountName:domainId.
-     */
-    private String getUniqueAccountName() {
+    	String query = "command=deleteSSHKeyPair";
+    	Document response = null;
+    	
     	try {
-	        String query = new String( "command=listAccounts" );
-            Document cloudResp = resolveURL( genAPIURL( query, genQuerySignature( query )), "listAccounts", true );
-	        NodeList match = cloudResp.getElementsByTagName( "name" );
-	        String accountName = null;
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     accountName = new String( item.getFirstChild().getNodeValue());
-            }
- 	        
- 	        match = cloudResp.getElementsByTagName("domainid");
- 	        String domainId = null;
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     domainId = new String( item.getFirstChild().getNodeValue());
- 	        }
- 	        
- 	        if (accountName != null && domainId != null)
- 	        	return accountName.concat(":").concat(domainId);
- 	        else
- 	        	throw new EC2ServiceException("Error getting account name and domain id");
- 	         
-       	} catch( EC2ServiceException error ) {
-     		logger.error( "getAccountName - " + error.toString());
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "getAccountName - " + e.toString());
-    		throw new InternalErrorException( e.toString());
-    	}
+        	query += "&name=".concat(URLEncoder.encode(keyName, "utf8"));
+			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteSSHKeyPair", true);
+		} catch (EC2ServiceException e) {
+			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());	
+		} catch (Exception e) {
+			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+		}
+		
+		NodeList success = response.getElementsByTagName("success");
+		if (success != null && success.getLength() > 0 && success.item(0).hasChildNodes())
+			return success.item(0).getFirstChild().getNodeValue().equals("true");
+		
+		return false;
     }
-    
     
     /**
      * Wait until one specific VM has stopped

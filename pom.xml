@@ -269,6 +269,7 @@
         <configuration>
                 <warDirectory>target/ROOT</warDirectory>
 		<warSourceDirectory>target/ROOT</warSourceDirectory>
+                <port>8090</port>
         </configuration>
 		</plugin>
 	<plugin>
