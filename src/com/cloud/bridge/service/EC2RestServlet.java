@@ -75,6 +75,7 @@ import com.amazon.ec2.DescribeSecurityGroupsResponse;
 import com.amazon.ec2.DescribeSnapshotsResponse;
 import com.amazon.ec2.DescribeVolumesResponse;
 import com.amazon.ec2.DetachVolumeResponse;
+import com.amazon.ec2.GetPasswordDataResponse;
 import com.amazon.ec2.ImportKeyPairResponse;
 import com.amazon.ec2.ModifyImageAttributeResponse;
 import com.amazon.ec2.RebootInstancesResponse;
@@ -239,6 +240,7 @@ public class EC2RestServlet extends HttpServlet {
        	    else if (action.equalsIgnoreCase( "ImportKeyPair"             )) importKeyPair(request, response);
        	    else if (action.equalsIgnoreCase( "DeleteKeyPair"             )) deleteKeyPair(request, response);
        	    else if (action.equalsIgnoreCase( "DescribeKeyPairs"          )) describeKeyPairs(request, response);
+       	    else if (action.equalsIgnoreCase( "GetPasswordData"           )) getPasswordData(request, response);
     	    else {
         		logger.error("Unsupported action " + action);
         		response.setStatus(501);
@@ -1170,16 +1172,13 @@ public class EC2RestServlet extends HttpServlet {
     	serializeResponse(response, EC2Response);
     }
 
-    @SuppressWarnings("unchecked")
     private void importKeyPair(HttpServletRequest request, HttpServletResponse response) 
 			throws ADBException, XMLStreamException, IOException {
-    	String keyName = "";
-    	String publicKeyMaterial = "";
-    	Map<String, String[]> params = request.getParameterMap();
-    	if (params.get("KeyName") != null && params.get("KeyName").length > 0)
-    		keyName = params.get("KeyName")[0];
-    	if (params.get("PublicKeyMaterial") != null && params.get("PublicKeyMaterial").length > 0)
-    		publicKeyMaterial = params.get("PublicKeyMaterial")[0];
+    	String keyName = request.getParameter("KeyName");
+    	String publicKeyMaterial = request.getParameter("PublicKeyMaterial");
+    	if (keyName==null & publicKeyMaterial==null)
+    		response.sendError(530, "Missing parameter");
+    	
     	String publicKey = SSHKeysHelper.getPublicKeyFromKeyMaterial(publicKeyMaterial);
 
     	ImportKeyPairResponse EC2Response = EC2SoapServiceImpl.toImportKeyPair(
@@ -1187,29 +1186,33 @@ public class EC2RestServlet extends HttpServlet {
     	serializeResponse(response, EC2Response);
     }
 
-    @SuppressWarnings("unchecked")
     private void createKeyPair(HttpServletRequest request, HttpServletResponse response)
     		throws ADBException, XMLStreamException, IOException { 
-    	String keyName = "";	
-    	Map<String, String[]> params = request.getParameterMap();
-    	if (params.get("KeyName") != null && params.get("KeyName").length > 0)
-    		keyName = params.get("KeyName")[0];
-
+    	String keyName = request.getParameter("KeyName");
+    	if (keyName==null) response.sendError(530, "Missing KeyName parameter");
+    	
     	CreateKeyPairResponse EC2Response = EC2SoapServiceImpl.toCreateKeyPair(
     			ServiceProvider.getInstance().getEC2Engine().createKeyPair(keyName));
     	serializeResponse(response, EC2Response);	
     }
 
-    @SuppressWarnings("unchecked")
     private void deleteKeyPair(HttpServletRequest request, HttpServletResponse response)
 			throws ADBException, XMLStreamException, IOException {
-    	String keyName = "";	
-    	Map<String, String[]> params = request.getParameterMap();
-    	if (params.get("KeyName") != null && params.get("KeyName").length > 0)
-    		keyName = params.get("KeyName")[0];
-
+    	String keyName = request.getParameter("KeyName");
+    	if (keyName==null) response.sendError(530, "Missing KeyName parameter");
+    	
     	DeleteKeyPairResponse EC2Response = EC2SoapServiceImpl.toDeleteKeyPair(
     			ServiceProvider.getInstance().getEC2Engine().deleteKeyPair(keyName));
+    	serializeResponse(response, EC2Response);
+    }
+    
+    private void getPasswordData(HttpServletRequest request, HttpServletResponse response) 
+    		throws ADBException, XMLStreamException, IOException {
+    	String instanceId = request.getParameter("InstanceId");
+    	if (instanceId==null) response.sendError(530, "Missing InstanceId parameter");
+  	
+    	GetPasswordDataResponse EC2Response = EC2SoapServiceImpl.toGetPasswordData(
+    			ServiceProvider.getInstance().getEC2Engine().getPasswordData(instanceId));
     	serializeResponse(response, EC2Response);
     }
     

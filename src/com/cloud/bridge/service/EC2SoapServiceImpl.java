@@ -42,6 +42,7 @@ import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Image;
 import com.cloud.bridge.service.core.ec2.EC2Instance;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
+import com.cloud.bridge.service.core.ec2.EC2PasswordData;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
@@ -524,11 +525,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	public GetConsoleOutputResponse getConsoleOutput(GetConsoleOutput getConsoleOutput) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public GetPasswordDataResponse getPasswordData(GetPasswordData getPasswordData) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -1630,6 +1626,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDescribeKeyPairs(engine.describeKeyPairs());
 	}
 	
+	@SuppressWarnings("serial")
 	public static DescribeKeyPairsResponse toDescribeKeyPairs(final List<EC2SSHKeyPair> keyList) {
 		return new DescribeKeyPairsResponse() {{
 			setDescribeKeyPairsResponse(new DescribeKeyPairsResponseType() {{ 
@@ -1655,6 +1652,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toImportKeyPair(engine.importKeyPair(keyName, publicKey));
 	}
 	
+	@SuppressWarnings("serial")
 	public static ImportKeyPairResponse toImportKeyPair(final EC2SSHKeyPair key) {
 		return new ImportKeyPairResponse() {{
 			setImportKeyPairResponse(new ImportKeyPairResponseType() {{
@@ -1669,6 +1667,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toCreateKeyPair(engine.createKeyPair(createKeyPair.getCreateKeyPair().getKeyName()));
 	}
 	
+	@SuppressWarnings("serial")
 	public static CreateKeyPairResponse toCreateKeyPair(final EC2SSHKeyPair key) {
 		return new CreateKeyPairResponse() {{
 			setCreateKeyPairResponse(new CreateKeyPairResponseType() {{
@@ -1684,11 +1683,28 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDeleteKeyPair(engine.deleteKeyPair(deleteKeyPair.getDeleteKeyPair().getKeyName()));
 	}
 	
+	@SuppressWarnings("serial")
 	public static DeleteKeyPairResponse toDeleteKeyPair(final boolean success) {
 		return new DeleteKeyPairResponse() {{
 			setDeleteKeyPairResponse(new DeleteKeyPairResponseType() {{
 				setRequestId(UUID.randomUUID().toString());
 				set_return(success);
+			}});
+		}};
+	}
+	
+	public GetPasswordDataResponse getPasswordData(GetPasswordData getPasswordData) {
+		return toGetPasswordData(engine.getPasswordData(getPasswordData.getGetPasswordData().getInstanceId()));
+	}
+	
+	@SuppressWarnings("serial")
+	public static GetPasswordDataResponse toGetPasswordData(final EC2PasswordData passwdData) {
+		return new GetPasswordDataResponse() {{
+			setGetPasswordDataResponse(new GetPasswordDataResponseType() {{
+				setRequestId(UUID.randomUUID().toString());
+				setTimestamp(Calendar.getInstance());
+				setPasswordData(passwdData.getEncryptedPassword());
+				setInstanceId(passwdData.getInstanceId());
 			}});
 		}};
 	}

@@ -1270,6 +1270,35 @@ public class EC2Engine {
 		return false;
     }
     
+    public EC2PasswordData getPasswordData(String instanceId) {
+    	String query = "command=getVMPassword";
+    	Document response = null;
+    	EC2PasswordData passwdData = new EC2PasswordData();
+    	passwdData.setInstanceId(instanceId);
+    	
+    	try {
+    		query += "&id=".concat(URLEncoder.encode(instanceId, "utf8"));
+    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "getVMPassword", true);
+    		NodeList passwd = response.getElementsByTagName("encryptedpassword");
+    		if (passwd != null && passwd.getLength() > 0 && passwd.item(0).hasChildNodes())
+    			passwdData.setEncryptedPassword(passwd.item(0).getFirstChild().getNodeValue());
+
+    	} catch (EC2ServiceException e) {
+    		if (!e.getMessage().startsWith("431 No password for VM with id")) { 
+    			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+    			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());
+    		} else {
+    			passwdData.setEncryptedPassword("");
+    		}
+    	} catch (Exception e) {
+    		logger.error( "EC2 Describe KeyPairs - " + e.toString());
+    		throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+    	}
+
+    	return passwdData;
+    }
+    
+    
     /**
      * Wait until one specific VM has stopped
      */
