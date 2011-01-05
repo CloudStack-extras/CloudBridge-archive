@@ -223,11 +223,11 @@ public class EC2Engine {
 			 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both name & description are required");
 
     	try {
-	        String query = new String( "command=createNetworkGroup" +
+	        String query = new String( "command=createSecurityGroup" +
 	        		                   "&description=" + safeURLencode( request.getDescription()) + 
 	        		                   "&name="        + safeURLencode( request.getName()));
 	        
-            resolveURL(genAPIURL(query, genQuerySignature(query)), "createNetworkGroup", true );
+            resolveURL(genAPIURL(query, genQuerySignature(query)), "createSecurityGroup", true );
       		return true;
      		
        	} catch( EC2ServiceException error ) {
@@ -245,8 +245,8 @@ public class EC2Engine {
 		if (null == request.getName()) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Name is a required parameter");
 
    	    try {
-	        String query = new String( "command=deleteNetworkGroup&name=" + safeURLencode( request.getName()));        
-            resolveURL( genAPIURL( query, genQuerySignature(query)), "deleteNetworkGroup", true );
+	        String query = new String( "command=deleteSecurityGroup&name=" + safeURLencode( request.getName()));        
+            resolveURL( genAPIURL( query, genQuerySignature(query)), "deleteSecurityGroup", true );
      		return true;
     		
       	} catch( EC2ServiceException error ) {
@@ -277,10 +277,10 @@ public class EC2Engine {
     /**
      * The Cload Stack API only handles one item out of the EC2 request at a time.
      * Place authorizw and revoke into one function since it appears that they are practically identical.
-     * Both authorizeNetworkGroupIngress and revokeNetworkGroupIngress are asynchonrous
+     * Both authorizeSecurityGroupIngress and revokeSecurityGroupIngress are asynchonrous
      * 
      * @param request - ip permission parameters
-     * @param command - { authorizeNetworkGroupIngress | revokeNetworkGroupIngress }
+     * @param command - { authorizeSecurityGroupIngress | revokeSecurityGroupIngress }
      */
     public boolean securityGroupRequest(EC2AuthorizeRevokeSecurityGroup request, String command ) 
     {
@@ -2230,7 +2230,7 @@ public class EC2Engine {
     {
     	EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
     	Node parent = null; 	
-	    Document cloudResp = resolveURL(genAPIURL( "command=listNetworkGroups", genQuerySignature("command=listNetworkGroups")), "listNetworkGroups", true );
+	    Document cloudResp = resolveURL(genAPIURL( "command=listSecurityGroups", genQuerySignature("command=listSecurityGroups")), "listSecurityGroups", true );
         NodeList match = cloudResp.getElementsByTagName( "securitygroup" ); 
 	    int     length = match.getLength();
 	       
@@ -2250,7 +2250,7 @@ public class EC2Engine {
 	    			 if (null != child.getFirstChild()) 
 	    			 {
 	    			     String value = child.getFirstChild().getNodeValue();
-	    			     //System.out.println( "listNetworkGroups " + name + "=" + value );
+	    			     //System.out.println( "listSecurityGroups " + name + "=" + value );
 	    			     
 	    			          if (name.equalsIgnoreCase( "name"        )) group.setName( value );
 	    			     else if (name.equalsIgnoreCase( "description" )) group.setDescription( value );
