@@ -697,9 +697,11 @@ public class S3ObjectAction implements ServletAction {
 	{
 		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		String   owner  = null;
 		int uploadId    = -1;
 		int maxParts    = 1000;
 		int partMarker  = 0;
+		int nextMarker  = 0;
 
 		String temp = request.getParameter("uploadId");
     	if (null != temp) uploadId = Integer.parseInt( temp );
@@ -717,13 +719,13 @@ public class S3ObjectAction implements ServletAction {
 		// -> there is no SOAP version of this function
     	try {
 	        MultipartLoadDao uploadDao = new MultipartLoadDao();
-	        if (null == uploadDao.multipartExits( uploadId )) {
+	        if (null == (owner = uploadDao.multipartExits( uploadId ))) {
 	    	   response.setStatus(404);
 	    	   return;
 	        }
 	    
-	        // ToDO all the info from the multipart_uploads table
 	        S3MultipartPart[] parts = uploadDao.getUploadParts( uploadId, maxParts, partMarker );
+	        int remaining = uploadDao.numUploadParts( uploadId, partMarker+maxParts );
 	        
 			StringBuffer xml = new StringBuffer();
 	        xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
@@ -731,18 +733,39 @@ public class S3ObjectAction implements ServletAction {
 	        xml.append( "<Bucket>" ).append( bucket ).append( "</Bucket>" );
 	        xml.append( "<Key>" ).append( key ).append( "</Key>" );
 	        xml.append( "<UploadId>" ).append( uploadId ).append( "</UploadId>" );
-	        
+	      
+	        // -> currently we just have the access key and have no notion of a display name
+	        xml.append( "<Initiator>" );
+	        xml.append( "<ID>" ).append( owner ).append( "</ID>" );
+	        xml.append( "<DisplayName></DisplayName>" );
+	        xml.append( "</Initiator>" );
+	        xml.append( "<Owner>" );
+	        xml.append( "<ID>" ).append( owner ).append( "</ID>" );
+	        xml.append( "<DisplayName></DisplayName>" );
+	        xml.append( "</Owner>" );       
+	 
+			StringBuffer partsList = new StringBuffer();
 	        for( int i=0; i < parts.length; i++ ) 
 	        {
 	        	S3MultipartPart onePart = parts[i];
 	        	if (null == onePart) break;
-	        	xml.append( "<Part>" );
-		        xml.append( "<PartNumber>" ).append( onePart.getPartNumber()).append( "</PartNumber>" );
-		        xml.append( "<LastModified>" ).append( DatatypeConverter.printDateTime( onePart.getLastModified())).append( "</LastModified>" );
-		        xml.append( "<ETag>" ).append( onePart.getETag()).append( "</ETag>" );
-		        xml.append( "<Size>" ).append( onePart.getSize()).append( "</Size>" );
-	        	xml.append( "</Part>" );
-	        }       
+	        	
+	        	nextMarker = onePart.getPartNumber();
+	            partsList.append( "<Part>" );
+	            partsList.append( "<PartNumber>" ).append( nextMarker ).append( "</PartNumber>" );
+	            partsList.append( "<LastModified>" ).append( DatatypeConverter.printDateTime( onePart.getLastModified())).append( "</LastModified>" );
+	            partsList.append( "<ETag>" ).append( onePart.getETag()).append( "</ETag>" );
+	            partsList.append( "<Size>" ).append( onePart.getSize()).append( "</Size>" );
+	            partsList.append( "</Part>" );        	
+	        }  
+	        
+	        xml.append( "<StorageClass>STANDARD</StorageClass>" );
+	        xml.append( "<PartNumberMarker>" ).append( partMarker ).append( "</PartNumberMarker>" );
+	        xml.append( "<NextPartNumberMarker>" ).append( nextMarker ).append( "</NextPartNumberMarker>" );
+	        xml.append( "<MaxParts>" ).append( maxParts ).append( "</MaxParts>" );   
+	        xml.append( "<IsTruncated>" ).append((0 < remaining ? "true" : "false" )).append( "</IsTruncated>" );
+
+	        xml.append( partsList.toString());
 	        xml.append( "</ListPartsResult>" );
 	      
 			response.setStatus(200);

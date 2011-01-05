@@ -49,25 +49,26 @@ public class MultipartLoadDao {
 	}
 	
 	/**
-	 * If a multipart upload exists with the uploadId value then return a non-null creation date.
+	 * If a multipart upload exists with the uploadId value then return the non-null creators
+	 * accessKey.
 	 * 
 	 * @param uploadId
-	 * @return creation date of the multipart upload
+	 * @return creator of the multipart upload
 	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
 	 */
-	public Date multipartExits( int uploadId ) 
+	public String multipartExits( int uploadId ) 
 	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	{
 	    PreparedStatement statement = null;
-        Date tod = null;
+	    String accessKey = null;
 		
         openConnection();	
         try {            
-		    statement = conn.prepareStatement ( "SELECT CreateTime FROM multipart_uploads WHERE ID=?" );
+		    statement = conn.prepareStatement ( "SELECT AccessKey FROM multipart_uploads WHERE ID=?" );
 	        statement.setInt( 1, uploadId );
 	        ResultSet rs = statement.executeQuery();
-		    if (rs.next()) tod = rs.getDate( "CreateTime" );
-            return tod;
+		    if (rs.next()) accessKey = rs.getString( "AccessKey" );
+            return accessKey;
         
         } finally {
             closeConnection();
@@ -163,7 +164,9 @@ public class MultipartLoadDao {
     }
 	
 	/**
-	 * Return info on a range of upload parts that have already been stored in disk,
+	 * Return info on a range of upload parts that have already been stored in disk.
+	 * Note that parts can be uploaded in any order yet we must returned an ordered list
+	 * of parts thus we use the "ORDERED BY" clause to sort the list.
 	 * 
 	 * @param uploadId
 	 * @param maxParts
@@ -180,10 +183,11 @@ public class MultipartLoadDao {
 		
         openConnection();	
         try {
-		    statement = conn.prepareStatement ( "SELECT partNumber, MD5, StoredSize, CreateTime  " +
-		    		                            "FROM   multipart_parts " +
-		    		                            "WHERE  UploadID=? " +
-		    		                            "AND    ID > ? AND ID < ?" );
+		    statement = conn.prepareStatement ( "SELECT   partNumber, MD5, StoredSize, CreateTime  " +
+		    		                            "FROM     multipart_parts " +
+		    		                            "WHERE    UploadID=? " +
+		    		                            "AND      partNumber > ? AND partNumber < ? " +
+		    		                            "ORDER BY partNumber" );
 	        statement.setInt( 1, uploadId );
 	        statement.setInt( 2, startAt  );
 	        statement.setInt( 3, startAt + maxParts + 1 );
@@ -208,7 +212,36 @@ public class MultipartLoadDao {
             closeConnection();
         }
 	}
-        
+  
+	/**
+	 * How many parts exist after the endMarker part number?
+	 * 
+	 * @param uploadId
+	 * @param endMarker - can be used to see if getUploadedParts was truncated
+	 * @return number of parts with partNumber greater than endMarker
+	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	 */
+	public int numUploadParts( int uploadId, int endMarker ) 
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+    {
+        PreparedStatement statement = null;
+        int count = 0;
+	
+        openConnection();	
+        try {
+	        statement = conn.prepareStatement ( "SELECT count(*) FROM multipart_parts WHERE UploadID=? AND partNumber > ?" );
+            statement.setInt( 1, uploadId );
+            statement.setInt( 2, endMarker );
+	        ResultSet rs = statement.executeQuery();	    
+	        if (rs.next()) count = rs.getInt( 1 );
+            statement.close();			    
+            return count;
+    
+        } finally {
+            closeConnection();
+        }
+    }
+
 	/**
 	 * A multipart upload request can have zero to many meta data entries to be applied to the
 	 * final object.   We need to remember all of the objects meta data until the multipart is complete.
