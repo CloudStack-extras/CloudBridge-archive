@@ -6,6 +6,7 @@ public class S3MultipartPart {
 	private int partNumber = -1;
 	private Calendar lastModified = null;
 	private String eTag = null;
+	private String path = null;
 	private int size = -1;
 	
 	public S3MultipartPart() {
@@ -34,7 +35,15 @@ public class S3MultipartPart {
 	public void setEtag(String eTag) {
 		this.eTag = eTag;
 	}
+
+	public String getPath() {
+		return path;
+	}
 	
+	public void setPath(String path) {
+		this.path = path;
+	}
+
 	public int getSize() {
 		return size;
 	}

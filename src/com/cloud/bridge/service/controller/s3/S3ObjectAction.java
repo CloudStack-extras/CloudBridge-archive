@@ -644,6 +644,11 @@ public class S3ObjectAction implements ServletAction {
 
 		temp = request.getParameter("partNumber");
     	if (null != temp) partNumber = Integer.parseInt( temp );
+    	if (partNumber < 1 || partNumber > 10000) {
+			logger.error("uploadPart invalid part number " + partNumber );	
+			response.setStatus(416);
+            return;
+    	}
     	
 		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
 		engineRequest.setBucketName(bucket);
@@ -682,15 +687,20 @@ public class S3ObjectAction implements ServletAction {
 	
 	private void executeAbortMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException 
 	{
-		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
-		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		String bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		int uploadId    = -1;
 
 		String temp = request.getParameter("uploadId");
     	if (null != temp) uploadId = Integer.parseInt( temp );
     	
-		// TODO - cancel a multipart upload and remove all its parts
-		response.setStatus(501);
+    	try {
+			int result = ServiceProvider.getInstance().getS3Engine().freeUploadParts( bucket, uploadId ); 
+            response.setStatus( result );
+	    }
+		catch( Exception e ) {
+		    logger.error("Abort Multipart Upload failed due to " + e.getMessage(), e);	
+		    response.setStatus(500);
+		}
 	}
 	
 	private void executeListUploadParts( HttpServletRequest request, HttpServletResponse response ) throws IOException 

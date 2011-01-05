@@ -76,6 +76,32 @@ public class MultipartLoadDao {
 	}
 	
 	/**
+	 * The multipart upload was either successfully completed or was aborted.   In either case, we need
+	 * to remove all of its state from the tables.   Note that we have cascade deletes so all tables with
+	 * uploadId as a foreign key are automatically cleaned.
+	 * 
+	 * @param uploadId
+	 * 
+	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
+	 */
+	public void deleteUpload( int uploadId )
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	{
+	    PreparedStatement statement = null;
+		
+        openConnection();	
+        try {
+		    statement = conn.prepareStatement ( "DELETE FROM multipart_uploads WHERE ID=?" );
+	        statement.setInt( 1, uploadId );
+	        int count = statement.executeUpdate();
+            statement.close();	
+        
+        } finally {
+            closeConnection();
+        }
+	}
+	
+	/**
 	 * Create a new "in-process" multipart upload entry to keep track of its state.
 	 * 
 	 * @param accessKey
@@ -183,7 +209,7 @@ public class MultipartLoadDao {
 		
         openConnection();	
         try {
-		    statement = conn.prepareStatement ( "SELECT   partNumber, MD5, StoredSize, CreateTime  " +
+		    statement = conn.prepareStatement ( "SELECT   partNumber, MD5, StoredSize, StoredPath, CreateTime " +
 		    		                            "FROM     multipart_parts " +
 		    		                            "WHERE    UploadID=? " +
 		    		                            "AND      partNumber > ? AND partNumber < ? " +
@@ -199,10 +225,11 @@ public class MultipartLoadDao {
 		    	tod.setTime( rs.getDate( "CreateTime" ));
 		    	
 		    	parts[i] = new S3MultipartPart();
-		    	parts[i].setPartNumber( rs.getInt( "partNumber" ));
+		    	parts[i].setPartNumber( rs.getInt( "partNumber" )); 
 		    	parts[i].setEtag( rs.getString( "MD5" ));
 		    	parts[i].setLastModified( tod );
 		    	parts[i].setSize( rs.getInt( "StoredSize" ));
+		    	parts[i].setPath( rs.getString( "StoredPath" ));
 		    	i++;
 		    }
             statement.close();			    

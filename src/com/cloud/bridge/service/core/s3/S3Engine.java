@@ -348,6 +348,48 @@ public class S3Engine {
     }
     
     /**
+     * This function should be called if a multipart upload is aborted OR has completed successfully and
+     * the individual parts have to be cleaned up.
+     * 
+     * @param bucketName
+     * @param uploadId
+     * @return
+     */
+    public int freeUploadParts(String bucketName, int uploadId)
+    {
+		// -> we need to look up the final bucket to figure out which mount point to use to save the part in
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
+		
+		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
+		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
+
+		try {
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
+    	    if (null == uploadDao.multipartExits( uploadId )) {
+    	    	return 404;
+    	    }
+    	    
+
+    	    // -> first get a list of all the uploaded files and delete one by one
+	        S3MultipartPart[] parts = uploadDao.getUploadParts( uploadId, 10000, 0 );
+	        for( int i=0; i < parts.length; i++ )
+	        {    
+    	       bucketAdapter.deleteObject( tupleBucketHost.getSecond(), ServiceProvider.getInstance().getMultipartDir(), parts[i].getPath());
+	        }
+	        
+	        uploadDao.deleteUpload( uploadId );
+    	    return 204;
+
+		} catch (Exception e) {
+			logger.error("freeUploadParts failed due to " + e.getMessage(), e);	
+			return 500;
+		}     
+	}
+
+
+    /**
      * Save the object fragment in a special (i.e., hidden) directory inside the same mount point as 
      * the bucket location that the final object will be stored in.
      * 
