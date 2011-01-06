@@ -102,6 +102,33 @@ public class MultipartLoadDao {
 	}
 	
 	/**
+	 * The caller needs to know who initiated the multipart upload.
+	 * 
+	 * @param uploadId
+	 * @return the access key value defining the initiator
+	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	 */
+	public String getUploadInitiator( int uploadId ) 
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	{
+	    PreparedStatement statement = null;
+	    String initiator = null;
+		
+        openConnection();	
+        try {
+		    statement = conn.prepareStatement ( "SELECT AccessKey FROM multipart_uploads WHERE ID=?" );
+	        statement.setInt( 1, uploadId );
+	        ResultSet rs = statement.executeQuery();
+		    if (rs.next()) initiator = rs.getString( "AccessKey" );
+            statement.close();			    
+            return initiator;
+        
+        } finally {
+            closeConnection();
+        }
+	}
+	
+	/**
 	 * Create a new "in-process" multipart upload entry to keep track of its state.
 	 * 
 	 * @param accessKey
@@ -232,7 +259,9 @@ public class MultipartLoadDao {
 		    	parts[i].setPath( rs.getString( "StoredPath" ));
 		    	i++;
 		    }
-            statement.close();			    
+            statement.close();		
+            
+            if (i < maxParts) parts = (S3MultipartPart[])resizeArray(parts,i);
             return parts;
         
         } finally {
@@ -313,5 +342,25 @@ public class MultipartLoadDao {
     private void closeConnection() throws SQLException {
 	    if (null != conn) conn.close();
 	    conn = null;
+    }
+    
+    /**
+    * Reallocates an array with a new size, and copies the contents
+    * of the old array to the new array.
+    * 
+    * @param oldArray  the old array, to be reallocated.
+    * @param newSize   the new array size.
+    * @return          A new array with the same contents.
+    */
+    private static Object resizeArray(Object oldArray, int newSize) 
+    {
+       int oldSize = java.lang.reflect.Array.getLength(oldArray);
+       Class elementType = oldArray.getClass().getComponentType();
+       Object newArray = java.lang.reflect.Array.newInstance(
+             elementType,newSize);
+       int preserveLength = Math.min(oldSize,newSize);
+       if (preserveLength > 0)
+          System.arraycopy (oldArray,0,newArray,0,preserveLength);
+       return newArray; 
     }
 }

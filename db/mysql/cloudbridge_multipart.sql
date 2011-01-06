@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS multipart_parts;
 CREATE TABLE multipart_uploads (
 	ID BIGINT NOT NULL AUTO_INCREMENT,
 	
-	AccessKey  VARCHAR(150) NOT NULL,
+	AccessKey  VARCHAR(150) NOT NULL,  -- this is the initiator of the request
 	BucketName VARCHAR(64)  NOT NULL,
 	NameKey    VARCHAR(255) NOT NULL,
 	x_amz_acl  VARCHAR(64)  NULL,

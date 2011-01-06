@@ -44,6 +44,7 @@ import org.apache.log4j.Logger;
 
 import com.amazon.s3.CopyObjectResponse;
 import com.amazon.s3.GetObjectAccessControlPolicyResponse;
+import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.model.SBucket;
 import com.cloud.bridge.model.SHost;
 import com.cloud.bridge.persist.dao.MultipartLoadDao;
@@ -76,6 +77,7 @@ import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.core.s3.S3SetObjectAccessControlPolicyRequest;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
+import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.Converter;
 import com.cloud.bridge.util.DateHelper;
 import com.cloud.bridge.util.HeaderParam;
@@ -597,17 +599,17 @@ public class S3ObjectAction implements ServletAction {
 		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 		String   cannedAccess = request.getHeader( "x-amz-acl" );
 		S3MetaDataEntry[] meta = extractMetaData( request );
-		int uploadId = -1;
-		
-        try {
-    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
-    	    uploadId = uploadDao.initiateUpload( UserContext.current().getAccessKey(), bucket, key, cannedAccess, meta );
-    	    
-        } catch( Exception e ) {
-			logger.error( "executeInitiateMultipartUpload exception: " + e.toString());
-    		response.setStatus(500);
-        	return;
-        }
+        
+        // -> the S3 engine has easy access to all the privileged checking code
+		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
+		engineRequest.setBucketName(bucket);
+		engineRequest.setKey(key);
+		engineRequest.setCannedAccess( cannedAccess );
+		engineRequest.setMetaEntries( meta );
+		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().initiateMultipartUpload( engineRequest ); 
+		int result = engineResponse.getResultCode();
+		response.setStatus( result );
+        if (200 != result) return;
         
         // -> there is no SOAP version of this function
 		StringBuffer xml = new StringBuffer();
@@ -615,10 +617,9 @@ public class S3ObjectAction implements ServletAction {
         xml.append( "<InitiateMultipartUploadResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
         xml.append( "<Bucket>" ).append( bucket ).append( "</Bucket>" );
         xml.append( "<Key>" ).append( key ).append( "</Key>" );
-        xml.append( "<UploadId>" ).append( uploadId ).append( "</UploadId>" );
+        xml.append( "<UploadId>" ).append( engineResponse.getUploadId()).append( "</UploadId>" );
         xml.append( "</InitiateMultipartUploadResult>" );
       
-		response.setStatus(200);
 	    response.setContentType("text/xml; charset=UTF-8");
     	S3RestServlet.endResponse(response, xml.toString());
 	}
@@ -658,7 +659,7 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setData(dataHandler);
 
 		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().saveUploadPart( engineRequest, uploadId, partNumber ); 
-		response.setHeader("ETag", engineResponse.getETag());
+		if (null != engineResponse.getETag()) response.setHeader("ETag", engineResponse.getETag());
 		response.setStatus(engineResponse.getResultCode());
 	}
 	
@@ -705,9 +706,12 @@ public class S3ObjectAction implements ServletAction {
 	
 	private void executeListUploadParts( HttpServletRequest request, HttpServletResponse response ) throws IOException 
 	{
-		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
-		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
-		String   owner  = null;
+		String bucketName = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		String owner  = null;
+		String initiator =  null;
+		S3MultipartPart[] parts = null;
+		int remaining   = 0;
 		int uploadId    = -1;
 		int maxParts    = 1000;
 		int partMarker  = 0;
@@ -726,66 +730,89 @@ public class S3ObjectAction implements ServletAction {
     	if (null != temp) partMarker = Integer.parseInt( temp );
 
     	
-		// -> there is no SOAP version of this function
+		// -> does the bucket exist, we may need it to verify access permissions
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "listUploadParts failed since " + bucketName + " does not exist" );
+	    	response.setStatus(404);
+	    	return;
+		}
+	
     	try {
 	        MultipartLoadDao uploadDao = new MultipartLoadDao();
 	        if (null == (owner = uploadDao.multipartExits( uploadId ))) {
 	    	   response.setStatus(404);
 	    	   return;
 	        }
+	        
+    	    // -> the multipart initiator or bucket owner can do this action
+    	    initiator = uploadDao.getUploadInitiator( uploadId );
+    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) 
+    	    {
+    	    	try {
+    	    	    // -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
+    			    S3Engine.accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    	    	}
+    	    	catch (PermissionDeniedException e) {
+    	    		response.setStatus(403);
+    	    		return;
+    	    	}
+    	    }
 	    
-	        S3MultipartPart[] parts = uploadDao.getUploadParts( uploadId, maxParts, partMarker );
-	        int remaining = uploadDao.numUploadParts( uploadId, partMarker+maxParts );
-	        
-			StringBuffer xml = new StringBuffer();
-	        xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
-	        xml.append( "<ListPartsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
-	        xml.append( "<Bucket>" ).append( bucket ).append( "</Bucket>" );
-	        xml.append( "<Key>" ).append( key ).append( "</Key>" );
-	        xml.append( "<UploadId>" ).append( uploadId ).append( "</UploadId>" );
-	      
-	        // -> currently we just have the access key and have no notion of a display name
-	        xml.append( "<Initiator>" );
-	        xml.append( "<ID>" ).append( owner ).append( "</ID>" );
-	        xml.append( "<DisplayName></DisplayName>" );
-	        xml.append( "</Initiator>" );
-	        xml.append( "<Owner>" );
-	        xml.append( "<ID>" ).append( owner ).append( "</ID>" );
-	        xml.append( "<DisplayName></DisplayName>" );
-	        xml.append( "</Owner>" );       
-	 
-			StringBuffer partsList = new StringBuffer();
-	        for( int i=0; i < parts.length; i++ ) 
-	        {
-	        	S3MultipartPart onePart = parts[i];
-	        	if (null == onePart) break;
-	        	
-	        	nextMarker = onePart.getPartNumber();
-	            partsList.append( "<Part>" );
-	            partsList.append( "<PartNumber>" ).append( nextMarker ).append( "</PartNumber>" );
-	            partsList.append( "<LastModified>" ).append( DatatypeConverter.printDateTime( onePart.getLastModified())).append( "</LastModified>" );
-	            partsList.append( "<ETag>" ).append( onePart.getETag()).append( "</ETag>" );
-	            partsList.append( "<Size>" ).append( onePart.getSize()).append( "</Size>" );
-	            partsList.append( "</Part>" );        	
-	        }  
-	        
-	        xml.append( "<StorageClass>STANDARD</StorageClass>" );
-	        xml.append( "<PartNumberMarker>" ).append( partMarker ).append( "</PartNumberMarker>" );
-	        xml.append( "<NextPartNumberMarker>" ).append( nextMarker ).append( "</NextPartNumberMarker>" );
-	        xml.append( "<MaxParts>" ).append( maxParts ).append( "</MaxParts>" );   
-	        xml.append( "<IsTruncated>" ).append((0 < remaining ? "true" : "false" )).append( "</IsTruncated>" );
-
-	        xml.append( partsList.toString());
-	        xml.append( "</ListPartsResult>" );
-	      
-			response.setStatus(200);
-		    response.setContentType("text/xml; charset=UTF-8");
-	    	S3RestServlet.endResponse(response, xml.toString());
+	        parts = uploadDao.getUploadParts( uploadId, maxParts, partMarker );
+	        remaining = uploadDao.numUploadParts( uploadId, partMarker+maxParts );
     	}
 		catch( Exception e ) {
 			logger.error("List Uploads failed due to " + e.getMessage(), e);	
 			response.setStatus(500);
 		}
+
+	        
+		StringBuffer xml = new StringBuffer();
+	    xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
+	    xml.append( "<ListPartsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
+	    xml.append( "<Bucket>" ).append( bucket ).append( "</Bucket>" );
+	    xml.append( "<Key>" ).append( key ).append( "</Key>" );
+	    xml.append( "<UploadId>" ).append( uploadId ).append( "</UploadId>" );
+	      
+	    // -> currently we just have the access key and have no notion of a display name
+	    xml.append( "<Initiator>" );
+	    xml.append( "<ID>" ).append( initiator ).append( "</ID>" );
+	    xml.append( "<DisplayName></DisplayName>" );
+	    xml.append( "</Initiator>" );
+	    xml.append( "<Owner>" );
+	    xml.append( "<ID>" ).append( owner ).append( "</ID>" );
+	    xml.append( "<DisplayName></DisplayName>" );
+	    xml.append( "</Owner>" );       
+	 
+		StringBuffer partsList = new StringBuffer();
+	    for( int i=0; i < parts.length; i++ ) 
+	    {
+	        S3MultipartPart onePart = parts[i];
+	        if (null == onePart) break;
+	        	
+	        nextMarker = onePart.getPartNumber();
+	        partsList.append( "<Part>" );
+	        partsList.append( "<PartNumber>" ).append( nextMarker ).append( "</PartNumber>" );
+	        partsList.append( "<LastModified>" ).append( DatatypeConverter.printDateTime( onePart.getLastModified())).append( "</LastModified>" );
+	        partsList.append( "<ETag>" ).append( onePart.getETag()).append( "</ETag>" );
+	        partsList.append( "<Size>" ).append( onePart.getSize()).append( "</Size>" );
+	        partsList.append( "</Part>" );        	
+	    }  
+	        
+	    xml.append( "<StorageClass>STANDARD</StorageClass>" );
+	    xml.append( "<PartNumberMarker>" ).append( partMarker ).append( "</PartNumberMarker>" );
+	    xml.append( "<NextPartNumberMarker>" ).append( nextMarker ).append( "</NextPartNumberMarker>" );
+	    xml.append( "<MaxParts>" ).append( maxParts ).append( "</MaxParts>" );   
+	    xml.append( "<IsTruncated>" ).append((0 < remaining ? "true" : "false" )).append( "</IsTruncated>" );
+
+	    xml.append( partsList.toString());
+	    xml.append( "</ListPartsResult>" );
+	      
+		response.setStatus(200);
+		response.setContentType("text/xml; charset=UTF-8");
+	    S3RestServlet.endResponse(response, xml.toString());
 	}
 	
 	/**

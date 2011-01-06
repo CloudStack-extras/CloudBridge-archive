@@ -360,8 +360,11 @@ public class S3Engine {
 		// -> we need to look up the final bucket to figure out which mount point to use to save the part in
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket bucket = bucketDao.getByName(bucketName);
-		if (bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
-		
+		if (bucket == null) {
+			logger.error( "initiateMultipartUpload failed since " + bucketName + " does not exist" );
+			return 404;
+		}
+	
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 
@@ -371,12 +374,18 @@ public class S3Engine {
     	    	return 404;
     	    }
     	    
+    	    // -> the multipart initiator or bucket owner can do this action
+    	    String initiator = uploadDao.getUploadInitiator( uploadId );
+    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
+    	    	// -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
+    			accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    	    }
 
     	    // -> first get a list of all the uploaded files and delete one by one
 	        S3MultipartPart[] parts = uploadDao.getUploadParts( uploadId, 10000, 0 );
 	        for( int i=0; i < parts.length; i++ )
 	        {    
-    	       bucketAdapter.deleteObject( tupleBucketHost.getSecond(), ServiceProvider.getInstance().getMultipartDir(), parts[i].getPath());
+    	        bucketAdapter.deleteObject( tupleBucketHost.getSecond(), ServiceProvider.getInstance().getMultipartDir(), parts[i].getPath());
 	        }
 	        
 	        uploadDao.deleteUpload( uploadId );
@@ -388,6 +397,40 @@ public class S3Engine {
 		}     
 	}
 
+    /**
+     * The initiator must have permission to write to the bucket in question in order to initiate
+     * a multipart upload.
+     *  
+     * @param request
+     */
+    public S3PutObjectInlineResponse initiateMultipartUpload(S3PutObjectInlineRequest request)
+    {
+    	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
+		String bucketName = request.getBucketName();
+
+		// -> does the bucket exist and can we write to it?
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "initiateMultipartUpload failed since " + bucketName + " does not exist" );
+			response.setResultCode(404);
+		}
+		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+
+		
+        try {
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
+    	    int uploadId = uploadDao.initiateUpload( UserContext.current().getAccessKey(), bucketName, request.getKey(), request.getCannedAccess(), request.getMetaEntries());
+    	    response.setUploadId( uploadId );
+    	    response.setResultCode(200);
+    	    
+        } catch( Exception e ) {
+			logger.error( "initiateMultipartUpload exception: " + e.toString());
+        	response.setResultCode(500);
+        }
+
+        return response;
+    }
 
     /**
      * Save the object fragment in a special (i.e., hidden) directory inside the same mount point as 
@@ -406,7 +449,12 @@ public class S3Engine {
 		// -> we need to look up the final bucket to figure out which mount point to use to save the part in
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket bucket = bucketDao.getByName(bucketName);
-		if (bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
+		if (bucket == null) {
+			logger.error( "saveUploadedPart failed since " + bucketName + " does not exist" );
+			response.setResultCode(404);
+		}
+		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		
 		
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
@@ -419,6 +467,14 @@ public class S3Engine {
     	    	response.setResultCode(404);
     	    	response.setResultDescription("uploadId does not exist");
     	    	return response;
+    	    }
+    	    
+    	    // -> another requirement is that only the upload initiator can upload parts
+    	    String initiator = uploadDao.getUploadInitiator( uploadId );
+    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
+    	    	response.setResultCode(403);
+    	    	response.setResultDescription("only the upload initiator can upload a part");
+    	    	return response;   	    	
     	    }
 
 			is = request.getDataInputStream();
@@ -1279,7 +1335,8 @@ public class S3Engine {
 	 * For cases where an ACL is meant for any anonymous user (or 'AllUsers') we place a "A" for the 
 	 * Canonical User Id ("A" is not a legal Cloud Stack Access key).
 	 */
-	public void accessAllowed( String target, long targetId, int requestedPermission ) {
+	public static void accessAllowed( String target, long targetId, int requestedPermission ) 
+	{
 		SAclDao aclDao = new SAclDao();
 		
 		// -> if an annoymous request, then canonicalUserId is an empty string
@@ -1299,7 +1356,7 @@ public class S3Engine {
         throw new PermissionDeniedException( "Access Denied - user does not have the required permission" );
 	}
 	
-	private boolean hasPermission( List<SAcl> priviledges, int requestedPermission ) 
+	private static boolean hasPermission( List<SAcl> priviledges, int requestedPermission ) 
 	{
         ListIterator it = priviledges.listIterator();
         while( it.hasNext()) 
