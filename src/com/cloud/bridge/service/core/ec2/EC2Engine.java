@@ -1176,7 +1176,13 @@ public class EC2Engine {
     	try {
         	query += "&name=".concat(URLEncoder.encode(keyName, "utf8"));
         	query += "&publickey=".concat(URLEncoder.encode(publicKey, "utf8"));
-			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "registerSSHKeyPair", true);
+        	
+        	// Temporary workaround. The CloudStack computes signatures on URL-encoded parameter strings
+        	// encoding spaces as %20, not +. Computing a signature from a string with spaces encoded as
+        	// a + results in a 401.
+        	query = query.replace("+", "%20");
+			
+        	response = resolveURL(genAPIURL(query, genQuerySignature(query)), "registerSSHKeyPair", true);
 		} catch (EC2ServiceException e) {
 			logger.error( "EC2 Describe KeyPairs - " + e.toString());
 
