@@ -310,13 +310,13 @@ public class EC2Engine {
    	    	   if ( protocol.equalsIgnoreCase( "icmp" )) {
   	   	            params.append( "&icmpCode="         + items[i].getToPort());
    	   	            params.append( "&icmpType="         + items[i].getFromPort());
-   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
    	   	            params.append( "&protocol="         + safeURLencode( protocol ));
+   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
    	    	   }
    	    	   else {
   	   	            params.append( "&endPort="          + items[i].getToPort());
-   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
    	   	            params.append( "&protocol="         + safeURLencode( protocol ));
+   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
    	   	            params.append( "&startPort="        + items[i].getFromPort());
    	    	   }
     	
