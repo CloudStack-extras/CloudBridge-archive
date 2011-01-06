@@ -2342,7 +2342,7 @@ public class EC2Engine {
 		         else if (name.equalsIgnoreCase( "endport"          )) perm.setToPort( Integer.parseInt( value ));
 		         else if (name.equalsIgnoreCase( "cidr"             )) perm.addIpRange( value );
 		         else if (name.equalsIgnoreCase( "account"          )) account = value;
-		         else if (name.equalsIgnoreCase( "networkgroupname" )) groupName = value ;
+		         else if (name.equalsIgnoreCase( "securitygroupname" )) groupName = value ;
 		              
 		         if (null != account && null != groupName) 
 		         {
