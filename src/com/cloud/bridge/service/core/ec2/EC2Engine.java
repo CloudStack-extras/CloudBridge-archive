@@ -310,12 +310,12 @@ public class EC2Engine {
    	    	   if ( protocol.equalsIgnoreCase( "icmp" )) {
   	   	            params.append( "&icmpCode="         + items[i].getToPort());
    	   	            params.append( "&icmpType="         + items[i].getFromPort());
-   	   	            params.append( "&networkGroupName=" + safeURLencode( request.getName()));
+   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
    	   	            params.append( "&protocol="         + safeURLencode( protocol ));
    	    	   }
    	    	   else {
   	   	            params.append( "&endPort="          + items[i].getToPort());
-   	   	            params.append( "&networkGroupName=" + safeURLencode( request.getName()));
+   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
    	   	            params.append( "&protocol="         + safeURLencode( protocol ));
    	   	            params.append( "&startPort="        + items[i].getFromPort());
    	    	   }
@@ -386,8 +386,8 @@ public class EC2Engine {
     	StringBuffer userList = new StringBuffer();
 
     	for( int i=0; i < groups.length; i++ ) {
-        	userList.append( "&userNetworkGroupList["+i+"].account=" + safeURLencode( groups[i].getAccount()));
-        	userList.append( "&userNetworkGroupList["+i+"].group="   + safeURLencode( groups[i].getName()));		
+        	userList.append( "&userSecurityGroupList["+i+"].account=" + safeURLencode( groups[i].getAccount()));
+        	userList.append( "&userSecurityGroupList["+i+"].group="   + safeURLencode( groups[i].getName()));		
     	}
     	return userList.toString();
     }
