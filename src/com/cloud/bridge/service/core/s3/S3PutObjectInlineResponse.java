@@ -24,10 +24,11 @@ public class S3PutObjectInlineResponse extends S3Response {
 	protected String ETag;
 	protected Calendar lastModified;
 	protected String version;
-	protected int uploadId = -1;
+	protected int uploadId;
 	
 	public S3PutObjectInlineResponse() {
 		super();
+		uploadId = -1;
 	}
 
 	public String getETag() {

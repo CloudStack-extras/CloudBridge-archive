@@ -161,12 +161,11 @@ public class MultipartLoadDao {
             statement.close();	
             
             // -> we need the newly entered ID 
-		    statement = conn.prepareStatement ( "SELECT ID FROM multipart_uploads WHERE AccessKey=? AND BucketName=? AND NameKey=? AND x_amz_acl=? AND CreateTime=?" );
+		    statement = conn.prepareStatement ( "SELECT ID FROM multipart_uploads WHERE AccessKey=? AND BucketName=? AND NameKey=? AND CreateTime=?" );
 	        statement.setString( 1, accessKey );
 	        statement.setString( 2, bucketName );
 	        statement.setString( 3, key );
-	        statement.setString( 4, cannedAccess );      
-	        statement.setDate( 5, sqlDate );
+	        statement.setDate( 4, sqlDate );
 	        ResultSet rs = statement.executeQuery();
 		    if (rs.next()) {
 		    	uploadId = rs.getInt( "ID" );
@@ -182,7 +181,8 @@ public class MultipartLoadDao {
 	
 	/**
 	 * Remember all the individual parts that make up the entire multipart upload so that once
-	 * the upload is complete all the parts can be glued together into a single object.
+	 * the upload is complete all the parts can be glued together into a single object.  Note, 
+	 * the caller can over write an existing part.
 	 * 
 	 * @param uploadId
 	 * @param partNumber
@@ -195,20 +195,41 @@ public class MultipartLoadDao {
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
     {
         PreparedStatement statement = null;
+        int id = -1;
+        int count = 0;
 	
         openConnection();	
         try {
             Date tod = new Date();
             java.sql.Date sqlDate = new java.sql.Date( tod.getTime());
 
-	        statement = conn.prepareStatement ( "INSERT INTO multipart_parts (UploadID, partNumber, MD5, StoredPath, StoredSize, CreateTime) VALUES (?,?,?,?,?,?)" );
-            statement.setInt(    1, uploadId );
-            statement.setInt(    2, partNumber );
-            statement.setString( 3, md5 );
-            statement.setString( 4, storedPath );   
-            statement.setInt(    5, size );
-            statement.setDate(   6, sqlDate );
-            int count = statement.executeUpdate();
+            // -> are we doing an update or an insert?  (are we over writting an existing entry?)
+		    statement = conn.prepareStatement ( "SELECT ID FROM multipart_parts WHERE UploadID=? AND partNumber=?" );
+            statement.setInt( 1, uploadId );
+            statement.setInt( 2, partNumber  );
+            ResultSet rs = statement.executeQuery();
+		    if (rs.next()) id = rs.getInt( "ID" );
+            statement.close();			    
+
+            if ( -1 == id )
+            {
+	             statement = conn.prepareStatement ( "INSERT INTO multipart_parts (UploadID, partNumber, MD5, StoredPath, StoredSize, CreateTime) VALUES (?,?,?,?,?,?)" );
+                 statement.setInt(    1, uploadId );
+                 statement.setInt(    2, partNumber );
+                 statement.setString( 3, md5 );
+                 statement.setString( 4, storedPath );   
+                 statement.setInt(    5, size );
+                 statement.setDate(   6, sqlDate );
+            }
+            else
+            {    statement = conn.prepareStatement ( "UPDATE multipart_parts SET MD5=?, StoredSize=?, CreateTime=? WHERE UploadId=? AND partNumber=?" );
+                 statement.setString( 1, md5 );
+                 statement.setInt(    2, size );
+                 statement.setDate(   3, sqlDate );
+                 statement.setInt(    4, uploadId );
+                 statement.setInt(    5, partNumber );
+            }
+            count = statement.executeUpdate();
             statement.close();	
             
         } finally {

@@ -371,6 +371,7 @@ public class S3Engine {
 		try {
     	    MultipartLoadDao uploadDao = new MultipartLoadDao();
     	    if (null == uploadDao.multipartExits( uploadId )) {
+    			logger.error( "initiateMultipartUpload failed since multipart upload" + uploadId + " does not exist" );
     	    	return 404;
     	    }
     	    
@@ -392,7 +393,7 @@ public class S3Engine {
     	    return 204;
 
 		} catch (Exception e) {
-			logger.error("freeUploadParts failed due to " + e.getMessage(), e);	
+			logger.error("freeUploadParts failed due to [" + e.getMessage() + "]", e);	
 			return 500;
 		}     
 	}
@@ -455,31 +456,17 @@ public class S3Engine {
 		}
 		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 		
-		
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 		String itemFileName = new String( uploadId + "-" + partNumber );
 		InputStream is = null;
 
 		try {
-    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
-    	    if (null == uploadDao.multipartExits( uploadId )) {
-    	    	response.setResultCode(404);
-    	    	response.setResultDescription("uploadId does not exist");
-    	    	return response;
-    	    }
-    	    
-    	    // -> another requirement is that only the upload initiator can upload parts
-    	    String initiator = uploadDao.getUploadInitiator( uploadId );
-    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
-    	    	response.setResultCode(403);
-    	    	response.setResultDescription("only the upload initiator can upload a part");
-    	    	return response;   	    	
-    	    }
-
 			is = request.getDataInputStream();
 			String md5Checksum = bucketAdapter.saveObject(is, tupleBucketHost.getSecond(), ServiceProvider.getInstance().getMultipartDir(), itemFileName);
-			response.setETag(md5Checksum);		
+			response.setETag(md5Checksum);	
+			
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
     	    uploadDao.saveUploadPart( uploadId, partNumber, md5Checksum, itemFileName, (int)request.getContentLength());
         	response.setResultCode(200);
 
@@ -503,6 +490,59 @@ public class S3Engine {
 		}
     	
 		return response;
+    }
+    
+    /**
+     * Create the real object represented by all the parts of the multipart upload.       
+     * 
+     * @param request
+     * @param parts
+     * @return
+     */
+    public S3PutObjectInlineResponse concatentateMultipartUploads(S3PutObjectInlineRequest request, S3MultipartPart[] parts)
+    {
+    	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
+		String bucketName = request.getBucketName();
+		String key = request.getKey();
+		S3MetaDataEntry[] meta = request.getMetaEntries();
+		
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "completeMultipartUpload( failed since " + bucketName + " does not exist" );
+			response.setResultCode(404);
+		}
+		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		
+
+		// -> now we need to create the final re-assembled object
+		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, null, request.getCannedAccess());
+		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
+		
+		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
+		String itemFileName = tupleObjectItem.getSecond().getStoredPath();
+
+		try {
+			// explicit transaction control to avoid holding transaction during long file concatentation process
+			PersistContext.commitTransaction();
+			
+			Tuple<String, Long> result = bucketAdapter.concatentateObjects( tupleBucketHost.getSecond(), bucket.getName(), itemFileName, ServiceProvider.getInstance().getMultipartDir(), parts );
+			response.setETag(result.getFirst());
+			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
+	        response.setVersion( tupleObjectItem.getSecond().getVersion());
+		
+			SObjectItemDao itemDao = new SObjectItemDao();
+			SObjectItem item = itemDao.get( tupleObjectItem.getSecond().getId());
+			item.setMd5(result.getFirst());
+			item.setStoredSize(result.getSecond().longValue());
+			response.setResultCode(200);
+
+			PersistContext.getSession().save(item);			
+		} 
+		catch (Exception e) {
+			logger.error("completeMultipartUpload failed due to " + e.getMessage(), e);		
+		}
+    	return response;	
     }
     
     public S3PutObjectInlineResponse handleRequest(S3PutObjectInlineRequest request) 

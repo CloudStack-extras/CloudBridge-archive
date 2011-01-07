@@ -651,6 +651,27 @@ public class S3ObjectAction implements ServletAction {
             return;
     	}
     	
+    	// -> verification
+		try {
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
+    	    if (null == uploadDao.multipartExits( uploadId )) {
+    	    	response.setStatus(404);
+    	    	return;
+    	    }
+    	    
+    	    // -> another requirement is that only the upload initiator can upload parts
+    	    String initiator = uploadDao.getUploadInitiator( uploadId );
+    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
+    	    	response.setStatus(403);
+    	    	return;   	    	
+    	    }
+		}
+		catch( Exception e ) {
+		    logger.error("executeUploadPart failed due to " + e.getMessage(), e);	
+			response.setStatus(500);
+			return;
+		}
+
 		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
 		engineRequest.setBucketName(bucket);
 		engineRequest.setKey(key);
@@ -673,8 +694,9 @@ public class S3ObjectAction implements ServletAction {
 			throw new IOException( e.toString());
 		}
 
-		String   bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
-		String   key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		String bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
+		S3MultipartPart[] parts = null;
 		int uploadId    = -1;
 
 		String temp = request.getParameter("uploadId");
@@ -682,14 +704,71 @@ public class S3ObjectAction implements ServletAction {
 
 		// TODO  parse the XML body part
 		
-		// TODO - reassemble all the download parts and create the new object into the bucket
-		response.setStatus(501);
+		// -> reassemble all the download parts and create the new object into the bucket
+		try {
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
+    	    if (null == uploadDao.multipartExits( uploadId )) {
+    	    	response.setStatus(404);
+    	    	return;
+    	    }
+    	    
+    	    // -> another requirement is that only the upload initiator can upload parts
+    	    String initiator = uploadDao.getUploadInitiator( uploadId );
+    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
+    	    	response.setStatus(403);
+    	    	return;   	    	
+    	    }
+    	    
+    	    parts = uploadDao.getUploadParts( uploadId, 10000, 0 );
+		}
+		catch( Exception e ) {
+		    logger.error("executeCompleteMultipartUpload failed due to " + e.getMessage(), e);	
+			response.setStatus(500);
+			return;
+		}
+		
+		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
+		engineRequest.setBucketName(bucket);
+		engineRequest.setKey(key);
+		// TODO set the cannedAccess and Meta data from the multipart DB entry
+
+		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().concatentateMultipartUploads( engineRequest, parts );
+		int result = engineResponse.getResultCode();
+		
+		// -> if all successful then clean up all left over parts
+ 	    StringBuffer xml = new StringBuffer();
+		if ( 200 == result ) 
+	    {
+			 // -> free all multipart state since we now have one concatentated object
+			 executeAbortMultipartUpload( request, response );
+		
+             xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
+             xml.append( "<CompleteMultipartUploadResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
+             xml.append( "<Location>" ).append( "http://" + bucket + ".s3.amazonaws.com/" + key ).append( "</Location>" );
+             xml.append( "<Bucket>" ).append( bucket ).append( "</Bucket>" );
+             xml.append( "<Key>" ).append( key ).append( "</Key>" );
+             xml.append( "<ETag>" ).append( engineResponse.getETag()).append( "</<ETag>" );
+             xml.append( "</CompleteMultipartUploadResult>" );
+	    }
+		else
+		{    xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
+             xml.append( "<Error>" );
+             xml.append( "<Code>" ).append( result ).append( "</Code>" );
+             xml.append( "<Message>" ).append( "" ).append( "</Message>" );
+             xml.append( "<RequestId>" ).append( "" ).append( "</RequestId>" );
+             xml.append( "<HostId>" ).append( "" ).append( "</<HostId>" );
+             xml.append( "</Error>" );		
+		}
+				
+		response.setStatus(result);
+	    response.setContentType("text/xml; charset=UTF-8");
+    	S3RestServlet.endResponse(response, xml.toString());
 	}
 	
 	private void executeAbortMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException 
 	{
 		String bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
-		int uploadId    = -1;
+		int uploadId  = -1;
 
 		String temp = request.getParameter("uploadId");
     	if (null != temp) uploadId = Integer.parseInt( temp );
@@ -699,7 +778,7 @@ public class S3ObjectAction implements ServletAction {
             response.setStatus( result );
 	    }
 		catch( Exception e ) {
-		    logger.error("Abort Multipart Upload failed due to " + e.getMessage(), e);	
+		    logger.error("Multipart Upload cleanup failed due to " + e.getMessage(), e);	
 		    response.setStatus(500);
 		}
 	}
