@@ -9,14 +9,14 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
-import com.cloud.bridge.model.UserCredentials;
-import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3MultipartPart;
 import com.cloud.bridge.util.ConfigurationHelper;
@@ -108,7 +108,7 @@ public class MultipartLoadDao {
 	 * @return the access key value defining the initiator
 	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	 */
-	public String getUploadInitiator( int uploadId ) 
+	public String getInitiator( int uploadId ) 
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	{
 	    PreparedStatement statement = null;
@@ -191,7 +191,7 @@ public class MultipartLoadDao {
 	 * @param size
 	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	 */
-	public void saveUploadPart( int uploadId, int partNumber, String md5, String storedPath, int size ) 
+	public void savePart( int uploadId, int partNumber, String md5, String storedPath, int size ) 
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
     {
         PreparedStatement statement = null;
@@ -238,6 +238,71 @@ public class MultipartLoadDao {
     }
 	
 	/**
+	 * It is possible for there to be a null canned access policy defined.
+	 * @param uploadId
+	 * @return the value defined in the x-amz-acl header or null
+	 */
+	public String getCannedAccess( int uploadId )
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	{
+	    PreparedStatement statement = null;
+	    String access = null;
+		
+        openConnection();	
+        try {
+		    statement = conn.prepareStatement ( "SELECT x_amz_acl FROM multipart_uploads WHERE ID=?" );
+	        statement.setInt( 1, uploadId );
+	        ResultSet rs = statement.executeQuery();
+		    if (rs.next()) access = rs.getString( "x_amz_acl" );
+            statement.close();			    
+            return access;
+        
+        } finally {
+            closeConnection();
+        }
+	}
+	
+	/**
+	 * When the multipart are being composed into one object we need any meta data to be saved with
+	 * the new re-constituted object.
+	 * 
+	 * @param uploadId
+	 * @return an array of S3MetaDataEntry (will be null if no meta values exist)
+	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	 */
+	public S3MetaDataEntry[] getMeta( int uploadId )
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	{
+		List<S3MetaDataEntry> metaList = new ArrayList<S3MetaDataEntry>();
+	    PreparedStatement statement = null;
+	    int count = 0;
+		
+        openConnection();	
+        try {
+		    statement = conn.prepareStatement ( "SELECT Name, Value FROM multipart_meta WHERE UploadID=?" );
+	        statement.setInt( 1, uploadId );
+		    ResultSet rs = statement.executeQuery();
+		    
+		    while (rs.next()) 
+		    {
+		    	S3MetaDataEntry oneMeta = new S3MetaDataEntry();
+		    	oneMeta.setName(  rs.getString( "Name" ));
+	            oneMeta.setValue( rs.getString( "Value" ));
+	            metaList.add( oneMeta );
+	            count++;
+		    }
+            statement.close();	
+            
+            if ( 0 == count )
+            	 return null;
+            else return metaList.toArray(new S3MetaDataEntry[0]);
+        
+        } finally {
+            closeConnection();
+        }
+	}
+	
+	/**
 	 * Return info on a range of upload parts that have already been stored in disk.
 	 * Note that parts can be uploaded in any order yet we must returned an ordered list
 	 * of parts thus we use the "ORDERED BY" clause to sort the list.
@@ -248,7 +313,7 @@ public class MultipartLoadDao {
 	 * @return an array of S3MultipartPart objects
 	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	 */
-	public S3MultipartPart[] getUploadParts( int uploadId, int maxParts, int startAt ) 
+	public S3MultipartPart[] getParts( int uploadId, int maxParts, int startAt ) 
 	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	{
 		S3MultipartPart[] parts = new S3MultipartPart[maxParts];
@@ -298,7 +363,7 @@ public class MultipartLoadDao {
 	 * @return number of parts with partNumber greater than endMarker
 	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	 */
-	public int numUploadParts( int uploadId, int endMarker ) 
+	public int numParts( int uploadId, int endMarker ) 
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
     {
         PreparedStatement statement = null;

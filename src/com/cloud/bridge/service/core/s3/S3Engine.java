@@ -16,6 +16,7 @@
 package com.cloud.bridge.service.core.s3;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -28,6 +29,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.hibernate.LockMode;
@@ -376,14 +380,14 @@ public class S3Engine {
     	    }
     	    
     	    // -> the multipart initiator or bucket owner can do this action
-    	    String initiator = uploadDao.getUploadInitiator( uploadId );
+    	    String initiator = uploadDao.getInitiator( uploadId );
     	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
     	    	// -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
     			accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
     	    }
 
     	    // -> first get a list of all the uploaded files and delete one by one
-	        S3MultipartPart[] parts = uploadDao.getUploadParts( uploadId, 10000, 0 );
+	        S3MultipartPart[] parts = uploadDao.getParts( uploadId, 10000, 0 );
 	        for( int i=0; i < parts.length; i++ )
 	        {    
     	        bucketAdapter.deleteObject( tupleBucketHost.getSecond(), ServiceProvider.getInstance().getMultipartDir(), parts[i].getPath());
@@ -467,7 +471,7 @@ public class S3Engine {
 			response.setETag(md5Checksum);	
 			
     	    MultipartLoadDao uploadDao = new MultipartLoadDao();
-    	    uploadDao.saveUploadPart( uploadId, partNumber, md5Checksum, itemFileName, (int)request.getContentLength());
+    	    uploadDao.savePart( uploadId, partNumber, md5Checksum, itemFileName, (int)request.getContentLength());
         	response.setResultCode(200);
 
 		} catch (IOException e) {
@@ -495,12 +499,17 @@ public class S3Engine {
     /**
      * Create the real object represented by all the parts of the multipart upload.       
      * 
-     * @param request
-     * @param parts
+     * @param httpResp - servelet response handle to return the headers of the response (including version header) 
+     * @param request - normal parameters need to create a new object (e.g., meta data)
+     * @param parts - list of files that make up the multipart
+     * @param os - response outputstream, this function can take a long time and we are required to
+     *        keep the connection alive by returning whitespace characters back periodically.
      * @return
+     * @throws IOException 
      */
-    public S3PutObjectInlineResponse concatentateMultipartUploads(S3PutObjectInlineRequest request, S3MultipartPart[] parts)
+    public S3PutObjectInlineResponse concatentateMultipartUploads(HttpServletResponse httpResp, S3PutObjectInlineRequest request, S3MultipartPart[] parts, OutputStream os) throws IOException
     {
+    	// [A] Set up and initial error checking
     	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
 		String bucketName = request.getBucketName();
 		String key = request.getKey();
@@ -515,21 +524,30 @@ public class S3Engine {
 		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 		
 
-		// -> now we need to create the final re-assembled object
+		// [B] Now we need to create the final re-assembled object
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, null, request.getCannedAccess());
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
 		
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 		String itemFileName = tupleObjectItem.getSecond().getStoredPath();
+		
+		// -> Amazon defines that we must return a 200 response immediately to the client, but
+		// -> we don't know the version header until we hit here
+		httpResp.setStatus(200);
+	    httpResp.setContentType("text/xml; charset=UTF-8");
+		String version = tupleObjectItem.getSecond().getVersion();
+		if (null != version) httpResp.addHeader( "x-amz-version-id", version );	
+        httpResp.flushBuffer();
+		
 
+        // [C] Re-assemble the object from its uploaded file parts
 		try {
-			// explicit transaction control to avoid holding transaction during long file concatentation process
+			// explicit transaction control to avoid holding transaction during long file concatenation process
 			PersistContext.commitTransaction();
 			
-			Tuple<String, Long> result = bucketAdapter.concatentateObjects( tupleBucketHost.getSecond(), bucket.getName(), itemFileName, ServiceProvider.getInstance().getMultipartDir(), parts );
+			Tuple<String, Long> result = bucketAdapter.concatentateObjects( tupleBucketHost.getSecond(), bucket.getName(), itemFileName, ServiceProvider.getInstance().getMultipartDir(), parts, os );
 			response.setETag(result.getFirst());
 			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
-	        response.setVersion( tupleObjectItem.getSecond().getVersion());
 		
 			SObjectItemDao itemDao = new SObjectItemDao();
 			SObjectItem item = itemDao.get( tupleObjectItem.getSecond().getId());
