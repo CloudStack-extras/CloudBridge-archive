@@ -32,7 +32,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -41,6 +43,10 @@ import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import com.amazon.s3.CopyObjectResponse;
 import com.amazon.s3.GetObjectAccessControlPolicyResponse;
@@ -684,6 +690,13 @@ public class S3ObjectAction implements ServletAction {
 		response.setStatus(engineResponse.getResultCode());
 	}
 	
+	/**
+	 * This function is required to both parsing XML on the request and return XML as part of its result.
+	 * 
+	 * @param request
+	 * @param response
+	 * @throws IOException
+	 */
 	private void executeCompleteMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException
 	{
 		// [A] This request is via a POST which typically has its auth parameters inside the message
@@ -700,6 +713,9 @@ public class S3ObjectAction implements ServletAction {
 		S3MetaDataEntry[] meta  = null;
 		String cannedAccess = null;
 		int uploadId    = -1;
+		
+        //  -> Amazon defines to keep connection alive by sending whitespace characters until done
+        OutputStream os = response.getOutputStream();
 
 		String temp = request.getParameter("uploadId");
     	if (null != temp) uploadId = Integer.parseInt( temp );
@@ -710,6 +726,7 @@ public class S3ObjectAction implements ServletAction {
     	    MultipartLoadDao uploadDao = new MultipartLoadDao();
     	    if (null == uploadDao.multipartExits( uploadId )) {
     	    	response.setStatus(404);
+    			returnErrorXML( 404, "NotFound", os );
     	    	return;
     	    }
     	    
@@ -717,6 +734,7 @@ public class S3ObjectAction implements ServletAction {
     	    String initiator = uploadDao.getInitiator( uploadId );
     	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
     	    	response.setStatus(403);
+    			returnErrorXML( 403, "Forbidden", os );
     	    	return;   	    	
     	    }
     	    
@@ -727,16 +745,21 @@ public class S3ObjectAction implements ServletAction {
 		catch( Exception e ) {
 		    logger.error("executeCompleteMultipartUpload failed due to " + e.getMessage(), e);	
 			response.setStatus(500);
+			returnErrorXML( 500, "InternalError", os );
 			return;
 		}
 		
-		// [C] TODO  parse the given XML body part and perform error checking
+		
+		// [C] Parse the given XML body part and perform error checking
+		Tuple<Integer,String> match = verifyParts( request.getInputStream(), parts );
+		if (200 != match.getFirst().intValue()) {
+			response.setStatus(match.getFirst().intValue());
+			returnErrorXML( match.getFirst().intValue(), match.getSecond(), os );
+			return;
+		}
 
 		
-		// [D] As the engine to create the newly re-constituted object
-        // -> Amazon defines to keep connection alive by sending whitespace characters until done
-        OutputStream os = response.getOutputStream();
-
+		// [D] Ask the engine to create a newly re-constituted object
 		S3PutObjectInlineRequest engineRequest = new S3PutObjectInlineRequest();
 		engineRequest.setBucketName(bucket);
 		engineRequest.setKey(key);
@@ -745,14 +768,13 @@ public class S3ObjectAction implements ServletAction {
 
 		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().concatentateMultipartUploads( response, engineRequest, parts, os );
 		int result = engineResponse.getResultCode();
+		// -> free all multipart state since we now have one concatentated object
+		if (200 == result) executeAbortMultipartUpload( request, response );
 		
 		// -> if all successful then clean up all left over parts
- 	    StringBuffer xml = new StringBuffer();
 		if ( 200 == result ) 
 	    {
-			 // -> free all multipart state since we now have one concatentated object
-			 executeAbortMultipartUpload( request, response );
-		
+ 	 	     StringBuffer xml = new StringBuffer();
              xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
              xml.append( "<CompleteMultipartUploadResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
              xml.append( "<Location>" ).append( "http://" + bucket + ".s3.amazonaws.com/" + key ).append( "</Location>" );
@@ -760,19 +782,10 @@ public class S3ObjectAction implements ServletAction {
              xml.append( "<Key>" ).append( key ).append( "</Key>" );
              xml.append( "<ETag>" ).append( engineResponse.getETag()).append( "</<ETag>" );
              xml.append( "</CompleteMultipartUploadResult>" );
+             os.write( xml.toString().getBytes());
+             os.close();
 	    }
-		else
-		{    xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
-             xml.append( "<Error>" );
-             xml.append( "<Code>" ).append( result ).append( "</Code>" );
-             xml.append( "<Message>" ).append( "" ).append( "</Message>" );
-             xml.append( "<RequestId>" ).append( "" ).append( "</RequestId>" );
-             xml.append( "<HostId>" ).append( "" ).append( "</<HostId>" );
-             xml.append( "</Error>" );		
-		}
-				
-        os.write( xml.toString().getBytes());
-        os.close();
+		else returnErrorXML( result, null, os );
 	}
 	
 	private void executeAbortMultipartUpload( HttpServletRequest request, HttpServletResponse response ) throws IOException 
@@ -1074,4 +1087,106 @@ public class S3ObjectAction implements ServletAction {
         }
 		return null;
 	}
+	
+	private void returnErrorXML( int errorCode, String errorDescription, OutputStream os ) throws IOException
+	{
+ 	    StringBuffer xml = new StringBuffer();
+ 	    
+	    xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
+        xml.append( "<Error>" );
+        
+        if ( null != errorDescription )
+             xml.append( "<Code>" ).append( errorDescription ).append( "</Code>" );
+        else xml.append( "<Code>" ).append( errorCode ).append( "</Code>" );
+        
+        xml.append( "<Message>" ).append( "" ).append( "</Message>" );
+        xml.append( "<RequestId>" ).append( "" ).append( "</RequestId>" );
+        xml.append( "<HostId>" ).append( "" ).append( "</<HostId>" );
+        xml.append( "</Error>" );	
+        
+        os.write( xml.toString().getBytes());
+        os.close();
+	}
+	
+	/**
+	 * The Complete Multipart Upload function pass in the request body a list of
+	 * all uploaded body parts.   It is required that we verify that list matches
+	 * what was uploaded.
+	 * 
+	 * @param is
+	 * @param parts
+	 * @return error code, and error string
+	 * @throws ParserConfigurationException, IOException, SAXException 
+	 */
+    private Tuple<Integer,String> verifyParts( InputStream is, S3MultipartPart[] parts ) 
+    {
+    	try {
+		    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		    dbf.setNamespaceAware( true );
+		
+		    DocumentBuilder db  = dbf.newDocumentBuilder();
+		    Document        doc = db.parse( is );
+		    Node            parent     = null;
+		    Node            contents   = null;
+		    NodeList        children   = null;
+		    String          temp       = null;
+		    String          element    = null;
+		    String          eTag       = null;
+		    int             lastNumber = -1;
+		    int             partNumber = -1;
+		    int             count      = 0;
+
+		    // -> handle with and without a namespace
+		    NodeList nodeSet = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "Part" );		
+		    count = nodeSet.getLength();
+		    if (0 == count) {
+		    	nodeSet = doc.getElementsByTagName( "Part" );
+			    count = nodeSet.getLength();
+		    }
+		    if (count != parts.length) return new Tuple<Integer, String>(400, "InvalidPart");
+
+		    // -> get a list of all the children elements of the 'Part' parent element
+		    for( int i=0; i < count; i++ )
+		    {
+			   partNumber = -1;
+			   eTag       = null;
+			   parent     = nodeSet.item(i);
+				 
+			   if (null != (children = parent.getChildNodes()))
+			   {
+				  int numChildren = children.getLength();
+				  for( int j=0; j < numChildren; j++ )
+				  {
+					  contents = children.item( j );
+					  element  = contents.getNodeName().trim();
+					  if ( element.endsWith( "PartNumber" ))
+					  {
+						   temp = contents.getFirstChild().getNodeValue();
+						   if (null != temp) partNumber = Integer.parseInt( temp );
+						   //System.out.println( "part: " + partNumber );
+					  }
+					  else if (element.endsWith( "ETag" ))
+					  {
+						   eTag = contents.getFirstChild().getNodeValue();
+						   //System.out.println( "etag: " + eTag );
+					  }
+				  }
+			   }
+				 
+			   // -> do the parts given in the call XML match what was previously uploaded?
+			   if (lastNumber >= partNumber) {
+		           return new Tuple<Integer, String>(400, "InvalidPartOrder"); 
+			   }
+			   if (partNumber != parts[i].getPartNumber() || eTag == null || !eTag.equalsIgnoreCase( parts[i].getETag())) {
+		           return new Tuple<Integer, String>(400, "InvalidPart");
+		       }
+				 
+			   lastNumber = partNumber;
+		    }
+		    return new Tuple<Integer, String>(200, "Success");
+    	}
+    	catch( Exception e ) {
+    		return new Tuple<Integer, String>(500, e.toString());
+    	}
+    }
 }
