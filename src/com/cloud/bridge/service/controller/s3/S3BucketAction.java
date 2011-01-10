@@ -42,7 +42,9 @@ import org.w3c.dom.Node;
 import com.amazon.s3.GetBucketAccessControlPolicyResponse;
 import com.amazon.s3.ListAllMyBucketsResponse;
 import com.amazon.s3.ListBucketResponse;
+import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.model.SBucket;
+import com.cloud.bridge.persist.dao.MultipartLoadDao;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.service.S3Constants;
 import com.cloud.bridge.service.S3RestServlet;
@@ -56,12 +58,15 @@ import com.cloud.bridge.service.core.s3.S3CreateBucketConfiguration;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
 import com.cloud.bridge.service.core.s3.S3CreateBucketResponse;
 import com.cloud.bridge.service.core.s3.S3DeleteBucketRequest;
+import com.cloud.bridge.service.core.s3.S3Engine;
 import com.cloud.bridge.service.core.s3.S3GetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsResponse;
 import com.cloud.bridge.service.core.s3.S3ListBucketObjectEntry;
 import com.cloud.bridge.service.core.s3.S3ListBucketRequest;
 import com.cloud.bridge.service.core.s3.S3ListBucketResponse;
+import com.cloud.bridge.service.core.s3.S3MultipartPart;
+import com.cloud.bridge.service.core.s3.S3MultipartUpload;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
@@ -505,14 +510,80 @@ public class S3BucketAction implements ServletAction {
 	
 	public void executeListMultipartUploads(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
-		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String bucketName     = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String delimiter      = request.getParameter("delimiter");
-		String maxUploads     = request.getParameter("max-uploads");
 		String keyMarker      = request.getParameter("key-marker");
 		String prefix         = request.getParameter("prefix");
 		String uploadIdMarker = request.getParameter("upload-id-marker");
+		int maxUploads        = 1000;
+		int remaining         = 0;
+		S3MultipartUpload[] uploads = null;
+		
+		// TODO: support delimiter, key-marker, prefix, upload-id-marker
 
-		// TODO - list for the bucket all the uploads in progress
-		response.setStatus(501);
+		String temp = request.getParameter("max-uploads");
+    	if (null != temp) {
+    		maxUploads = Integer.parseInt( temp );
+    		if (maxUploads > 1000 || maxUploads < 0) maxUploads = 1000;
+    	}
+    	
+		// -> does the bucket exist, we may need it to verify access permissions
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "listMultipartUpload failed since " + bucketName + " does not exist" );
+	    	response.setStatus(404);
+	    	return;
+		}
+  	
+    	try {
+	        MultipartLoadDao uploadDao = new MultipartLoadDao();
+	        uploads = uploadDao.getInitiatedUploads( bucketName, maxUploads, 0 );
+    	}
+		catch( Exception e ) {
+			logger.error("List Multipart Uploads failed due to " + e.getMessage(), e);	
+			response.setStatus(500);
+		}
+
+		StringBuffer xml = new StringBuffer();
+	    xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
+	    xml.append( "<ListMultipartUploadsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
+	    xml.append( "<Bucket>" ).append( bucketName ).append( "</Bucket>" );
+	    xml.append( "<KeyMarker>").append( "" ).append( "</KeyMarker>" );
+	    xml.append( "<UploadIdMarker>").append( "" ).append( "</UploadIdMarker>" );
+	      
+		StringBuffer partsList = new StringBuffer();
+	    for( int i=0; i < uploads.length; i++ ) 
+	    {
+	        S3MultipartUpload onePart = uploads[i];
+	        if (null == onePart) break;
+	        	
+	        partsList.append( "<Upload>" );
+	        partsList.append( "<Key>" ).append( onePart.getKey()).append( "</Key>" );
+	        partsList.append( "<UploadId>" ).append( onePart.getId()).append( "</UploadId>" );
+	        partsList.append( "<Initiator>" );
+	        partsList.append( "<ID>" ).append( onePart.getAccessKey()).append( "</ID>" );
+	        partsList.append( "<DisplayName></DisplayName>" );
+	        partsList.append( "</Initiator>" );
+	        partsList.append( "<Owner>" );
+	        partsList.append( "<ID>" ).append( onePart.getAccessKey()).append( "</ID>" );
+	        partsList.append( "<DisplayName></DisplayName>" );
+	        partsList.append( "</Owner>" );       
+	        partsList.append( "<StorageClass>STANDARD</StorageClass>" );
+	        partsList.append( "<Initiated>" ).append( DatatypeConverter.printDateTime( onePart.getLastModified())).append( "</Initiated>" );
+	        partsList.append( "</Upload>" );        	
+	    }  
+	        
+	    xml.append( "<NextKeyMarker>" ).append( "" ).append( "</NextKeyMarker>" );
+	    xml.append( "<NextUploadIdMarker>" ).append( "" ).append( "</NextUploadIdMarker>" );
+	    xml.append( "<MaxUploads>" ).append( maxUploads ).append( "</MaxUploads>" );   
+	    xml.append( "<IsTruncated>" ).append((0 < remaining ? "true" : "false" )).append( "</IsTruncated>" );
+
+	    xml.append( partsList.toString());
+	    xml.append( "</ListMultipartUploadsResult>" );
+	      
+		response.setStatus(200);
+		response.setContentType("text/xml; charset=UTF-8");
+	    S3RestServlet.endResponse(response, xml.toString());
 	}
 }
