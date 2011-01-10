@@ -9,6 +9,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -19,6 +20,7 @@ import org.apache.log4j.Logger;
 
 import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3MultipartPart;
+import com.cloud.bridge.service.core.s3.S3MultipartUpload;
 import com.cloud.bridge.util.ConfigurationHelper;
 
 public class MultipartLoadDao {
@@ -149,14 +151,14 @@ public class MultipartLoadDao {
         openConnection();	
         try {
 	        Date tod = new Date();
-	        java.sql.Date sqlDate = new java.sql.Date( tod.getTime());
+	        java.sql.Timestamp dateTime = new Timestamp( tod.getTime());
 
 		    statement = conn.prepareStatement ( "INSERT INTO multipart_uploads (AccessKey, BucketName, NameKey, x_amz_acl, CreateTime) VALUES (?,?,?,?,?)" );
 	        statement.setString( 1, accessKey );
 	        statement.setString( 2, bucketName );
 	        statement.setString( 3, key );
 	        statement.setString( 4, cannedAccess );      
-	        statement.setDate( 5, sqlDate );
+	        statement.setTimestamp( 5, dateTime );
             int count = statement.executeUpdate();
             statement.close();	
             
@@ -165,7 +167,7 @@ public class MultipartLoadDao {
 	        statement.setString( 1, accessKey );
 	        statement.setString( 2, bucketName );
 	        statement.setString( 3, key );
-	        statement.setDate( 4, sqlDate );
+	        statement.setTimestamp( 4, dateTime );
 	        ResultSet rs = statement.executeQuery();
 		    if (rs.next()) {
 		    	uploadId = rs.getInt( "ID" );
@@ -201,7 +203,7 @@ public class MultipartLoadDao {
         openConnection();	
         try {
             Date tod = new Date();
-            java.sql.Date sqlDate = new java.sql.Date( tod.getTime());
+            java.sql.Timestamp dateTime = new java.sql.Timestamp( tod.getTime());
 
             // -> are we doing an update or an insert?  (are we over writting an existing entry?)
 		    statement = conn.prepareStatement ( "SELECT ID FROM multipart_parts WHERE UploadID=? AND partNumber=?" );
@@ -219,13 +221,13 @@ public class MultipartLoadDao {
                  statement.setString( 3, md5 );
                  statement.setString( 4, storedPath );   
                  statement.setInt(    5, size );
-                 statement.setDate(   6, sqlDate );
+                 statement.setTimestamp( 6, dateTime );
             }
             else
             {    statement = conn.prepareStatement ( "UPDATE multipart_parts SET MD5=?, StoredSize=?, CreateTime=? WHERE UploadId=? AND partNumber=?" );
                  statement.setString( 1, md5 );
                  statement.setInt(    2, size );
-                 statement.setDate(   3, sqlDate );
+                 statement.setTimestamp( 3, dateTime );
                  statement.setInt(    4, uploadId );
                  statement.setInt(    5, partNumber );
             }
@@ -302,6 +304,58 @@ public class MultipartLoadDao {
         }
 	}
 	
+	/** 
+	 * The result has to be ordered by key and if there is more than one identical key then all the 
+	 * identical keys are ordered by create time.
+	 * 
+	 * @param bucketName
+	 * @param maxParts
+	 * @param startAt
+	 * @return S3MultipartUpload[]
+	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	 */
+	public S3MultipartUpload[] getInitiatedUploads( String bucketName, int maxParts, int startAt )
+        throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	{
+		S3MultipartUpload[] inProgress = new S3MultipartUpload[maxParts];
+	    PreparedStatement statement = null;
+	    int i = 0;
+		
+        openConnection();	
+        try {
+		    statement = conn.prepareStatement ( "SELECT   ID, AccessKey, NameKey, CreateTime " +
+		    		                            "FROM     multipart_uploads " +
+		    		                            "WHERE    BucketName=? " +
+		    		                            "AND      ID > ? " +
+		    		                            "ORDER BY NameKey, CreateTime" );
+		    statement.setString( 1, bucketName );
+	        statement.setInt( 2, startAt );
+		    ResultSet rs = statement.executeQuery();
+		    
+		    while (rs.next() && i < maxParts) 
+		    {
+		    	Calendar tod = Calendar.getInstance();
+		    	tod.setTime( rs.getTimestamp( "CreateTime" ));
+
+		    	inProgress[i] = new S3MultipartUpload();
+		    	inProgress[i].setId( rs.getInt( "ID" )); 
+		    	inProgress[i].setAccessKey( rs.getString( "AccessKey" ));
+		    	inProgress[i].setLastModified( tod );
+		    	inProgress[i].setBucketName( bucketName );
+		    	inProgress[i].setKey( rs.getString( "NameKey" ));
+		    	i++;
+		    }
+            statement.close();		
+            
+            if (i < maxParts) inProgress = (S3MultipartUpload[])resizeArray(inProgress,i);
+            return inProgress;
+        
+        } finally {
+            closeConnection();
+        }
+
+	}
+	
 	/**
 	 * Return info on a range of upload parts that have already been stored in disk.
 	 * Note that parts can be uploaded in any order yet we must returned an ordered list
@@ -335,7 +389,7 @@ public class MultipartLoadDao {
 		    while (rs.next() && i < maxParts) 
 		    {
 		    	Calendar tod = Calendar.getInstance();
-		    	tod.setTime( rs.getDate( "CreateTime" ));
+		    	tod.setTime( rs.getTimestamp( "CreateTime" ));
 		    	
 		    	parts[i] = new S3MultipartPart();
 		    	parts[i].setPartNumber( rs.getInt( "partNumber" )); 
