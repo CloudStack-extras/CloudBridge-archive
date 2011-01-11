@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.security.KeyStore;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
@@ -31,7 +32,9 @@ import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -44,16 +47,21 @@ import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMFactory;
+import org.apache.axis2.AxisFault;
+import org.apache.axis2.databinding.ADBBean;
 import org.apache.axis2.databinding.ADBException;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
 import com.amazon.ec2.AttachVolumeResponse;
 import com.amazon.ec2.AuthorizeSecurityGroupIngressResponse;
 import com.amazon.ec2.CreateImageResponse;
+import com.amazon.ec2.CreateKeyPairResponse;
 import com.amazon.ec2.CreateSecurityGroupResponse;
 import com.amazon.ec2.CreateSnapshotResponse;
 import com.amazon.ec2.CreateVolumeResponse;
+import com.amazon.ec2.DeleteKeyPairResponse;
 import com.amazon.ec2.DeleteSecurityGroupResponse;
 import com.amazon.ec2.DeleteSnapshotResponse;
 import com.amazon.ec2.DeleteVolumeResponse;
@@ -63,10 +71,13 @@ import com.amazon.ec2.DescribeImageAttributeResponse;
 import com.amazon.ec2.DescribeImagesResponse;
 import com.amazon.ec2.DescribeInstanceAttributeResponse;
 import com.amazon.ec2.DescribeInstancesResponse;
+import com.amazon.ec2.DescribeKeyPairsResponse;
 import com.amazon.ec2.DescribeSecurityGroupsResponse;
 import com.amazon.ec2.DescribeSnapshotsResponse;
 import com.amazon.ec2.DescribeVolumesResponse;
 import com.amazon.ec2.DetachVolumeResponse;
+import com.amazon.ec2.GetPasswordDataResponse;
+import com.amazon.ec2.ImportKeyPairResponse;
 import com.amazon.ec2.ModifyImageAttributeResponse;
 import com.amazon.ec2.RebootInstancesResponse;
 import com.amazon.ec2.RegisterImageResponse;
@@ -225,6 +236,11 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "TerminateInstances"        )) terminateInstances(request, response); 
     	    else if (action.equalsIgnoreCase( "SetCertificate"            )) setCertificate(request, response);
        	    else if (action.equalsIgnoreCase( "DeleteCertificate"         )) deleteCertificate(request, response);
+       	    else if (action.equalsIgnoreCase( "CreateKeyPair"             )) createKeyPair(request, response);
+       	    else if (action.equalsIgnoreCase( "ImportKeyPair"             )) importKeyPair(request, response);
+       	    else if (action.equalsIgnoreCase( "DeleteKeyPair"             )) deleteKeyPair(request, response);
+       	    else if (action.equalsIgnoreCase( "DescribeKeyPairs"          )) describeKeyPairs(request, response);
+       	    else if (action.equalsIgnoreCase( "GetPasswordData"           )) getPasswordData(request, response);
     	    else {
         		logger.error("Unsupported action " + action);
         		response.setStatus(501);
@@ -232,10 +248,14 @@ public class EC2RestServlet extends HttpServlet {
     	    }
     	         
         } catch( EC2ServiceException e ) {
-    		logger.error("EC2ServiceException: " + e.getMessage(), e);
-    		response.setStatus( e.getErrorCode());
-        	endResponse(response, e.toString());
-        	
+    		response.setStatus(e.getErrorCode());
+    		
+    		if (e.getCause() != null && e.getCause() instanceof AxisFault)
+    			faultResponse(response, ((AxisFault)e.getCause()).getFaultCode().getLocalPart(), e.getMessage());
+    		else {
+        		logger.error("EC2ServiceException: " + e.getMessage(), e);
+    			endResponse(response, e.toString());
+    		}
         } catch( PermissionDeniedException e ) {
     		logger.error("Unexpected exception: " + e.getMessage(), e);
     		response.setStatus(403);
@@ -472,17 +492,7 @@ public class EC2RestServlet extends HttpServlet {
 		
 		// -> execute the request
 		AttachVolumeResponse EC2response = EC2SoapServiceImpl.toAttachVolumeResponse( ServiceProvider.getInstance().getEC2Engine().attachVolume( EC2request ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
   
     /**
@@ -539,18 +549,8 @@ public class EC2RestServlet extends HttpServlet {
 	    EC2request.addIpPermission( perm );	
 		
 	    // -> execute the request
-        RevokeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toRevokeSecurityGroupIngressResponse( ServiceProvider.getInstance().getEC2Engine().securityGroupRequest( EC2request, "revokeNetworkGroupIngress" ));
-
-	    // -> serialize using the apache's Axiom classes
-	    OutputStream os = response.getOutputStream();
-	    response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        RevokeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toRevokeSecurityGroupIngressResponse( ServiceProvider.getInstance().getEC2Engine().securityGroupRequest( EC2request, "revokeSecurityGroupIngress" ));
+        serializeResponse(response, EC2response);
     }
 
      private void authorizeSecurityGroupIngress( HttpServletRequest request, HttpServletResponse response ) 
@@ -617,18 +617,8 @@ public class EC2RestServlet extends HttpServlet {
 
 		
 	    // -> execute the request
-        AuthorizeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toAuthorizeSecurityGroupIngressResponse( ServiceProvider.getInstance().getEC2Engine().securityGroupRequest( EC2request, "authorizeNetworkGroupIngress" ));
-
-	    // -> serialize using the apache's Axiom classes
-	    OutputStream os = response.getOutputStream();
-	    response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        AuthorizeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toAuthorizeSecurityGroupIngressResponse( ServiceProvider.getInstance().getEC2Engine().securityGroupRequest( EC2request, "authorizeSecurityGroupIngress" ));
+        serializeResponse(response, EC2response);
     }
     
     private void detachVolume( HttpServletRequest request, HttpServletResponse response ) 
@@ -650,17 +640,7 @@ public class EC2RestServlet extends HttpServlet {
 		
 		// -> execute the request
 		DetachVolumeResponse EC2response = EC2SoapServiceImpl.toDetachVolumeResponse( ServiceProvider.getInstance().getEC2Engine().detachVolume( EC2request ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
 
     private void deleteVolume( HttpServletRequest request, HttpServletResponse response ) 
@@ -674,17 +654,7 @@ public class EC2RestServlet extends HttpServlet {
 
 		// -> execute the request
 		DeleteVolumeResponse EC2response = EC2SoapServiceImpl.toDeleteVolumeResponse( ServiceProvider.getInstance().getEC2Engine().deleteVolume( EC2request ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
 
     private void createVolume( HttpServletRequest request, HttpServletResponse response ) 
@@ -720,17 +690,7 @@ public class EC2RestServlet extends HttpServlet {
 
 		// -> execute the request
 		CreateVolumeResponse EC2response = EC2SoapServiceImpl.toCreateVolumeResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
 
     private void createSecurityGroup( HttpServletRequest request, HttpServletResponse response ) 
@@ -749,17 +709,7 @@ public class EC2RestServlet extends HttpServlet {
 
 	    // -> execute the request
         CreateSecurityGroupResponse EC2response = EC2SoapServiceImpl.toCreateSecurityGroupResponse( ServiceProvider.getInstance().getEC2Engine().createSecurityGroup( EC2request ));
-
-	    // -> serialize using the apache's Axiom classes
-	    OutputStream os = response.getOutputStream();
-	    response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        serializeResponse(response, EC2response);
     }
 
     private void deleteSecurityGroup( HttpServletRequest request, HttpServletResponse response ) 
@@ -773,17 +723,7 @@ public class EC2RestServlet extends HttpServlet {
 
         // -> execute the request
         DeleteSecurityGroupResponse EC2response = EC2SoapServiceImpl.toDeleteSecurityGroupResponse( ServiceProvider.getInstance().getEC2Engine().deleteSecurityGroup( EC2request ));
-
-        // -> serialize using the apache's Axiom classes
-        OutputStream os = response.getOutputStream();
-        response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-        XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-        MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        serializeResponse(response, EC2response);
     }
 
     private void deleteSnapshot( HttpServletRequest request, HttpServletResponse response ) 
@@ -797,17 +737,7 @@ public class EC2RestServlet extends HttpServlet {
 		
 		// -> execute the request
 		DeleteSnapshotResponse EC2response = EC2SoapServiceImpl.toDeleteSnapshotResponse( ServiceProvider.getInstance().getEC2Engine().deleteSnapshot( snapshotId ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
 
     private void createSnapshot( HttpServletRequest request, HttpServletResponse response ) 
@@ -822,17 +752,7 @@ public class EC2RestServlet extends HttpServlet {
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
         CreateSnapshotResponse EC2response = EC2SoapServiceImpl.toCreateSnapshotResponse( engine.createSnapshot( volumeId ), engine);
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        serializeResponse(response, EC2response);
     }
     
     private void deregisterImage( HttpServletRequest request, HttpServletResponse response ) 
@@ -846,17 +766,7 @@ public class EC2RestServlet extends HttpServlet {
 		
 		// -> execute the request
 		DeregisterImageResponse EC2response = EC2SoapServiceImpl.toDeregisterImageResponse( ServiceProvider.getInstance().getEC2Engine().deregisterImage( image ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
  
     private void createImage( HttpServletRequest request, HttpServletResponse response ) 
@@ -879,17 +789,7 @@ public class EC2RestServlet extends HttpServlet {
 
 		// -> execute the request
         CreateImageResponse EC2response = EC2SoapServiceImpl.toCreateImageResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        serializeResponse(response, EC2response);
     }
 
     private void registerImage( HttpServletRequest request, HttpServletResponse response ) 
@@ -916,17 +816,7 @@ public class EC2RestServlet extends HttpServlet {
 
 		// -> execute the request
         RegisterImageResponse EC2response = EC2SoapServiceImpl.toRegisterImageResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        serializeResponse(response, EC2response);
     }
 
     private void modifyImageAttribute( HttpServletRequest request, HttpServletResponse response ) 
@@ -946,17 +836,7 @@ public class EC2RestServlet extends HttpServlet {
 
 		// -> execute the request
 		ModifyImageAttributeResponse EC2response = EC2SoapServiceImpl.toModifyImageAttributeResponse( ServiceProvider.getInstance().getEC2Engine().modifyImageAttribute( image ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
 
     private void resetImageAttribute( HttpServletRequest request, HttpServletResponse response ) 
@@ -971,17 +851,7 @@ public class EC2RestServlet extends HttpServlet {
 		// -> execute the request
 		image.setDescription( "" );
 		ResetImageAttributeResponse EC2response = EC2SoapServiceImpl.toResetImageAttributeResponse( ServiceProvider.getInstance().getEC2Engine().modifyImageAttribute( image ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
 
     private void runInstances( HttpServletRequest request, HttpServletResponse response ) 
@@ -1017,20 +887,15 @@ public class EC2RestServlet extends HttpServlet {
 		    EC2request.setSize(Integer.valueOf(size[0]));
 		}
 
+		String[] keyName = request.getParameterValues("KeyName");
+		if (keyName != null) {
+			EC2request.setKeyName(keyName[0]);
+		}
+		
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 		RunInstancesResponse EC2response = EC2SoapServiceImpl.toRunInstancesResponse( engine.handleRequest( EC2request ), engine);
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
 
     private void rebootInstances( HttpServletRequest request, HttpServletResponse response ) 
@@ -1054,17 +919,7 @@ public class EC2RestServlet extends HttpServlet {
     
         // -> execute the request
         RebootInstancesResponse EC2response = EC2SoapServiceImpl.toRebootInstancesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-        // -> serialize using the apache's Axiom classes
-        OutputStream os = response.getOutputStream();
-        response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-        XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-        MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        serializeResponse(response, EC2response);
     }
 
     private void startInstances( HttpServletRequest request, HttpServletResponse response ) 
@@ -1088,17 +943,7 @@ public class EC2RestServlet extends HttpServlet {
 
         // -> execute the request
         StartInstancesResponse EC2response = EC2SoapServiceImpl.toStartInstancesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-        // -> serialize using the apache's Axiom classes
-        OutputStream os = response.getOutputStream();
-        response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-        XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-        MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        serializeResponse(response, EC2response);
     }
 
     private void stopInstances( HttpServletRequest request, HttpServletResponse response ) 
@@ -1122,17 +967,7 @@ public class EC2RestServlet extends HttpServlet {
 
 	    // -> execute the request
 	    StopInstancesResponse EC2response = EC2SoapServiceImpl.toStopInstancesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-	    // -> serialize using the apache's Axiom classes
-	    OutputStream os = response.getOutputStream();
-	    response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+	    serializeResponse(response, EC2response);
     }
 
     private void terminateInstances( HttpServletRequest request, HttpServletResponse response ) 
@@ -1157,17 +992,7 @@ public class EC2RestServlet extends HttpServlet {
         // -> execute the request
 		EC2request.setDestroyInstances( true );
         TerminateInstancesResponse EC2response = EC2SoapServiceImpl.toTermInstancesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-        // -> serialize using the apache's Axiom classes
-        OutputStream os = response.getOutputStream();
-        response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-        XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-        MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        serializeResponse(response, EC2response);
     }
 
     /**
@@ -1189,17 +1014,7 @@ public class EC2RestServlet extends HttpServlet {
 		}		
 		// -> execute the request
 		DescribeAvailabilityZonesResponse EC2response = EC2SoapServiceImpl.toDescribeAvailabilityZonesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
 
     private void describeImages( HttpServletRequest request, HttpServletResponse response ) 
@@ -1218,17 +1033,7 @@ public class EC2RestServlet extends HttpServlet {
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 		DescribeImagesResponse EC2response = EC2SoapServiceImpl.toDescribeImagesResponse( engine.handleRequest( EC2request ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
     
     private void describeImageAttribute( HttpServletRequest request, HttpServletResponse response ) 
@@ -1248,17 +1053,7 @@ public class EC2RestServlet extends HttpServlet {
 
 		// -> execute the request
 		DescribeImageAttributeResponse EC2response = EC2SoapServiceImpl.toDescribeImageAttributeResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
 
     private void describeInstances( HttpServletRequest request, HttpServletResponse response ) 
@@ -1277,17 +1072,7 @@ public class EC2RestServlet extends HttpServlet {
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 		DescribeInstancesResponse EC2response = EC2SoapServiceImpl.toDescribeInstancesResponse( engine.handleRequest( EC2request ), engine);
-
-		// -> serialize using the apache's Axiom classes
-		OutputStream os = response.getOutputStream();
-		response.setStatus(200);	
-	    response.setContentType("text/xml; charset=UTF-8");
-		XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-		MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+		serializeResponse(response, EC2response);
     }
     
     private void describeSecurityGroups( HttpServletRequest request, HttpServletResponse response ) 
@@ -1307,17 +1092,7 @@ public class EC2RestServlet extends HttpServlet {
 	    // -> execute the request
 	    EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 	    DescribeSecurityGroupsResponse EC2response = EC2SoapServiceImpl.toDescribeSecurityGroupsResponse( engine.handleRequest( EC2request ));
-
-	    // -> serialize using the apache's Axiom classes
-	    OutputStream os = response.getOutputStream();
-	    response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+	    serializeResponse(response, EC2response);
     }
     
     private void describeInstanceAttribute( HttpServletRequest request, HttpServletResponse response ) 
@@ -1348,17 +1123,7 @@ public class EC2RestServlet extends HttpServlet {
      
 	    // -> execute the request
 	    DescribeInstanceAttributeResponse EC2response = EC2SoapServiceImpl.toDescribeInstanceAttributeResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-	    // -> serialize using the apache's Axiom classes
-	    OutputStream os = response.getOutputStream();
-	    response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+	    serializeResponse(response, EC2response);
     }
 
     private void describeSnapshots( HttpServletRequest request, HttpServletResponse response ) 
@@ -1377,17 +1142,7 @@ public class EC2RestServlet extends HttpServlet {
 	    // -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 	    DescribeSnapshotsResponse EC2response = EC2SoapServiceImpl.toDescribeSnapshotsResponse( engine.handleRequest( EC2request ));
-
-	    // -> serialize using the apache's Axiom classes
-	    OutputStream os = response.getOutputStream();
-	    response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-	    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-	    MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+	    serializeResponse(response, EC2response);
     }
 
     private void describeVolumes( HttpServletRequest request, HttpServletResponse response ) 
@@ -1405,19 +1160,63 @@ public class EC2RestServlet extends HttpServlet {
         }		
         // -> execute the request
         DescribeVolumesResponse EC2response = EC2SoapServiceImpl.toDescribeVolumesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
-
-        // -> serialize using the apache's Axiom classes
-        OutputStream os = response.getOutputStream();
-        response.setStatus(200);	
-        response.setContentType("text/xml; charset=UTF-8");
-        XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
-        MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
-        EC2response.serialize( null, factory, MTOMWriter );
-        xmlWriter.flush();
-        xmlWriter.close();
-        os.close();
+        serializeResponse(response, EC2response);
     }
 
+    private void describeKeyPairs(HttpServletRequest request, HttpServletResponse response) 
+			throws ADBException, XMLStreamException, IOException {
+		// TODO: Handle filters for key-name and finger print
+
+    	DescribeKeyPairsResponse EC2Response = EC2SoapServiceImpl.toDescribeKeyPairs(
+    			ServiceProvider.getInstance().getEC2Engine().describeKeyPairs());
+    	serializeResponse(response, EC2Response);
+    }
+
+    private void importKeyPair(HttpServletRequest request, HttpServletResponse response) 
+			throws ADBException, XMLStreamException, IOException {
+    	String keyName = request.getParameter("KeyName");
+    	String publicKeyMaterial = request.getParameter("PublicKeyMaterial");
+    	if (keyName==null & publicKeyMaterial==null)
+    		response.sendError(530, "Missing parameter");
+    	
+        if (!publicKeyMaterial.contains(" "))
+            publicKeyMaterial = new String(Base64.decodeBase64(publicKeyMaterial.getBytes())); 
+    	
+    	ImportKeyPairResponse EC2Response = EC2SoapServiceImpl.toImportKeyPair(
+    			ServiceProvider.getInstance().getEC2Engine().importKeyPair(keyName, publicKeyMaterial));
+    	serializeResponse(response, EC2Response);
+    }
+
+    private void createKeyPair(HttpServletRequest request, HttpServletResponse response)
+    		throws ADBException, XMLStreamException, IOException { 
+    	String keyName = request.getParameter("KeyName");
+    	if (keyName==null) response.sendError(530, "Missing KeyName parameter");
+    	
+    	CreateKeyPairResponse EC2Response = EC2SoapServiceImpl.toCreateKeyPair(
+    			ServiceProvider.getInstance().getEC2Engine().createKeyPair(keyName));
+    	serializeResponse(response, EC2Response);	
+    }
+
+    private void deleteKeyPair(HttpServletRequest request, HttpServletResponse response)
+			throws ADBException, XMLStreamException, IOException {
+    	String keyName = request.getParameter("KeyName");
+    	if (keyName==null) response.sendError(530, "Missing KeyName parameter");
+    	
+    	DeleteKeyPairResponse EC2Response = EC2SoapServiceImpl.toDeleteKeyPair(
+    			ServiceProvider.getInstance().getEC2Engine().deleteKeyPair(keyName));
+    	serializeResponse(response, EC2Response);
+    }
+    
+    private void getPasswordData(HttpServletRequest request, HttpServletResponse response) 
+    		throws ADBException, XMLStreamException, IOException {
+    	String instanceId = request.getParameter("InstanceId");
+    	if (instanceId==null) response.sendError(530, "Missing InstanceId parameter");
+  	
+    	GetPasswordDataResponse EC2Response = EC2SoapServiceImpl.toGetPasswordData(
+    			ServiceProvider.getInstance().getEC2Engine().getPasswordData(instanceId));
+    	serializeResponse(response, EC2Response);
+    }
+    
     /**
      * This function implements the EC2 REST authentication algorithm.   It uses the given
      * "AWSAccessKeyId" parameter to look up the Cloud.com account holder's secret key which is
@@ -1581,5 +1380,44 @@ public class EC2RestServlet extends HttpServlet {
     			}
     		}
     	}
+    }
+     
+    /**
+	 * Send out an error response according to Amazon convention.
+     */
+    private void faultResponse(HttpServletResponse response, String errorCode, String errorMessage) {
+        try {
+			OutputStreamWriter out = new OutputStreamWriter(response.getOutputStream());
+	        response.setContentType("text/xml; charset=UTF-8");
+	        out.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+	        out.write("<Response><Errors><Error><Code>");
+	        out.write(errorCode);
+	        out.write("</Code><Message>");
+	        out.write(errorMessage);
+	        out.write("</Message></Error></Errors><RequestID>");
+	        out.write(UUID.randomUUID().toString());
+	        out.write("</RequestID></Response>");
+	        out.flush();
+	        out.close();
+		} catch (IOException e) {
+    		logger.error("Unexpected exception " + e.getMessage(), e);
+		}
+    }
+    
+    /**
+	 * Serialize Axis beans to XML output. 
+     */
+    private void serializeResponse(HttpServletResponse response, ADBBean EC2Response) 
+			throws ADBException, XMLStreamException, IOException {
+    	OutputStream os = response.getOutputStream();
+    	response.setStatus(200);	
+    	response.setContentType("text/xml; charset=UTF-8");
+    	XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
+    	MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
+    	MTOMWriter.setDefaultNamespace("http://ec2.amazonaws.com/doc/" + wsdlVersion + "/");
+	EC2Response.serialize( null, factory, MTOMWriter );
+	xmlWriter.flush();
+	xmlWriter.close();
+	os.close();
     }
 }
