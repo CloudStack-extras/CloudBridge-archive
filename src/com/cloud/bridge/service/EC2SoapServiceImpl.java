@@ -71,11 +71,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	this.engine = engine;
     }
 
-	public AllocateAddressResponse allocateAddress(AllocateAddress allocateAddress) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
 	public AssociateAddressResponse associateAddress(AssociateAddress associateAddress) {
 		return null;
 	}
@@ -417,6 +412,10 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         }
         return toDescribeAddressesResponse( engine.handleRequest( request ), engine);
     }
+
+	public AllocateAddressResponse allocateAddress(AllocateAddress allocateAddress) {
+		return toAllocateAddressResponse( engine.allocateAddress() );
+	}
 
 	public DescribeRegionsResponse describeRegions(DescribeRegions describeRegions) {
 		return null;
@@ -1112,8 +1111,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 
     public static DescribeAddressesResponse toDescribeAddressesResponse(EC2DescribeAddressesResponse engineResponse, EC2Engine engine) {
         EC2Address[] addresses = engineResponse.getAddressSet();
-
         final DescribeAddressesResponseItemType[] items = new DescribeAddressesResponseItemType[addresses.length];
+
         for( int i=0; i < addresses.length; i++ ) {
             items[i].setPublicIp(addresses[i].getIpAddress());
             items[i].setInstanceId(addresses[i].getAssociatedInstanceId());
@@ -1125,6 +1124,16 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
                 setAddressesSet(new DescribeAddressesResponseInfoType() {{
                     setItem(items);
                 }});
+            }});
+        }};
+    }
+
+    public static AllocateAddressResponse toAllocateAddressResponse(final String publicIp) {
+
+        return new AllocateAddressResponse() {{
+            setAllocateAddressResponse(new AllocateAddressResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                setPublicIp(publicIp);
             }});
         }};
     }

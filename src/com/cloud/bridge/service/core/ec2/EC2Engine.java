@@ -716,6 +716,40 @@ public class EC2Engine {
         }
     }
 
+    public String allocateAddress()
+    {
+        try {
+            String query = new String( "command=associateIpAddress&zoneId=1" );  // zoneId: Temporary workaround.
+            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "associateIpAddress", true );
+            Node parent = cloudResp.getElementsByTagName("ipaddress").item(0);
+
+            if (null != parent) {
+                NodeList children = parent.getChildNodes();
+                int length = children.getLength();
+
+                for (int i = 0; i < length; i++) {
+                    Node child  = children.item(i);
+                    String name = child.getNodeName();
+
+                    if (null != child.getFirstChild()) {
+                        String value = child.getFirstChild().getNodeValue();
+
+                        if (name.equalsIgnoreCase("ipaddress"))
+                            return value;
+                    }
+                }
+            }
+            return null;
+        } catch( EC2ServiceException error ) {
+            logger.error( "EC2 AllocateAddress - " + error.toString());
+            throw error;
+
+        } catch( Exception e ) {
+            logger.error( "EC2 AllocateAddress - " + e.toString());
+            throw new InternalErrorException( e.toString());
+        }
+    }
+
     public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) 
     {	
     	try {
