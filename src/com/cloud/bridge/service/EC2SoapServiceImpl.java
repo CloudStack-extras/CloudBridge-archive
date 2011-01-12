@@ -71,10 +71,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	this.engine = engine;
     }
 
-	public AssociateAddressResponse associateAddress(AssociateAddress associateAddress) {
-		return null;
-	}
-	
 	public AssociateDhcpOptionsResponse associateDhcpOptions(AssociateDhcpOptions associateDhcpOptions) {
 		// TODO Auto-generated method stub
 		return null;
@@ -425,6 +421,19 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         return toReleaseAddressResponse( engine.releaseAddress(publicIp) );
     }
 
+    @Override
+    public AssociateAddressResponse associateAddress(AssociateAddress associateAddress) {
+        String publicIp   = associateAddress.getAssociateAddress().getPublicIp();
+        String instanceId = associateAddress.getAssociateAddress().getInstanceId();
+        return toAssociateAddressResponse( engine.associateAddress(publicIp, instanceId) );
+    }
+
+    @Override
+    public DisassociateAddressResponse disassociateAddress(DisassociateAddress disassociateAddress) {
+        String publicIp = disassociateAddress.getDisassociateAddress().getPublicIp();
+        return toDisassociateAddressResponse( engine.disassociateAddress(publicIp) );
+    }
+
 	public DescribeRegionsResponse describeRegions(DescribeRegions describeRegions) {
 		return null;
 	}
@@ -533,11 +542,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	public DetachVpnGatewayResponse detachVpnGateway(DetachVpnGateway detachVpnGateway) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DisassociateAddressResponse disassociateAddress(DisassociateAddress disassociateAddress) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -1145,6 +1149,26 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 
         return new ReleaseAddressResponse() {{
             setReleaseAddressResponse(new ReleaseAddressResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                set_return(result);
+            }});
+        }};
+    }
+
+    public static AssociateAddressResponse toAssociateAddressResponse(final boolean result) {
+
+        return new AssociateAddressResponse() {{
+            setAssociateAddressResponse(new AssociateAddressResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                set_return(result);
+            }});
+        }};
+    }
+
+    public static DisassociateAddressResponse toDisassociateAddressResponse(final boolean result) {
+
+        return new DisassociateAddressResponse() {{
+            setDisassociateAddressResponse(new DisassociateAddressResponseType() {{
                 setRequestId(UUID.randomUUID().toString());
                 set_return(result);
             }});

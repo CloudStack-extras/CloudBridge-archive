@@ -752,24 +752,52 @@ public class EC2Engine {
 
     public boolean releaseAddress(String publicIp)
     {
+        if (null == publicIp) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
         try {
             String query = "command=disassociateIpAddress&ipAddress="+ safeURLencode(publicIp);
             Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "disassociateIpAddress", true);
-            Node node = cloudResp.getElementsByTagName("success").item(0);
-
-            if (null != node) {
-                if (null != node.getFirstChild()) {
-                    String value = node.getFirstChild().getNodeValue();
-                    return Boolean.valueOf(value);
-                }
-            }
-            return false;
+            return true;
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 ReleaseAddress - " + error.toString());
             throw error;
 
         } catch( Exception e ) {
             logger.error( "EC2 ReleaseAddress - " + e.toString());
+            throw new InternalErrorException( e.toString());
+        }
+    }
+
+    public boolean associateAddress(String publicIp, String instanceId)
+    {
+        if (null == publicIp || null == instanceId) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both IP address and instance id are required");
+        try {
+            String query = "command=ec2associateAddress&instanceId=" + safeURLencode(instanceId)
+                                                    + "&ipAddress="  + safeURLencode(publicIp);
+            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "ec2associateAddress", true);
+            return true;
+        } catch( EC2ServiceException error ) {
+            logger.error( "EC2 AssociateAddress - " + error.toString());
+            throw error;
+
+        } catch( Exception e ) {
+            logger.error( "EC2 AssociateAddress - " + e.toString());
+            throw new InternalErrorException( e.toString());
+        }
+    }
+
+    public boolean disassociateAddress(String publicIp)
+    {
+        if (null == publicIp) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
+        try {
+            String query = "command=ec2disassociateAddress&ipAddress=" + safeURLencode(publicIp);
+            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "ec2disassociateAddress", true);
+            return true;
+        } catch( EC2ServiceException error ) {
+            logger.error( "EC2 DisassociateAddress - " + error.toString());
+            throw error;
+
+        } catch( Exception e ) {
+            logger.error( "EC2 DisassociateAddress - " + e.toString());
             throw new InternalErrorException( e.toString());
         }
     }
