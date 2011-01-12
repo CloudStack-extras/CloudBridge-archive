@@ -719,7 +719,7 @@ public class EC2Engine {
     public String allocateAddress()
     {
         try {
-            String query = new String( "command=associateIpAddress&zoneId=1" );  // zoneId: Temporary workaround.
+            String query = "command=associateIpAddress&zoneId=1"; // Temporary workaround; zoneId is required.
             Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "associateIpAddress", true );
             Node parent = cloudResp.getElementsByTagName("ipaddress").item(0);
 
@@ -746,6 +746,30 @@ public class EC2Engine {
 
         } catch( Exception e ) {
             logger.error( "EC2 AllocateAddress - " + e.toString());
+            throw new InternalErrorException( e.toString());
+        }
+    }
+
+    public boolean releaseAddress(String publicIp)
+    {
+        try {
+            String query = "command=disassociateIpAddress&ipAddress="+ safeURLencode(publicIp);
+            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "disassociateIpAddress", true);
+            Node node = cloudResp.getElementsByTagName("success").item(0);
+
+            if (null != node) {
+                if (null != node.getFirstChild()) {
+                    String value = node.getFirstChild().getNodeValue();
+                    return Boolean.valueOf(value);
+                }
+            }
+            return false;
+        } catch( EC2ServiceException error ) {
+            logger.error( "EC2 ReleaseAddress - " + error.toString());
+            throw error;
+
+        } catch( Exception e ) {
+            logger.error( "EC2 ReleaseAddress - " + e.toString());
             throw new InternalErrorException( e.toString());
         }
     }
@@ -2172,7 +2196,7 @@ public class EC2Engine {
         Node parent = null;
         StringBuffer params = new StringBuffer();
         params.append( "command=listPublicIpAddresses" );
-        if (null != publicIp) params.append( "&ipAddress=" + publicIp );
+        if (null != publicIp) params.append( "&ipAddress=" + safeURLencode(publicIp) );
         String query = params.toString();
 
         Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "listPublicIpAddresses", true );

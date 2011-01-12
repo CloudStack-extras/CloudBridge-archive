@@ -401,6 +401,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDescribeInstancesResponse( engine.handleRequest( request ), engine);
 	}
 
+    @Override
     public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
         EC2DescribeAddresses request = new EC2DescribeAddresses();
         DescribeAddressesType dat = describeAddresses.getDescribeAddresses();
@@ -413,9 +414,16 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         return toDescribeAddressesResponse( engine.handleRequest( request ), engine);
     }
 
-	public AllocateAddressResponse allocateAddress(AllocateAddress allocateAddress) {
-		return toAllocateAddressResponse( engine.allocateAddress() );
-	}
+    @Override
+    public AllocateAddressResponse allocateAddress(AllocateAddress allocateAddress) {
+        return toAllocateAddressResponse( engine.allocateAddress() );
+    }
+
+    @Override
+    public ReleaseAddressResponse releaseAddress(ReleaseAddress releaseAddress) {
+        String publicIp = releaseAddress.getReleaseAddress().getPublicIp();
+        return toReleaseAddressResponse( engine.releaseAddress(publicIp) );
+    }
 
 	public DescribeRegionsResponse describeRegions(DescribeRegions describeRegions) {
 		return null;
@@ -671,11 +679,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setDescription( rit.getDescription());
 		request.setArchitecture( rit.getArchitecture());  
 		return toRegisterImageResponse( engine.handleRequest( request ));
-	}
-
-	public ReleaseAddressResponse releaseAddress(ReleaseAddress releaseAddress) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public RequestSpotInstancesResponse requestSpotInstances(RequestSpotInstances requestSpotInstances) {
@@ -1134,6 +1137,16 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             setAllocateAddressResponse(new AllocateAddressResponseType() {{
                 setRequestId(UUID.randomUUID().toString());
                 setPublicIp(publicIp);
+            }});
+        }};
+    }
+
+    public static ReleaseAddressResponse toReleaseAddressResponse(final boolean result) {
+
+        return new ReleaseAddressResponse() {{
+            setReleaseAddressResponse(new ReleaseAddressResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                set_return(result);
             }});
         }};
     }
