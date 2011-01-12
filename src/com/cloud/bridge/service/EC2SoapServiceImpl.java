@@ -55,6 +55,9 @@ import com.cloud.bridge.service.core.ec2.EC2StartInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
+import com.cloud.bridge.service.core.ec2.EC2Address;
+import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
+import com.cloud.bridge.service.core.ec2.EC2DescribeAddressesResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.util.SSHKeysHelper;
 
@@ -303,10 +306,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDeregisterImageResponse( engine.deregisterImage( image ));
 	}
 
-	public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
-		return null;
-	}
-
 	public DescribeAvailabilityZonesResponse describeAvailabilityZones(DescribeAvailabilityZones describeAvailabilityZones) {
 		EC2DescribeAvailabilityZones request = new EC2DescribeAvailabilityZones();
 		
@@ -406,6 +405,18 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		}
 		return toDescribeInstancesResponse( engine.handleRequest( request ), engine);
 	}
+
+    public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
+        EC2DescribeAddresses request = new EC2DescribeAddresses();
+        DescribeAddressesType dat = describeAddresses.getDescribeAddresses();
+
+        DescribeAddressesInfoType dait = dat.getPublicIpsSet();
+        DescribeAddressesItemType[] items = dait.getItem();
+        if (null != items) {  // -> can be empty
+            for( int i=0; i < items.length; i++ ) request.addPublicIp( items[i].getPublicIp());
+        }
+        return toDescribeAddressesResponse( engine.handleRequest( request ), engine);
+    }
 
 	public DescribeRegionsResponse describeRegions(DescribeRegions describeRegions) {
 		return null;
@@ -1098,7 +1109,26 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    response.setDescribeInstancesResponse( param1 );
 		return response;
 	}
-	
+
+    public static DescribeAddressesResponse toDescribeAddressesResponse(EC2DescribeAddressesResponse engineResponse, EC2Engine engine) {
+        EC2Address[] addresses = engineResponse.getAddressSet();
+
+        final DescribeAddressesResponseItemType[] items = new DescribeAddressesResponseItemType[addresses.length];
+        for( int i=0; i < addresses.length; i++ ) {
+            items[i].setPublicIp(addresses[i].getIpAddress());
+            items[i].setInstanceId(addresses[i].getAssociatedInstanceId());
+        }
+
+        return new DescribeAddressesResponse() {{
+            setDescribeAddressesResponse(new DescribeAddressesResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                setAddressesSet(new DescribeAddressesResponseInfoType() {{
+                    setItem(items);
+                }});
+            }});
+        }};
+    }
+
 	/**
 	 * Map our cloud state values into what Amazon defines.
 	 * Where are the values that can be returned by our cloud api defined?
