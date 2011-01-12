@@ -310,26 +310,37 @@ public class MultipartLoadDao {
 	 * 
 	 * @param bucketName
 	 * @param maxParts
-	 * @param startAt
+	 * @param prefix - can be null
+	 * @param keyMarker - can be null
+	 * @param uploadIdMarker - can be null, should only be defined if keyMarker is not-null
 	 * @return S3MultipartUpload[]
 	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	 */
-	public S3MultipartUpload[] getInitiatedUploads( String bucketName, int maxParts, int startAt )
+	public S3MultipartUpload[] getInitiatedUploads( String bucketName, int maxParts, String prefix, String keyMarker, String uploadIdMarker )
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	{
 		S3MultipartUpload[] inProgress = new S3MultipartUpload[maxParts];
 	    PreparedStatement statement = null;
 	    int i = 0;
+	    int pos = 1;
+	    
+	    // -> SQL like condition requires the '%' as a wildcard marker
+	    if (null != prefix) prefix = prefix + "%";
+	    
+	    StringBuffer queryStr = new StringBuffer();
+	    queryStr.append( "SELECT ID, AccessKey, NameKey, CreateTime FROM multipart_uploads WHERE BucketName=? " );   
+	    if (null != prefix        ) queryStr.append( "AND NameKey like ? " );
+	    if (null != keyMarker     ) queryStr.append( "AND NameKey > ? ");
+        if (null != uploadIdMarker) queryStr.append( "AND ID > ? " );    
+        queryStr.append( "ORDER BY NameKey, CreateTime" );
 		
         openConnection();	
         try {
-		    statement = conn.prepareStatement ( "SELECT   ID, AccessKey, NameKey, CreateTime " +
-		    		                            "FROM     multipart_uploads " +
-		    		                            "WHERE    BucketName=? " +
-		    		                            "AND      ID > ? " +
-		    		                            "ORDER BY NameKey, CreateTime" );
-		    statement.setString( 1, bucketName );
-	        statement.setInt( 2, startAt );
+		    statement = conn.prepareStatement ( queryStr.toString());
+		    statement.setString( pos++, bucketName );
+		    if (null != prefix        ) statement.setString( pos++, prefix );
+		    if (null != keyMarker     ) statement.setString( pos++, keyMarker );
+		    if (null != uploadIdMarker) statement.setString( pos, uploadIdMarker );
 		    ResultSet rs = statement.executeQuery();
 		    
 		    while (rs.next() && i < maxParts) 

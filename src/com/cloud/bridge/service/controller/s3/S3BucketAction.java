@@ -514,18 +514,21 @@ public class S3BucketAction implements ServletAction {
 		String delimiter      = request.getParameter("delimiter");
 		String keyMarker      = request.getParameter("key-marker");
 		String prefix         = request.getParameter("prefix");
-		String uploadIdMarker = request.getParameter("upload-id-marker");
 		int maxUploads        = 1000;
 		int remaining         = 0;
 		S3MultipartUpload[] uploads = null;
 		
-		// TODO: support delimiter, key-marker, prefix, upload-id-marker
+		// TODO: support delimiter, common prefixes on output, and isTruncated
 
 		String temp = request.getParameter("max-uploads");
     	if (null != temp) {
     		maxUploads = Integer.parseInt( temp );
     		if (maxUploads > 1000 || maxUploads < 0) maxUploads = 1000;
     	}
+    	
+    	// -> upload-id-marker is ignored unless key-marker is also specified
+		String uploadIdMarker = request.getParameter("upload-id-marker");
+        if (null == keyMarker) uploadIdMarker = null;
     	
 		// -> does the bucket exist, we may need it to verify access permissions
 		SBucketDao bucketDao = new SBucketDao();
@@ -538,7 +541,7 @@ public class S3BucketAction implements ServletAction {
   	
     	try {
 	        MultipartLoadDao uploadDao = new MultipartLoadDao();
-	        uploads = uploadDao.getInitiatedUploads( bucketName, maxUploads, 0 );
+	        uploads = uploadDao.getInitiatedUploads( bucketName, maxUploads, prefix, keyMarker, uploadIdMarker );
     	}
 		catch( Exception e ) {
 			logger.error("List Multipart Uploads failed due to " + e.getMessage(), e);	
