@@ -719,7 +719,7 @@ public class EC2Engine {
     public String allocateAddress()
     {
         try {
-            String query = "command=associateIpAddress&zoneId=1"; // Temporary workaround; zoneId is required.
+            String query = "command=associateIpAddress&zoneId="+ toZoneId(null);
             Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "associateIpAddress", true );
             Node parent = cloudResp.getElementsByTagName("ipaddress").item(0);
 
