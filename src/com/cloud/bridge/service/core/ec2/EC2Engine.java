@@ -42,6 +42,7 @@ import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
 import com.cloud.bridge.util.ConfigurationHelper;
+import com.cloud.bridge.util.Tuple;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -993,11 +994,15 @@ public class EC2Engine {
 
        	    if (null != request.getGroupId()) params.append("&group=" + request.getGroupId());
        	    
+       	    String zoneId = toZoneId(request.getZoneName());
+       	    
        	    if (cloudStackVersion >= CLOUD_STACK_VERSION_2_2) {
            	    if (null != request.getKeyName()) params.append("&keypair=" + safeURLencode(request.getKeyName()));
            	    
-           	    String networks = getNetworkIds("virtual", toZoneId(request.getZoneName()));
-           	    if (networks != null) params.append("&networkIds=" + networks);
+           	    String dcNetworkType = getDCNetworkType(zoneId);
+           	    if (dcNetworkType.equals("Advanced")) { 
+           	    	params.append("&networkIds=" + getNetworkId(zoneId));
+           	    }
        	    }
 
        	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
@@ -1010,7 +1015,7 @@ public class EC2Engine {
        	    //if (null != vlanId) params.append( "&vlanId=" + vlanId );
        	    // temp hack   
        	    
-       	    params.append( "&zoneId=" + toZoneId( request.getZoneName()));
+       	    params.append( "&zoneId=" + zoneId);
        	    String query      = params.toString();
             String apiCommand = genAPIURL(query, genQuerySignature(query));
  		
@@ -1046,12 +1051,10 @@ public class EC2Engine {
          	return instances;
             
     	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 RunInstances - " + error.toString());
     		throw error;
-    		
      	} catch( Exception e ) {
     		logger.error( "EC2 RunInstances - deploy 2 " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
      	}
      	
     }
@@ -2473,29 +2476,50 @@ public class EC2Engine {
 		}
 
 		NodeList match = response.getElementsByTagName("id");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setId(match.item(0).getNodeValue());
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setId(match.item(0).getFirstChild().getNodeValue());
 		
 		match = response.getElementsByTagName("name");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setAccountName(match.item(0).getNodeValue());
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setAccountName(match.item(0).getFirstChild().getNodeValue());
 		
 		match = response.getElementsByTagName("domainid");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setDomainId(match.item(0).getNodeValue());
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setDomainId(match.item(0).getFirstChild().getNodeValue());
 		
 		match = response.getElementsByTagName("domain");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setDomainName(match.item(0).getNodeValue());
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setDomainName(match.item(0).getFirstChild().getNodeValue());
 
 		return account;
     }
     
-    private String getNetworkIds(String networkType, String zoneId) {
+    /**
+     * Check for three network types in succession until one is found.
+     * Creates a new one if no network is found.
+     * 
+     * @return A network id suitable for use.
+     */
+    private String getNetworkId(String zoneId) {
+    	String networkId = null;
+    	
+    	if (networkId==null) networkId = getNetworkId("direct", false);
+    	if (networkId==null) networkId = getNetworkId("direct", true);
+    	if (networkId==null) networkId = getNetworkId("virtual", false);
+    	if (networkId==null) networkId = createNetwork(zoneId);
+    	
+    	return networkId;
+    }
+    
+    private String getNetworkId(String networkType, boolean shared) {
     	String query = "command=listNetworks";
     	Document response = null;
-    	Account account = getAccount();
     	
-    	query = query.concat("&account=").concat(account.getAccountName());
-    	query = query.concat("&domainid=").concat(account.getDomainId());
+    	if (!shared) {
+        	Account account = getAccount();
+    		query = query.concat("&account=").concat(account.getAccountName());
+    		query = query.concat("&domainid=").concat(account.getDomainId());
+    	} 
+    		
+    	query = query.concat("&isdefault=").concat("true");
+    	if (shared) query = query.concat("&isshared=").concat("true");
     	query = query.concat("&type=").concat(networkType);
-    	query = query.concat("&zoneid=").concat(zoneId);
     	
     	try {
     		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listNetworks", true);
@@ -2504,7 +2528,7 @@ public class EC2Engine {
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
     	}
     	
-    	// For now just return the first network id found.
+    	// Return the first network id found.
     	NodeList parent = response.getElementsByTagName("network");
     	if (parent.getLength() > 0 && parent.item(0).hasChildNodes()) {
     		NodeList children = parent.item(0).getChildNodes();
@@ -2515,7 +2539,87 @@ public class EC2Engine {
     		}
     	}
     	
-    	throw new EC2ServiceException(ServerError.InternalError, "Unable to find a suitable network.");
+    	return null;
+    }
+    
+    private String createNetwork(String zoneId) {
+    	String query = "command=createNetwork";
+    	Document response = null;
+    	Account account = getAccount();
+    	Tuple<String, String> networkOffering = getNetworkOffering();
+    	
+    	try {
+    		query = query.concat("&account=").concat(account.getAccountName());
+    		query = query.concat("&displaytext=").concat(safeURLencode(networkOffering.getSecond()));
+    		query = query.concat("&domainid=").concat(account.getDomainId());
+    		query = query.concat("&name=").concat(safeURLencode("EC2 created network"));
+    		query = query.concat("&networkofferingid=").concat(networkOffering.getFirst());
+    		query = query.concat("&zoneid=").concat(zoneId);
+		
+    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "createNetwork", true);
+    	} catch (Exception e) {
+    		logger.error("Create Network - " + e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	}
+		
+		NodeList match = response.getElementsByTagName("id");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) 
+			return match.item(0).getFirstChild().getNodeValue();
+		
+		logger.error("Create Network - Unable to create a new network");
+		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    }
+    
+    private Tuple<String, String> getNetworkOffering() {
+    	String query = "command=listNetworkOfferings";
+    	Document response = null;
+    	
+    	query = query.concat("&isdefault=true");
+    	query = query.concat("&traffictype=guest");
+    	
+    	try {
+    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listNetworkOfferings", true);
+    	} catch (Exception e) {
+    		logger.error("List Network Offerings - " + e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	}
+    	
+    	Tuple<String, String> offering = new Tuple<String, String>("", ""); 
+		NodeList match = response.getElementsByTagName("id");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) { 
+			offering.setFirst(match.item(0).getFirstChild().getNodeValue());
+		} else {
+    		logger.error("List Network Offerings - No suitable network offering found");
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+		}
+		match = response.getElementsByTagName("displaytext");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) {
+			offering.setSecond(match.item(0).getFirstChild().getNodeValue());
+		}
+    	
+    	return offering;
+    }
+    
+    private String getDCNetworkType(String zoneId) {
+    	String query = "command=listZones";
+    	Document response = null;
+
+    	query = query.concat("&id=").concat(zoneId);
+    	
+      	try {
+    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listZones", true);
+    	} catch (Exception e) {
+    		logger.error("List Zones - " + e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	}
+    	
+		NodeList match = response.getElementsByTagName("networktype");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) {
+			return match.item(0).getFirstChild().getNodeValue();
+		}
+
+		logger.error("List Zones - Unable to determine zone network type");
+		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
     }
        
     /**
