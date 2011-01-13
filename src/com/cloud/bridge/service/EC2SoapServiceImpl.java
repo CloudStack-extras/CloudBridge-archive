@@ -15,9 +15,11 @@
  */
 package com.cloud.bridge.service;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.UUID;
 
 import com.amazon.ec2.*;
@@ -41,10 +43,12 @@ import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Image;
 import com.cloud.bridge.service.core.ec2.EC2Instance;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
+import com.cloud.bridge.service.core.ec2.EC2PasswordData;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
 import com.cloud.bridge.service.core.ec2.EC2RunInstancesResponse;
+import com.cloud.bridge.service.core.ec2.EC2SSHKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2Snapshot;
 import com.cloud.bridge.service.core.ec2.EC2StartInstances;
@@ -98,7 +102,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         IpPermissionSetType ipPerms = sgit.getIpPermissions();
         
         EC2AuthorizeRevokeSecurityGroup request = toSecurityGroup( sgit.getGroupName(), ipPerms.getItem());
-		return toAuthorizeSecurityGroupIngressResponse( engine.securityGroupRequest( request, "authorizeNetworkGroupIngress" ));
+		return toAuthorizeSecurityGroupIngressResponse( engine.securityGroupRequest( request, "authorizeSecurityGroupIngress" ));
 	}
 
 	public RevokeSecurityGroupIngressResponse revokeSecurityGroupIngress(RevokeSecurityGroupIngress revokeSecurityGroupIngress) {
@@ -106,7 +110,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         IpPermissionSetType ipPerms = sgit.getIpPermissions();
         
         EC2AuthorizeRevokeSecurityGroup request = toSecurityGroup( sgit.getGroupName(), ipPerms.getItem());
-		return toRevokeSecurityGroupIngressResponse( engine.securityGroupRequest( request, "revokeNetworkGroupIngress" ));
+		return toRevokeSecurityGroupIngressResponse( engine.securityGroupRequest( request, "revokeSecurityGroupIngress" ));
 	}
 
 	/**
@@ -186,11 +190,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toCreateImageResponse( engine.handleRequest( request ));
 	}
 
-	public CreateKeyPairResponse createKeyPair(CreateKeyPair createKeyPair) {
-		// ToDO: no matching function in the Cloud API
-		return null;
-	}
-
 	public CreateSecurityGroupResponse createSecurityGroup(CreateSecurityGroup createSecurityGroup) {
         CreateSecurityGroupType sgt = createSecurityGroup.getCreateSecurityGroup();
         EC2SecurityGroup request = new EC2SecurityGroup();
@@ -246,11 +245,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	public DeleteDhcpOptionsResponse deleteDhcpOptions(DeleteDhcpOptions deleteDhcpOptions) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DeleteKeyPairResponse deleteKeyPair(DeleteKeyPair deleteKeyPair) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -413,11 +407,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDescribeInstancesResponse( engine.handleRequest( request ), engine);
 	}
 
-	public DescribeKeyPairsResponse describeKeyPairs(DescribeKeyPairs describeKeyPairs) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public DescribeRegionsResponse describeRegions(DescribeRegions describeRegions) {
 		return null;
 	}
@@ -540,11 +529,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return null;
 	}
 
-	public GetPasswordDataResponse getPasswordData(GetPasswordData getPasswordData) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public ModifyImageAttributeResponse modifyImageAttribute(ModifyImageAttribute modifyImageAttribute) {
 		EC2Image request = new EC2Image();
 		ModifyImageAttributeType miat = modifyImageAttribute.getModifyImageAttribute();
@@ -614,10 +598,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return null;
 	}
 	
-	public ImportKeyPairResponse importKeyPair(ImportKeyPair importKeyPair) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	/**
 	 * Did not find a matching service offering so for now we just return disabled
@@ -719,6 +699,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		GroupSetType gst = rit.getGroupSet();
 		String type = rit.getInstanceType();	
 		UserDataType userData = rit.getUserData();
+		String keyName = rit.getKeyName();
 		
 		request.setTemplateId( rit.getImageId());
 		request.setMinCount( rit.getMinCount());
@@ -726,6 +707,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		if (null != type    ) request.setInstanceType( type );
 		if (null != prt     ) request.setZoneName( prt.getAvailabilityZone());
 		if (null != userData) request.setUserData( userData.getData());
+		if (null != keyName ) request.setKeyName( keyName );
 		
 		// -> we can only support one group per instance
 		if (null != gst) {
@@ -1636,5 +1618,95 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		param1.setRequestId( UUID.randomUUID().toString());
 		response.setRevokeSecurityGroupIngressResponse( param1 );
         return response;
+	}
+	
+	public DescribeKeyPairsResponse describeKeyPairs(DescribeKeyPairs describeKeyPairs) {
+		// TODO: Handle filters for key-name and fingerprint
+		
+		return toDescribeKeyPairs(engine.describeKeyPairs());
+	}
+	
+	@SuppressWarnings("serial")
+	public static DescribeKeyPairsResponse toDescribeKeyPairs(final List<EC2SSHKeyPair> keyList) {
+		return new DescribeKeyPairsResponse() {{
+			setDescribeKeyPairsResponse(new DescribeKeyPairsResponseType() {{ 
+				setRequestId(UUID.randomUUID().toString());
+				setKeySet(new DescribeKeyPairsResponseInfoType());
+				if (keyList != null && keyList.size() > 0) {
+					for (final EC2SSHKeyPair key : keyList) { 
+						getKeySet().addItem(new DescribeKeyPairsResponseItemType() {{
+							setKeyName(key.getKeyName());
+							setKeyFingerprint(key.getFingerprint());
+						}});
+					}
+				}
+			}});
+		}};
+	}
+	
+	public ImportKeyPairResponse importKeyPair(ImportKeyPair importKeyPair) {
+		String keyName = importKeyPair.getImportKeyPair().getKeyName();
+		String publicKey = importKeyPair.getImportKeyPair().getPublicKeyMaterial();
+        if (!publicKey.contains(" "))
+             publicKey = new String(Base64.decodeBase64(publicKey.getBytes())); 
+		
+		return toImportKeyPair(engine.importKeyPair(keyName, publicKey));
+	}
+	
+	@SuppressWarnings("serial")
+	public static ImportKeyPairResponse toImportKeyPair(final EC2SSHKeyPair key) {
+		return new ImportKeyPairResponse() {{
+			setImportKeyPairResponse(new ImportKeyPairResponseType() {{
+				setRequestId(UUID.randomUUID().toString());
+				setKeyName(key.getKeyName());
+				setKeyFingerprint(key.getFingerprint());
+			}});
+		}}; 
+	}
+	
+	public CreateKeyPairResponse createKeyPair(CreateKeyPair createKeyPair) {
+		return toCreateKeyPair(engine.createKeyPair(createKeyPair.getCreateKeyPair().getKeyName()));
+	}
+	
+	@SuppressWarnings("serial")
+	public static CreateKeyPairResponse toCreateKeyPair(final EC2SSHKeyPair key) {
+		return new CreateKeyPairResponse() {{
+			setCreateKeyPairResponse(new CreateKeyPairResponseType() {{
+				setRequestId(UUID.randomUUID().toString());
+				setKeyName(key.getKeyName());
+				setKeyFingerprint(key.getFingerprint());
+				setKeyMaterial(key.getPrivateKey());
+			}});
+		}};
+	}
+	
+	public DeleteKeyPairResponse deleteKeyPair(DeleteKeyPair deleteKeyPair) {
+		return toDeleteKeyPair(engine.deleteKeyPair(deleteKeyPair.getDeleteKeyPair().getKeyName()));
+	}
+	
+	@SuppressWarnings("serial")
+	public static DeleteKeyPairResponse toDeleteKeyPair(final boolean success) {
+		return new DeleteKeyPairResponse() {{
+			setDeleteKeyPairResponse(new DeleteKeyPairResponseType() {{
+				setRequestId(UUID.randomUUID().toString());
+				set_return(success);
+			}});
+		}};
+	}
+	
+	public GetPasswordDataResponse getPasswordData(GetPasswordData getPasswordData) {
+		return toGetPasswordData(engine.getPasswordData(getPasswordData.getGetPasswordData().getInstanceId()));
+	}
+	
+	@SuppressWarnings("serial")
+	public static GetPasswordDataResponse toGetPasswordData(final EC2PasswordData passwdData) {
+		return new GetPasswordDataResponse() {{
+			setGetPasswordDataResponse(new GetPasswordDataResponseType() {{
+				setRequestId(UUID.randomUUID().toString());
+				setTimestamp(Calendar.getInstance());
+				setPasswordData(passwdData.getEncryptedPassword());
+				setInstanceId(passwdData.getInstanceId());
+			}});
+		}};
 	}
 }

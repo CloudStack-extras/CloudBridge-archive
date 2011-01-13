@@ -33,6 +33,7 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.apache.axis2.AxisFault;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
@@ -269,31 +270,39 @@ public class ServiceProvider {
     		logger.info("ServiceProvider stopped");
     }
     
+    @SuppressWarnings("unchecked")
     private static <T> T getProxy(Class<?> serviceInterface, final T serviceObject) {
     	return (T) Proxy.newProxyInstance(serviceObject.getClass().getClassLoader(),
-              new Class[] { serviceInterface },
-              new InvocationHandler() {
-                  public Object invoke(Object proxy, Method method, 
-                    Object[] args) throws Throwable {
-                	  try {
-                		  Object result = method.invoke(serviceObject, args);
-                		  PersistContext.commitTransaction();
-                		  return result;
-                	  } catch(Throwable e) {
-                		  // log the exception to help debugging
-                		  logger.warn("Unhandled exception " + e.getMessage(), e);
-                		  
-                		  // rethrow the exception to Axis
-                		  if ( null != e.getCause())
-                		       throw e.getCause();
-                		  else throw e;
-                	  } finally {
-                		  PersistContext.closeSession();
-                	  }
-                  }
-              });
+    		new Class[] { serviceInterface },
+        	new InvocationHandler() {
+            	public Object invoke(Object proxy, Method method,
+            			Object[] args) throws Throwable {
+                    try {
+                    	Object result = method.invoke(serviceObject, args);
+                        PersistContext.commitTransaction();
+                        return result;
+                    } catch(Throwable e) {
+                    	// Rethrow the exception to Axis:
+                        // Check if the exception is an AxisFault or a RuntimeException
+                        // enveloped AxisFault and if so, pass it on as such. Otherwise
+                        // log to help debugging and throw as is.
+                        if (e.getCause() != null && e.getCause() instanceof AxisFault)
+                        	throw e.getCause();
+                        else if (e.getCause() != null && e.getCause().getCause() != null
+                        		&& e.getCause().getCause() instanceof AxisFault)
+                        	throw e.getCause().getCause();
+                        else {
+                        	logger.warn("Unhandled exception " + e.getMessage(), e);
+                            	throw e;
+                        }
+                    } finally {
+                    	PersistContext.closeSession();
+                    }
+                }
+          	});
     }
-    
+
+    @SuppressWarnings("unchecked")
     public <T> T getServiceImpl(Class<?> serviceInterface) {
     	return getProxy(serviceInterface, (T)serviceMap.get(serviceInterface));
     }

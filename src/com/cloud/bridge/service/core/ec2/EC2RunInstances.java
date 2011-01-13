@@ -22,6 +22,7 @@ public class EC2RunInstances {
 	private String templateId;
 	private String groupId;
 	private String userData;
+	private String keyName;
 	private int    maxCount;
 	private int    minCount;
     private Integer    size;  		// <- in gigs
@@ -33,6 +34,7 @@ public class EC2RunInstances {
 		templateId   = null;
 		groupId      = null;
 		userData     = null;
+		keyName = null;
 		maxCount     = 0;
 		minCount     = 0;
 		size		 = 0;
@@ -77,6 +79,14 @@ public class EC2RunInstances {
 	public String getUserData() {
 		return this.userData;
 	}	
+	
+	public String getKeyName() {
+		return keyName;
+	}
+
+	public void setKeyName(String publicKeyName) {
+		this.keyName = publicKeyName;
+	}
 
 	public void setMaxCount( int maxCount ) {
 		this.maxCount = maxCount;
