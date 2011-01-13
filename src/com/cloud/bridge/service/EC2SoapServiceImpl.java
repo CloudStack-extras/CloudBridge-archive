@@ -1121,6 +1121,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         final DescribeAddressesResponseItemType[] items = new DescribeAddressesResponseItemType[addresses.length];
 
         for( int i=0; i < addresses.length; i++ ) {
+            items[i] = new DescribeAddressesResponseItemType();
             items[i].setPublicIp(addresses[i].getIpAddress());
             items[i].setInstanceId(addresses[i].getAssociatedInstanceId());
         }
