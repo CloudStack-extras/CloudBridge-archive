@@ -142,3 +142,52 @@ def relpath(path, start="."):
         return curdir
     return os.path.join(*rel_list)
 Utils.relpath = relpath
+
+def getdebdeps():
+        def debdeps(fileset):
+                for f in fileset:
+                        lines = file(f).readlines()
+                        lines = [ x[len("Build-Depends: "):] for x in lines if x.startswith("Build-Depends") ]
+                        for l in lines:
+                                deps = [ x.strip() for x in l.split(",") ]
+                                for d in deps:
+                                        if "%s-"%APPNAME in d: continue
+                                        yield d
+                yield "build-essential"
+                yield "devscripts"
+                yield "debhelper"
+
+        deps = set(debdeps(["debian/control"]))
+        return deps
+
+def throws_command_errors(f):
+        def g(*args,**kwargs):
+                try: return f(*args,**kwargs)
+                except CalledProcessError,e:
+                        raise Utils.WafError("system command %s failed with error value %s"%(e.cmd[0],e.returncode))
+                except IOError,e:
+                        if e.errno is 32:
+                                raise Utils.WafError("system command %s terminated abruptly, closing communications with parent's pipe"%e.cmd[0])
+                        raise
+        return g
+
+def c(cmdlist,cwd=None):
+        # Run a command with _check_call, pretty-printing the cmd list
+        Utils.pprint("BLUE"," ".join(cmdlist))
+        return _check_call(cmdlist,cwd=cwd)
+
+def viewdebdeps(context):
+        """shows all the necessary dependencies to build the DEB packages of the Bridge"""
+        for dep in getdebdeps(): print dep
+
+@throws_command_errors
+def deb(context):
+        """Builds DEB packages of the Bridge"""
+        Utils.pprint("GREEN","Building DEBs")
+	basedir = os.path.realpath(os.path.curdir) + "/packages/config"
+        checkdeps = lambda: c(["dpkg-checkbuilddeps"], basedir)
+        dodeb = lambda: c(["debuild", '-e','WAFCACHE','--no-lintian', "-us","-uc", "-b"], basedir)
+        try: checkdeps()
+        except (CalledProcessError,OSError),e:
+                Utils.pprint("YELLOW","Dependencies might be missing.  Trying to auto-install them...")
+        dodeb()

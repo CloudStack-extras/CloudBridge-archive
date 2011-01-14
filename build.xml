@@ -35,6 +35,7 @@
         		<!-- compilerarg line="-processor com.vmops.annotation.LocalProcessor -processorpath ${base.dir}/tools/src -Xlint:all"/ -->
         		<!-- compilerarg line="-processor com.vmops.utils.LocalProcessor -processorpath ${base.dir}/utils/src -Xlint:all"/ -->
         		<compilerarg line="-Xlint:all"/>
+        		<compilerarg line="-nowarn"/>
         		<classpath refid="@{classpath}" />
         		<exclude-files/>
       		</javac>
