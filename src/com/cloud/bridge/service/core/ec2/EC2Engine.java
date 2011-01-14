@@ -738,6 +738,107 @@ public class EC2Engine {
     	}
     }
 
+    public EC2DescribeAddressesResponse handleRequest(EC2DescribeAddresses request)
+    {
+        try {
+            return listPublicIpAddresses( request.getPublicIpsSet());
+
+        } catch( EC2ServiceException error ) {
+            logger.error( "EC2 DescribeAddresses - " + error.toString());
+            throw error;
+
+        } catch( Exception e ) {
+            logger.error( "EC2 DescribeAddresses - " + e.toString());
+            throw new InternalErrorException( e.toString());
+        }
+    }
+
+    public String allocateAddress()
+    {
+        try {
+            String query = "command=associateIpAddress&zoneId="+ toZoneId(null);
+            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "associateIpAddress", true );
+            Node parent = cloudResp.getElementsByTagName("ipaddress").item(0);
+
+            if (null != parent) {
+                NodeList children = parent.getChildNodes();
+                int length = children.getLength();
+
+                for (int i = 0; i < length; i++) {
+                    Node child  = children.item(i);
+                    String name = child.getNodeName();
+
+                    if (null != child.getFirstChild()) {
+                        String value = child.getFirstChild().getNodeValue();
+
+                        if (name.equalsIgnoreCase("ipaddress"))
+                            return value;
+                    }
+                }
+            }
+            return null;
+        } catch( EC2ServiceException error ) {
+            logger.error( "EC2 AllocateAddress - " + error.toString());
+            throw error;
+
+        } catch( Exception e ) {
+            logger.error( "EC2 AllocateAddress - " + e.toString());
+            throw new InternalErrorException( e.toString());
+        }
+    }
+
+    public boolean releaseAddress(String publicIp)
+    {
+        if (null == publicIp) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
+        try {
+            String query = "command=disassociateIpAddress&ipAddress="+ safeURLencode(publicIp);
+            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "disassociateIpAddress", true);
+            return true;
+        } catch( EC2ServiceException error ) {
+            logger.error( "EC2 ReleaseAddress - " + error.toString());
+            throw error;
+
+        } catch( Exception e ) {
+            logger.error( "EC2 ReleaseAddress - " + e.toString());
+            throw new InternalErrorException( e.toString());
+        }
+    }
+
+    public boolean associateAddress(String publicIp, String instanceId)
+    {
+        if (null == publicIp || null == instanceId) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both IP address and instance id are required");
+        try {
+            String query = "command=ec2associateAddress&instanceId=" + safeURLencode(instanceId)
+                                                    + "&ipAddress="  + safeURLencode(publicIp);
+            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "ec2associateAddress", true);
+            return true;
+        } catch( EC2ServiceException error ) {
+            logger.error( "EC2 AssociateAddress - " + error.toString());
+            throw error;
+
+        } catch( Exception e ) {
+            logger.error( "EC2 AssociateAddress - " + e.toString());
+            throw new InternalErrorException( e.toString());
+        }
+    }
+
+    public boolean disassociateAddress(String publicIp)
+    {
+        if (null == publicIp) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
+        try {
+            String query = "command=ec2disassociateAddress&ipAddress=" + safeURLencode(publicIp);
+            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "ec2disassociateAddress", true);
+            return true;
+        } catch( EC2ServiceException error ) {
+            logger.error( "EC2 DisassociateAddress - " + error.toString());
+            throw error;
+
+        } catch( Exception e ) {
+            logger.error( "EC2 DisassociateAddress - " + e.toString());
+            throw new InternalErrorException( e.toString());
+        }
+    }
+
     public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) 
     {	
     	try {
@@ -1842,7 +1943,27 @@ public class EC2Engine {
 	    }
 	    return instances;
 	}
-    
+
+    /**
+     * Performs the cloud API listPublicIpAddresses one or more times.
+     *
+     * @param publicIps - an array of IP addresses we are interested in getting information on.
+     */
+    private EC2DescribeAddressesResponse listPublicIpAddresses( String[] publicIps )
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException
+    {
+        EC2DescribeAddressesResponse response = new EC2DescribeAddressesResponse();
+
+        if (null == publicIps || 0 == publicIps.length) {
+            return lookupAddresses( null, response );
+        }
+
+        for( int i=0; i <  publicIps.length; i++ ) {
+           response = lookupAddresses( publicIps[i], response );
+        }
+        return response;
+    }
+
     /**  
      * Get one or more templates depending on the volumeId parameter.
      * 
@@ -2133,6 +2254,56 @@ public class EC2Engine {
 	    	}
 	    }
 	    return instances;
+    }
+
+    /**
+     * Get information on one or more public IP addresses.
+     *
+     * @param publicIp - if null then return information on all IP addresses, otherwise
+     *                   just return information on the matching address.
+     * @param response - a container object to fill with one or more EC2Address objects
+     *
+     * @return the same object passed in as the "response" parameter modified with one or more
+     *         EC2Address objects loaded.
+     */
+    private EC2DescribeAddressesResponse lookupAddresses( String publicIp, EC2DescribeAddressesResponse response )
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+    {
+        Node parent = null;
+        StringBuffer params = new StringBuffer();
+        params.append( "command=listPublicIpAddresses" );
+        if (null != publicIp) params.append( "&ipAddress=" + safeURLencode(publicIp) );
+        String query = params.toString();
+
+        Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "listPublicIpAddresses", true );
+        NodeList match     = cloudResp.getElementsByTagName( "publicipaddress" );
+        int      length    = match.getLength();
+
+        for( int i=0; i < length; i++ )
+        {
+            if (null != (parent = match.item(i)))
+            {
+                NodeList children = parent.getChildNodes();
+                int      numChild = children.getLength();
+                EC2Address   addr = new EC2Address();
+
+                for( int j=0; j < numChild; j++ )
+                {
+                    Node   child = children.item(j);
+                    String name  = child.getNodeName();
+
+                    if (null != child.getFirstChild())
+                    {
+                        String value = child.getFirstChild().getNodeValue();
+
+                             if (name.equalsIgnoreCase( "ipaddress" )) addr.setIpAddress( value );
+                        else if (name.equalsIgnoreCase( "associatedInstanceId" )) addr.setAssociatedInstanceId( value );
+                    }
+                }
+                response.addAddress( addr );
+            }
+        }
+        return response;
     }
 
     /**  

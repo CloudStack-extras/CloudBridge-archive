@@ -93,6 +93,7 @@ import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZones;
+import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeInstances;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSecurityGroups;
@@ -201,8 +202,8 @@ public class EC2RestServlet extends HttpServlet {
         try {
     	    if (!authenticateRequest( request, response )) return;
 
-    	         if (action.equalsIgnoreCase( "AllocateAddress"           )) /* not yet implemented */ ;   		
-    	    else if (action.equalsIgnoreCase( "AssociateAddress"          )) /* not yet implemented */ ;  
+    	         if (action.equalsIgnoreCase( "AllocateAddress"           )) allocateAddress(request, response);
+    	    else if (action.equalsIgnoreCase( "AssociateAddress"          )) /* not yet implemented on server */ ;  
     	    else if (action.equalsIgnoreCase( "AttachVolume"              )) attachVolume(request, response );
     	    else if (action.equalsIgnoreCase( "AuthorizeSecurityGroupIngress" )) authorizeSecurityGroupIngress(request, response);  
     	    else if (action.equalsIgnoreCase( "CreateImage"               )) createImage(request, response);
@@ -213,7 +214,7 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "DeleteSnapshot"            )) deleteSnapshot(request, response); 
     	    else if (action.equalsIgnoreCase( "DeleteVolume"              )) deleteVolume(request, response);   
     	    else if (action.equalsIgnoreCase( "DeregisterImage"           )) deregisterImage(request, response);    
-    	    else if (action.equalsIgnoreCase( "DescribeAddresses"         )) /* not yet implemented */ ;  
+    	    else if (action.equalsIgnoreCase( "DescribeAddresses"         )) describeAddresses(request, response);
     	    else if (action.equalsIgnoreCase( "DescribeAvailabilityZones" )) describeAvailabilityZones(request, response); 
     	    else if (action.equalsIgnoreCase( "DescribeImageAttribute"    )) describeImageAttribute(request, response);  
     	    else if (action.equalsIgnoreCase( "DescribeImages"            )) describeImages(request, response);  
@@ -223,11 +224,11 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "DescribeSnapshots"         )) describeSnapshots(request, response);  
     	    else if (action.equalsIgnoreCase( "DescribeVolumes"           )) describeVolumes(request, response); 
     	    else if (action.equalsIgnoreCase( "DetachVolume"              )) detachVolume(request, response);  
-    	    else if (action.equalsIgnoreCase( "DisassociateAddress"       )) /* not yet implemented */ ;  
+    	    else if (action.equalsIgnoreCase( "DisassociateAddress"       )) /* not yet implemented on server */ ;  
     	    else if (action.equalsIgnoreCase( "ModifyImageAttribute"      )) modifyImageAttribute(request, response);  
     	    else if (action.equalsIgnoreCase( "RebootInstances"           )) rebootInstances(request, response);  
     	    else if (action.equalsIgnoreCase( "RegisterImage"             )) registerImage(request, response);  
-    	    else if (action.equalsIgnoreCase( "ReleaseAddress"            )) /* not yet implemented */ ;  
+    	    else if (action.equalsIgnoreCase( "ReleaseAddress"            )) releaseAddress(request, response);
     	    else if (action.equalsIgnoreCase( "ResetImageAttribute"       )) resetImageAttribute(request, response);  
     	    else if (action.equalsIgnoreCase( "RevokeSecurityGroupIngress")) revokeSecurityGroupIngress(request, response);
     	    else if (action.equalsIgnoreCase( "RunInstances"              )) runInstances(request, response);   
@@ -1074,7 +1075,72 @@ public class EC2RestServlet extends HttpServlet {
 		DescribeInstancesResponse EC2response = EC2SoapServiceImpl.toDescribeInstancesResponse( engine.handleRequest( EC2request ), engine);
 		serializeResponse(response, EC2response);
     }
-    
+
+    private void describeAddresses( HttpServletRequest request, HttpServletResponse response )
+        throws ADBException, XMLStreamException, IOException {
+        EC2DescribeAddresses EC2request = new EC2DescribeAddresses();
+
+        // -> load in all the "PublicIp.n" parameters if any
+        Enumeration names = request.getParameterNames();
+        while( names.hasMoreElements()) {
+            String key = (String)names.nextElement();
+            if (key.startsWith("PublicIp")) {
+                String[] value = request.getParameterValues( key );
+                if (null != value && 0 < value.length) EC2request.addPublicIp( value[0] );
+            }
+        }
+        // -> execute the request
+        EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
+        serializeResponse(response, EC2SoapServiceImpl.toDescribeAddressesResponse( engine.handleRequest( EC2request ), engine));
+    }
+
+    private void allocateAddress( HttpServletRequest request, HttpServletResponse response )
+        throws ADBException, XMLStreamException, IOException {
+        EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
+        serializeResponse(response, EC2SoapServiceImpl.toAllocateAddressResponse( engine.allocateAddress() ));
+    }
+
+    private void releaseAddress( HttpServletRequest request, HttpServletResponse response )
+        throws ADBException, XMLStreamException, IOException {
+        EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
+
+        String publicIp = request.getParameter( "PublicIp" );
+        if (null == publicIp) {
+            response.sendError(530, "Missing PublicIp parameter" );
+            return;
+        }
+        serializeResponse(response, EC2SoapServiceImpl.toReleaseAddressResponse( engine.releaseAddress(publicIp) ));
+    }
+
+    private void associateAddress( HttpServletRequest request, HttpServletResponse response )
+        throws ADBException, XMLStreamException, IOException {
+        EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
+
+        String publicIp = request.getParameter( "PublicIp" );
+        if (null == publicIp) {
+            response.sendError(530, "Missing PublicIp parameter" );
+            return;
+        }
+        String instanceId = request.getParameter( "InstanceId" );
+        if (null == instanceId) {
+            response.sendError(530, "Missing InstanceId parameter" );
+            return;
+        }
+        serializeResponse(response, EC2SoapServiceImpl.toAssociateAddressResponse( engine.associateAddress(publicIp, instanceId) ));
+    }
+
+    private void disassociateAddress( HttpServletRequest request, HttpServletResponse response )
+        throws ADBException, XMLStreamException, IOException {
+        EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
+
+        String publicIp = request.getParameter( "PublicIp" );
+        if (null == publicIp) {
+            response.sendError(530, "Missing PublicIp parameter" );
+            return;
+        }
+        serializeResponse(response, EC2SoapServiceImpl.toDisassociateAddressResponse( engine.disassociateAddress(publicIp) ));
+    }
+
     private void describeSecurityGroups( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {
 	    EC2DescribeSecurityGroups EC2request = new EC2DescribeSecurityGroups();
