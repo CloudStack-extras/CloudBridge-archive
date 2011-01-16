@@ -274,7 +274,6 @@ public class S3RestServlet extends HttpServlet {
     	}
     	    	
     	// [C] Calculate the signature from the request's headers
-    	/*
     	auth.setDateHeader( request.getHeader( "Date" ));
     	auth.setContentTypeHeader( request.getHeader( "Content-Type" ));
     	auth.setContentMD5Header( request.getHeader( "Content-MD5" ));
@@ -300,12 +299,12 @@ public class S3RestServlet extends HttpServlet {
 				UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), AWSAccessKey, info.getDescription());
 				return;
 			}
-		*/	
+	
 			// -> turn off auth - just for testing
-			UserContext.current().initContext("Mark", "123", "Mark", "testing");
-            return;
+			//UserContext.current().initContext("Mark", "123", "Mark", "testing");
+            //return;
           
-    	/*
+    	
 		} catch (SignatureException e) {
 			throw new PermissionDeniedException(e);
 			
@@ -313,7 +312,7 @@ public class S3RestServlet extends HttpServlet {
 	    	throw new PermissionDeniedException(e);
 		}
 		throw new PermissionDeniedException("Invalid signature");
-		*/
+	
     }
     
     private ServletAction routeRequest(HttpServletRequest request) {
