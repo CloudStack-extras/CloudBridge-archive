@@ -44,6 +44,7 @@ import com.amazon.s3.ListAllMyBucketsResponse;
 import com.amazon.s3.ListBucketResponse;
 import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.model.SBucket;
+import com.cloud.bridge.model.SObject;
 import com.cloud.bridge.persist.dao.MultipartLoadDao;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.service.S3Constants;
@@ -63,6 +64,7 @@ import com.cloud.bridge.service.core.s3.S3GetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsResponse;
 import com.cloud.bridge.service.core.s3.S3ListBucketObjectEntry;
+import com.cloud.bridge.service.core.s3.S3ListBucketPrefixEntry;
 import com.cloud.bridge.service.core.s3.S3ListBucketRequest;
 import com.cloud.bridge.service.core.s3.S3ListBucketResponse;
 import com.cloud.bridge.service.core.s3.S3MultipartPart;
@@ -76,6 +78,7 @@ import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.service.exception.UnsupportedException;
 import com.cloud.bridge.util.Converter;
 import com.cloud.bridge.util.StringHelper;
+import com.cloud.bridge.util.Tuple;
 import com.cloud.bridge.util.XSerializer;
 import com.cloud.bridge.util.XSerializerXmlAdapter;
 
@@ -508,18 +511,30 @@ public class S3BucketAction implements ServletAction {
 		response.flushBuffer();
 	}
 	
+	/**
+	 * This is a very complex function with all the options defined by Amazon.   Part of the functionality is 
+	 * provided by the query done against the database.  The CommonPrefixes functionality is done the same way 
+	 * as done in the listBucketContents function (i.e., by iterating though the list to decide which output 
+	 * element each key is placed).
+	 * 
+	 * @param request
+	 * @param response
+	 * @throws IOException
+	 */
 	public void executeListMultipartUploads(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
+		// [A] Obtain parameters and do basic bucket verifcation
 		String bucketName     = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String delimiter      = request.getParameter("delimiter");
 		String keyMarker      = request.getParameter("key-marker");
 		String prefix         = request.getParameter("prefix");
 		int maxUploads        = 1000;
-		int remaining         = 0;
+		int nextUploadId      = 0;
+		String nextKey        = null;
+		boolean isTruncated   = false;
 		S3MultipartUpload[] uploads = null;
+		S3MultipartUpload onePart = null;
 		
-		// TODO: support delimiter, common prefixes on output, and isTruncated
-
 		String temp = request.getParameter("max-uploads");
     	if (null != temp) {
     		maxUploads = Integer.parseInt( temp );
@@ -539,9 +554,13 @@ public class S3BucketAction implements ServletAction {
 	    	return;
 		}
   	
+		
+		// [B] Query the multipart table to get the list of current uploads
     	try {
 	        MultipartLoadDao uploadDao = new MultipartLoadDao();
-	        uploads = uploadDao.getInitiatedUploads( bucketName, maxUploads, prefix, keyMarker, uploadIdMarker );
+	        Tuple<S3MultipartUpload[],Boolean> result = uploadDao.getInitiatedUploads( bucketName, maxUploads, prefix, keyMarker, uploadIdMarker );
+    	    uploads = result.getFirst();
+    	    isTruncated = result.getSecond().booleanValue();
     	}
 		catch( Exception e ) {
 			logger.error("List Multipart Uploads failed due to " + e.getMessage(), e);	
@@ -552,18 +571,29 @@ public class S3BucketAction implements ServletAction {
 	    xml.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>" );
 	    xml.append( "<ListMultipartUploadsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" );
 	    xml.append( "<Bucket>" ).append( bucketName ).append( "</Bucket>" );
-	    xml.append( "<KeyMarker>").append( "" ).append( "</KeyMarker>" );
-	    xml.append( "<UploadIdMarker>").append( "" ).append( "</UploadIdMarker>" );
-	      
+	    xml.append( "<KeyMarker>").append((null == keyMarker ? "" : keyMarker)).append( "</KeyMarker>" );
+	    xml.append( "<UploadIdMarker>").append((null == uploadIdMarker ? "" : uploadIdMarker)).append( "</UploadIdMarker>" );
+	    
+	    
+	    // [C] Construct the contents of the <Upload> element
 		StringBuffer partsList = new StringBuffer();
 	    for( int i=0; i < uploads.length; i++ ) 
 	    {
-	        S3MultipartUpload onePart = uploads[i];
+	        onePart = uploads[i];
 	        if (null == onePart) break;
+	        
+			if (delimiter != null && !delimiter.isEmpty()) 
+			{
+				// -> is this available only in the CommonPrefixes element?
+				if (StringHelper.substringInBetween(onePart.getKey(), prefix, delimiter) != null)
+					continue;
+			}
 	        	
+	        nextKey      = onePart.getKey();
+	        nextUploadId = onePart.getId();
 	        partsList.append( "<Upload>" );
-	        partsList.append( "<Key>" ).append( onePart.getKey()).append( "</Key>" );
-	        partsList.append( "<UploadId>" ).append( onePart.getId()).append( "</UploadId>" );
+	        partsList.append( "<Key>" ).append( nextKey ).append( "</Key>" );
+	        partsList.append( "<UploadId>" ).append( nextUploadId ).append( "</UploadId>" );
 	        partsList.append( "<Initiator>" );
 	        partsList.append( "<ID>" ).append( onePart.getAccessKey()).append( "</ID>" );
 	        partsList.append( "<DisplayName></DisplayName>" );
@@ -577,10 +607,33 @@ public class S3BucketAction implements ServletAction {
 	        partsList.append( "</Upload>" );        	
 	    }  
 	        
-	    xml.append( "<NextKeyMarker>" ).append( "" ).append( "</NextKeyMarker>" );
-	    xml.append( "<NextUploadIdMarker>" ).append( "" ).append( "</NextUploadIdMarker>" );
+	    // [D] Construct the contents of the <CommonPrefixes> elements (if any)
+	    for( int i=0; i < uploads.length; i++ ) 
+	    {
+	        onePart = uploads[i];
+	        if (null == onePart) break;
+
+			if (delimiter != null && !delimiter.isEmpty()) 
+			{
+				String subName = StringHelper.substringInBetween(onePart.getKey(), prefix, delimiter);
+				if (subName != null) 
+				{
+			        partsList.append( "<CommonPrefixes>" );
+			        partsList.append( "<Prefix>" );
+					if ( prefix != null && prefix.length() > 0 )
+						partsList.append( prefix + delimiter + subName );
+					else partsList.append( subName );
+			        partsList.append( "</Prefix>" );
+			        partsList.append( "</CommonPrefixes>" );
+				}
+			}		
+		}
+	    
+	    // [D] Finish off the response
+	    xml.append( "<NextKeyMarker>" ).append((null == nextKey ? "" : nextKey)).append( "</NextKeyMarker>" );
+	    xml.append( "<NextUploadIdMarker>" ).append((0 == nextUploadId ? "" : nextUploadId)).append( "</NextUploadIdMarker>" );
 	    xml.append( "<MaxUploads>" ).append( maxUploads ).append( "</MaxUploads>" );   
-	    xml.append( "<IsTruncated>" ).append((0 < remaining ? "true" : "false" )).append( "</IsTruncated>" );
+	    xml.append( "<IsTruncated>" ).append( isTruncated ).append( "</IsTruncated>" );
 
 	    xml.append( partsList.toString());
 	    xml.append( "</ListMultipartUploadsResult>" );

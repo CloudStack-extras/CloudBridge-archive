@@ -50,9 +50,14 @@ public class S3FileSystemBucketAdapter implements S3BucketAdapter {
 	
 	@Override
 	public void createContainer(String mountedRoot, String bucket) {
+		
 		String dir = getBucketFolderDir(mountedRoot, bucket);
-		if(!new File(dir).mkdirs())
-			throw new OutOfStorageException("Unable to create " + dir + " for bucket " + bucket); 
+		File container = new File(dir);
+		
+		if (!container.exists()) {
+		   if (!container.mkdirs())
+			   throw new OutOfStorageException("Unable to create " + dir + " for bucket " + bucket); 
+		}
 	}
 	
 	@Override

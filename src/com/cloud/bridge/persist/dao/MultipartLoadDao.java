@@ -22,6 +22,7 @@ import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3MultipartPart;
 import com.cloud.bridge.service.core.s3.S3MultipartUpload;
 import com.cloud.bridge.util.ConfigurationHelper;
+import com.cloud.bridge.util.Tuple;
 
 public class MultipartLoadDao {
 	public static final Logger logger = Logger.getLogger(MultipartLoadDao.class);
@@ -313,14 +314,15 @@ public class MultipartLoadDao {
 	 * @param prefix - can be null
 	 * @param keyMarker - can be null
 	 * @param uploadIdMarker - can be null, should only be defined if keyMarker is not-null
-	 * @return S3MultipartUpload[]
+	 * @return Tuple<S3MultipartUpload[], isTruncated>
 	 * @throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	 */
-	public S3MultipartUpload[] getInitiatedUploads( String bucketName, int maxParts, String prefix, String keyMarker, String uploadIdMarker )
+	public Tuple<S3MultipartUpload[],Boolean> getInitiatedUploads( String bucketName, int maxParts, String prefix, String keyMarker, String uploadIdMarker )
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	{
 		S3MultipartUpload[] inProgress = new S3MultipartUpload[maxParts];
 	    PreparedStatement statement = null;
+	    boolean isTruncated = false;
 	    int i = 0;
 	    int pos = 1;
 	    
@@ -356,10 +358,12 @@ public class MultipartLoadDao {
 		    	inProgress[i].setKey( rs.getString( "NameKey" ));
 		    	i++;
 		    }
+		    
+		    if (rs.next()) isTruncated = true;
             statement.close();		
             
             if (i < maxParts) inProgress = (S3MultipartUpload[])resizeArray(inProgress,i);
-            return inProgress;
+            return new Tuple<S3MultipartUpload[], Boolean>(inProgress, isTruncated);
         
         } finally {
             closeConnection();

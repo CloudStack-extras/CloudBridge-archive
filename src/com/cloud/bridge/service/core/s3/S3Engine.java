@@ -153,7 +153,7 @@ public class S3Engine {
 				if(bucketDao.getByName(request.getBucketName()) != null)
 					throw new ObjectAlreadyExistsException("Bucket already exists"); 
 					
-				shostTuple = allocBucketStorageHost(request.getBucketName());
+				shostTuple = allocBucketStorageHost(request.getBucketName(), null);
 				
 				SBucket sbucket = new SBucket();
 				sbucket.setName(request.getBucketName());
@@ -404,7 +404,8 @@ public class S3Engine {
 
     /**
      * The initiator must have permission to write to the bucket in question in order to initiate
-     * a multipart upload.
+     * a multipart upload.  Also check to make sure the special folder used to store parts of 
+     * a multipart exists for this bucket.
      *  
      * @param request
      */
@@ -421,8 +422,8 @@ public class S3Engine {
 			response.setResultCode(404);
 		}
 		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		createUploadFolder( bucketName ); 
 
-		
         try {
     	    MultipartLoadDao uploadDao = new MultipartLoadDao();
     	    int uploadId = uploadDao.initiateUpload( UserContext.current().getAccessKey(), bucketName, request.getKey(), request.getCannedAccess(), request.getMetaEntries());
@@ -850,7 +851,6 @@ public class S3Engine {
     /**
      * In one place we handle both versioning and non-versioning delete requests.
      */
-    //@SuppressWarnings("deprecation")
 	public S3Response handleRequest(S3DeleteObjectRequest request) 
 	{		
 		// -> verify that the bucket and object exist
@@ -1128,7 +1128,35 @@ public class S3Engine {
 		throw new HostNotMountedException("Storage host " + shost.getHost() + " is not locally mounted");
 	}
     
-	private Tuple<SHost, String> allocBucketStorageHost(String bucketName) 
+	/**
+	 * Locate the folder to hold upload parts at the same mount point as the upload's final bucket
+	 * location.   Create the upload folder dynamically.
+	 * 
+	 * @param bucketName
+	 */
+	private void createUploadFolder(String bucketName) 
+	{
+		if (PersistContext.acquireNamedLock("bucket.creation", LOCK_ACQUIRING_TIMEOUT_SECONDS)) 
+		{
+			try {
+			    allocBucketStorageHost(bucketName, ServiceProvider.getInstance().getMultipartDir());
+            }
+		    finally {
+		    	PersistContext.releaseNamedLock("bucket.creation");
+		    }
+		}
+	}
+	
+	/**
+	 * The overrideName is used to create a hidden storage bucket (folder) in the same location
+	 * as the given bucketName.   This can be used to create a folder for parts of a multipart
+	 * upload for the associated bucket.
+	 * 
+	 * @param bucketName
+	 * @param overrideName
+	 * @return
+	 */
+	private Tuple<SHost, String> allocBucketStorageHost(String bucketName, String overrideName) 
 	{
 		MHostDao mhostDao = new MHostDao();
 		SHostDao shostDao = new SHostDao();
@@ -1142,7 +1170,7 @@ public class S3Engine {
 			MHostMount[] mounts = (MHostMount[])mhost.getMounts().toArray();
 			MHostMount mount = mounts[random.nextInt(mounts.length)];
 			S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(mount.getShost());
-			bucketAdapter.createContainer(mount.getMountPath(), bucketName);
+			bucketAdapter.createContainer(mount.getMountPath(), (null != overrideName ? overrideName : bucketName));
 			return new Tuple<SHost, String>(mount.getShost(), mount.getMountPath());
 		}
 		
@@ -1154,7 +1182,7 @@ public class S3Engine {
 				throw new InternalErrorException("storage.root is configured but not initialized");
 			
 			S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(localSHost);
-			bucketAdapter.createContainer(localSHost.getExportRoot(), bucketName);
+			bucketAdapter.createContainer(localSHost.getExportRoot(),(null != overrideName ? overrideName : bucketName));
 			return new Tuple<SHost, String>(localSHost, localStorageRoot);
 		}
 		
