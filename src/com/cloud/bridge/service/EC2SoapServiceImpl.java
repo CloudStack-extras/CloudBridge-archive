@@ -56,6 +56,9 @@ import com.cloud.bridge.service.core.ec2.EC2StartInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
+import com.cloud.bridge.service.core.ec2.EC2Address;
+import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
+import com.cloud.bridge.service.core.ec2.EC2DescribeAddressesResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 
 
@@ -68,15 +71,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	this.engine = engine;
     }
 
-	public AllocateAddressResponse allocateAddress(AllocateAddress allocateAddress) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
-	public AssociateAddressResponse associateAddress(AssociateAddress associateAddress) {
-		return null;
-	}
-	
 	public AssociateDhcpOptionsResponse associateDhcpOptions(AssociateDhcpOptions associateDhcpOptions) {
 		// TODO Auto-generated method stub
 		return null;
@@ -303,10 +297,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDeregisterImageResponse( engine.deregisterImage( image ));
 	}
 
-	public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
-		return null;
-	}
-
 	public DescribeAvailabilityZonesResponse describeAvailabilityZones(DescribeAvailabilityZones describeAvailabilityZones) {
 		EC2DescribeAvailabilityZones request = new EC2DescribeAvailabilityZones();
 		
@@ -406,6 +396,43 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		}
 		return toDescribeInstancesResponse( engine.handleRequest( request ), engine);
 	}
+
+    @Override
+    public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
+        EC2DescribeAddresses request = new EC2DescribeAddresses();
+        DescribeAddressesType dat = describeAddresses.getDescribeAddresses();
+
+        DescribeAddressesInfoType dait = dat.getPublicIpsSet();
+        DescribeAddressesItemType[] items = dait.getItem();
+        if (null != items) {  // -> can be empty
+            for( int i=0; i < items.length; i++ ) request.addPublicIp( items[i].getPublicIp());
+        }
+        return toDescribeAddressesResponse( engine.handleRequest( request ), engine);
+    }
+
+    @Override
+    public AllocateAddressResponse allocateAddress(AllocateAddress allocateAddress) {
+        return toAllocateAddressResponse( engine.allocateAddress() );
+    }
+
+    @Override
+    public ReleaseAddressResponse releaseAddress(ReleaseAddress releaseAddress) {
+        String publicIp = releaseAddress.getReleaseAddress().getPublicIp();
+        return toReleaseAddressResponse( engine.releaseAddress(publicIp) );
+    }
+
+    @Override
+    public AssociateAddressResponse associateAddress(AssociateAddress associateAddress) {
+        String publicIp   = associateAddress.getAssociateAddress().getPublicIp();
+        String instanceId = associateAddress.getAssociateAddress().getInstanceId();
+        return toAssociateAddressResponse( engine.associateAddress(publicIp, instanceId) );
+    }
+
+    @Override
+    public DisassociateAddressResponse disassociateAddress(DisassociateAddress disassociateAddress) {
+        String publicIp = disassociateAddress.getDisassociateAddress().getPublicIp();
+        return toDisassociateAddressResponse( engine.disassociateAddress(publicIp) );
+    }
 
 	public DescribeRegionsResponse describeRegions(DescribeRegions describeRegions) {
 		return null;
@@ -515,11 +542,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	public DetachVpnGatewayResponse detachVpnGateway(DetachVpnGateway detachVpnGateway) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DisassociateAddressResponse disassociateAddress(DisassociateAddress disassociateAddress) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -661,11 +683,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setDescription( rit.getDescription());
 		request.setArchitecture( rit.getArchitecture());  
 		return toRegisterImageResponse( engine.handleRequest( request ));
-	}
-
-	public ReleaseAddressResponse releaseAddress(ReleaseAddress releaseAddress) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public RequestSpotInstancesResponse requestSpotInstances(RequestSpotInstances requestSpotInstances) {
@@ -1098,7 +1115,67 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    response.setDescribeInstancesResponse( param1 );
 		return response;
 	}
-	
+
+    public static DescribeAddressesResponse toDescribeAddressesResponse(EC2DescribeAddressesResponse engineResponse, EC2Engine engine) {
+        EC2Address[] addresses = engineResponse.getAddressSet();
+        final DescribeAddressesResponseItemType[] items = new DescribeAddressesResponseItemType[addresses.length];
+
+        for( int i=0; i < addresses.length; i++ ) {
+            items[i] = new DescribeAddressesResponseItemType();
+            items[i].setPublicIp(addresses[i].getIpAddress());
+            items[i].setInstanceId(addresses[i].getAssociatedInstanceId());
+        }
+
+        return new DescribeAddressesResponse() {{
+            setDescribeAddressesResponse(new DescribeAddressesResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                setAddressesSet(new DescribeAddressesResponseInfoType() {{
+                    setItem(items);
+                }});
+            }});
+        }};
+    }
+
+    public static AllocateAddressResponse toAllocateAddressResponse(final String publicIp) {
+
+        return new AllocateAddressResponse() {{
+            setAllocateAddressResponse(new AllocateAddressResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                setPublicIp(publicIp);
+            }});
+        }};
+    }
+
+    public static ReleaseAddressResponse toReleaseAddressResponse(final boolean result) {
+
+        return new ReleaseAddressResponse() {{
+            setReleaseAddressResponse(new ReleaseAddressResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                set_return(result);
+            }});
+        }};
+    }
+
+    public static AssociateAddressResponse toAssociateAddressResponse(final boolean result) {
+
+        return new AssociateAddressResponse() {{
+            setAssociateAddressResponse(new AssociateAddressResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                set_return(result);
+            }});
+        }};
+    }
+
+    public static DisassociateAddressResponse toDisassociateAddressResponse(final boolean result) {
+
+        return new DisassociateAddressResponse() {{
+            setDisassociateAddressResponse(new DisassociateAddressResponseType() {{
+                setRequestId(UUID.randomUUID().toString());
+                set_return(result);
+            }});
+        }};
+    }
+
 	/**
 	 * Map our cloud state values into what Amazon defines.
 	 * Where are the values that can be returned by our cloud api defined?

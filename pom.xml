@@ -255,6 +255,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>tomcat-maven-plugin</artifactId>
         <configuration>
+                <port>8090</port>
                 <warDirectory>target/bridge</warDirectory>
 		<warSourceDirectory>target/bridge</warSourceDirectory>
         </configuration>
@@ -330,6 +331,16 @@
 				<include>**/**</include>	
 				</includes>
 				</resource>
+
+                                <resource>
+                                <directory>resource/AmazonEC2</directory>
+                                <targetPath>WEB-INF/classes</targetPath>
+                                <includes>
+                                <include>**/*.keystore</include>
+                                </includes>
+                                </resource>
+
+
           		</webResources>
 		</configuration>
 	</plugin>
