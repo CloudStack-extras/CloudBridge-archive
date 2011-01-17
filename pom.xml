@@ -267,15 +267,9 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>tomcat-maven-plugin</artifactId>
         <configuration>
-<<<<<<< HEAD
-                <warDirectory>target/ROOT</warDirectory>
-		<warSourceDirectory>target/ROOT</warSourceDirectory>
-                <port>8090</port>
-=======
                 <port>8090</port>
                 <warDirectory>target/bridge</warDirectory>
 		<warSourceDirectory>target/bridge</warSourceDirectory>
->>>>>>> cloud.com/master
         </configuration>
 		</plugin>
 	<plugin>
@@ -351,21 +345,13 @@
 				</resource>
 
                                 <resource>
-<<<<<<< HEAD
-				<directory>resource/AmazonEC2</directory>
-=======
                                 <directory>resource/AmazonEC2</directory>
->>>>>>> cloud.com/master
                                 <targetPath>WEB-INF/classes</targetPath>
                                 <includes>
                                 <include>**/*.keystore</include>
                                 </includes>
                                 </resource>
 
-<<<<<<< HEAD
-=======
-
->>>>>>> cloud.com/master
           		</webResources>
 		</configuration>
 	</plugin>
