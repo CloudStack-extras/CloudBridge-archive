@@ -6,6 +6,8 @@
  * by the Apache Axis2 version: 1.5.1  Built on : Oct 19, 2009 (10:59:00 EDT)
  */
     package com.amazon.s3;
+
+import org.apache.axis2.AxisFault;
     /**
      *  AmazonS3SkeletonInterface java skeleton interface for the axisService
      */
@@ -30,13 +32,14 @@
          * Auto generated method signature
          * 
                                     * @param copyObject
+         * @throws AxisFault 
          */
 
         
                 public com.amazon.s3.CopyObjectResponse copyObject
                 (
                   com.amazon.s3.CopyObject copyObject
-                 )
+                 ) throws AxisFault
             ;
         
          

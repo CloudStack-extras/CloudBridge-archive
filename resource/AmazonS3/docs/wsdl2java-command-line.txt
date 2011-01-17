@@ -1,2 +1,0 @@
-To generate the Java AXIS2 classes from the Amazon S3 wsdl and xsd use the following command line:
-C:\axis2-1.5.1\bin>wsdl2java.bat -ss -sd -ssi -g -p com.amazon.s3 -ns2p "http://s3.amazonaws.com/doc/2006-03-01/"=com.amazon.s3 -uri AmazonS3.wsdl

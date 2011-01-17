@@ -69,8 +69,9 @@ public class ServiceProvider {
     private Properties properties;
     private boolean useSubDomain = false;			// use DNS sub domain for bucket name
     private String serviceEndpoint = null;
+    private String multipartDir = null;  // illegal bucket name used as a folder for storing multiparts
     private S3Engine engine;
-    private EC2Engine EC2_engine;
+    private EC2Engine EC2_engine = null;
     
     protected ServiceProvider() {
     	// register service implementation object
@@ -117,6 +118,10 @@ public class ServiceProvider {
     
     public String getServiceEndpoint() {
     	return serviceEndpoint;
+    }
+    
+    public String getMultipartDir() {
+    	return multipartDir;
     }
     
     public Properties getStartupProperties() {
@@ -181,8 +186,9 @@ public class ServiceProvider {
     	PersistContext.flush();
 
     	String localStorageRoot = properties.getProperty("storage.root");
-    	if(localStorageRoot != null)
-    		setupLocalStorage(localStorageRoot);
+    	if (localStorageRoot != null) setupLocalStorage(localStorageRoot);
+
+    	multipartDir = properties.getProperty("storage.multipartDir");
     	
     	timer.schedule(getHeartbeatTask(), HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL);
     	
@@ -264,38 +270,39 @@ public class ServiceProvider {
     		logger.info("ServiceProvider stopped");
     }
     
-        @SuppressWarnings("unchecked")
-        private static <T> T getProxy(Class<?> serviceInterface, final T serviceObject) {
+    @SuppressWarnings("unchecked")
+    private static <T> T getProxy(Class<?> serviceInterface, final T serviceObject) {
     	return (T) Proxy.newProxyInstance(serviceObject.getClass().getClassLoader(),
-              new Class[] { serviceInterface },
-              new InvocationHandler() {
-                  public Object invoke(Object proxy, Method method, 
-                    Object[] args) throws Throwable {
-                	  try {
-                		  Object result = method.invoke(serviceObject, args);
-                		  PersistContext.commitTransaction();
-                		  return result;
-                	  } catch(Throwable e) {
-                		  // Rethrow the exception to Axis:
-                		  // Check if the exception is an AxisFault or a RuntimeException
-                		  // enveloped AxisFault and if so, pass it on as such. Otherwise
-                		  // log to help debugging and throw as is.
-                		  if (e.getCause() != null && e.getCause() instanceof AxisFault) 
-                			  throw e.getCause();
-                		  else if (e.getCause() != null && e.getCause().getCause() != null 
-                				  && e.getCause().getCause() instanceof AxisFault)
-                			  throw e.getCause().getCause();
-                		  else {
-                    		          logger.warn("Unhandled exception " + e.getMessage(), e);
-                			  throw e;
-                		  }
-                	  } finally {
-                		  PersistContext.closeSession();
-                	  }
-                  }
-              });
+    		new Class[] { serviceInterface },
+        	new InvocationHandler() {
+            	public Object invoke(Object proxy, Method method,
+            			Object[] args) throws Throwable {
+                    try {
+                    	Object result = method.invoke(serviceObject, args);
+                        PersistContext.commitTransaction();
+                        return result;
+                    } catch(Throwable e) {
+                    	// Rethrow the exception to Axis:
+                        // Check if the exception is an AxisFault or a RuntimeException
+                        // enveloped AxisFault and if so, pass it on as such. Otherwise
+                        // log to help debugging and throw as is.
+                        if (e.getCause() != null && e.getCause() instanceof AxisFault)
+                        	throw e.getCause();
+                        else if (e.getCause() != null && e.getCause().getCause() != null
+                        		&& e.getCause().getCause() instanceof AxisFault)
+                        	throw e.getCause().getCause();
+                        else {
+                        	logger.warn("Unhandled exception " + e.getMessage(), e);
+                            	throw e;
+                        }
+                    } finally {
+                    	PersistContext.closeSession();
+                    }
+                }
+          	});
     }
-    
+
+    @SuppressWarnings("unchecked")
     public <T> T getServiceImpl(Class<?> serviceInterface) {
     	return getProxy(serviceInterface, (T)serviceMap.get(serviceInterface));
     }

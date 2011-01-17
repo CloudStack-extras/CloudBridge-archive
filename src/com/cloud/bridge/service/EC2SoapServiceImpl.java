@@ -15,6 +15,7 @@
  */
 package com.cloud.bridge.service;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
 import java.util.Calendar;
@@ -1723,9 +1724,10 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	
 	public ImportKeyPairResponse importKeyPair(ImportKeyPair importKeyPair) {
 		String keyName = importKeyPair.getImportKeyPair().getKeyName();
-		String publicKey = SSHKeysHelper.getPublicKeyFromKeyMaterial(
-				importKeyPair.getImportKeyPair().getPublicKeyMaterial());
-
+		String publicKey = importKeyPair.getImportKeyPair().getPublicKeyMaterial();
+        if (!publicKey.contains(" "))
+             publicKey = new String(Base64.decodeBase64(publicKey.getBytes())); 
+		
 		return toImportKeyPair(engine.importKeyPair(keyName, publicKey));
 	}
 	

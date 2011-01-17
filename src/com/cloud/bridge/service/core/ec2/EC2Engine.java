@@ -39,7 +39,10 @@ import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.InternalErrorException;
+import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
+import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
 import com.cloud.bridge.util.ConfigurationHelper;
+import com.cloud.bridge.util.Tuple;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -85,6 +88,7 @@ public class EC2Engine {
     private int pollInterval6 = 100;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
     private int CLOUD_STACK_VERSION_2_0 = 200;
     private int CLOUD_STACK_VERSION_2_1 = 210;
+    private int CLOUD_STACK_VERSION_2_2 = 220;
     private int cloudStackVersion;
    
     
@@ -154,7 +158,7 @@ public class EC2Engine {
 	}
     
     private int getCloudStackVersion(Properties prop) 
-    {
+    {	
     	String versionProp = prop.getProperty( "cloudstackVersion", null );
     	if(versionProp!=null){
     		if(versionProp.equals("2.0")){
@@ -166,12 +170,45 @@ public class EC2Engine {
     		else if(versionProp.equals("2.1.0")){
     			return CLOUD_STACK_VERSION_2_1;
     		}
-    		else if(versionProp.equals("2.1.0")){
-    			return CLOUD_STACK_VERSION_2_1;
+    		else if(versionProp.equals("2.2.0")){
+    			return CLOUD_STACK_VERSION_2_2;
     		}
     	}
-    	return CLOUD_STACK_VERSION_2_1;
+    	
+    	// Let the version specified in the properties file have a higher precedence 
+    	// than the CloudStack's listCapabilities command. Only check with the CloudStack
+    	// if no version is specified in the properties file.
+    	return getCloudStackVersionBasedOnCapabilitiesCmd();
 	}
+    
+    private int getCloudStackVersionBasedOnCapabilitiesCmd() {
+    	StringBuilder query = new StringBuilder();
+    	query.append(getServerURL());
+    	query.append("command=listCapabilities");
+    	Document response = null;
+    	   	    	
+    	try {
+    	    response = resolveURL(query.toString(), "listCapabilities", false);
+    	} catch (Exception e) {
+    		// listCapabilities is introduced in 2.2 - if the command fails the CloudStack 
+    		// is older. Default to 2.1 in that case.
+    		return CLOUD_STACK_VERSION_2_1;
+    	}
+    	
+    	String version = "unknown";
+    	NodeList responseList = response.getElementsByTagName("cloudStackVersion");
+    	if (responseList != null && responseList.getLength() > 0 && responseList.item(0).hasChildNodes())
+			version = responseList.item(0).getFirstChild().getNodeValue();
+    	
+    	if (!version.equals("unknown")) {
+    		if(version.equals("2.2.0")){
+    			return CLOUD_STACK_VERSION_2_2;
+    		}    	
+    	}
+    	
+    	// Default to 2.2
+    	return CLOUD_STACK_VERSION_2_2;
+    }
 
 	/**
      * We have to generate the URL explicity here because we are using the given inputs as the 
@@ -220,7 +257,7 @@ public class EC2Engine {
     public boolean createSecurityGroup(EC2SecurityGroup request) 
     {
 		if (null == request.getDescription() || null == request.getName()) 
-			 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both name & description are required");
+			 throw new EC2ServiceException(ServerError.InternalError, "Both name & description are required");
 
     	try {
 	        String query = new String( "command=createSecurityGroup" +
@@ -242,9 +279,9 @@ public class EC2Engine {
     
     public boolean deleteSecurityGroup(EC2SecurityGroup request) 
     {
-		if (null == request.getName()) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Name is a required parameter");
+	if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
 
-   	    try {
+   	try {
 	        String query = new String( "command=deleteSecurityGroup&name=" + safeURLencode( request.getName()));        
             resolveURL( genAPIURL( query, genQuerySignature(query)), "deleteSecurityGroup", true );
      		return true;
@@ -284,7 +321,7 @@ public class EC2Engine {
      */
     public boolean securityGroupRequest(EC2AuthorizeRevokeSecurityGroup request, String command ) 
     {
-		if (null == request.getName()) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Name is a required parameter");
+		if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
     	
 		StringBuffer url    = new StringBuffer();   // -> used to derive URL for Cloud Stack
 		StringBuffer sorted = new StringBuffer();   // -> used for signature generation
@@ -336,7 +373,7 @@ public class EC2Engine {
 		       if ( 0 < match.getLength()) {
 		    	    Node item = match.item(0);
 		    	    String jobId = new String( item.getFirstChild().getNodeValue());
-		    	    if (!waitForAsynch( jobId )) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, command + " failed" );
+		    	    if (!waitForAsynch( jobId )) throw new EC2ServiceException(ServerError.InternalError, command + " failed" );
 	 	        } 
 	 	        else throw new InternalErrorException( "InternalError" );
 
@@ -563,7 +600,7 @@ public class EC2Engine {
             		 {
             			 needsRestart = true;
             			 if (!stopVirtualMachine( request.getInstanceId()))
-            		         throw new EC2ServiceException(EC2ServiceException.ClientError.IncorrectState, "CreateImage - instance must be in a stopped state");
+            		         throw new EC2ServiceException(ClientError.IncorrectState, "CreateImage - instance must be in a stopped state");
             		 }           		 
             		 volumeId = volSet[i].getId();
             		 break;
@@ -602,7 +639,7 @@ public class EC2Engine {
  	        if (needsRestart) 
  	        {
    			    if (!startVirtualMachine( request.getInstanceId()))
-		            throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError
+		            throw new EC2ServiceException(ServerError.InternalError
 		            		,"CreateImage - restarting instance " + request.getInstanceId() + " failed");
  	        }
  	        return response;
@@ -626,7 +663,7 @@ public class EC2Engine {
     	try {
     		if (null == request.getFormat()   || null == request.getName() || null == request.getOsTypeName() ||
     		    null == request.getLocation() || null == request.getZoneName())
-    			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Missing parameter - location/architecture/name");
+    			throw new EC2ServiceException(ServerError.InternalError, "Missing parameter - location/architecture/name");
     			
             // -> the parameters must be in sorted order for proper signature generation
 	        String query = new String( "command=registerTemplate" +
@@ -752,7 +789,7 @@ public class EC2Engine {
 
     public boolean releaseAddress(String publicIp)
     {
-        if (null == publicIp) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
+        if (null == publicIp) throw new EC2ServiceException(ServerError.InternalError, "IP address is a required parameter");
         try {
             String query = "command=disassociateIpAddress&ipAddress="+ safeURLencode(publicIp);
             Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "disassociateIpAddress", true);
@@ -769,7 +806,7 @@ public class EC2Engine {
 
     public boolean associateAddress(String publicIp, String instanceId)
     {
-        if (null == publicIp || null == instanceId) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both IP address and instance id are required");
+        if (null == publicIp || null == instanceId) throw new EC2ServiceException(ServerError.InternalError, "Both IP address and instance id are required");
         try {
             String query = "command=ec2associateAddress&instanceId=" + safeURLencode(instanceId)
                                                     + "&ipAddress="  + safeURLencode(publicIp);
@@ -787,7 +824,7 @@ public class EC2Engine {
 
     public boolean disassociateAddress(String publicIp)
     {
-        if (null == publicIp) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
+        if (null == publicIp) throw new EC2ServiceException(ServerError.InternalError, "IP address is a required parameter");
         try {
             String query = "command=ec2disassociateAddress&ipAddress=" + safeURLencode(publicIp);
             Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "ec2disassociateAddress", true);
@@ -1040,7 +1077,7 @@ public class EC2Engine {
  	        
      	    if (canCreateInstances < request.getMinCount()) {
     		    logger.info( "EC2 RunInstances - min count too big (" + request.getMinCount() + "), " + canCreateInstances + " left to allocate");
-    		    throw new EC2ServiceException(EC2ServiceException.ClientError.InstanceLimitExceeded ,"Only " + canCreateInstances + " instance(s) left to allocate");	
+    		    throw new EC2ServiceException(ClientError.InstanceLimitExceeded ,"Only " + canCreateInstances + " instance(s) left to allocate");	
      	    }
 
      	    if ( canCreateInstances < request.getMaxCount()) 
@@ -1057,8 +1094,18 @@ public class EC2Engine {
        	    params.append( "command=deployVirtualMachine" );
 
        	    if (null != request.getGroupId()) params.append("&group=" + request.getGroupId());
-       	    if (null != request.getKeyName()) params.append("&publicKey=" + safeURLencode(request.getKeyName()));
-       
+       	    
+       	    String zoneId = toZoneId(request.getZoneName());
+       	    
+       	    if (cloudStackVersion >= CLOUD_STACK_VERSION_2_2) {
+           	    if (null != request.getKeyName()) params.append("&keypair=" + safeURLencode(request.getKeyName()));
+           	    
+           	    String dcNetworkType = getDCNetworkType(zoneId);
+           	    if (dcNetworkType.equals("Advanced")) { 
+           	    	params.append("&networkIds=" + getNetworkId(zoneId));
+           	    }
+       	    }
+
        	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
             params.append("&size=" + String.valueOf(request.getSize()));
        	    params.append( "&templateId=" + request.getTemplateId());
@@ -1069,7 +1116,7 @@ public class EC2Engine {
        	    //if (null != vlanId) params.append( "&vlanId=" + vlanId );
        	    // temp hack   
        	    
-       	    params.append( "&zoneId=" + toZoneId( request.getZoneName()));
+       	    params.append( "&zoneId=" + zoneId);
        	    String query      = params.toString();
             String apiCommand = genAPIURL(query, genQuerySignature(query));
  		
@@ -1100,17 +1147,15 @@ public class EC2Engine {
         	}
 
          	if (0 == countCreated) 
-         		throw new EC2ServiceException(EC2ServiceException.ServerError.InsufficientInstanceCapacity, "Insufficient Instance Capacity" );
+         		throw new EC2ServiceException(ServerError.InsufficientInstanceCapacity, "Insufficient Instance Capacity" );
             
          	return instances;
             
     	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 RunInstances - " + error.toString());
     		throw error;
-    		
      	} catch( Exception e ) {
     		logger.error( "EC2 RunInstances - deploy 2 " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
      	}
      	
     }
@@ -1227,6 +1272,8 @@ public class EC2Engine {
 
     
     public List<EC2SSHKeyPair> describeKeyPairs() {
+    	ensureVersion(CLOUD_STACK_VERSION_2_2);
+    	
     	String query = "command=listSSHKeyPairs";
     	Document response = null;
     	
@@ -1234,10 +1281,10 @@ public class EC2Engine {
 			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listSSHKeyPairs", true);
 		} catch (EC2ServiceException e) {
 			logger.error( "EC2 Describe KeyPairs - " + e.toString());
-			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
 		} catch (Exception e) {
 			logger.error( "EC2 Describe KeyPairs - " + e.toString());
-			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
 		}
 		
 		List<EC2SSHKeyPair> returnList = new ArrayList<EC2SSHKeyPair>();
@@ -1270,31 +1317,27 @@ public class EC2Engine {
 		return returnList;
     }
     
-    public EC2SSHKeyPair importKeyPair(String keyName, String publicKey) {   	
+    public EC2SSHKeyPair importKeyPair(String keyName, String publicKey) {     	
+    	ensureVersion(CLOUD_STACK_VERSION_2_2);
+
     	String query = "command=registerSSHKeyPair";
     	Document response = null;
     	
     	try {
-        	query += "&name=".concat(URLEncoder.encode(keyName, "utf8"));
-        	query += "&publickey=".concat(URLEncoder.encode(publicKey, "utf8"));
-        	
-        	// Temporary workaround. The CloudStack computes signatures on URL-encoded parameter strings
-        	// encoding spaces as %20, not +. Computing a signature from a string with spaces encoded as
-        	// a + results in a 401.
-        	query = query.replace("+", "%20");
-			
+        	query += "&name=".concat(safeURLencode(keyName));
+        	query += "&publickey=".concat(safeURLencode(publicKey));
         	response = resolveURL(genAPIURL(query, genQuerySignature(query)), "registerSSHKeyPair", true);
 		} catch (EC2ServiceException e) {
 			logger.error( "EC2 Describe KeyPairs - " + e.toString());
 
 			if (e.getMessage().startsWith("431")) // Needs improvement
-				throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
+				throw new EC2ServiceException(ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
 			else
-				throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());
+				throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
 			
 		} catch (Exception e) {
 			logger.error( "EC2 Describe KeyPairs - " + e.toString());
-			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
 		}
 
 		EC2SSHKeyPair keyPair = new EC2SSHKeyPair();		
@@ -1316,6 +1359,8 @@ public class EC2Engine {
     }
     
     public EC2SSHKeyPair createKeyPair(String keyName) {
+    	ensureVersion(CLOUD_STACK_VERSION_2_2);
+
     	String query = "command=createSSHKeyPair";
     	Document response = null;
     	
@@ -1326,13 +1371,13 @@ public class EC2Engine {
 			logger.error( "EC2 Describe KeyPairs - " + e.toString());
 
 			if (e.getMessage().startsWith("431")) // Needs improvement
-				throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
+				throw new EC2ServiceException(ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
 			else
-				throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());
+				throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
 			
 		} catch (Exception e) {
 			logger.error( "EC2 Describe KeyPairs - " + e.toString());
-			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
 		}
 		
 		EC2SSHKeyPair keyPair = new EC2SSHKeyPair();		
@@ -1356,6 +1401,8 @@ public class EC2Engine {
     }
     
     public boolean deleteKeyPair(String keyName) {
+    	ensureVersion(CLOUD_STACK_VERSION_2_2);
+
     	String query = "command=deleteSSHKeyPair";
     	Document response = null;
     	
@@ -1364,10 +1411,10 @@ public class EC2Engine {
 			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteSSHKeyPair", true);
 		} catch (EC2ServiceException e) {
 			logger.error( "EC2 Describe KeyPairs - " + e.toString());
-			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());	
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());	
 		} catch (Exception e) {
 			logger.error( "EC2 Describe KeyPairs - " + e.toString());
-			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
 		}
 		
 		NodeList success = response.getElementsByTagName("success");
@@ -1378,6 +1425,8 @@ public class EC2Engine {
     }
     
     public EC2PasswordData getPasswordData(String instanceId) {
+    	ensureVersion(CLOUD_STACK_VERSION_2_2);
+
     	String query = "command=getVMPassword";
     	Document response = null;
     	EC2PasswordData passwdData = new EC2PasswordData();
@@ -1393,13 +1442,13 @@ public class EC2Engine {
     	} catch (EC2ServiceException e) {
     		if (!e.getMessage().startsWith("431 No password for VM with id")) { 
     			logger.error( "EC2 Describe KeyPairs - " + e.toString());
-    			throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, e.getMessage());
+    			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
     		} else {
     			passwdData.setEncryptedPassword("");
     		}
     	} catch (Exception e) {
     		logger.error( "EC2 Describe KeyPairs - " + e.toString());
-    		throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "An unexpected error occurred");
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
     	}
 
     	return passwdData;
@@ -1427,7 +1476,7 @@ public class EC2Engine {
    	         Node item = match.item(0);
    	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
         }
-        else throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError ,"Internal Server Error");
+        else throw new EC2ServiceException(ServerError.InternalError ,"Internal Server Error");
 		
 	    vms = waitForStartStop( vms, jobIds, 1, "stopped" );
 	    return vms[0].getState().equalsIgnoreCase( "stopped" );    	
@@ -1451,7 +1500,7 @@ public class EC2Engine {
 	         Node item = match.item(0);
 	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
         }
-        else throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError ,"Internal Server Error");
+        else throw new EC2ServiceException(ServerError.InternalError ,"Internal Server Error");
 	
         vms = waitForStartStop( vms, jobIds, 1, "running" );
         return vms[0].getState().equalsIgnoreCase( "running" );    	
@@ -1533,9 +1582,9 @@ public class EC2Engine {
                if ( 0 < match.getLength()) {
     	            item = match.item(0);
     	            if (null != item && null != item.getFirstChild())
-    	        	    throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Template action failed: " + item.getFirstChild().getNodeValue());
+    	        	    throw new EC2ServiceException(ServerError.InternalError, "Template action failed: " + item.getFirstChild().getNodeValue());
                }
-               throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Template action failed");
+               throw new EC2ServiceException(ServerError.InternalError, "Template action failed");
 	    	   
 		  case 1:  // Successfully completed
       	       match = cloudResp.getElementsByTagName( "id" ); 
@@ -1703,9 +1752,9 @@ public class EC2Engine {
                if ( 0 < match.getLength()) {
     	            item = match.item(0);
     	            if (null != item && null != item.getFirstChild())
-    	        	    throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Volume action failed: " + item.getFirstChild().getNodeValue());
+    	        	    throw new EC2ServiceException(ServerError.InternalError, "Volume action failed: " + item.getFirstChild().getNodeValue());
                }
-               throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Volume action failed");
+               throw new EC2ServiceException(ServerError.InternalError, "Volume action failed");
 	    	   
 		  case 1:  // Successfully completed
       	       match = cloudResp.getElementsByTagName( "id" ); 
@@ -1766,9 +1815,9 @@ public class EC2Engine {
                 if ( 0 < match.getLength()) {
         	         item = match.item(0);
         	         if (null != item && null != item.getFirstChild())
-        	         	 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Snapshot action failed: " + item.getFirstChild().getNodeValue());
+        	         	 throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed: " + item.getFirstChild().getNodeValue());
                 }
-                throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Snapshot action failed");
+                throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed");
     	   
 	       case 1:  // Successfully completed
   	            match = cloudResp.getElementsByTagName( "id" ); 
@@ -1902,7 +1951,7 @@ public class EC2Engine {
      * @param publicIps - an array of IP addresses we are interested in getting information on.
      */
     private EC2DescribeAddressesResponse listPublicIpAddresses( String[] publicIps )
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException
     {
         EC2DescribeAddressesResponse response = new EC2DescribeAddressesResponse();
 
@@ -1990,7 +2039,7 @@ public class EC2Engine {
  		}
  		zones = listZones( interestedZones );
 	    
- 		if (null == zones.getZoneIdAt( 0 )) throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidParameterValue, "Unknown zoneName value - " + zoneName);
+ 		if (null == zones.getZoneIdAt( 0 )) throw new EC2ServiceException(ClientError.InvalidParameterValue, "Unknown zoneName value - " + zoneName);
  		return zones.getZoneIdAt( 0 );
  	}
  	
@@ -2016,11 +2065,11 @@ public class EC2Engine {
  		else if (instanceType.equalsIgnoreCase( "m2.2xlarge" )) found = M22Xlarge;
  		else if (instanceType.equalsIgnoreCase( "m2.4xlarge" )) found = M24Xlarge;
  		else if (instanceType.equalsIgnoreCase( "cc1.4xlarge")) found = CC14xlarge;
- 		else throw new EC2ServiceException(EC2ServiceException.ClientError.Unsupported, "Unknown: " + instanceType);
+ 		else throw new EC2ServiceException(ClientError.Unsupported, "Unknown: " + instanceType);
  		     
 // 		if ( null == found.getDiskOfferingId() || null == found.getServiceOfferingId())
  	 	if (found.getServiceOfferingId() == null)
- 			 throw new EC2ServiceException(EC2ServiceException.ClientError.Unsupported, "Not configured properly: " + instanceType);
+ 			 throw new EC2ServiceException(ClientError.Unsupported, "Not configured properly: " + instanceType);
  		else return found;
  	}
  	
@@ -2090,7 +2139,7 @@ public class EC2Engine {
     	        }
 	        }
         }
-		throw new EC2ServiceException(EC2ServiceException.ClientError.InvalidParameterValue, "Unknown osTypeName value - " + osTypeName);
+		throw new EC2ServiceException(ClientError.InvalidParameterValue, "Unknown osTypeName value - " + osTypeName);
     }
 
     /**
@@ -2586,6 +2635,175 @@ public class EC2Engine {
 	    return snapshots;
     }
 
+    public Account getAccount() {
+    	String query = "command=listAccounts";
+    	Document response = null;
+    	Account account = new Account();
+
+    	try {
+    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listAccounts", true);
+		} catch (Exception e) {
+			logger.error( "List Accounts - " + e.toString());
+			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+		}
+
+		NodeList match = response.getElementsByTagName("id");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setId(match.item(0).getFirstChild().getNodeValue());
+		
+		match = response.getElementsByTagName("name");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setAccountName(match.item(0).getFirstChild().getNodeValue());
+		
+		match = response.getElementsByTagName("domainid");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setDomainId(match.item(0).getFirstChild().getNodeValue());
+		
+		match = response.getElementsByTagName("domain");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setDomainName(match.item(0).getFirstChild().getNodeValue());
+
+		return account;
+    }
+    
+    /**
+     * Check for three network types in succession until one is found.
+     * Creates a new one if no network is found.
+     * 
+     * @return A network id suitable for use.
+     */
+    private String getNetworkId(String zoneId) {
+    	String networkId = null;
+    	
+    	if (networkId==null) networkId = getNetworkId("direct", false);
+    	if (networkId==null) networkId = getNetworkId("direct", true);
+    	if (networkId==null) networkId = getNetworkId("virtual", false);
+    	if (networkId==null) networkId = createNetwork(zoneId);
+    	
+    	return networkId;
+    }
+    
+    private String getNetworkId(String networkType, boolean shared) {
+    	String query = "command=listNetworks";
+    	Document response = null;
+    	
+    	if (!shared) {
+        	Account account = getAccount();
+    		query = query.concat("&account=").concat(account.getAccountName());
+    		query = query.concat("&domainid=").concat(account.getDomainId());
+    	} 
+    		
+    	query = query.concat("&isdefault=").concat("true");
+    	if (shared) query = query.concat("&isshared=").concat("true");
+    	query = query.concat("&type=").concat(networkType);
+    	
+    	try {
+    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listNetworks", true);
+    	} catch (Exception e) {
+    		logger.error( "List Networks - " + e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	}
+    	
+    	// Return the first network id found.
+    	NodeList parent = response.getElementsByTagName("network");
+    	if (parent.getLength() > 0 && parent.item(0).hasChildNodes()) {
+    		NodeList children = parent.item(0).getChildNodes();
+    		for (int i = 0; i < children.getLength(); i++) {
+    			if (children.item(0).getNodeName().equals("id")) {
+    				return children.item(0).getNodeValue();
+    			}
+    		}
+    	}
+    	
+    	return null;
+    }
+    
+    private String createNetwork(String zoneId) {
+    	String query = "command=createNetwork";
+    	Document response = null;
+    	Account account = getAccount();
+    	Tuple<String, String> networkOffering = getNetworkOffering();
+    	
+    	try {
+    		query = query.concat("&account=").concat(account.getAccountName());
+    		query = query.concat("&displaytext=").concat(safeURLencode(networkOffering.getSecond()));
+    		query = query.concat("&domainid=").concat(account.getDomainId());
+    		query = query.concat("&name=").concat(safeURLencode("EC2 created network"));
+    		query = query.concat("&networkofferingid=").concat(networkOffering.getFirst());
+    		query = query.concat("&zoneid=").concat(zoneId);
+		
+    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "createNetwork", true);
+    	} catch (Exception e) {
+    		logger.error("Create Network - " + e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	}
+		
+		NodeList match = response.getElementsByTagName("id");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) 
+			return match.item(0).getFirstChild().getNodeValue();
+		
+		logger.error("Create Network - Unable to create a new network");
+		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    }
+    
+    private Tuple<String, String> getNetworkOffering() {
+    	String query = "command=listNetworkOfferings";
+    	Document response = null;
+    	
+    	query = query.concat("&isdefault=true");
+    	query = query.concat("&traffictype=guest");
+    	
+    	try {
+    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listNetworkOfferings", true);
+    	} catch (Exception e) {
+    		logger.error("List Network Offerings - " + e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	}
+    	
+    	Tuple<String, String> offering = new Tuple<String, String>("", ""); 
+		NodeList match = response.getElementsByTagName("id");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) { 
+			offering.setFirst(match.item(0).getFirstChild().getNodeValue());
+		} else {
+    		logger.error("List Network Offerings - No suitable network offering found");
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+		}
+		match = response.getElementsByTagName("displaytext");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) {
+			offering.setSecond(match.item(0).getFirstChild().getNodeValue());
+		}
+    	
+    	return offering;
+    }
+    
+    private String getDCNetworkType(String zoneId) {
+    	String query = "command=listZones";
+    	Document response = null;
+
+    	query = query.concat("&id=").concat(zoneId);
+    	
+      	try {
+    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listZones", true);
+    	} catch (Exception e) {
+    		logger.error("List Zones - " + e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	}
+    	
+		NodeList match = response.getElementsByTagName("networktype");
+		if (match.getLength() > 0 && match.item(0).hasChildNodes()) {
+			return match.item(0).getFirstChild().getNodeValue();
+		}
+
+		logger.error("List Zones - Unable to determine zone network type");
+		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    }
+       
+    /**
+     * Ensures that the CloudStack back-end is at least of version @param csVersion. 
+     * Throws a Server.InternalError {@link EC2ServiceException} if it's not.  
+     */
+    private void ensureVersion(int csVersion) {
+    	if (cloudStackVersion < csVersion) 
+    		throw new EC2ServiceException(ServerError.InternalError, "CloudStack version " 
+    				+ String.valueOf((double)csVersion/100) + " or higher is needed for this command.");
+    }
+    
     /**
      * Has the job finished?
      * 
@@ -2657,7 +2875,7 @@ public class EC2Engine {
     	else if (device.equalsIgnoreCase( "/dev/xvdh" )) request.setDeviceId( 7 );  
     	else if (device.equalsIgnoreCase( "/dev/xvdi" )) request.setDeviceId( 8 );  
     	else if (device.equalsIgnoreCase( "/dev/xvdj" )) request.setDeviceId( 9 );  
-    	else throw new EC2ServiceException(EC2ServiceException.ClientError.Unsupported, device + " is not supported" );
+    	else throw new EC2ServiceException(ClientError.Unsupported, device + " is not supported" );
     	     
     	return request;
     }
@@ -2733,10 +2951,10 @@ public class EC2Engine {
         if (400 <= code.intValue()) 
         {
         	if ( null != (errorMsg = connect.getResponseMessage()))
-        		 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, code.toString() + " " + errorMsg);
+        		 throw new EC2ServiceException(ServerError.InternalError, code.toString() + " " + errorMsg);
         	else if ( null != (errorMsg = connect.getHeaderField("X-Description")))
-        		 throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, code.toString() + " " + errorMsg);
-        	else throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, command + " cloud API HTTP Error: " + code.toString());
+        		 throw new EC2ServiceException(ServerError.InternalError, code.toString() + " " + errorMsg);
+        	else throw new EC2ServiceException(ServerError.InternalError, command + " cloud API HTTP Error: " + code.toString());
         }
 		DocumentBuilder db = dbf.newDocumentBuilder();
 		return db.parse( connect.getInputStream());

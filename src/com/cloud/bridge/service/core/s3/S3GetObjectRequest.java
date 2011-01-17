@@ -26,19 +26,16 @@ public class S3GetObjectRequest extends S3Request {
 	private String version;
 	private boolean returnMetadata;
 	private boolean returnData;
-	private boolean inlineData;
-	
+	private boolean inlineData;	
 	private long byteRangeStart = -1;
 	private long byteRangeEnd = -1;
-	private String[] ifMatch;
-	private String[] ifNoneMatch;
-	private Calendar ifModifiedSince;
-	private Calendar ifUnmodifiedSince;
 	private boolean returnCompleteObjectOnConditionFailure;
+	private S3ConditionalHeaders conds;
 	
 	public S3GetObjectRequest() {
 		super();
 		version = null;
+		returnCompleteObjectOnConditionFailure = false;
 	}
 
 	public String getBucketName() {
@@ -105,44 +102,19 @@ public class S3GetObjectRequest extends S3Request {
 		this.byteRangeEnd = byteRangeEnd;
 	}
 
-	public String[] getIfMatch() {
-		return ifMatch;
-	}
-
-	public void setIfMatch(String[] ifMatch) {
-		this.ifMatch = ifMatch;
-	}
-
-	public String[] getIfNoneMatch() {
-		return ifNoneMatch;
-	}
-
-	public void setIfNoneMatch(String[] ifNoneMatch) {
-		this.ifNoneMatch = ifNoneMatch;
-	}
-
-	public Calendar getIfModifiedSince() {
-		return ifModifiedSince;
-	}
-
-	public void setIfModifiedSince(Calendar ifModifiedSince) {
-		this.ifModifiedSince = ifModifiedSince;
-	}
-
-	public Calendar getIfUnmodifiedSince() {
-		return ifUnmodifiedSince;
-	}
-
-	public void setIfUnmodifiedSince(Calendar ifUnmodifiedSince) {
-		this.ifUnmodifiedSince = ifUnmodifiedSince;
-	}
-
 	public boolean isReturnCompleteObjectOnConditionFailure() {
 		return returnCompleteObjectOnConditionFailure;
 	}
 
-	public void setReturnCompleteObjectOnConditionFailure(
-			boolean returnCompleteObjectOnConditionFailure) {
+	public void setReturnCompleteObjectOnConditionFailure(boolean returnCompleteObjectOnConditionFailure) {
 		this.returnCompleteObjectOnConditionFailure = returnCompleteObjectOnConditionFailure;
+	}
+	
+	public void setConditions(S3ConditionalHeaders conds) {
+		this.conds = conds;
+	}
+	
+	public S3ConditionalHeaders getConditions() {
+		return conds;
 	}
 }

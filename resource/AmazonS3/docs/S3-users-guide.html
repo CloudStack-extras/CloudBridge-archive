@@ -4,7 +4,7 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's S3 API User's Guide</H1>
-9/2/2010
+1/12/2011                   
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#part1">Part 1. Cloud.com's Specific Implementation Details</A></LI>
@@ -27,7 +27,7 @@ The S3 service uses the user's Cloud.com API access and secret keys <A href="#re
 the REST and SOAP authentication algorithms.  This is done by re-using an EC2 provided REST command.   Once
 this URL is invoked the user has registered for both the S3 service and the EC2 REST service.
 <pre>
-http://&lt;fqdn-or-ip>:&lt;port>/bridge/rest/AmazonEC2?Action=SetUserKeys&accesskey=&lt;key>&secretkey=&lt;key>
+http://&lt;fqdn-or-ip>:&lt;port>/bridge/rest/AmazonS3?Action=SetUserKeys&accesskey=&lt;key>&secretkey=&lt;key>
 </pre>
 SetUserKeys is an <I>unauthorized</I> REST call.</br>
 A HTTP 200 result code is returned on success and a 401 on failure.
@@ -73,12 +73,18 @@ GET Bucket versioning
 PUT Bucket
 PUT Bucket acl
 PUT Bucket versioning
+List Multipart Uploads
 DELETE Object
 GET Object
 GET Object acl
 HEAD Object
 POST Object
 PUT Object
+Initiate Multipart Upload
+Upload Part
+Complete Multipart Upload
+Abort Multipart Upload
+List Parts
 
 SOAP calls:
 ListAllMyBuckets
@@ -89,6 +95,7 @@ GetBucketAccessControlPolicy
 SetBucketAccessControlPolicy
 PutObjectInline
 PutObject
+CopyObject
 GetObject
 GetObjectExtended
 DeleteObject

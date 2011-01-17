@@ -16,6 +16,7 @@
 package com.cloud.bridge.service.core.s3;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -29,7 +30,8 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import javax.activation.DataHandler;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.hibernate.LockMode;
@@ -46,6 +48,7 @@ import com.cloud.bridge.model.SObjectItem;
 import com.cloud.bridge.persist.PersistContext;
 import com.cloud.bridge.persist.dao.MHostDao;
 import com.cloud.bridge.persist.dao.MHostMountDao;
+import com.cloud.bridge.persist.dao.MultipartLoadDao;
 import com.cloud.bridge.persist.dao.SAclDao;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.persist.dao.SHostDao;
@@ -56,6 +59,7 @@ import com.cloud.bridge.service.S3BucketAdapter;
 import com.cloud.bridge.service.S3FileSystemBucketAdapter;
 import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.UserContext;
+import com.cloud.bridge.service.core.s3.S3CopyObjectRequest.MetadataDirective;
 import com.cloud.bridge.service.exception.HostNotMountedException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
@@ -75,13 +79,64 @@ public class S3Engine {
     protected final static Logger logger = Logger.getLogger(S3Engine.class);
     
     private final int LOCK_ACQUIRING_TIMEOUT_SECONDS = 10;		// ten seconds
-	
+
     private final Map<Integer, S3BucketAdapter> bucketAdapters = new HashMap<Integer, S3BucketAdapter>();
     
     public S3Engine() {
     	bucketAdapters.put(SHost.STORAGE_HOST_TYPE_LOCAL, new S3FileSystemBucketAdapter());
     }
     
+    /**
+     * We treat this simply as first a get and then a put of the object the user wants to copy.
+     */
+	public S3CopyObjectResponse handleRequest(S3CopyObjectRequest request) 
+	{
+		S3CopyObjectResponse response = new S3CopyObjectResponse();
+		
+		// [A] Get the object we want to copy
+		S3GetObjectRequest getRequest = new S3GetObjectRequest();
+		getRequest.setBucketName(request.getSourceBucketName());
+		getRequest.setKey(request.getSourceKey());
+		getRequest.setVersion(request.getVersion());
+		getRequest.setConditions( request.getConditions());
+
+		getRequest.setInlineData( true );
+		getRequest.setReturnData( true );
+		if ( MetadataDirective.COPY == request.getDirective()) 
+		     getRequest.setReturnMetadata( true );
+		else getRequest.setReturnMetadata( false );		
+	    S3GetObjectResponse originalObject = handleRequest(getRequest); 
+	
+	    int resultCode = originalObject.getResultCode();
+	    if (200 != resultCode) {
+	    	response.setResultCode( resultCode );
+	    	response.setResultDescription( originalObject.getResultDescription());
+	    	return response;
+	    }
+	    	    
+	    response.setCopyVersion( originalObject.getVersion());
+
+	    
+	    // [B] Put the object into the destination bucket
+	    S3PutObjectInlineRequest putRequest = new S3PutObjectInlineRequest();
+	    putRequest.setBucketName(request.getDestinationBucketName()) ;
+	    putRequest.setKey(request.getDestinationKey());
+		if ( MetadataDirective.COPY == request.getDirective()) 
+			 putRequest.setMetaEntries(originalObject.getMetaEntries());
+		else putRequest.setMetaEntries(request.getMetaEntries());	
+	    putRequest.setAcl(request.getAcl());                    // -> if via a SOAP call
+	    putRequest.setCannedAccess(request.getCannedAccess());  // -> if via a REST call 
+	    putRequest.setData(originalObject.getData());
+
+	    S3PutObjectInlineResponse putResp = handleRequest(putRequest);  
+	    response.setResultCode( putResp.resultCode );
+	    response.setResultDescription( putResp.getResultDescription());
+		response.setETag( putResp.getETag());
+		response.setLastModified( putResp.getLastModified());
+		response.setPutVersion( putResp.getVersion());
+		return response;
+	}
+
     public S3CreateBucketResponse handleRequest(S3CreateBucketRequest request) 
     {
     	S3CreateBucketResponse response = new S3CreateBucketResponse();
@@ -98,7 +153,7 @@ public class S3Engine {
 				if(bucketDao.getByName(request.getBucketName()) != null)
 					throw new ObjectAlreadyExistsException("Bucket already exists"); 
 					
-				shostTuple = allocBucketStorageHost(request.getBucketName());
+				shostTuple = allocBucketStorageHost(request.getBucketName(), null);
 				
 				SBucket sbucket = new SBucket();
 				sbucket.setName(request.getBucketName());
@@ -296,6 +351,219 @@ public class S3Engine {
     	return policy;
     }
     
+    /**
+     * This function should be called if a multipart upload is aborted OR has completed successfully and
+     * the individual parts have to be cleaned up.
+     * 
+     * @param bucketName
+     * @param uploadId
+     * @return
+     */
+    public int freeUploadParts(String bucketName, int uploadId)
+    {
+		// -> we need to look up the final bucket to figure out which mount point to use to save the part in
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "initiateMultipartUpload failed since " + bucketName + " does not exist" );
+			return 404;
+		}
+	
+		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
+		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
+
+		try {
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
+    	    if (null == uploadDao.multipartExits( uploadId )) {
+    			logger.error( "initiateMultipartUpload failed since multipart upload" + uploadId + " does not exist" );
+    	    	return 404;
+    	    }
+    	    
+    	    // -> the multipart initiator or bucket owner can do this action
+    	    String initiator = uploadDao.getInitiator( uploadId );
+    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
+    	    	// -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
+    			accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    	    }
+
+    	    // -> first get a list of all the uploaded files and delete one by one
+	        S3MultipartPart[] parts = uploadDao.getParts( uploadId, 10000, 0 );
+	        for( int i=0; i < parts.length; i++ )
+	        {    
+    	        bucketAdapter.deleteObject( tupleBucketHost.getSecond(), ServiceProvider.getInstance().getMultipartDir(), parts[i].getPath());
+	        }
+	        
+	        uploadDao.deleteUpload( uploadId );
+    	    return 204;
+
+		} catch (Exception e) {
+			logger.error("freeUploadParts failed due to [" + e.getMessage() + "]", e);	
+			return 500;
+		}     
+	}
+
+    /**
+     * The initiator must have permission to write to the bucket in question in order to initiate
+     * a multipart upload.  Also check to make sure the special folder used to store parts of 
+     * a multipart exists for this bucket.
+     *  
+     * @param request
+     */
+    public S3PutObjectInlineResponse initiateMultipartUpload(S3PutObjectInlineRequest request)
+    {
+    	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
+		String bucketName = request.getBucketName();
+
+		// -> does the bucket exist and can we write to it?
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "initiateMultipartUpload failed since " + bucketName + " does not exist" );
+			response.setResultCode(404);
+		}
+		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		createUploadFolder( bucketName ); 
+
+        try {
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
+    	    int uploadId = uploadDao.initiateUpload( UserContext.current().getAccessKey(), bucketName, request.getKey(), request.getCannedAccess(), request.getMetaEntries());
+    	    response.setUploadId( uploadId );
+    	    response.setResultCode(200);
+    	    
+        } catch( Exception e ) {
+			logger.error( "initiateMultipartUpload exception: " + e.toString());
+        	response.setResultCode(500);
+        }
+
+        return response;
+    }
+
+    /**
+     * Save the object fragment in a special (i.e., hidden) directory inside the same mount point as 
+     * the bucket location that the final object will be stored in.
+     * 
+     * @param request
+     * @param uploadId
+     * @param partNumber
+     * @return S3PutObjectInlineResponse
+     */
+    public S3PutObjectInlineResponse saveUploadPart(S3PutObjectInlineRequest request, int uploadId, int partNumber) 
+    {
+    	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
+		String bucketName = request.getBucketName();
+
+		// -> we need to look up the final bucket to figure out which mount point to use to save the part in
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "saveUploadedPart failed since " + bucketName + " does not exist" );
+			response.setResultCode(404);
+		}
+		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		
+		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
+		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
+		String itemFileName = new String( uploadId + "-" + partNumber );
+		InputStream is = null;
+
+		try {
+			is = request.getDataInputStream();
+			String md5Checksum = bucketAdapter.saveObject(is, tupleBucketHost.getSecond(), ServiceProvider.getInstance().getMultipartDir(), itemFileName);
+			response.setETag(md5Checksum);	
+			
+    	    MultipartLoadDao uploadDao = new MultipartLoadDao();
+    	    uploadDao.savePart( uploadId, partNumber, md5Checksum, itemFileName, (int)request.getContentLength());
+        	response.setResultCode(200);
+
+		} catch (IOException e) {
+			logger.error("UploadPart failed due to " + e.getMessage(), e);
+			response.setResultCode(500);
+		} catch (OutOfStorageException e) {
+			logger.error("UploadPart failed due to " + e.getMessage(), e);
+			response.setResultCode(500);
+		} catch (Exception e) {
+			logger.error("UploadPart failed due to " + e.getMessage(), e);	
+			response.setResultCode(500);
+		} finally {
+			if(is != null) {
+				try {
+					is.close();
+				} catch (IOException e) {
+					logger.error("UploadPart unable to close stream from data handler.", e);
+				}
+			}
+		}
+    	
+		return response;
+    }
+    
+    /**
+     * Create the real object represented by all the parts of the multipart upload.       
+     * 
+     * @param httpResp - servelet response handle to return the headers of the response (including version header) 
+     * @param request - normal parameters need to create a new object (e.g., meta data)
+     * @param parts - list of files that make up the multipart
+     * @param os - response outputstream, this function can take a long time and we are required to
+     *        keep the connection alive by returning whitespace characters back periodically.
+     * @return
+     * @throws IOException 
+     */
+    public S3PutObjectInlineResponse concatentateMultipartUploads(HttpServletResponse httpResp, S3PutObjectInlineRequest request, S3MultipartPart[] parts, OutputStream os) throws IOException
+    {
+    	// [A] Set up and initial error checking
+    	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
+		String bucketName = request.getBucketName();
+		String key = request.getKey();
+		S3MetaDataEntry[] meta = request.getMetaEntries();
+		
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "completeMultipartUpload( failed since " + bucketName + " does not exist" );
+			response.setResultCode(404);
+		}
+		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		
+
+		// [B] Now we need to create the final re-assembled object
+		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, null, request.getCannedAccess());
+		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
+		
+		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
+		String itemFileName = tupleObjectItem.getSecond().getStoredPath();
+		
+		// -> Amazon defines that we must return a 200 response immediately to the client, but
+		// -> we don't know the version header until we hit here
+		httpResp.setStatus(200);
+	    httpResp.setContentType("text/xml; charset=UTF-8");
+		String version = tupleObjectItem.getSecond().getVersion();
+		if (null != version) httpResp.addHeader( "x-amz-version-id", version );	
+        httpResp.flushBuffer();
+		
+
+        // [C] Re-assemble the object from its uploaded file parts
+		try {
+			// explicit transaction control to avoid holding transaction during long file concatenation process
+			PersistContext.commitTransaction();
+			
+			Tuple<String, Long> result = bucketAdapter.concatentateObjects( tupleBucketHost.getSecond(), bucket.getName(), itemFileName, ServiceProvider.getInstance().getMultipartDir(), parts, os );
+			response.setETag(result.getFirst());
+			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
+		
+			SObjectItemDao itemDao = new SObjectItemDao();
+			SObjectItem item = itemDao.get( tupleObjectItem.getSecond().getId());
+			item.setMd5(result.getFirst());
+			item.setStoredSize(result.getSecond().longValue());
+			response.setResultCode(200);
+
+			PersistContext.getSession().save(item);			
+		} 
+		catch (Exception e) {
+			logger.error("completeMultipartUpload failed due to " + e.getMessage(), e);		
+		}
+    	return response;	
+    }
+    
     public S3PutObjectInlineResponse handleRequest(S3PutObjectInlineRequest request) 
     {
     	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
@@ -317,6 +585,7 @@ public class S3Engine {
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
 		String itemFileName = tupleObjectItem.getSecond().getStoredPath();
 		InputStream is = null;
+
 		try {
 			// explicit transaction control to avoid holding transaction during file-copy process
 			PersistContext.commitTransaction();
@@ -326,7 +595,7 @@ public class S3Engine {
 			response.setETag(md5Checksum);
 			response.setLastModified(DateHelper.toCalendar( tupleObjectItem.getSecond().getLastModifiedTime()));
 	        response.setVersion( tupleObjectItem.getSecond().getVersion());
-			
+		
 			SObjectItemDao itemDao = new SObjectItemDao();
 			SObjectItem item = itemDao.get( tupleObjectItem.getSecond().getId());
 			item.setMd5(md5Checksum);
@@ -342,7 +611,7 @@ public class S3Engine {
 				try {
 					is.close();
 				} catch (IOException e) {
-					logger.error("Unable to close stream from data handler.", e);
+					logger.error("PutObjectInline unable to close stream from data handler.", e);
 				}
 			}
 		}
@@ -456,10 +725,19 @@ public class S3Engine {
     	return policy;
     }
     
+    /**
+     * Implements both GetObject and GetObjectExtended.
+     * 
+     * @param request
+     * @return
+     */
     public S3GetObjectResponse handleRequest(S3GetObjectRequest request) 
     {
     	S3GetObjectResponse response = new S3GetObjectResponse();
-    	int resultCode = 200;
+    	boolean ifRange = false;
+		long bytesStart = request.getByteRangeStart();
+		long bytesEnd   = request.getByteRangeEnd();
+    	int resultCode  = 200;
 
     	// [A] Verify that the bucket and the object exist
 		SBucketDao bucketDao = new SBucketDao();
@@ -500,9 +778,29 @@ public class S3Engine {
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
 			return response;  		
     	}
+	
 		
+	    // [C] Handle all the IFModifiedSince ... conditions, and access privileges
 		accessAllowed( "SObject", item.getId(), SAcl.PERMISSION_READ );
-		
+
+		// -> http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.27 (HTTP If-Range header)
+		if (request.isReturnCompleteObjectOnConditionFailure() && (0 <= bytesStart && 0 <= bytesEnd)) ifRange = true;
+
+		resultCode = conditionPassed( request.getConditions(), item.getLastModifiedTime(), item.getMd5(), ifRange );
+	    if ( -1 == resultCode ) {
+	    	// -> If-Range implementation, we have to return the entire object
+	    	resultCode = 200;
+	    	bytesStart = -1;
+	    	bytesEnd = -1;
+	    }
+	    else if (200 != resultCode) {
+			response.setResultCode( resultCode );
+	    	response.setResultDescription( "Precondition Failed" );			
+			return response;
+		}
+
+
+		// [D] Return the contents of the object inline	
 		// -> extract the meta data that corresponds the specific versioned item 
 		SMetaDao metaDao = new SMetaDao();
 		List<SMeta> itemMetaData = metaDao.getByTarget( "SObjectItem", item.getId());
@@ -520,15 +818,9 @@ public class S3Engine {
 		    }
 		    response.setMetaEntries( metaEntries );
 		}
-		
-		
-    	// TODO logic of IfMatch IfNoneMatch, IfModifiedSince, IfUnmodifiedSince (already done in the REST half)  	
-		
-		// [C] Return the contents of the object inline
+		    
 		//  -> support a single byte range
-		long bytesStart = request.getByteRangeStart();
-		long bytesEnd   = request.getByteRangeEnd();
-		if ( 0 <= bytesStart && 0 <= bytesEnd) {
+		if ( 0 <= bytesStart && 0 <= bytesEnd ) {
 		     response.setContentLength( bytesEnd - bytesStart );	
 		     resultCode = 206;
 		}
@@ -544,7 +836,7 @@ public class S3Engine {
     			Tuple<SHost, String> tupleSHostInfo = getBucketStorageHost(sbucket);
 				S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleSHostInfo.getFirst());
 				
-				if ( request.getByteRangeStart() >= 0 && request.getByteRangeEnd() >= 0)
+				if ( 0 <= bytesStart && 0 <= bytesEnd )
 					 response.setData(bucketAdapter.loadObjectRange(tupleSHostInfo.getSecond(), 
 						   request.getBucketName(), item.getStoredPath(), bytesStart, bytesEnd ));
 				else response.setData(bucketAdapter.loadObject(tupleSHostInfo.getSecond(), request.getBucketName(), item.getStoredPath()));
@@ -559,7 +851,6 @@ public class S3Engine {
     /**
      * In one place we handle both versioning and non-versioning delete requests.
      */
-    //@SuppressWarnings("deprecation")
 	public S3Response handleRequest(S3DeleteObjectRequest request) 
 	{		
 		// -> verify that the bucket and object exist
@@ -837,7 +1128,35 @@ public class S3Engine {
 		throw new HostNotMountedException("Storage host " + shost.getHost() + " is not locally mounted");
 	}
     
-	private Tuple<SHost, String> allocBucketStorageHost(String bucketName) 
+	/**
+	 * Locate the folder to hold upload parts at the same mount point as the upload's final bucket
+	 * location.   Create the upload folder dynamically.
+	 * 
+	 * @param bucketName
+	 */
+	private void createUploadFolder(String bucketName) 
+	{
+		if (PersistContext.acquireNamedLock("bucket.creation", LOCK_ACQUIRING_TIMEOUT_SECONDS)) 
+		{
+			try {
+			    allocBucketStorageHost(bucketName, ServiceProvider.getInstance().getMultipartDir());
+            }
+		    finally {
+		    	PersistContext.releaseNamedLock("bucket.creation");
+		    }
+		}
+	}
+	
+	/**
+	 * The overrideName is used to create a hidden storage bucket (folder) in the same location
+	 * as the given bucketName.   This can be used to create a folder for parts of a multipart
+	 * upload for the associated bucket.
+	 * 
+	 * @param bucketName
+	 * @param overrideName
+	 * @return
+	 */
+	private Tuple<SHost, String> allocBucketStorageHost(String bucketName, String overrideName) 
 	{
 		MHostDao mhostDao = new MHostDao();
 		SHostDao shostDao = new SHostDao();
@@ -851,7 +1170,7 @@ public class S3Engine {
 			MHostMount[] mounts = (MHostMount[])mhost.getMounts().toArray();
 			MHostMount mount = mounts[random.nextInt(mounts.length)];
 			S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(mount.getShost());
-			bucketAdapter.createContainer(mount.getMountPath(), bucketName);
+			bucketAdapter.createContainer(mount.getMountPath(), (null != overrideName ? overrideName : bucketName));
 			return new Tuple<SHost, String>(mount.getShost(), mount.getMountPath());
 		}
 		
@@ -863,7 +1182,7 @@ public class S3Engine {
 				throw new InternalErrorException("storage.root is configured but not initialized");
 			
 			S3BucketAdapter bucketAdapter =  getStorageHostBucketAdapter(localSHost);
-			bucketAdapter.createContainer(localSHost.getExportRoot(), bucketName);
+			bucketAdapter.createContainer(localSHost.getExportRoot(),(null != overrideName ? overrideName : bucketName));
 			return new Tuple<SHost, String>(localSHost, localStorageRoot);
 		}
 		
@@ -1054,7 +1373,7 @@ public class S3Engine {
         {
             S3Grant defaultGrant = new S3Grant();
             defaultGrant.setGrantee(SAcl.GRANTEE_USER);
-            defaultGrant.setCanonicalUserID( userId);
+            defaultGrant.setCanonicalUserID( userId );
             defaultGrant.setPermission( permission );
             defaultAcl.addGrant( defaultGrant );       
             aclDao.save( target, targetId, defaultAcl );
@@ -1102,7 +1421,8 @@ public class S3Engine {
 	 * For cases where an ACL is meant for any anonymous user (or 'AllUsers') we place a "A" for the 
 	 * Canonical User Id ("A" is not a legal Cloud Stack Access key).
 	 */
-	public void accessAllowed( String target, long targetId, int requestedPermission ) {
+	public static void accessAllowed( String target, long targetId, int requestedPermission ) 
+	{
 		SAclDao aclDao = new SAclDao();
 		
 		// -> if an annoymous request, then canonicalUserId is an empty string
@@ -1122,7 +1442,7 @@ public class S3Engine {
         throw new PermissionDeniedException( "Access Denied - user does not have the required permission" );
 	}
 	
-	private boolean hasPermission( List<SAcl> priviledges, int requestedPermission ) 
+	private static boolean hasPermission( List<SAcl> priviledges, int requestedPermission ) 
 	{
         ListIterator it = priviledges.listIterator();
         while( it.hasNext()) 
@@ -1133,5 +1453,34 @@ public class S3Engine {
            if (requestedPermission == (permission & requestedPermission)) return true;
         }
         return false;
+	}
+	
+	/**
+	 * ifRange is true and IfUnmodifiedSince or IfMatch fails then we return the entire object (indicated by
+	 * returning a -1 as the function result.
+	 * 
+	 * @param ifCond - conditional get defined by these tests
+	 * @param lastModified - value used on ifModifiedSince or ifUnmodifiedSince
+	 * @param ETag - value used on ifMatch and ifNoneMatch
+	 * @param ifRange - using an If-Range HTTP functionality 
+	 * @return -1 means return the entire object with an HTTP 200 (not a subrange)
+	 */
+	private int conditionPassed( S3ConditionalHeaders ifCond, Date lastModified, String ETag, boolean ifRange ) 
+	{	
+		if (null == ifCond) return 200;
+		
+		if (0 > ifCond.ifModifiedSince( lastModified )) 
+			return 304;
+		
+		if (0 > ifCond.ifUnmodifiedSince( lastModified )) 
+			return (ifRange ? -1 : 412);
+		
+		if (0 > ifCond.ifMatchEtag( ETag ))  			  
+			return (ifRange ? -1 : 412);
+		
+		if (0 > ifCond.ifNoneMatchEtag( ETag ))  		  
+			return 412;
+		
+		return 200;
 	}
 }

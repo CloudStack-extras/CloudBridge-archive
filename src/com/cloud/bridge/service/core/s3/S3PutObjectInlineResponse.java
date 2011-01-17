@@ -24,9 +24,11 @@ public class S3PutObjectInlineResponse extends S3Response {
 	protected String ETag;
 	protected Calendar lastModified;
 	protected String version;
+	protected int uploadId;
 	
 	public S3PutObjectInlineResponse() {
 		super();
+		uploadId = -1;
 	}
 
 	public String getETag() {
@@ -51,5 +53,13 @@ public class S3PutObjectInlineResponse extends S3Response {
 
 	public void setVersion(String version) {
 		this.version = version;
+	}
+	
+	public int getUploadId() {
+		return uploadId;
+	}
+
+	public void setUploadId(int uploadId) {
+		this.uploadId = uploadId;
 	}
 }

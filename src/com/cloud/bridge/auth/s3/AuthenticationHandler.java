@@ -20,7 +20,6 @@ import java.sql.SQLException;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPBody;
 import org.apache.log4j.Logger;
-import org.apache.axis2.addressing.EndpointReference;
 import org.apache.axis2.context.MessageContext;
 import org.apache.axis2.engine.Handler;
 import org.apache.axis2.AxisFault;

@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -28,11 +29,15 @@ import javax.activation.DataSource;
 
 import org.apache.log4j.Logger;
 
+import com.cloud.bridge.model.SObject;
+import com.cloud.bridge.model.SObjectItem;
+import com.cloud.bridge.service.core.s3.S3MultipartPart;
 import com.cloud.bridge.service.exception.FileNotExistException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.service.exception.OutOfStorageException;
 import com.cloud.bridge.util.FileRangeDataSource;
 import com.cloud.bridge.util.StringHelper;
+import com.cloud.bridge.util.Tuple;
 
 /**
  * @author Kelven Yang
@@ -45,9 +50,14 @@ public class S3FileSystemBucketAdapter implements S3BucketAdapter {
 	
 	@Override
 	public void createContainer(String mountedRoot, String bucket) {
+		
 		String dir = getBucketFolderDir(mountedRoot, bucket);
-		if(!new File(dir).mkdirs())
-			throw new OutOfStorageException("Unable to create " + dir + " for bucket " + bucket); 
+		File container = new File(dir);
+		
+		if (!container.exists()) {
+		   if (!container.mkdirs())
+			   throw new OutOfStorageException("Unable to create " + dir + " for bucket " + bucket); 
+		}
 	}
 	
 	@Override
@@ -72,8 +82,11 @@ public class S3FileSystemBucketAdapter implements S3BucketAdapter {
 	}
 	
 	@Override
-	public String saveObject(InputStream is, String mountedRoot, String bucket, String fileName) {
-		MessageDigest md5;
+	public String saveObject(InputStream is, String mountedRoot, String bucket, String fileName) 
+	{
+		FileOutputStream fos = null;
+		MessageDigest md5 = null;
+		
 		try {
 			md5 = MessageDigest.getInstance("MD5");
 		} catch (NoSuchAlgorithmException e) {
@@ -87,20 +100,93 @@ public class S3FileSystemBucketAdapter implements S3BucketAdapter {
 			file.delete();
 			file.createNewFile();
 			
-	        final FileOutputStream fos = new FileOutputStream(file);
+	        fos = new FileOutputStream(file);
 	        byte[] buffer = new byte[4096];
 	        int len = 0;
 	        while( (len = is.read(buffer)) > 0) {
 	        	fos.write(buffer, 0, len);
 	        	md5.update(buffer, 0, len);
-	        }
-	        fos.close();
-	        
+	        }        
 	        return StringHelper.toHexString(md5.digest());
-		} catch(IOException e) {
+	        
+		} 
+		catch(IOException e) {
 			logger.error("Unexpected exception " + e.getMessage(), e);
 			throw new OutOfStorageException(e);
 		}
+		finally {
+			try {
+			    if (null != fos) fos.close();
+			}
+			catch( Exception e ) {
+				logger.error("Can't close FileOutputStream " + e.getMessage(), e);			
+			}
+		}
+	}
+	
+	/**
+	 * From a list of files (each being one part of the multipart upload), concatentate all files into a single
+	 * object that can be accessed by normal S3 calls.  This function could take a long time since a multipart is
+	 * allowed to have upto 10,000 parts (each 5 gib long).   Amazon defines that while this operation is in progress
+	 * whitespace is sent back to the client inorder to keep the HTTP connection alive.
+	 * 
+	 * @param mountedRoot - where both the source and dest buckets are located
+	 * @param destBucket - resulting location of the concatenated objects
+	 * @param fileName - resulting file name of the concatenated objects
+	 * @param sourceBucket - special bucket used to save uploaded file parts
+	 * @param parts - an array of file names in the sourceBucket
+	 * @param client - if not null, then keep the servlet connection alive while this potentially long concatentation takes place
+	 * @return Tuple with the first value the MD5 of the final object, and the second value the length of the final object
+	 */
+	@Override
+	public Tuple<String,Long> concatentateObjects(String mountedRoot, String destBucket, String fileName, String sourceBucket, S3MultipartPart[] parts, OutputStream client) 
+	{
+		MessageDigest md5;
+		long totalLength = 0;
+		
+		try {
+			md5 = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			logger.error("Unexpected exception " + e.getMessage(), e);
+			throw new InternalErrorException("Unable to get MD5 MessageDigest", e);
+		}
+		
+		File file = new File(getBucketFolderDir(mountedRoot, destBucket) + File.separatorChar + fileName);
+		try {
+			// -> when versioning is off we need to rewrite the file contents
+			file.delete();
+			file.createNewFile();
+			
+	        final FileOutputStream fos = new FileOutputStream(file);
+	        byte[] buffer = new byte[4096];
+	        
+	        // -> get the input stream for the next file part
+	        for( int i=0; i < parts.length; i++ )
+	        {
+	           DataHandler nextPart = loadObject( mountedRoot, sourceBucket, parts[i].getPath());
+	           InputStream is = nextPart.getInputStream();
+	           
+	           int len = 0;
+	           while( (len = is.read(buffer)) > 0) {
+	        	   fos.write(buffer, 0, len);
+	        	   md5.update(buffer, 0, len);
+	        	   totalLength += len;
+	           }
+	           is.close();
+	           
+	           // -> after each file write tell the client we are still here to keep connection alive
+	           if (null != client) {
+	        	   client.write( new String(" ").getBytes());
+	        	   client.flush();
+	           }
+	        }        
+	        fos.close();	
+	        return new Tuple<String, Long>(StringHelper.toHexString(md5.digest()), new Long(totalLength));
+		} 
+		catch(IOException e) {
+			logger.error("concatentateObjects unexpected exception " + e.getMessage(), e);
+			throw new OutOfStorageException(e);
+		}	
 	}
 	
 	@Override
@@ -116,8 +202,11 @@ public class S3FileSystemBucketAdapter implements S3BucketAdapter {
 	@Override
 	public void deleteObject(String mountedRoot, String bucket, String fileName) {
 		String filePath = new String( getBucketFolderDir(mountedRoot, bucket) + File.separatorChar + fileName );
-		File file = new File( filePath );		
-		if (!file.delete()) throw new OutOfStorageException( "Unable to delete " + filePath + " for object deletion" ); 
+		File file = new File( filePath );	
+		if (!file.delete()) {
+			logger.error("file: " + filePath + ", f=" + file.isFile() + ", h=" + file.isHidden() + ", e=" + file.exists() + ", w=" + file.canWrite());
+			throw new OutOfStorageException( "Unable to delete " + filePath + " for object deletion" ); 
+		}
 	}
 
 	@Override

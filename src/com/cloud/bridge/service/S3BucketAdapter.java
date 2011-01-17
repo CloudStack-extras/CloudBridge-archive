@@ -16,8 +16,12 @@
 package com.cloud.bridge.service;
 
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import javax.activation.DataHandler;
+
+import com.cloud.bridge.service.core.s3.S3MultipartPart;
+import com.cloud.bridge.util.Tuple;
 
 /**
  * @author Kelven Yang
@@ -30,4 +34,5 @@ public interface S3BucketAdapter {
 	DataHandler loadObject(String mountedRoot, String bucket, String fileName);
 	DataHandler loadObjectRange(String mountedRoot, String bucket, String fileName, long startPos, long endPos);
 	void deleteObject(String mountedRoot, String bucket, String fileName);
+	Tuple<String, Long> concatentateObjects(String mountedRoot, String destBucket, String fileName, String sourceBucket, S3MultipartPart[] parts, OutputStream os);
 }

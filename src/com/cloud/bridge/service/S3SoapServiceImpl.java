@@ -18,12 +18,15 @@ package com.cloud.bridge.service;
 import java.io.IOException;
 import java.util.Calendar;
 
+import org.apache.axis2.AxisFault;
 import org.apache.log4j.Logger;
 
 import com.amazon.s3.AccessControlList;
 import com.amazon.s3.AccessControlPolicy;
 import com.amazon.s3.AmazonS3SkeletonInterface;
 import com.amazon.s3.CanonicalUser;
+import com.amazon.s3.CopyObject;
+import com.amazon.s3.CopyObjectResult;
 import com.amazon.s3.Group;
 import com.amazon.s3.CopyObjectResponse;
 import com.amazon.s3.CreateBucket;
@@ -55,6 +58,7 @@ import com.amazon.s3.ListBucket;
 import com.amazon.s3.ListBucketResponse;
 import com.amazon.s3.ListBucketResult;
 import com.amazon.s3.ListEntry;
+import com.amazon.s3.MetadataDirective;
 import com.amazon.s3.MetadataEntry;
 import com.amazon.s3.Permission;
 import com.amazon.s3.PrefixEntry;
@@ -75,6 +79,9 @@ import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.service.core.s3.S3AccessControlList;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
 import com.cloud.bridge.service.core.s3.S3CanonicalUser;
+import com.cloud.bridge.service.core.s3.S3ConditionalHeaders;
+import com.cloud.bridge.service.core.s3.S3CopyObjectRequest;
+import com.cloud.bridge.service.core.s3.S3CopyObjectResponse;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
 import com.cloud.bridge.service.core.s3.S3CreateBucketResponse;
 import com.cloud.bridge.service.core.s3.S3DeleteBucketRequest;
@@ -118,10 +125,29 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
         throw new UnsupportedOperationException("Unsupported API");
     }
 	     
-	public CopyObjectResponse copyObject(com.amazon.s3.CopyObject copyObject) {
-        //TODO : fill this with the necessary business logic
-        throw new UnsupportedOperationException("Please implement " + this.getClass().getName() + "#copyObject");
-    }
+	public CopyObjectResponse copyObject(CopyObject copyObject) throws AxisFault {
+        S3CopyObjectRequest request = new S3CopyObjectRequest();
+        
+        request.setSourceBucketName(copyObject.getSourceBucket());
+        request.setSourceKey(copyObject.getSourceKey());
+        request.setDestinationBucketName(copyObject.getDestinationBucket());
+        request.setDestinationKey(copyObject.getDestinationKey());
+    
+        MetadataDirective mdd = copyObject.getMetadataDirective();
+        if (null != mdd) request.setDataDirective(mdd.getValue());
+
+		request.setMetaEntries(toEngineMetaEntries(copyObject.getMetadata()));
+		request.setAcl(toEngineAccessControlList(copyObject.getAccessControlList()));
+		
+		S3ConditionalHeaders conds = new S3ConditionalHeaders();
+		conds.setModifiedSince(copyObject.getCopySourceIfModifiedSince());
+		conds.setUnModifiedSince(copyObject.getCopySourceIfUnmodifiedSince());
+		conds.setMatch(copyObject.getCopySourceIfMatch());
+		conds.setNoneMatch(copyObject.getCopySourceIfNoneMatch());
+		request.setConditions(conds);
+		
+	    return toCopyObjectResponse(engine.handleRequest(request));
+   }
  
 	public GetBucketAccessControlPolicyResponse getBucketAccessControlPolicy(
 		GetBucketAccessControlPolicy getBucketAccessControlPolicy) {
@@ -327,7 +353,8 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		return toGetObjectExtendedResponse(engine.handleRequest(toEngineGetObjectRequest(getObjectExtended)));
     }
 	
-	private S3GetObjectRequest toEngineGetObjectRequest(GetObject getObject) {
+	private S3GetObjectRequest toEngineGetObjectRequest(GetObject getObject) 
+	{
 		S3GetObjectRequest request = new S3GetObjectRequest();
 		
 		request.setAccessKey(getObject.getAWSAccessKeyId());
@@ -352,12 +379,15 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		request.setReturnMetadata(getObjectExtended.getGetMetadata());
 		request.setInlineData(getObjectExtended.getInlineData());
 		
+		S3ConditionalHeaders conds = new S3ConditionalHeaders();
+		conds.setModifiedSince(getObjectExtended.getIfModifiedSince());
+		conds.setUnModifiedSince(getObjectExtended.getIfUnmodifiedSince());
+		conds.setMatch(getObjectExtended.getIfMatch());
+		conds.setNoneMatch(getObjectExtended.getIfNoneMatch());
+		request.setConditions(conds);
+
 		request.setByteRangeStart(getObjectExtended.getByteRangeStart());
 		request.setByteRangeEnd(getObjectExtended.getByteRangeEnd());
-		request.setIfMatch(getObjectExtended.getIfMatch());
-		request.setIfModifiedSince(getObjectExtended.getIfModifiedSince());
-		request.setIfUnmodifiedSince(getObjectExtended.getIfUnmodifiedSince());
-		request.setIfNoneMatch(getObjectExtended.getIfNoneMatch());
 		request.setReturnCompleteObjectOnConditionFailure(getObjectExtended.getReturnCompleteObjectOnConditionFailure());
 		return request;
 	}
@@ -398,7 +428,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		param1.setDescription( engineResponse.getResultDescription());
 		result.setStatus( param1 );
 
-		if ( 200 == resultCode )
+		if ( 200 == resultCode || 206 == resultCode )
 		{
 		     result.setData(engineResponse.getData());
 		     result.setETag( engineResponse.getETag());
@@ -517,7 +547,6 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		request.setData(putObjectInline.getData());
 		request.setMetaEntries(toEngineMetaEntries(putObjectInline.getMetadata()));
 		request.setAcl(toEngineAccessControlList(putObjectInline.getAccessControlList()));
-		
 		return request;
 	}
 	
@@ -647,9 +676,25 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 		
 		PutObjectResult result = new PutObjectResult();
 		result.setETag(engineResponse.getETag());
-		result.setLastModified(engineResponse.getLastModified());
-		
+		result.setLastModified(engineResponse.getLastModified());		
 		response.setPutObjectInlineResponse(result);
+		return response;
+	}
+	
+	public static CopyObjectResponse toCopyObjectResponse(S3CopyObjectResponse engineResponse) throws AxisFault {
+		CopyObjectResponse response = new CopyObjectResponse();
+		int resultCode = engineResponse.getResultCode();
+
+		CopyObjectResult result = new CopyObjectResult();		
+		if ( 300 <= resultCode )
+		{
+		     String description = engineResponse.getResultDescription();
+			 throw new AxisFault( "" + resultCode, (null == description ? "" : description));
+		}
+		
+		result.setETag(engineResponse.getETag());
+		result.setLastModified(engineResponse.getLastModified());		 
+		response.setCopyObjectResult(result);
 		return response;
 	}
 }

@@ -1,4 +1,4 @@
-http://localhost:8080/gate/rest/AmazonEC2?Action=DescribeInstances&SignatureVersion=2&SignatureMethod=HmacSHA256&Version=2009-11-30&Timestamp=2010-01-07T15%3A23%3A03Z&Expires=2010-11-07T15%3A23%3A03Z&AWSAccessKeyId=O4O0Niu98EvraLKH2o8SFNMQlXZvuE5ueMDR9CHU5WA2-qv4PEQkgMcrtrNs6eHYwpLySev4Hi03_YXiHz4gGg&Signature=lyHOvu2LNxjLHIAlQo3F0JNSDtuCtqHtAX786cCZDFI=
+      http://localhost:8080/gate/rest/AmazonEC2?Action=DescribeInstances&SignatureVersion=2&SignatureMethod=HmacSHA256&Version=2009-11-30&Timestamp=2010-01-07T15%3A23%3A03Z&Expires=2010-11-07T15%3A23%3A03Z&AWSAccessKeyId=O4O0Niu98EvraLKH2o8SFNMQlXZvuE5ueMDR9CHU5WA2-qv4PEQkgMcrtrNs6eHYwpLySev4Hi03_YXiHz4gGg&Signature=lyHOvu2LNxjLHIAlQo3F0JNSDtuCtqHtAX786cCZDFI=
 
 
 

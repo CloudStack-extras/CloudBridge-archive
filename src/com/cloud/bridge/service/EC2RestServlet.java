@@ -51,6 +51,7 @@ import org.apache.axis2.AxisFault;
 import org.apache.axis2.databinding.ADBBean;
 import org.apache.axis2.databinding.ADBException;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
 import com.amazon.ec2.AttachVolumeResponse;
@@ -1245,10 +1246,11 @@ public class EC2RestServlet extends HttpServlet {
     	if (keyName==null & publicKeyMaterial==null)
     		response.sendError(530, "Missing parameter");
     	
-    	String publicKey = SSHKeysHelper.getPublicKeyFromKeyMaterial(publicKeyMaterial);
-
+        if (!publicKeyMaterial.contains(" "))
+            publicKeyMaterial = new String(Base64.decodeBase64(publicKeyMaterial.getBytes())); 
+    	
     	ImportKeyPairResponse EC2Response = EC2SoapServiceImpl.toImportKeyPair(
-    			ServiceProvider.getInstance().getEC2Engine().importKeyPair(keyName, publicKey));
+    			ServiceProvider.getInstance().getEC2Engine().importKeyPair(keyName, publicKeyMaterial));
     	serializeResponse(response, EC2Response);
     }
 
@@ -1480,9 +1482,9 @@ public class EC2RestServlet extends HttpServlet {
     	XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
     	MTOMAwareXMLSerializer MTOMWriter = new MTOMAwareXMLSerializer( xmlWriter );
     	MTOMWriter.setDefaultNamespace("http://ec2.amazonaws.com/doc/" + wsdlVersion + "/");
-		EC2Response.serialize( null, factory, MTOMWriter );
-		xmlWriter.flush();
-		xmlWriter.close();
-		os.close();
+	EC2Response.serialize( null, factory, MTOMWriter );
+	xmlWriter.flush();
+	xmlWriter.close();
+	os.close();
     }
 }
