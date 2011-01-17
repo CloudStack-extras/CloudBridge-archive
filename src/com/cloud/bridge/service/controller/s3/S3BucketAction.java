@@ -15,9 +15,14 @@
  */
 package com.cloud.bridge.service.controller.s3;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.Calendar;
 
 import javax.servlet.http.HttpServletRequest;
@@ -45,6 +50,7 @@ import com.amazon.s3.ListBucketResponse;
 import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.model.SBucket;
 import com.cloud.bridge.model.SObject;
+import com.cloud.bridge.persist.dao.BucketPolicyDao;
 import com.cloud.bridge.persist.dao.MultipartLoadDao;
 import com.cloud.bridge.persist.dao.SBucketDao;
 import com.cloud.bridge.service.S3Constants;
@@ -99,74 +105,188 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void execute(HttpServletRequest request, HttpServletResponse response) 
-	    throws IOException, XMLStreamException {
+	    throws IOException, XMLStreamException 
+	{
 		String method = request.getMethod(); 
+		String queryString = request.getQueryString();
 		
-		if (method.equalsIgnoreCase("PUT")) 
+		if ( method.equalsIgnoreCase("PUT")) 
 		{
-			String queryString = request.getQueryString();
-			if (queryString != null && queryString.length() > 0) 
-			{
-				if ( queryString.startsWith("acl")) {
-					 executePutBucketAcl(request, response);
-					 return;
-				} 
-				else if(queryString.startsWith("versioning")) {
-					 executePutBucketVersioning(request, response);
-					 return;
-				} 
-				else if(queryString.startsWith("logging")) {
-					 executePutBucketLogging(request, response);
-					 return;
-				}
-			}
-			executePutBucket(request, response);
-			return;
+			 if ( queryString != null && queryString.length() > 0 ) 
+			 {
+			 	  if ( queryString.startsWith("acl")) {
+				 	   executePutBucketAcl(request, response);
+				 	   return;
+				  } 
+				  else if (queryString.startsWith("versioning")) {
+					   executePutBucketVersioning(request, response);
+					   return;
+				  } 
+				  else if (queryString.startsWith("logging")) {
+					   executePutBucketLogging(request, response);
+					   return;
+				  }
+				  else if (queryString.startsWith("policy")) {
+					   executePutBucketPolicy(request, response);
+					   return;
+				  }
+			 }
+			 executePutBucket(request, response);
 		} 
 		else if(method.equalsIgnoreCase("GET")) 
 		{
-			String queryString = request.getQueryString();
-			if (queryString != null && queryString.length() > 0) 
-			{
-				if ( queryString.startsWith("acl")) {
-					 executeGetBucketAcl(request, response);
-					 return;
-				} 
-				else if(queryString.startsWith("versioning")) {
-					 executeGetBucketVersioning(request, response);
-					 return;
-				} 
-				else if(queryString.startsWith("versions")) {
-					 executeGetBucketObjectVersions(request, response);
-					 return;
-				} 
-				else if(queryString.startsWith("logging")) {
-					 executeGetBucketLogging(request, response);
-					 return;
-				} 
-				else if(queryString.startsWith("location")) {
-					 executeGetBucketLocation(request, response);
-					 return;
-				}
-				else if(queryString.startsWith("uploads")) {
-					 executeListMultipartUploads(request, response);
-					 return;
-				}
-			}
+			 if (queryString != null && queryString.length() > 0) 
+			 {
+				 if ( queryString.startsWith("acl")) {
+					  executeGetBucketAcl(request, response);
+					  return;
+				 } 
+				 else if (queryString.startsWith("versioning")) {
+					  executeGetBucketVersioning(request, response);
+					  return;
+				 } 
+				 else if (queryString.startsWith("versions")) {
+					  executeGetBucketObjectVersions(request, response);
+					  return;
+				 } 
+				 else if (queryString.startsWith("logging")) {
+					  executeGetBucketLogging(request, response);
+					  return;
+				 } 
+				 else if (queryString.startsWith("location")) {
+					  executeGetBucketLocation(request, response);
+					  return;
+				 }
+				 else if (queryString.startsWith("uploads")) {
+					  executeListMultipartUploads(request, response);
+					  return;
+				 }
+				 else if (queryString.startsWith("policy")) {
+					  executeGetBucketPolicy(request, response);
+					  return;
+				 }
+			 }
 			
-			String bucketAtr = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
-            if ( bucketAtr.equals( "/" ))
-            	 executeGetAllBuckets(request, response);
-            else executeGetBucket(request, response);
+			 String bucketAtr = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+             if ( bucketAtr.equals( "/" ))
+            	  executeGetAllBuckets(request, response);
+             else executeGetBucket(request, response);
 		} 
 		else if (method.equalsIgnoreCase("DELETE")) 
 		{
-			executeDeleteBucket(request, response);
+			 if (queryString != null && queryString.length() > 0) 
+			 {
+				 if (queryString.startsWith("policy")) {
+					 executeDeleteBucketPolicy(request, response);
+					 return;
+				 }
+			 }
+			 executeDeleteBucket(request, response);
 		} 
 		else throw new IllegalArgumentException("Unsupported method in REST request");
 	}
 	
 	
+	private void executePutBucketPolicy(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	{
+		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String policy = streamToString( request.getInputStream());
+		
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "PUT bucket policy failed since " + bucketName + " does not exist" );
+	    	response.setStatus(404);
+	    	return;
+		}
+		
+		String client = UserContext.current().getCanonicalUserId();
+		if (!client.equals( bucket.getOwnerCanonicalId()))
+		    throw new PermissionDeniedException( "Access Denied - only the owner or someone with PutPolicy permissions can put a policy." );
+	
+    	try {
+	        BucketPolicyDao policyDao = new BucketPolicyDao();
+	        policyDao.deletePolicy( bucket.getId());
+	        if (null != policy && !policy.isEmpty()) policyDao.addPolicy( bucket.getId(), policy );
+    		response.setStatus(200);
+    	}
+		catch( Exception e ) {
+			logger.error("Put Bucket Policy failed due to " + e.getMessage(), e);	
+			response.setStatus(500);
+		}
+	}
+	
+	private void executeGetBucketPolicy(HttpServletRequest request, HttpServletResponse response) 
+	{
+		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "GET bucket policy failed since " + bucketName + " does not exist" );
+	    	response.setStatus(404);
+	    	return;
+		}
+
+		String client = UserContext.current().getCanonicalUserId();
+		if (!client.equals( bucket.getOwnerCanonicalId())) {
+		    response.setStatus(405);
+		    return;
+		}
+
+    	try {
+	        BucketPolicyDao policyDao = new BucketPolicyDao();
+	        String policy = policyDao.getPolicy( bucket.getId());
+	        if ( null == policy ) {
+	    		 response.setStatus(404);
+	        }
+	        else {
+    		     response.setStatus(200);
+    			 response.setContentType("application/json");
+    			 S3RestServlet.endResponse(response, policy);
+	        }
+    	}
+		catch( Exception e ) {
+			logger.error("Get Bucket Policy failed due to " + e.getMessage(), e);	
+			response.setStatus(500);
+		}
+	}
+
+	private void executeDeleteBucketPolicy(HttpServletRequest request, HttpServletResponse response) 
+	{
+		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		
+		SBucketDao bucketDao = new SBucketDao();
+		SBucket bucket = bucketDao.getByName(bucketName);
+		if (bucket == null) {
+			logger.error( "DELETE bucket policy failed since " + bucketName + " does not exist" );
+	    	response.setStatus(404);
+	    	return;
+		}
+
+		String client = UserContext.current().getCanonicalUserId();
+		if (!client.equals( bucket.getOwnerCanonicalId())) {
+		    response.setStatus(405);
+		    return;
+		}
+
+    	try {
+	        BucketPolicyDao policyDao = new BucketPolicyDao();
+	        String policy = policyDao.getPolicy( bucket.getId());
+	        if ( null == policy ) {
+	    		 response.setStatus(204);
+	        }
+	        else {
+    	         policyDao.deletePolicy( bucket.getId());
+    		     response.setStatus(200);
+	        }
+    	}
+		catch( Exception e ) {
+			logger.error("Delete Bucket Policy failed due to " + e.getMessage(), e);	
+			response.setStatus(500);
+		}
+	}
+
 	public void executeGetAllBuckets(HttpServletRequest request, HttpServletResponse response) 
 	    throws IOException, XMLStreamException 
 	{
@@ -378,7 +498,7 @@ public class S3BucketAction implements ServletAction {
 	}
 	
 	public void executeGetBucketLocation(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		throw new UnsupportedException( "No concept of Region is support in this EC2 implementation." );
+		response.setStatus(501);
 	}
 	
 	public void executePutBucket(HttpServletRequest request, HttpServletResponse response) throws IOException 
@@ -642,4 +762,24 @@ public class S3BucketAction implements ServletAction {
 		response.setContentType("text/xml; charset=UTF-8");
 	    S3RestServlet.endResponse(response, xml.toString());
 	}
+	
+	private String streamToString( InputStream is ) throws IOException 
+	{
+		int n = 0;
+		
+	    if ( null != is ) 
+	    {
+	         Writer writer = new StringWriter();
+	         char[] buffer = new char[1024];
+	         try {
+	             Reader reader = new BufferedReader( new InputStreamReader(is, "UTF-8"));
+	             while ((n = reader.read(buffer)) != -1) writer.write(buffer, 0, n);
+             } 
+	         finally {
+	             is.close();
+	         }
+	         return writer.toString();	        
+	    } 
+	    else return null;       
+    }
 }
