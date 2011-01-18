@@ -69,6 +69,9 @@ install-arch:
 	dh_prep -s 
 	dh_installdirs -s
 	(cd ../..; ant deploy-debian-install)
+	chmod 755 debian/tmp/etc/init.d/cloud-bridge
+	chmod 755 debian/tmp/usr/bin/cloud-setup-bridge
+	chmod 755 debian/tmp/usr/bin/cloud-setup-bridge-db
 	dh_install -s
 # Must not depend on anything. This is to be called by
 # binary-arch/binary-indep
