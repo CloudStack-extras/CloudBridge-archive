@@ -3,10 +3,10 @@
 
 # the following two variables are used by the target "waf dist"
 # if you change 'em here, you need to change it also in cloud.spec, add a %changelog entry there, and add an entry in debian/changelog
-VERSION = '1.0.0'
+VERSION = '2.1.97'
 APPNAME = 'cloud-bridge'
 
-import shutil,os
+import shutil,os,glob
 import email,time
 import optparse
 import platform
@@ -19,10 +19,10 @@ from os.path import abspath as _abspath, basename as _basename, dirname as _dirn
 from glob import glob as _glob
 import zipfile,tarfile
 try:
-  from os import chmod as _chmod,chown as _chown
-  import pwd,stat,grp
+	from os import chmod as _chmod,chown as _chown
+	import pwd,stat,grp
 except ImportError:
-  _chmod,_chown,pwd,stat,grp = (None,None,None,None,None)
+	_chmod,_chown,pwd,stat,grp = (None,None,None,None,None)
 import xml.dom.minidom
 import re
 
@@ -80,8 +80,8 @@ def _getbuildcontext():
 def set_options(opt):
 	"""Register command line options"""
 	opt.tool_options('gnu_dirs')
-	
-        inst_dir = opt.get_option_group('--bindir') # get the group that contains bindir
+
+	inst_dir = opt.get_option_group('--bindir') # get the group that contains bindir
 	inst_dir.add_option('--javadir', # add javadir to the group that contains bindir
 		help = 'Java class and jar files [Default: ${DATADIR}/java]',
 		default = '',
@@ -100,12 +100,12 @@ def set_options(opt):
 def showconfig(conf):
 	"""prints out the current configure environment configuration"""
 	conf = _getbuildcontext()
-	
+
 	Utils.pprint("WHITE","Build environment:")
 	for key,val in sorted(conf.env.get_merged_dict().items()):
 		if "CLASSPATH" in key:
 			Utils.pprint("BLUE","  %s:"%key)
-			for v in val.split(pathsep):
+		   	for v in val.split(pathsep):
 				Utils.pprint("BLUE","     %s"%v)
 			continue
 		Utils.pprint("BLUE","  %s:	%s"%(key,val))
@@ -129,65 +129,95 @@ def runant(tsk):
 Utils.runant = runant
 
 def relpath(path, start="."):
-    if not path: raise ValueError("no path specified")
+	if not path: raise ValueError("no path specified")
 
-    start_list = os.path.abspath(start).split(sep)
-    path_list = os.path.abspath(path).split(sep)
+	start_list = os.path.abspath(start).split(sep)
+	path_list = os.path.abspath(path).split(sep)
 
-    # Work out how much of the filepath is shared by start and path.
-    i = len(os.path.commonprefix([start_list, path_list]))
+	# Work out how much of the filepath is shared by start and path.
+	i = len(os.path.commonprefix([start_list, path_list]))
 
-    rel_list = [pardir] * (len(start_list)-i) + path_list[i:]
-    if not rel_list:
-        return curdir
-    return os.path.join(*rel_list)
+	rel_list = [pardir] * (len(start_list)-i) + path_list[i:]
+	if not rel_list:
+		return curdir
+	return os.path.join(*rel_list)
 Utils.relpath = relpath
 
-def getdebdeps():
-        def debdeps(fileset):
-                for f in fileset:
-                        lines = file(f).readlines()
-                        lines = [ x[len("Build-Depends: "):] for x in lines if x.startswith("Build-Depends") ]
-                        for l in lines:
-                                deps = [ x.strip() for x in l.split(",") ]
-                                for d in deps:
-                                        if "%s-"%APPNAME in d: continue
-                                        yield d
-                yield "build-essential"
-                yield "devscripts"
-                yield "debhelper"
+def mkdir_p(directory):
+	if not _isdir(directory):
+		Utils.pprint("GREEN","Creating directory %s and necessary parents"%directory)
+		_makedirs(directory)
 
-        deps = set(debdeps(["debian/control"]))
-        return deps
+def getdebdeps():
+	def debdeps(fileset):
+		for f in fileset:
+			lines = file(f).readlines()
+			lines = [ x[len("Build-Depends: "):] for x in lines if x.startswith("Build-Depends") ]
+			for l in lines:
+				deps = [ x.strip() for x in l.split(",") ]
+				for d in deps:
+					if "%s-"%APPNAME in d: continue
+					yield d
+		yield "build-essential"
+		yield "devscripts"
+		yield "debhelper"
+
+	deps = set(debdeps(["debian/control"]))
+	return deps
 
 def throws_command_errors(f):
-        def g(*args,**kwargs):
-                try: return f(*args,**kwargs)
-                except CalledProcessError,e:
-                        raise Utils.WafError("system command %s failed with error value %s"%(e.cmd[0],e.returncode))
-                except IOError,e:
-                        if e.errno is 32:
-                                raise Utils.WafError("system command %s terminated abruptly, closing communications with parent's pipe"%e.cmd[0])
-                        raise
-        return g
+	def g(*args,**kwargs):
+		try: return f(*args,**kwargs)
+		except CalledProcessError,e:
+			raise Utils.WafError("system command %s failed with error value %s"%(e.cmd[0],e.returncode))
+		except IOError,e:
+			if e.errno is 32:
+				raise Utils.WafError("system command %s terminated abruptly, closing communications with parent's pipe"%e.cmd[0])
+			raise
+	return g
 
 def c(cmdlist,cwd=None):
-        # Run a command with _check_call, pretty-printing the cmd list
-        Utils.pprint("BLUE"," ".join(cmdlist))
-        return _check_call(cmdlist,cwd=cwd)
+	# Run a command with _check_call, pretty-printing the cmd list
+	Utils.pprint("BLUE"," ".join(cmdlist))
+	return _check_call(cmdlist,cwd=cwd)
 
 def viewdebdeps(context):
-        """shows all the necessary dependencies to build the DEB packages of the Bridge"""
-        for dep in getdebdeps(): print dep
+	"""shows all the necessary dependencies to build the DEB packages of the Bridge"""
+	for dep in getdebdeps(): print dep
 
 @throws_command_errors
 def deb(context):
-        """Builds DEB packages of the Bridge"""
-        Utils.pprint("GREEN","Building DEBs")
+	"""Builds DEB packages of the Bridge"""
+	Utils.pprint("GREEN","Building DEBs")
 	basedir = os.path.realpath(os.path.curdir) + "/packages/config"
-        checkdeps = lambda: c(["dpkg-checkbuilddeps"], basedir)
-        dodeb = lambda: c(["debuild", '-e','WAFCACHE','--no-lintian', "-us","-uc", "-b"], basedir)
-        try: checkdeps()
-        except (CalledProcessError,OSError),e:
-                Utils.pprint("YELLOW","Dependencies might be missing.  Trying to auto-install them...")
-        dodeb()
+	checkdeps = lambda: c(["dpkg-checkbuilddeps"], basedir)
+	dodeb = lambda: c(["debuild", '-e','WAFCACHE','--no-lintian', "-us","-uc", "-b"], basedir)
+	try: checkdeps()
+	except (CalledProcessError,OSError),e:
+		Utils.pprint("YELLOW","Dependencies might be missing.")
+	dodeb()
+
+
+@throws_command_errors
+def rpm(context):
+	"""Builds RPM packages of the Bridge"""
+	Utils.pprint("GREEN","Building RPMs")
+	basedir = os.path.realpath(os.path.curdir) + "/packages/config/rpm"
+	outputdir = basedir + "/tmp"
+	sourcedir = _join(outputdir,"SOURCES")
+	specfile = basedir + "/cloudbridge.spec"
+	tarball = Scripting.dist()
+
+	if _exists(outputdir): shutil.rmtree(outputdir)
+	for a in ["RPMS/noarch","SRPMS","BUILD","SPECS","SOURCES"]: mkdir_p(_join(outputdir,a))
+	shutil.copy(tarball,_join(sourcedir,tarball))
+
+	checkdeps = lambda: c(["rpmbuild", "--define", "_topdir %s"%outputdir, "--nobuild", specfile])
+	dorpm = lambda: c(["rpmbuild", "--define", "_topdir %s"%outputdir, "-bb", specfile])
+	try: checkdeps()
+	except (CalledProcessError,OSError),e:
+		Utils.pprint("YELLOW","Dependencies might be missing.")
+	dorpm()
+	for rpm in glob.glob(basedir + "/tmp/RPMS/*/*.rpm"):
+		shutil.copy(rpm, basedir + "/../..")
+

@@ -11,7 +11,6 @@
 		<property environment="env" />
 		
 		<property name="axis2.home" value="${base.dir}" />
-		<echo level="info" message="axis home: ${axis2.home}" />
 		<path id="axis2.class.path">
 			<fileset dir="${axis2.home}">
 				<include name="lib/*.jar" />
@@ -40,6 +39,9 @@
 			
 		<property name="tomcat.home" location="${catalina.dir}" />
 		<property name="deploy.dir" location="${tomcat.home}" />
+
+		<property name="rpm.install.dir" location="${base.dir}/../../../../../../packages/config/rpm/tmp/BUILDROOT/cloud-bridge-${version}-1.i386" />
+		<property name="rpm.tomcat.dir" location="${rpm.install.dir}/usr/share/cloud/bridge" />
 		<property name="debian.install.dir" location="${base.dir}/packages/config/debian/tmp" />
 		<property name="debian.tomcat.dir" location="${debian.install.dir}/usr/share/cloud/bridge" />
 		<echo level="info" message="deploy home: ${deploy.dir}" />
@@ -334,7 +336,93 @@
                                 <include name="cloud-bridge"/>
                         </fileset>
                 </copy>
+                <copy overwrite="true" todir="${debian.install.dir}/usr/bin">
+                        <fileset dir="${base.dir}/dist/setup">
+                                <include name="*"/>
+                        </fileset>
+                </copy>
 	</target>
+
+	<target name="deploy-rpm-install" depends="build-cloud-bridge-jar, build-cloud-bridge">
+
+        	<copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/services">
+                	<fileset dir="${dist.dir}">
+                        	<include name="cloud-s3.aar"/>
+                        	<include name="cloud-ec2.aar"/>
+                	</fileset>
+        	</copy>
+	        <copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/modules">
+        	        <fileset dir="${dist.dir}">
+                        	<include name="cloud-auth-s3.mar"/>
+                        	<include name="cloud-auth-ec2.mar"/>
+                	</fileset>
+                        <fileset dir="${base.dir}/modules">
+                                <include name="*.mar"/>
+                        </fileset>
+        	</copy>
+
+                <copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/lib">
+                        <fileset dir="${base.dir}/rampart-lib">
+                                <include name="*.jar"/>
+                        </fileset>
+                        <fileset dir="${jar.dir}">
+                                <include name="cloud-bridge.jar"/>
+                        </fileset>
+                </copy>
+
+                <copy todir="${rpm.tomcat.dir}/lib">
+                        <fileset dir="${base.dir}/lib">
+                                <include name="*.jar"/>
+                        </fileset>
+                </copy>
+
+		<copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/classes">
+                        <fileset dir="${base.dir}/resource/AmazonEC2">
+                                <include name="crypto.properties"/>
+                                <include name="xes.keystore"/>
+                        </fileset>
+                </copy>
+
+                <copy overwrite="true" todir="${rpm.tomcat.dir}/conf">
+                	<fileset dir="${base.dir}/conf/">
+                                <include name="**/*"/>
+                        </fileset>
+                	<fileset dir="${base.dir}/dist/tomcat">
+                                <include name="**/*"/>
+                        </fileset>
+                </copy>
+
+                <copy overwrite="true" todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/conf">
+                        <fileset dir="${base.dir}/resource/Axis2/">
+                                <include name="axis2.xml"/>
+                        </fileset>
+                </copy>
+
+                <copy overwrite="true" todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF">
+                        <fileset dir="${base.dir}/web/">
+                                <include name="web.xml"/>
+                        </fileset>
+                </copy>
+
+                <copy overwrite="true" todir="${rpm.install.dir}/usr/share/cloud/setup/bridge/db">
+                        <fileset dir="${base.dir}/db/mysql">
+                                <include name="*.sql"/>
+                                <include name="*.sh"/>
+                        </fileset>
+                </copy>
+
+                <copy overwrite="true" todir="${rpm.install.dir}/etc/init.d">
+                        <fileset dir="${base.dir}/dist/init/rpm/">
+                                <include name="cloud-bridge"/>
+                        </fileset>
+                </copy>
+                <copy overwrite="true" todir="${rpm.install.dir}/usr/bin">
+                        <fileset dir="${base.dir}/dist/setup">
+                                <include name="*"/>
+                        </fileset>
+                </copy>
+	</target>
+
 
   	
 	<target name="deploydb"> 
