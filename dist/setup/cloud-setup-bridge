@@ -80,7 +80,7 @@ function saveValue () {
 }
 
 function saveValues () {
-	echo /dev/null > $settingsFile
+	cat /dev/null > $settingsFile
 	saveValue managementServer
 	saveValue cloudAPIPort
 	saveValue WSDLVersion

@@ -25,23 +25,18 @@ Obsoletes: cloud-bridge < %{version}-%{release}
 %description
 This is the Cloud.com Bridge
 
-
 %prep
 
 %setup -q -n %{name}-%{_ver}
 
 %build
 
-# this fixes the /usr/com bug on centos5
 %define _localstatedir /var
 %define _sharedstatedir /usr/share/
 ./waf configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir} --javadir=%{_javadir} --sharedstatedir=%{_sharedstatedir} --localstatedir=%{_localstatedir} --sysconfdir=%{_sysconfdir} --mandir=%{_mandir} --docdir=%{_docdir}/%{name}-%{version} --fast
-#./waf build --build-number=%{?_build_number}
 
 %install
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
-# we put the build number again here, otherwise state checking will cause an almost-full recompile
-#./waf install --destdir=$RPM_BUILD_ROOT --nochown --build-number=%{?_build_number}
 ant deploy-rpm-install
 
 %clean
