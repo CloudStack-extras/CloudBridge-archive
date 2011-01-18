@@ -63,11 +63,11 @@ if [ "$1" == "1" ] ; then
 fi
 
 %files 
-%defattr(0644,root,root,0755)
+%defattr(0644,cloud,cloud,0755)
 /usr/share/cloud/bridge/conf/*
 /usr/share/cloud/bridge/lib/*
 /usr/share/cloud/bridge/webapps/*
-/usr/share/cloud/setup/bridge/db/*
+%attr(0644,root,root) /usr/share/cloud/setup/bridge/db/*
 %attr(0755,root,root) /etc/init.d/cloud-bridge
 %attr(0755,root,root) /usr/bin/cloud-setup-bridge
 %attr(0755,root,root) /usr/bin/cloud-setup-bridge-db
