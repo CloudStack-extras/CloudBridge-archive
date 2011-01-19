@@ -37,6 +37,7 @@ import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StartInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
+import com.cloud.bridge.service.core.ec2.IpForwardingRuleResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
@@ -806,12 +807,22 @@ public class EC2Engine {
 
     public boolean associateAddress(String publicIp, String instanceId)
     {
-        if (null == publicIp || null == instanceId) throw new EC2ServiceException(ServerError.InternalError, "Both IP address and instance id are required");
+        if (null == publicIp || null == instanceId)
+            throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both IP address and instance id are required");
         try {
-            String query = "command=ec2associateAddress&instanceId=" + safeURLencode(instanceId)
-                                                    + "&ipAddress="  + safeURLencode(publicIp);
-            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "ec2associateAddress", true);
-            return true;
+            String query = "command=createIpForwardingRule&ipAddress=" + safeURLencode(publicIp)
+                                                    + "&virtualMachineId="  + safeURLencode(instanceId);
+            Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createIpForwardingRule", true);
+            NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+            if ( 0 < match.getLength()) {
+                 Node item = match.item(0);
+                 String jobId = item.getFirstChild().getNodeValue();
+                 if (waitForAsynch( jobId ))
+                     return true;
+            }
+            else throw new InternalErrorException( "InternalError" );
+
+            return false;
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 AssociateAddress - " + error.toString());
             throw error;
@@ -824,11 +835,27 @@ public class EC2Engine {
 
     public boolean disassociateAddress(String publicIp)
     {
-        if (null == publicIp) throw new EC2ServiceException(ServerError.InternalError, "IP address is a required parameter");
+        boolean success = true;
+
+        if (null == publicIp)
+            throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
+
         try {
-            String query = "command=ec2disassociateAddress&ipAddress=" + safeURLencode(publicIp);
-            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "ec2disassociateAddress", true);
-            return true;
+            for (IpForwardingRuleResponse rule: listIpForwardingRules(publicIp)) {
+                String query = "command=deleteIpForwardingRule&id=" + rule.getId().toString();
+
+                Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteIpForwardingRule", true);
+                NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+                if (0 < match.getLength()) {
+                    Node item = match.item(0);
+                    String jobId = item.getFirstChild().getNodeValue();
+                    if (!waitForAsynch( jobId )) {
+                        success = false;
+                    }
+                }
+                else throw new InternalErrorException( "InternalError" );
+            }
+            return success;
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 DisassociateAddress - " + error.toString());
             throw error;
@@ -2306,6 +2333,44 @@ public class EC2Engine {
         }
         return response;
     }
+
+    private IpForwardingRuleResponse[] listIpForwardingRules(String publicIp)
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+    {
+        String   query     = "command=listIpForwardingRules&ipAddress=" + safeURLencode(publicIp);
+        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listIpForwardingRules", true);
+        NodeList match     = cloudResp.getElementsByTagName("ipforwardingrule");
+        int      length    = match.getLength();
+
+        List<IpForwardingRuleResponse> result = new ArrayList<IpForwardingRuleResponse>();
+        for (int i = 0; i < length; i++) {
+            IpForwardingRuleResponse rule = new IpForwardingRuleResponse();
+
+            Node     parent   = match.item(i);
+            NodeList children = parent.getChildNodes();
+            int      numChild = children.getLength();
+
+            for (int j = 0; j < numChild; j++ ) {
+                Node   child = children.item(j);
+                String name  = child.getNodeName();
+
+                if (null != child.getFirstChild()) {
+                    String value = child.getFirstChild().getNodeValue();
+
+                         if (name.equalsIgnoreCase("id"))                 rule.setId(new Long(value));
+                    else if (name.equalsIgnoreCase("protocol"))           rule.setProtocol(value);
+                    else if (name.equalsIgnoreCase("virtualMachineId"))   rule.setVirtualMachineId(new Long(value));
+                    else if (name.equalsIgnoreCase("virtualMachineName")) rule.setVirtualMachineName(value);
+                    else if (name.equalsIgnoreCase("ipaddress"))          rule.setPublicIpAddress(value);
+                    else if (name.equalsIgnoreCase("state"))              rule.setState(value);
+                    else if (name.equalsIgnoreCase("virtualMachineDisplayName")) rule.setVirtualMachineDisplayName(value);
+                }
+            }
+            result.add(rule);
+        }
+        return result.toArray(new IpForwardingRuleResponse[0]);
+    }
+
 
     /**  
      * Get one or more templates depending on the templateId parameter.
