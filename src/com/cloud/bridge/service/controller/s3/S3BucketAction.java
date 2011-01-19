@@ -27,29 +27,26 @@ import java.util.Calendar;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
-
 import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import com.amazon.s3.GetBucketAccessControlPolicyResponse;
 import com.amazon.s3.ListAllMyBucketsResponse;
 import com.amazon.s3.ListBucketResponse;
-import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.model.SBucket;
-import com.cloud.bridge.model.SObject;
 import com.cloud.bridge.persist.dao.BucketPolicyDao;
 import com.cloud.bridge.persist.dao.MultipartLoadDao;
 import com.cloud.bridge.persist.dao.SBucketDao;
@@ -65,15 +62,12 @@ import com.cloud.bridge.service.core.s3.S3CreateBucketConfiguration;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
 import com.cloud.bridge.service.core.s3.S3CreateBucketResponse;
 import com.cloud.bridge.service.core.s3.S3DeleteBucketRequest;
-import com.cloud.bridge.service.core.s3.S3Engine;
 import com.cloud.bridge.service.core.s3.S3GetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsResponse;
 import com.cloud.bridge.service.core.s3.S3ListBucketObjectEntry;
-import com.cloud.bridge.service.core.s3.S3ListBucketPrefixEntry;
 import com.cloud.bridge.service.core.s3.S3ListBucketRequest;
 import com.cloud.bridge.service.core.s3.S3ListBucketResponse;
-import com.cloud.bridge.service.core.s3.S3MultipartPart;
 import com.cloud.bridge.service.core.s3.S3MultipartUpload;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Response;
@@ -81,12 +75,13 @@ import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.exception.InvalidRequestContentException;
 import com.cloud.bridge.service.exception.NetworkIOException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
-import com.cloud.bridge.service.exception.UnsupportedException;
 import com.cloud.bridge.util.Converter;
+import com.cloud.bridge.util.PolicyParser;
 import com.cloud.bridge.util.StringHelper;
 import com.cloud.bridge.util.Tuple;
 import com.cloud.bridge.util.XSerializer;
 import com.cloud.bridge.util.XSerializerXmlAdapter;
+
 
 /**
  * @author Kelven Yang
@@ -208,7 +203,14 @@ public class S3BucketAction implements ServletAction {
 	        BucketPolicyDao policyDao = new BucketPolicyDao();
 	        policyDao.deletePolicy( bucket.getId());
 	        if (null != policy && !policy.isEmpty()) policyDao.addPolicy( bucket.getId(), policy );
+	        
+	        // test -- TODO parse the policy just before its use and save in a list
+       		PolicyParser parser = new PolicyParser();
+    		parser.parse( policy );
+            // test
+    		
     		response.setStatus(200);
+    		
     	}
 		catch( Exception e ) {
 			logger.error("Put Bucket Policy failed due to " + e.getMessage(), e);	

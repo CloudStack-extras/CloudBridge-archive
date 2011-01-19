@@ -20,5 +20,6 @@
 	<classpathentry kind="lib" path="lib/commons-fileupload-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/commons-codec-1.4.jar"/>
 	<classpathentry kind="lib" path="lib/jsch-0.1.42.jar"/>
+	<classpathentry kind="lib" path="lib/json_simple-1.1.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>
