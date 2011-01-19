@@ -114,16 +114,16 @@ public class AuthenticationHandler implements Handler {
 	     	     UserCredentials cloudKeys = credentialDao.getByCertUniqueId( uniqueId );
 	     	     if ( null == cloudKeys ) {
 	        	      logger.error( "Cert does not map to Cloud API keys: " + uniqueId );
-	        		  throw new AxisFault( "User not properly registered: certificate does not map to Cloud API Keys", "Client.Blocked" );
+	        		  throw new AxisFault( "User not properly registered: Certificate does not map to Cloud API Keys", "Client.Blocked" );
 	     	     }
 	     	     else UserContext.current().initContext( cloudKeys.getAccessKey(), cloudKeys.getSecretKey(), cloudKeys.getAccessKey(), "SOAP Request" );
 System.out.println( "end of cert match: " + UserContext.current().getSecretKey());
 	        }
-    	}
-    	catch( Exception e )
-    	{
+    	} catch (AxisFault e) {
+    		throw e;
+    	} catch( Exception e ) {
     	    logger.error( "EC2 Authentication Handler: " + e.toString());
-    		throw new AxisFault( e.toString(), "Server.InternalError" );
+    		throw new AxisFault( "An unknown error occurred.", "Server.InternalError" );
     	}    	
         return InvocationResponse.CONTINUE;
      }
