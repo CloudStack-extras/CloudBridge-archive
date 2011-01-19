@@ -65,13 +65,14 @@ public class ConfigurationHelper {
         }
 		
         // if running under Tomcat
-        newPath = System.getenv("CATALINA_HOME");
+        newPath = System.getenv("CATALINA_BASE");
+        
         if (newPath == null) {
-        	newPath = System.getenv("CATALINA_BASE");
+        	newPath = System.getProperty("catalina.base");
         }
         
         if (newPath == null) {
-        	newPath = System.getProperty("catalina.home");
+        	newPath = System.getenv("CATALINA_HOME");
         }
         
         if (newPath == null) {

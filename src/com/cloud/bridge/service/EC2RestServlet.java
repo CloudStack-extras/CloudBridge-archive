@@ -1242,8 +1242,10 @@ public class EC2RestServlet extends HttpServlet {
 			throws ADBException, XMLStreamException, IOException {
     	String keyName = request.getParameter("KeyName");
     	String publicKeyMaterial = request.getParameter("PublicKeyMaterial");
-    	if (keyName==null & publicKeyMaterial==null)
+    	if (keyName==null && publicKeyMaterial==null) {
     		response.sendError(530, "Missing parameter");
+    		return;
+    	}
     	
         if (!publicKeyMaterial.contains(" "))
             publicKeyMaterial = new String(Base64.decodeBase64(publicKeyMaterial.getBytes())); 
@@ -1256,7 +1258,10 @@ public class EC2RestServlet extends HttpServlet {
     private void createKeyPair(HttpServletRequest request, HttpServletResponse response)
     		throws ADBException, XMLStreamException, IOException { 
     	String keyName = request.getParameter("KeyName");
-    	if (keyName==null) response.sendError(530, "Missing KeyName parameter");
+    	if (keyName==null) { 
+    		response.sendError(530, "Missing KeyName parameter");
+    		return;
+    	}
     	
     	CreateKeyPairResponse EC2Response = EC2SoapServiceImpl.toCreateKeyPair(
     			ServiceProvider.getInstance().getEC2Engine().createKeyPair(keyName));
@@ -1266,7 +1271,10 @@ public class EC2RestServlet extends HttpServlet {
     private void deleteKeyPair(HttpServletRequest request, HttpServletResponse response)
 			throws ADBException, XMLStreamException, IOException {
     	String keyName = request.getParameter("KeyName");
-    	if (keyName==null) response.sendError(530, "Missing KeyName parameter");
+    	if (keyName==null) {
+    		response.sendError(530, "Missing KeyName parameter");
+    		return;
+    	}
     	
     	DeleteKeyPairResponse EC2Response = EC2SoapServiceImpl.toDeleteKeyPair(
     			ServiceProvider.getInstance().getEC2Engine().deleteKeyPair(keyName));
@@ -1276,7 +1284,10 @@ public class EC2RestServlet extends HttpServlet {
     private void getPasswordData(HttpServletRequest request, HttpServletResponse response) 
     		throws ADBException, XMLStreamException, IOException {
     	String instanceId = request.getParameter("InstanceId");
-    	if (instanceId==null) response.sendError(530, "Missing InstanceId parameter");
+    	if (instanceId==null) {
+    		response.sendError(530, "Missing InstanceId parameter");
+    		return;
+    	}
   	
     	GetPasswordDataResponse EC2Response = EC2SoapServiceImpl.toGetPasswordData(
     			ServiceProvider.getInstance().getEC2Engine().getPasswordData(instanceId));
