@@ -181,6 +181,11 @@ def c(cmdlist,cwd=None):
 	Utils.pprint("BLUE"," ".join(cmdlist))
 	return _check_call(cmdlist,cwd=cwd)
 
+
+"""                    """
+""" Custom waf targets """
+"""                    """
+
 def viewdebdeps(context):
 	"""shows all the necessary dependencies to build the DEB packages of the Bridge"""
 	for dep in getdebdeps(): print dep
@@ -221,3 +226,16 @@ def rpm(context):
 	for rpm in glob.glob(basedir + "/tmp/RPMS/*/*.rpm"):
 		shutil.copy(rpm, basedir + "/../..")
 
+def uninstallrpms(context):
+        """uninstalls any Cloud Bridge RPMs on this system"""
+        Utils.pprint("GREEN","Uninstalling any installed RPMs")
+        cmd = "rpm -qa | grep cloud-bridge | xargs -r sudo rpm -e"
+        Utils.pprint("BLUE",cmd)
+        os.system(cmd)
+
+def uninstalldebs(context):
+        """uninstalls any Cloud Bridge DEBs on this system"""
+        Utils.pprint("GREEN","Uninstalling any installed DEBs")
+        cmd = "dpkg -l 'cloud-bridge*' | grep ^i | awk '{ print $2 } ' | xargs aptitude purge -y"
+        Utils.pprint("BLUE",cmd)
+        os.system(cmd)

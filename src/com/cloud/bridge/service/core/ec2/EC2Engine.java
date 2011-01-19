@@ -244,7 +244,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "validateAccount - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
 
@@ -273,7 +273,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 CreateSecurityGroup - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
     
@@ -292,7 +292,7 @@ public class EC2Engine {
    		
    	    } catch( Exception e ) {
    		    logger.error( "EC2 DeleteSecurityGroup - " + e.toString());
-   		    throw new InternalErrorException( e.toString());
+   		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
    	    }
     }
     
@@ -307,7 +307,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DescribeSecurityGroups - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
    
@@ -375,7 +375,7 @@ public class EC2Engine {
 		    	    String jobId = new String( item.getFirstChild().getNodeValue());
 		    	    if (!waitForAsynch( jobId )) throw new EC2ServiceException(ServerError.InternalError, command + " failed" );
 	 	        } 
-	 	        else throw new InternalErrorException( "InternalError" );
+	 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 
 	            url.setLength( 0 );
    	    	    sorted.setLength( 0 );
@@ -389,7 +389,7 @@ public class EC2Engine {
    		
    	    } catch( Exception e ) {
    		    logger.error( "EC2 " + command + " - " + e.toString());
-   		    throw new InternalErrorException( e.toString());
+   		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
    	    } 	
     }
 
@@ -451,7 +451,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DescribeSnapshots - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
     
@@ -474,7 +474,7 @@ public class EC2Engine {
 	             if (0 < volSet.length) shot.setVolumeSize( volSet[0].getSize());
 	    	     return shot;
             }
- 	        else throw new InternalErrorException( "InternalError" );
+ 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
    	        
        	} catch( EC2ServiceException error ) {
      		logger.error( "EC2 CreateSnapshot - " + error.toString());
@@ -482,7 +482,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 CreateSnapshot - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
     
@@ -497,7 +497,7 @@ public class EC2Engine {
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
 	    	     if (waitForAsynch( jobId )) return true;
             }
- 	        else throw new InternalErrorException( "InternalError" );
+ 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 
     	    return false;
    	        
@@ -507,7 +507,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DeleteSnapshot - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
     
@@ -533,7 +533,7 @@ public class EC2Engine {
 		
 	    } catch( Exception e ) {
 		    logger.error( "EC2 ModifyImage - " + e.toString());
-		    throw new InternalErrorException( e.toString());
+		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 	    }
     }
     
@@ -563,7 +563,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DescribeImages - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
     
@@ -632,7 +632,7 @@ public class EC2Engine {
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
 	    	     response = waitForTemplate( jobId );  
             }
- 	        else throw new InternalErrorException( "InternalError" );
+ 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
  	        
  	        
  	        // [C] If we stopped the virtual machine now we need to restart it
@@ -650,7 +650,7 @@ public class EC2Engine {
 		
 	    } catch( Exception e ) {
 		    logger.error( "EC2 CreateImage - " + e.toString());
-		    throw new InternalErrorException( e.toString());
+		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 	    }
     }
     
@@ -690,7 +690,7 @@ public class EC2Engine {
 	
         } catch( Exception e ) {
 	        logger.error( "EC2 RegisterImage - " + e.toString());
-	        throw new InternalErrorException( e.toString());
+	        throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
     
@@ -709,7 +709,7 @@ public class EC2Engine {
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
 	    	     if (waitForAsynch( jobId )) return true;
             }
- 	        else throw new InternalErrorException( "InternalError" );
+ 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 
     	    return false;
    	        
@@ -719,7 +719,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DeregisterImage - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
     
@@ -734,7 +734,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DescribeInstances - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
 
@@ -749,7 +749,7 @@ public class EC2Engine {
 
         } catch( Exception e ) {
             logger.error( "EC2 DescribeAddresses - " + e.toString());
-            throw new InternalErrorException( e.toString());
+            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
 
@@ -783,7 +783,7 @@ public class EC2Engine {
 
         } catch( Exception e ) {
             logger.error( "EC2 AllocateAddress - " + e.toString());
-            throw new InternalErrorException( e.toString());
+            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
 
@@ -800,7 +800,7 @@ public class EC2Engine {
 
         } catch( Exception e ) {
             logger.error( "EC2 ReleaseAddress - " + e.toString());
-            throw new InternalErrorException( e.toString());
+            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
 
@@ -818,7 +818,7 @@ public class EC2Engine {
 
         } catch( Exception e ) {
             logger.error( "EC2 AssociateAddress - " + e.toString());
-            throw new InternalErrorException( e.toString());
+            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
 
@@ -835,7 +835,7 @@ public class EC2Engine {
 
         } catch( Exception e ) {
             logger.error( "EC2 DisassociateAddress - " + e.toString());
-            throw new InternalErrorException( e.toString());
+            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
 
@@ -850,7 +850,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DescribeAvailabilityZones - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
     
@@ -876,7 +876,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DescribeVolumes - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
     
@@ -899,7 +899,7 @@ public class EC2Engine {
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
 	    	     if (waitForAsynch( jobId )) request.setStatus( "attached" );
             }
- 	        else throw new InternalErrorException( "InternalError" );
+ 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
  	        
     	    return request;
    	        
@@ -909,7 +909,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 AttachVolume - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}   	    
     }
 
@@ -937,7 +937,7 @@ public class EC2Engine {
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
 	    	     if (waitForAsynch( jobId )) request.setStatus( "detached" );
             }
- 	        else throw new InternalErrorException( "InternalError" );
+ 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
  	        
             return request;
    	        
@@ -947,7 +947,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DetachVolume - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}   	    
     }
    
@@ -978,7 +978,7 @@ public class EC2Engine {
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
 	    	     return waitForVolume( jobId );  
             }
- 	        else throw new InternalErrorException( "InternalError" );
+ 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
    	        
        	} catch( EC2ServiceException error ) {
     		logger.error( "EC2 CreateVolume - " + error.toString());
@@ -986,7 +986,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 CreateVolume - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}   	    
     }
 
@@ -1005,7 +1005,7 @@ public class EC2Engine {
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
 	    	     if (waitForAsynch( jobId )) request.setStatus( "deleted" );
             }
- 	        else throw new InternalErrorException( "InternalError" );
+ 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 
     	    return request;
    	        
@@ -1015,7 +1015,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DeleteVolume - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}   	    
     }
 
@@ -1048,7 +1048,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 RebootInstances - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
 
@@ -1207,7 +1207,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 StartInstances - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
    
@@ -1266,7 +1266,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 StopInstances - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
 
@@ -2844,7 +2844,7 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 checkAsyncResult - " + e.toString());
-    		throw new InternalErrorException( e.toString());
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
     
