@@ -69,7 +69,7 @@
     -->
     <!-- A "Connector" using the shared thread pool-->
     <Connector executor="tomcatThreadPool"
-               port="8080" protocol="org.apache.coyote.http11.Http11NioProtocol" 
+               port="8090" protocol="org.apache.coyote.http11.Http11NioProtocol" 
                connectionTimeout="20000" disableUploadTimeout="true"
                acceptCount="150" enableLookups="false" maxThreads="150"
                maxHttpHeaderSize="8192" redirectPort="8443" />

@@ -69,5 +69,6 @@ fi
 /usr/share/cloud/bridge/webapps/*
 %attr(0644,root,root) /usr/share/cloud/setup/bridge/db/*
 %attr(0755,root,root) /etc/init.d/cloud-bridge
+%attr(0755,root,root) /usr/bin/cloud-bridge-register
 %attr(0755,root,root) /usr/bin/cloud-setup-bridge
 %attr(0755,root,root) /usr/bin/cloud-setup-bridge-db
