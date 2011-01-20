@@ -2748,11 +2748,12 @@ public class EC2Engine {
     	String query = "command=listNetworks";
     	Document response = null;
     	
-    	if (!shared) {
-        	Account account = getAccount();
-    		query = query.concat("&account=").concat(account.getAccountName());
-    		query = query.concat("&domainid=").concat(account.getDomainId());
-    	} 
+    	// Only need to specify account and domainid when admin
+    	//if (!shared) {
+        //	Account account = getAccount();
+    	//	query = query.concat("&account=").concat(account.getAccountName());
+    	//	query = query.concat("&domainid=").concat(account.getDomainId());
+    	//} 
     		
     	query = query.concat("&isdefault=").concat("true");
     	if (shared) query = query.concat("&isshared=").concat("true");
@@ -2782,13 +2783,13 @@ public class EC2Engine {
     private String createNetwork(String zoneId) {
     	String query = "command=createNetwork";
     	Document response = null;
-    	Account account = getAccount();
+    	//Account account = getAccount();
     	Tuple<String, String> networkOffering = getNetworkOffering();
     	
     	try {
-    		query = query.concat("&account=").concat(account.getAccountName());
+    		//query = query.concat("&account=").concat(account.getAccountName());
     		query = query.concat("&displaytext=").concat(safeURLencode(networkOffering.getSecond()));
-    		query = query.concat("&domainid=").concat(account.getDomainId());
+    		//query = query.concat("&domainid=").concat(account.getDomainId());
     		query = query.concat("&name=").concat(safeURLencode("EC2 created network"));
     		query = query.concat("&networkofferingid=").concat(networkOffering.getFirst());
     		query = query.concat("&zoneid=").concat(zoneId);
