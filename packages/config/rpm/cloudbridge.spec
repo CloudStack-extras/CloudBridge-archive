@@ -32,12 +32,15 @@ This is the Cloud.com Bridge
 %build
 
 %define _localstatedir /var
-%define _sharedstatedir /usr/share/
+%define _sharedstatedir /usr/share
 ./waf configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir} --javadir=%{_javadir} --sharedstatedir=%{_sharedstatedir} --localstatedir=%{_localstatedir} --sysconfdir=%{_sysconfdir} --mandir=%{_mandir} --docdir=%{_docdir}/%{name}-%{version} --fast
 
 %install
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 ant deploy-rpm-install
+mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/logs
+mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/work
+mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/temp
 
 %clean
 
@@ -67,6 +70,9 @@ fi
 /usr/share/cloud/bridge/conf/*
 /usr/share/cloud/bridge/lib/*
 /usr/share/cloud/bridge/webapps/*
+%dir %attr(0775,cloud,cloud) /usr/share/cloud/bridge/logs
+%dir %attr(0775,cloud,cloud) /usr/share/cloud/bridge/work
+%dir %attr(0775,cloud,cloud) /usr/share/cloud/bridge/temp
 %attr(0644,root,root) /usr/share/cloud/setup/bridge/db/*
 %attr(0755,root,root) /etc/init.d/cloud-bridge
 %attr(0755,root,root) /usr/bin/cloud-bridge-register
