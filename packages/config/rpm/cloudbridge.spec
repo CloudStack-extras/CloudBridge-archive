@@ -1,7 +1,7 @@
 %define __os_install_post %{nil}
 %global debug_package %{nil}
 
-%define _ver 2.1.97
+%define _ver 0.9.0
 %define _rel 1
 
 Name:      cloud-bridge
@@ -32,12 +32,15 @@ This is the Cloud.com Bridge
 %build
 
 %define _localstatedir /var
-%define _sharedstatedir /usr/share/
+%define _sharedstatedir /usr/share
 ./waf configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir} --javadir=%{_javadir} --sharedstatedir=%{_sharedstatedir} --localstatedir=%{_localstatedir} --sysconfdir=%{_sysconfdir} --mandir=%{_mandir} --docdir=%{_docdir}/%{name}-%{version} --fast
 
 %install
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 ant deploy-rpm-install
+mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/logs
+mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/work
+mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/temp
 
 %clean
 
@@ -67,7 +70,11 @@ fi
 /usr/share/cloud/bridge/conf/*
 /usr/share/cloud/bridge/lib/*
 /usr/share/cloud/bridge/webapps/*
+%dir %attr(0775,cloud,cloud) /usr/share/cloud/bridge/logs
+%dir %attr(0775,cloud,cloud) /usr/share/cloud/bridge/work
+%dir %attr(0775,cloud,cloud) /usr/share/cloud/bridge/temp
 %attr(0644,root,root) /usr/share/cloud/setup/bridge/db/*
 %attr(0755,root,root) /etc/init.d/cloud-bridge
+%attr(0755,root,root) /usr/bin/cloud-bridge-register
 %attr(0755,root,root) /usr/bin/cloud-setup-bridge
 %attr(0755,root,root) /usr/bin/cloud-setup-bridge-db

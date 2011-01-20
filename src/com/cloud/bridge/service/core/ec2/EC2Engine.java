@@ -37,6 +37,7 @@ import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StartInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
+import com.cloud.bridge.service.core.ec2.IpForwardingRuleResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
@@ -279,9 +280,9 @@ public class EC2Engine {
     
     public boolean deleteSecurityGroup(EC2SecurityGroup request) 
     {
-		if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
+	if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
 
-   	    try {
+   	try {
 	        String query = new String( "command=deleteSecurityGroup&name=" + safeURLencode( request.getName()));        
             resolveURL( genAPIURL( query, genQuerySignature(query)), "deleteSecurityGroup", true );
      		return true;
@@ -347,13 +348,13 @@ public class EC2Engine {
    	    	   if ( protocol.equalsIgnoreCase( "icmp" )) {
   	   	            params.append( "&icmpCode="         + items[i].getToPort());
    	   	            params.append( "&icmpType="         + items[i].getFromPort());
-   	   	            params.append( "&networkGroupName=" + safeURLencode( request.getName()));
    	   	            params.append( "&protocol="         + safeURLencode( protocol ));
+   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
    	    	   }
    	    	   else {
   	   	            params.append( "&endPort="          + items[i].getToPort());
-   	   	            params.append( "&networkGroupName=" + safeURLencode( request.getName()));
    	   	            params.append( "&protocol="         + safeURLencode( protocol ));
+   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
    	   	            params.append( "&startPort="        + items[i].getFromPort());
    	    	   }
     	
@@ -423,8 +424,8 @@ public class EC2Engine {
     	StringBuffer userList = new StringBuffer();
 
     	for( int i=0; i < groups.length; i++ ) {
-        	userList.append( "&userNetworkGroupList["+i+"].account=" + safeURLencode( groups[i].getAccount()));
-        	userList.append( "&userNetworkGroupList["+i+"].group="   + safeURLencode( groups[i].getName()));		
+        	userList.append( "&userSecurityGroupList["+i+"].account=" + safeURLencode( groups[i].getAccount()));
+        	userList.append( "&userSecurityGroupList["+i+"].group="   + safeURLencode( groups[i].getName()));		
     	}
     	return userList.toString();
     }
@@ -789,7 +790,7 @@ public class EC2Engine {
 
     public boolean releaseAddress(String publicIp)
     {
-        if (null == publicIp) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
+        if (null == publicIp) throw new EC2ServiceException(ServerError.InternalError, "IP address is a required parameter");
         try {
             String query = "command=disassociateIpAddress&ipAddress="+ safeURLencode(publicIp);
             Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "disassociateIpAddress", true);
@@ -806,12 +807,22 @@ public class EC2Engine {
 
     public boolean associateAddress(String publicIp, String instanceId)
     {
-        if (null == publicIp || null == instanceId) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both IP address and instance id are required");
+        if (null == publicIp || null == instanceId)
+            throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both IP address and instance id are required");
         try {
-            String query = "command=ec2associateAddress&instanceId=" + safeURLencode(instanceId)
-                                                    + "&ipAddress="  + safeURLencode(publicIp);
-            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "ec2associateAddress", true);
-            return true;
+            String query = "command=createIpForwardingRule&ipAddress=" + safeURLencode(publicIp)
+                                                    + "&virtualMachineId="  + safeURLencode(instanceId);
+            Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createIpForwardingRule", true);
+            NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+            if ( 0 < match.getLength()) {
+                 Node item = match.item(0);
+                 String jobId = item.getFirstChild().getNodeValue();
+                 if (waitForAsynch( jobId ))
+                     return true;
+            }
+            else throw new InternalErrorException( "InternalError" );
+
+            return false;
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 AssociateAddress - " + error.toString());
             throw error;
@@ -824,11 +835,27 @@ public class EC2Engine {
 
     public boolean disassociateAddress(String publicIp)
     {
-        if (null == publicIp) throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
+        boolean success = true;
+
+        if (null == publicIp)
+            throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
+
         try {
-            String query = "command=ec2disassociateAddress&ipAddress=" + safeURLencode(publicIp);
-            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "ec2disassociateAddress", true);
-            return true;
+            for (IpForwardingRuleResponse rule: listIpForwardingRules(publicIp)) {
+                String query = "command=deleteIpForwardingRule&id=" + rule.getId().toString();
+
+                Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteIpForwardingRule", true);
+                NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+                if (0 < match.getLength()) {
+                    Node item = match.item(0);
+                    String jobId = item.getFirstChild().getNodeValue();
+                    if (!waitForAsynch( jobId )) {
+                        success = false;
+                    }
+                }
+                else throw new InternalErrorException( "InternalError" );
+            }
+            return success;
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 DisassociateAddress - " + error.toString());
             throw error;
@@ -1270,6 +1297,7 @@ public class EC2Engine {
     	}
     }
 
+    
     public List<EC2SSHKeyPair> describeKeyPairs() {
     	ensureVersion(CLOUD_STACK_VERSION_2_2);
     	
@@ -2306,6 +2334,44 @@ public class EC2Engine {
         return response;
     }
 
+    private IpForwardingRuleResponse[] listIpForwardingRules(String publicIp)
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+    {
+        String   query     = "command=listIpForwardingRules&ipAddress=" + safeURLencode(publicIp);
+        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listIpForwardingRules", true);
+        NodeList match     = cloudResp.getElementsByTagName("ipforwardingrule");
+        int      length    = match.getLength();
+
+        List<IpForwardingRuleResponse> result = new ArrayList<IpForwardingRuleResponse>();
+        for (int i = 0; i < length; i++) {
+            IpForwardingRuleResponse rule = new IpForwardingRuleResponse();
+
+            Node     parent   = match.item(i);
+            NodeList children = parent.getChildNodes();
+            int      numChild = children.getLength();
+
+            for (int j = 0; j < numChild; j++ ) {
+                Node   child = children.item(j);
+                String name  = child.getNodeName();
+
+                if (null != child.getFirstChild()) {
+                    String value = child.getFirstChild().getNodeValue();
+
+                         if (name.equalsIgnoreCase("id"))                 rule.setId(new Long(value));
+                    else if (name.equalsIgnoreCase("protocol"))           rule.setProtocol(value);
+                    else if (name.equalsIgnoreCase("virtualMachineId"))   rule.setVirtualMachineId(new Long(value));
+                    else if (name.equalsIgnoreCase("virtualMachineName")) rule.setVirtualMachineName(value);
+                    else if (name.equalsIgnoreCase("ipaddress"))          rule.setPublicIpAddress(value);
+                    else if (name.equalsIgnoreCase("state"))              rule.setState(value);
+                    else if (name.equalsIgnoreCase("virtualMachineDisplayName")) rule.setVirtualMachineDisplayName(value);
+                }
+            }
+            result.add(rule);
+        }
+        return result.toArray(new IpForwardingRuleResponse[0]);
+    }
+
+
     /**  
      * Get one or more templates depending on the templateId parameter.
      * 
@@ -2561,7 +2627,7 @@ public class EC2Engine {
 		         else if (name.equalsIgnoreCase( "endport"          )) perm.setToPort( Integer.parseInt( value ));
 		         else if (name.equalsIgnoreCase( "cidr"             )) perm.addIpRange( value );
 		         else if (name.equalsIgnoreCase( "account"          )) account = value;
-		         else if (name.equalsIgnoreCase( "networkgroupname" )) groupName = value ;
+		         else if (name.equalsIgnoreCase( "securitygroupname" )) groupName = value ;
 		              
 		         if (null != account && null != groupName) 
 		         {
@@ -2682,11 +2748,12 @@ public class EC2Engine {
     	String query = "command=listNetworks";
     	Document response = null;
     	
-    	if (!shared) {
-        	Account account = getAccount();
-    		query = query.concat("&account=").concat(account.getAccountName());
-    		query = query.concat("&domainid=").concat(account.getDomainId());
-    	} 
+    	// Only need to specify account and domainid when admin
+    	//if (!shared) {
+        //	Account account = getAccount();
+    	//	query = query.concat("&account=").concat(account.getAccountName());
+    	//	query = query.concat("&domainid=").concat(account.getDomainId());
+    	//} 
     		
     	query = query.concat("&isdefault=").concat("true");
     	if (shared) query = query.concat("&isshared=").concat("true");
@@ -2716,13 +2783,13 @@ public class EC2Engine {
     private String createNetwork(String zoneId) {
     	String query = "command=createNetwork";
     	Document response = null;
-    	Account account = getAccount();
+    	//Account account = getAccount();
     	Tuple<String, String> networkOffering = getNetworkOffering();
     	
     	try {
-    		query = query.concat("&account=").concat(account.getAccountName());
+    		//query = query.concat("&account=").concat(account.getAccountName());
     		query = query.concat("&displaytext=").concat(safeURLencode(networkOffering.getSecond()));
-    		query = query.concat("&domainid=").concat(account.getDomainId());
+    		//query = query.concat("&domainid=").concat(account.getDomainId());
     		query = query.concat("&name=").concat(safeURLencode("EC2 created network"));
     		query = query.concat("&networkofferingid=").concat(networkOffering.getFirst());
     		query = query.concat("&zoneid=").concat(zoneId);

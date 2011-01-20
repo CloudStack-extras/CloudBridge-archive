@@ -18,17 +18,23 @@
   </properties>
   <repositories>
       <repository>
+          <id>ibiblio</id>
+          <name>Ibiblio Maven 2 Repository</name>
+          <url>http://repo1.maven.org/maven2/</url>
+          <layout>default</layout>
+      </repository>
+      <repository>
           <id>maven2-repository.dev.java.net</id>
           <name>Java.net Maven 2 Repository</name>
           <url>http://download.java.net/maven/2/</url>
           <layout>default</layout>
       </repository>
-      <repository>
+      <!--repository>
           <id>maven-repository.dev.java.net</id>
           <name>Java.net Maven 1 Repository (legacy)</name>
           <url>http://download.java.net/maven/1</url>
           <layout>legacy</layout>
-      </repository>
+      </repository-->
       <repository>
           <id>jboss</id>
           <name>JBOSS Repository</name>
@@ -128,6 +134,12 @@
 		<artifactId>servlet-api</artifactId>
 		<version>2.5</version>
 		<scope>provided</scope>
+	</dependency>
+	
+	<dependency>
+    	<groupId>com.jcraft</groupId>
+    	<artifactId>jsch</artifactId>
+    	<version>0.1.42</version>
 	</dependency>
 
      <!-- Hibernate -->
@@ -239,9 +251,15 @@
         <version>1.4.3</version>
     </dependency>
 
+    <dependency>
+        <groupId>com.googlecode.json-simple</groupId>
+        <artifactId>json-simple</artifactId>
+        <version>1.1</version>
+    </dependency>
+
   </dependencies>
   <build>
-    <finalName>bridge</finalName>
+    <finalName>ROOT</finalName>
     <sourceDirectory>src</sourceDirectory>
     <plugins>
 	    <plugin>
@@ -339,7 +357,6 @@
                                 <include>**/*.keystore</include>
                                 </includes>
                                 </resource>
-
 
           		</webResources>
 		</configuration>

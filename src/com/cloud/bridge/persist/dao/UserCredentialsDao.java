@@ -34,6 +34,7 @@ public class UserCredentialsDao {
 
 	private Connection conn       = null;
 	private String     dbName     = null;
+	private String     dbHost     = null;
 	private String     dbUser     = null;
 	private String     dbPassword = null;
 	
@@ -50,6 +51,7 @@ public class UserCredentialsDao {
 			} catch (IOException e) {
 				logger.warn("Unable to read properties file: " + propertiesFile.getAbsolutePath(), e);
 			}
+                    dbHost     = EC2Prop.getProperty( "dbHost" );
 		    dbName     = EC2Prop.getProperty( "dbName" );
 		    dbUser     = EC2Prop.getProperty( "dbUser" );
 		    dbPassword = EC2Prop.getProperty( "dbPassword" );
@@ -155,7 +157,7 @@ public class UserCredentialsDao {
 	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
         if (null == conn) {
 		    Class.forName( "com.mysql.jdbc.Driver" ).newInstance();
-            conn = DriverManager.getConnection( "jdbc:mysql://localhost:3306/"+dbName, dbUser, dbPassword );
+            conn = DriverManager.getConnection( "jdbc:mysql://" + dbHost + "/" + dbName, dbUser, dbPassword );
         }
 	}
 	

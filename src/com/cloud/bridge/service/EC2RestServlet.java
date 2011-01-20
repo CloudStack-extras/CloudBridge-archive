@@ -115,6 +115,7 @@ import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.AuthenticationUtils;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.EC2RestAuth;
+import com.cloud.bridge.util.SSHKeysHelper;
 
 
 public class EC2RestServlet extends HttpServlet {
@@ -203,7 +204,7 @@ public class EC2RestServlet extends HttpServlet {
     	    if (!authenticateRequest( request, response )) return;
 
     	         if (action.equalsIgnoreCase( "AllocateAddress"           )) allocateAddress(request, response);
-    	    else if (action.equalsIgnoreCase( "AssociateAddress"          )) /* not yet implemented on server */ ;  
+    	    else if (action.equalsIgnoreCase( "AssociateAddress"          )) associateAddress(request, response);
     	    else if (action.equalsIgnoreCase( "AttachVolume"              )) attachVolume(request, response );
     	    else if (action.equalsIgnoreCase( "AuthorizeSecurityGroupIngress" )) authorizeSecurityGroupIngress(request, response);  
     	    else if (action.equalsIgnoreCase( "CreateImage"               )) createImage(request, response);
@@ -224,7 +225,7 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "DescribeSnapshots"         )) describeSnapshots(request, response);  
     	    else if (action.equalsIgnoreCase( "DescribeVolumes"           )) describeVolumes(request, response); 
     	    else if (action.equalsIgnoreCase( "DetachVolume"              )) detachVolume(request, response);  
-    	    else if (action.equalsIgnoreCase( "DisassociateAddress"       )) /* not yet implemented on server */ ;  
+    	    else if (action.equalsIgnoreCase( "DisassociateAddress"       )) disassociateAddress(request, response);
     	    else if (action.equalsIgnoreCase( "ModifyImageAttribute"      )) modifyImageAttribute(request, response);  
     	    else if (action.equalsIgnoreCase( "RebootInstances"           )) rebootInstances(request, response);  
     	    else if (action.equalsIgnoreCase( "RegisterImage"             )) registerImage(request, response);  

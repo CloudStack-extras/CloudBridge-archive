@@ -8,6 +8,7 @@ settingsFile="/usr/share/cloud/bridge/conf/ec2-service.properties"
 function readCurrentSettings () {
 	readVar managementServer
 	readVar cloudAPIPort
+        readVar cloudstackVersion
 	readVar WSDLVersion
 	readVar keystore
 	readVar keystorePass
@@ -20,6 +21,7 @@ function readCurrentSettings () {
 	readVar m2.2xlarge.serviceId
 	readVar m2.4xlarge.serviceId
 	readVar cc1.4xlarge.serviceId
+	readVar dbHost
 	readVar dbName
 	readVar dbUser
 	readVar dbPassword
@@ -83,6 +85,7 @@ function saveValues () {
 	cat /dev/null > $settingsFile
 	saveValue managementServer
 	saveValue cloudAPIPort
+	saveValue cloudstackVersion
 	saveValue WSDLVersion
 	saveValue keystore
 	saveValue keystorePass
@@ -95,6 +98,7 @@ function saveValues () {
 	saveValue m2.2xlarge.serviceId
 	saveValue m2.4xlarge.serviceId
 	saveValue cc1.4xlarge.serviceId
+	saveValue dbHost
 	saveValue dbName
 	saveValue dbUser
 	saveValue dbPassword
