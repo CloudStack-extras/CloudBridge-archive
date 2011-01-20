@@ -57,6 +57,7 @@ import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.ServletAction;
 import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.s3.S3AccessControlPolicy;
+import com.cloud.bridge.service.core.s3.S3BucketPolicy;
 import com.cloud.bridge.service.core.s3.S3CanonicalUser;
 import com.cloud.bridge.service.core.s3.S3CreateBucketConfiguration;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
@@ -205,8 +206,9 @@ public class S3BucketAction implements ServletAction {
 	        if (null != policy && !policy.isEmpty()) policyDao.addPolicy( bucket.getId(), policy );
 	        
 	        // test -- TODO parse the policy just before its use and save in a list
-       		PolicyParser parser = new PolicyParser();
-    		parser.parse( policy );
+       		PolicyParser parser = new PolicyParser( false );
+    		S3BucketPolicy sbp = parser.parse( policy );
+    		System.out.println( sbp.toString());
             // test
     		
     		response.setStatus(200);

@@ -1,6 +1,7 @@
 package com.cloud.bridge.service.core.s3;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class S3PolicyAction {
@@ -14,7 +15,22 @@ public class S3PolicyAction {
 		return actionList.toArray(new String[0]);
 	}
 	
-	public void setAction(String param) {
+	public void addAction(String param) {
 		actionList.add( param );
+	}
+	
+	public String toString() {
+		
+		StringBuffer value = new StringBuffer();
+		Iterator<String> itr = actionList.iterator();
+		
+		value.append( "Actions: \n" );
+		while( itr.hasNext()) {
+			String oneAction = itr.next();
+			value.append( oneAction );
+			value.append( "\n" );
+		}
+		
+		return value.toString();
 	}
 }
