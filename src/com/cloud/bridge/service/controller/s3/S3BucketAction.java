@@ -208,7 +208,7 @@ public class S3BucketAction implements ServletAction {
 	        // test -- TODO parse the policy just before its use and save in a list
        		PolicyParser parser = new PolicyParser( false );
     		S3BucketPolicy sbp = parser.parse( policy );
-    		System.out.println( sbp.toString());
+    		if (null != sbp) System.out.println( sbp.toString());
             // test
     		
     		response.setStatus(200);

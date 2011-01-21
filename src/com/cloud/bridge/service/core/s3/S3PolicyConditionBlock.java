@@ -19,31 +19,31 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class S3PolicyPrincipal {
-
-	private List<String> principalList = new ArrayList<String>();
+public class S3PolicyConditionBlock {
 	
-	public S3PolicyPrincipal() {
+	private List<S3PolicyCondition> conditionList = new ArrayList<S3PolicyCondition>();
+	public int nesting;
+	
+	public S3PolicyConditionBlock() {
 	}
 
-	public String[] getPrincipals() {
-		return principalList.toArray(new String[0]);
+	public S3PolicyCondition[] getBlock() {
+		return conditionList.toArray(new S3PolicyCondition[0]);
 	}
 	
-	public void addPrincipal(String param) {
-		principalList.add( param );
+	public void addCondition(S3PolicyCondition param) {
+		conditionList.add( param );
 	}
-
+	
 	public String toString() {
 		
 		StringBuffer value = new StringBuffer();
-		Iterator<String> itr = principalList.iterator();
+		Iterator<S3PolicyCondition> itr = conditionList.iterator();
 		
-		value.append( "Principals: \n" );
+		value.append( "Condition: \n" );
 		while( itr.hasNext()) {
-			String onePrincipal = itr.next();
-			value.append( onePrincipal );
-			value.append( "\n" );
+			S3PolicyCondition oneCondition = itr.next();
+			value.append( oneCondition.toString());
 		}
 		
 		return value.toString();
