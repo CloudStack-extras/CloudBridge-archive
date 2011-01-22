@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
+
 public class S3BucketPolicy {
 	
 	/**
@@ -64,20 +66,30 @@ public class S3BucketPolicy {
 	 * This function evaluates all applicable policy statements.  Following the "evaluation logic"
 	 * as defined by Amazon the type of access derived from the policy is returned.
 	 * 
-	 * @param objectToAccess - path to the S3 bucket or object in the bucket associated with this
-	 *                         policy
+	 * @param objectToAccess - key to the S3 object in the bucket associated by this policy, should be
+	 *                         null if access is just to the bucket.
 	 * @param userAccount - the user performing the access request
 	 * @param operationRequested - the S3 operation being requested on the objectToAccess (e.g., PutObject)
 	 * @return PolicyAccess type
 	 */
-	public PolicyAccess eval(String objectToAccess, String userAccount, String operationRequested) 
+	public PolicyAccess eval(String objectToAccess, String userAccount, PolicyActions operationRequested) 
 	{
-		// loop though all statements in statementList
-		// --> call a function to verify that the statement is relevant to the request (parameters)
-		// --> call a function to evaluate the statement's condition
-		// --> if hit a DENY then return it
-		// --> if instead ended up with an allow return that
-		return PolicyAccess.DEFAULT_DENY;
+		PolicyAccess result = PolicyAccess.DEFAULT_DENY;
+		
+		Iterator<S3PolicyStatement> itr = statementList.iterator();
+		while( itr.hasNext()) 
+		{
+			S3PolicyStatement oneStatement = itr.next();
+			if (statementIsRelevant( oneStatement, objectToAccess, userAccount, operationRequested ))
+			{
+				if (conditionIsTrue( oneStatement )) 
+				{
+					result = oneStatement.getEffect();
+					if (PolicyAccess.DENY == result) return result;
+				}
+			}
+		}
+		return result;
 	}
 	
 	/**
@@ -98,5 +110,42 @@ public class S3BucketPolicy {
 		}
 		
 		return value.toString();
+	}
+	
+	private boolean conditionIsTrue( S3PolicyStatement oneStatement ) {
+	
+		// TODO: evaluate the statement's condition
+		return false;
+	}
+	
+	/**
+	 * Does the Policy Statement have anything to do with the requested access by the user?
+	 * 
+	 * @return true - statement is relevant, false it is not
+	 */
+	private boolean statementIsRelevant( S3PolicyStatement oneStatement, String objectToAccess, String userAccount, PolicyActions operationRequested ) 
+	{
+		String path = null;
+		
+		// [A] Is the userAccount one of the principals of the policy statement?
+		S3PolicyPrincipal principals = oneStatement.getPrincipals();
+		if (null == principals || !principals.contains( userAccount )) return false;
+		//System.out.println( "Statement: " + oneStatement.getSid() + " principal matches");
+		
+		// [B] Is the operationRequested included in the policy statement?
+		S3PolicyAction actions = oneStatement.getActions();
+		if (null == actions || !actions.contains( operationRequested )) return false;
+		//System.out.println( "Statement: " + oneStatement.getSid() + " action matches");
+		
+		// [C] Does the objectToAccess included in the resource of the policy statement?
+		//  -> is it just the bucket being accessed?
+		if ( null == objectToAccess ) 
+			 path = bucketName;
+		else path = new String( bucketName + "/" + objectToAccess );	 
+		
+	    if (!oneStatement.containsResource( path )) return false;
+		
+	    //System.out.println( "Statement: " + oneStatement.getSid() + " is relevant to access request");
+		return true;
 	}
 }

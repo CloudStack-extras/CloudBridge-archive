@@ -15,13 +15,16 @@
  */
 package com.cloud.bridge.service.core.s3;
 
+import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
+
 public class S3PolicyStatement {
 	private String sid;
-	private String effect;
+	private PolicyAccess effect;
 	private S3PolicyPrincipal principals;
     private S3PolicyAction actions;
     private String notAction;
     private String resource;
+    private String regexResource;
     private S3PolicyConditionBlock block;
 	
 	public S3PolicyStatement() {
@@ -51,11 +54,11 @@ public class S3PolicyStatement {
 		sid = param;
 	}
 
-	public String getEffect() {
+	public PolicyAccess getEffect() {
 		return effect;
 	}
 	
-	public void setEffect(String param) {
+	public void setEffect(PolicyAccess param) {
 		effect = param;
 	}
 	
@@ -65,6 +68,20 @@ public class S3PolicyStatement {
 	
 	public void setResource(String param) {
 		resource = param;
+		regexResource = toRegex( param );
+	}
+	
+	/**
+	 * Is the pathToObject "contained" in the statement's resource defintion?
+	 * Since the resource can contain wild card characters of '*' and '?' then
+	 * treat it as a regular expression to match the path given.
+	 */
+	public boolean containsResource(String pathToObject) {
+		if (null == resource) return false;
+	
+		if (pathToObject.matches( regexResource )) return true;
+		
+		return false;
 	}
 	
 	public String getNotAction() {
@@ -93,8 +110,40 @@ public class S3PolicyStatement {
 		if (null != actions   ) value.append( actions.toString());
 		if (null != notAction ) value.append( "NotAction: "  + notAction + "\n" );
 		if (null != resource  ) value.append( "Resource: " + resource + "\n" );
+		if (null != regexResource) value.append( "Regex Resource: " + regexResource + "\n" );
 		if (null != block     ) value.append( block.toString());
 		return value.toString();
 	}
 
+	/**
+	 * Convert the resource string into a regex to allow easy matching.
+	 * We must remember to quote all special regex characters that appear in the string.
+	 */
+	private String toRegex(String param) 
+	{
+		StringBuffer regex = new StringBuffer();
+		for( int i=0; i < param.length(); i++ ) 
+		{
+			char next = param.charAt( i );
+			     if ('*'  == next) regex.append( ".+"   );   // -> multi-character match wild card
+			else if ('?'  == next) regex.append( "."    );   // -> single-character match wild card
+			else if ('.'  == next) regex.append( "\\."  );   // all of these are special regex characters we are quoting
+			else if ('+'  == next) regex.append( "\\+"  );   
+			else if ('$'  == next) regex.append( "\\$"  );   
+			else if ('\\' == next) regex.append( "\\\\" );  
+			else if ('['  == next) regex.append( "\\["  );   
+			else if (']'  == next) regex.append( "\\]"  );   
+			else if ('{'  == next) regex.append( "\\{"  );   
+			else if ('}'  == next) regex.append( "\\}"  );   
+			else if ('('  == next) regex.append( "\\("  );   
+			else if (')'  == next) regex.append( "\\)"  );   
+			else if ('&'  == next) regex.append( "\\&"  );   
+			else if ('^'  == next) regex.append( "\\^"  );   
+			else if ('-'  == next) regex.append( "\\-"  );   
+			else if ('|'  == next) regex.append( "\\|"  );   
+			else regex.append( next );
+		}
+		
+		return regex.toString();
+	}
 }

@@ -73,6 +73,8 @@ import com.cloud.bridge.service.core.s3.S3MultipartUpload;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
+import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
+import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 import com.cloud.bridge.service.exception.InvalidRequestContentException;
 import com.cloud.bridge.service.exception.NetworkIOException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
@@ -208,7 +210,11 @@ public class S3BucketAction implements ServletAction {
 	        // test -- TODO parse the policy just before its use and save in a list
        		PolicyParser parser = new PolicyParser( false );
     		S3BucketPolicy sbp = parser.parse( policy, bucketName );
-    		if (null != sbp) System.out.println( sbp.toString());
+    		if (null != sbp) {
+    			System.out.println( sbp.toString());
+    			PolicyAccess result = sbp.eval(null, UserContext.current().getCanonicalUserId(), PolicyActions.PutObject);
+                System.out.println( "policy result: " + result );
+    		}
             // test
     		
     		response.setStatus(200);

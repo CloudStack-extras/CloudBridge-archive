@@ -29,6 +29,7 @@ import com.cloud.bridge.service.core.s3.S3PolicyCondition;
 import com.cloud.bridge.service.core.s3.S3PolicyConditionBlock;
 import com.cloud.bridge.service.core.s3.S3PolicyPrincipal;
 import com.cloud.bridge.service.core.s3.S3PolicyStatement;
+import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
 
 /**
  * This class uses the JSON simple parser to convert the JSON of a Bucket Policy
@@ -116,36 +117,48 @@ public class PolicyParser {
 				 if (null != statement) statement.setSid( sid );
 				 inSid = false;
 			}
-		    else if (inEffect) {
-			     if (null != statement) statement.setEffect( effect );
+		    else if (inEffect) 
+		    {
+			     if (null != statement) 
+			     {
+			    	      if (effect.equalsIgnoreCase("Allow")) statement.setEffect( PolicyAccess.ALLOW );
+			    	 else if (effect.equalsIgnoreCase("Deny" )) statement.setEffect( PolicyAccess.DENY );
+			     }
 			     inEffect = false;
 			}
-			else if (inResource) {
+			else if (inResource) 
+			{
 				 if (null != statement && resource.startsWith("arn:aws:s3:::")) {
 					 statement.setResource( resource.substring(13) );
 				 }
 				 inResource = false;
 			}
-			else if (inNotAction) {
+			else if (inNotAction) 
+			{
 				 if (null != statement) statement.setNotAction( notAction );
 				 inNotAction = false;
 			}
-			else if (inVersion) {
+			else if (inVersion) 
+			{
 				 inVersion = false;
 			}
-			else if (inId) {
+			else if (inId) 
+			{
 				 if (null != bucketPolicy) bucketPolicy.setId( id );
 				 inId = false;
 			}
-			else if (null != actions) {
+			else if (null != actions) 
+			{
 				 if (null != statement) statement.setActions( actions );
 				 actions = null;
 			}
-			else if (null != principals) {
+			else if (null != principals) 
+			{
 				 if (inAWS && null != statement) statement.setPrincipals( principals );
 			     principals = null;
 			}
-			else if (null != condition) {
+			else if (null != condition) 
+			{
 				 //System.out.println( "in condition: " + condNested + " " + entryNesting + " " + keyNested );
 				 // -> is it just the current key that is done?
 				 if (keyNested == entryNesting) {
@@ -161,7 +174,8 @@ public class PolicyParser {
 					 condition = null;
 				 }
 			}
-			else if (null != statement && 1 == entryNesting) {
+			else if (null != statement && 1 == entryNesting) 
+			{
 				 if (null != block) statement.setConditionBlock( block );
 				 if (null != bucketPolicy) bucketPolicy.addStatement( statement );
 				 statement = null;

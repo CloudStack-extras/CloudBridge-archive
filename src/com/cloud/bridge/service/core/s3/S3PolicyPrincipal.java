@@ -30,8 +30,17 @@ public class S3PolicyPrincipal {
 		return principalList.toArray(new String[0]);
 	}
 	
-	public void addPrincipal(String param) {
-		principalList.add( param );
+	public void addPrincipal(String principal) {
+		principalList.add( principal );
+	}
+	
+	public boolean contains(String findPrincipal) {
+		Iterator<String> itr = principalList.iterator();
+	    while( itr.hasNext()) {
+	    	String onePrincipal = itr.next();
+	    	if (onePrincipal.equals( findPrincipal )) return true;
+	    }
+	    return false;
 	}
 
 	public String toString() {

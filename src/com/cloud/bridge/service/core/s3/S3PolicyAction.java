@@ -21,6 +21,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
+
 public class S3PolicyAction {
 
 	public enum PolicyActions {
@@ -84,6 +86,16 @@ public class S3PolicyAction {
 		else return (PolicyActions)value;
 	}
 	
+	public boolean contains(PolicyActions operationRequested) {
+		Iterator<PolicyActions> itr = actionList.iterator();
+	    while( itr.hasNext()) {
+	    	PolicyActions oneAction = itr.next();
+	    	if (PolicyActions.AllActions == oneAction) return true;
+	    	if (oneAction == operationRequested) return true;
+	    }
+	    return false;
+	}
+
 	public String toString() {
 		
 		StringBuffer value = new StringBuffer();
