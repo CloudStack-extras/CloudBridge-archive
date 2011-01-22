@@ -121,7 +121,9 @@ public class PolicyParser {
 			     inEffect = false;
 			}
 			else if (inResource) {
-				 if (null != statement) statement.setResource( resource );
+				 if (null != statement && resource.startsWith("arn:aws:s3:::")) {
+					 statement.setResource( resource.substring(13) );
+				 }
 				 inResource = false;
 			}
 			else if (inNotAction) {
@@ -178,7 +180,7 @@ public class PolicyParser {
 			else if (inResource) resource = (String)value;
 			else if (inNotAction) notAction = (String)value;
 			else if (inId) id = (String)value;
-			else if (null != actions   ) actions.addAction( (String)value );
+			else if (null != actions   ) actions.addAction( actions.toPolicyActions((String)value));
 			else if (null != principals) principals.addPrincipal( (String)value );
 			else if (null != condition) valueList.add( (String)value );
 			else if (inVersion) {
@@ -243,9 +245,10 @@ public class PolicyParser {
 	};    			
 
 	
-	public S3BucketPolicy parse( String policy ) throws ParseException {
+	public S3BucketPolicy parse( String policy, String bucketName ) throws ParseException {
 		
 		bucketPolicy = new S3BucketPolicy();
+		bucketPolicy.setBucketName( bucketName );
 	    jparser.parse(policy, myHandler);
 	    return bucketPolicy;
 	}

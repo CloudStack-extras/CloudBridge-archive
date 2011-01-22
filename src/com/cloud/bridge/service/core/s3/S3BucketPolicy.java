@@ -20,8 +20,16 @@ import java.util.Iterator;
 import java.util.List;
 
 public class S3BucketPolicy {
+	
+	/**
+	 * 'NORESULT' is returned when no applicable statement can be found to evaluate
+	 * for the S3 access request.  If no evaluated statement results to true then the
+	 * default deny result is returned (allow ACL definitions to override it).  
+	 */
+	public enum PolicyAccess { ALLOW, DEFAULT_DENY, DENY }
 
 	private List<S3PolicyStatement> statementList = new ArrayList<S3PolicyStatement>();
+	private String bucketName = null;
 	private String id = null;
 
 	public S3BucketPolicy() {
@@ -36,6 +44,14 @@ public class S3BucketPolicy {
 		statementList.add( param );
 	}
 	
+	public String getBucketName() {
+		return bucketName;
+	}
+	
+	public void setBucketName(String param) {
+		bucketName = param;
+	}
+
 	public String getId() {
 		return id;
 	}
@@ -44,12 +60,35 @@ public class S3BucketPolicy {
 		id = param;
 	}
 	
+	/**
+	 * This function evaluates all applicable policy statements.  Following the "evaluation logic"
+	 * as defined by Amazon the type of access derived from the policy is returned.
+	 * 
+	 * @param objectToAccess - path to the S3 bucket or object in the bucket associated with this
+	 *                         policy
+	 * @param userAccount - the user performing the access request
+	 * @param operationRequested - the S3 operation being requested on the objectToAccess (e.g., PutObject)
+	 * @return PolicyAccess type
+	 */
+	public PolicyAccess eval(String objectToAccess, String userAccount, String operationRequested) 
+	{
+		// loop though all statements in statementList
+		// --> call a function to verify that the statement is relevant to the request (parameters)
+		// --> call a function to evaluate the statement's condition
+		// --> if hit a DENY then return it
+		// --> if instead ended up with an allow return that
+		return PolicyAccess.DEFAULT_DENY;
+	}
+	
+	/**
+	 * To support debugging we print out what the parsing process has resulted in.
+	 */
 	public String toString() {
 		
 		StringBuffer value = new StringBuffer();
 		Iterator<S3PolicyStatement> itr = statementList.iterator();
 		
-		value.append( "Bucket Policy: \n" );
+		value.append( "Bucket Policy for: " + bucketName + " \n" );
 		if (null != id) value.append( "Id: " + id + "\n" );
 		
 		while( itr.hasNext()) {
