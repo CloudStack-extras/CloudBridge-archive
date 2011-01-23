@@ -82,7 +82,7 @@ public class S3BucketPolicy {
 			S3PolicyStatement oneStatement = itr.next();
 			if (statementIsRelevant( oneStatement, objectToAccess, userAccount, operationRequested ))
 			{
-				if (conditionIsTrue( oneStatement )) 
+				if (oneStatement.getConditionBlock().isTrue()) 
 				{
 					result = oneStatement.getEffect();
 					if (PolicyAccess.DENY == result) return result;
@@ -110,12 +110,6 @@ public class S3BucketPolicy {
 		}
 		
 		return value.toString();
-	}
-	
-	private boolean conditionIsTrue( S3PolicyStatement oneStatement ) {
-	
-		// TODO: evaluate the statement's condition
-		return false;
 	}
 	
 	/**

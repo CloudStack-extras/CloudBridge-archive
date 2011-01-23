@@ -35,6 +35,26 @@ public class S3PolicyConditionBlock {
 		conditionList.add( param );
 	}
 	
+	/**
+	 * Condition blocks are evaluated where as an 'AND' of the result of
+	 * each separate condition in the block.   Thus, a single false value makes
+	 * the entire block evaluate to false.
+	 */
+	public boolean isTrue() {
+		
+		int count = 0;
+		
+		Iterator<S3PolicyCondition> itr = conditionList.iterator();
+		while( itr.hasNext()) {
+			count++;
+			S3PolicyCondition oneCondition = itr.next();
+			if (!oneCondition.isTrue()) return false;
+		}
+		
+		// -> if no conditions exist in the block its an error and we return false
+		return (0 < count ? true : false);
+	}
+	
 	public String toString() {
 		
 		StringBuffer value = new StringBuffer();

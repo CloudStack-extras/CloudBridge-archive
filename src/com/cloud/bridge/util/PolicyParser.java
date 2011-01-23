@@ -247,7 +247,7 @@ public class PolicyParser {
 			}
 			else if (null != block) {
 				 condition = new S3PolicyCondition();
-				 condition.setCondition( key );
+				 condition.setCondition( condition.toPolicyConditions( key ));
 				 condNested = entryNesting;
 			}
 			else if (debugOn) {
