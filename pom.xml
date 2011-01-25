@@ -259,7 +259,7 @@
 
   </dependencies>
   <build>
-    <finalName>ROOT</finalName>
+    <finalName>bridge</finalName>
     <sourceDirectory>src</sourceDirectory>
     <plugins>
 	    <plugin>

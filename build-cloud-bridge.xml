@@ -449,12 +449,12 @@
 	
 	<target name="codegen-server-ec2">
 		<wsdl2code
-			wsdlfilename="${base.dir}/wsdl/cloud-AmazonEC2.wsdl"
+			wsdlfilename="${base.dir}/wsdl/AmazonEC2.wsdl"
 			serverside="true"
 			generateservicexml="true"
 			skipbuildxml="true"
 			serversideinterface="true"
-			namespacetopackages="http://ec2.amazonaws.com/doc/2009-11-30/=com.amazon.ec2"
+			namespacetopackages="http://ec2.amazonaws.com/doc/2010-11-15/=com.amazon.ec2"
 			targetsourcefolderlocation="src"
 			targetresourcesfolderlocation="resource/AmazonEC2"
 			overwrite="true"
@@ -477,12 +477,12 @@
 	
 	<target name="codegen-client-ec2">
 		<wsdl2code
-			wsdlfilename="${base.dir}/wsdl/cloud-AmazonEC2.wsdl"
+			wsdlfilename="${base.dir}/wsdl/AmazonEC2.wsdl"
 			serverside="false"
 			generateservicexml="false"
 			skipbuildxml="true"
 			serversideinterface="false"
-			namespacetopackages="http://ec2.amazonaws.com/doc/2009-11-30/=com.amazon.ec2.client"
+			namespacetopackages="http://ec2.amazonaws.com/doc/2010-11-15/=com.amazon.ec2.client"
 			targetsourcefolderlocation="src"
 			targetresourcesfolderlocation="resource/AmazonEC2"
 			overwrite="true"

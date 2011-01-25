@@ -3,7 +3,7 @@
  * DescribeImagesType.java
  *
  * This file was auto-generated from WSDL
- * by the Apache Axis2 version: 1.5  Built on : Apr 30, 2009 (06:07:47 EDT)
+ * by the Apache Axis2 version: 1.5.1  Built on : Oct 19, 2009 (10:59:34 EDT)
  */
             
                 package com.amazon.ec2;
@@ -17,13 +17,13 @@
         implements org.apache.axis2.databinding.ADBBean{
         /* This type was generated from the piece of schema that had
                 name = DescribeImagesType
-                Namespace URI = http://ec2.amazonaws.com/doc/2010-08-31/
+                Namespace URI = http://ec2.amazonaws.com/doc/2010-11-15/
                 Namespace Prefix = ns1
                 */
             
 
         private static java.lang.String generatePrefix(java.lang.String namespace) {
-            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-08-31/")){
+            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-11-15/")){
                 return "ns1";
             }
             return org.apache.axis2.databinding.utils.BeanUtil.getUniquePrefix();
@@ -276,7 +276,7 @@
                   if (serializeType){
                
 
-                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-08-31/");
+                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-11-15/");
                    if ((namespacePrefix != null) && (namespacePrefix.trim().length() > 0)){
                        writeAttribute("xsi","http://www.w3.org/2001/XMLSchema-instance","type",
                            namespacePrefix+":DescribeImagesType",
@@ -293,25 +293,25 @@
                                             if (localExecutableBySet==null){
                                                  throw new org.apache.axis2.databinding.ADBException("executableBySet cannot be null!!");
                                             }
-                                           localExecutableBySet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","executableBySet"),
+                                           localExecutableBySet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/","executableBySet"),
                                                factory,xmlWriter);
                                         }
                                             if (localImagesSet==null){
                                                  throw new org.apache.axis2.databinding.ADBException("imagesSet cannot be null!!");
                                             }
-                                           localImagesSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","imagesSet"),
+                                           localImagesSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/","imagesSet"),
                                                factory,xmlWriter);
                                          if (localOwnersSetTracker){
                                             if (localOwnersSet==null){
                                                  throw new org.apache.axis2.databinding.ADBException("ownersSet cannot be null!!");
                                             }
-                                           localOwnersSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","ownersSet"),
+                                           localOwnersSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/","ownersSet"),
                                                factory,xmlWriter);
                                         } if (localFilterSetTracker){
                                             if (localFilterSet==null){
                                                  throw new org.apache.axis2.databinding.ADBException("filterSet cannot be null!!");
                                             }
-                                           localFilterSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","filterSet"),
+                                           localFilterSet.serialize(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/","filterSet"),
                                                factory,xmlWriter);
                                         }
                     xmlWriter.writeEndElement();
@@ -476,7 +476,7 @@
                  java.util.ArrayList attribList = new java.util.ArrayList();
 
                  if (localExecutableBySetTracker){
-                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/",
                                                                       "executableBySet"));
                             
                             
@@ -485,7 +485,7 @@
                                     }
                                     elementList.add(localExecutableBySet);
                                 }
-                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/",
                                                                       "imagesSet"));
                             
                             
@@ -494,7 +494,7 @@
                                     }
                                     elementList.add(localImagesSet);
                                  if (localOwnersSetTracker){
-                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/",
                                                                       "ownersSet"));
                             
                             
@@ -503,7 +503,7 @@
                                     }
                                     elementList.add(localOwnersSet);
                                 } if (localFilterSetTracker){
-                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
+                            elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/",
                                                                       "filterSet"));
                             
                             
@@ -590,7 +590,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","executableBySet").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/","executableBySet").equals(reader.getName())){
                                 
                                                 object.setExecutableBySet(com.amazon.ec2.DescribeImagesExecutableBySetType.Factory.parse(reader));
                                               
@@ -605,7 +605,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","imagesSet").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/","imagesSet").equals(reader.getName())){
                                 
                                                 object.setImagesSet(com.amazon.ec2.DescribeImagesInfoType.Factory.parse(reader));
                                               
@@ -621,7 +621,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","ownersSet").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/","ownersSet").equals(reader.getName())){
                                 
                                                 object.setOwnersSet(com.amazon.ec2.DescribeImagesOwnersType.Factory.parse(reader));
                                               
@@ -636,7 +636,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","filterSet").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/","filterSet").equals(reader.getName())){
                                 
                                                 object.setFilterSet(com.amazon.ec2.FilterSetType.Factory.parse(reader));
                                               

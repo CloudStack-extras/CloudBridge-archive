@@ -1787,4 +1787,24 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			}});
 		}};
 	}
+
+	public CancelConversionTaskResponse cancelConversionTask(CancelConversionTask cancelConversionTask) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public DescribeConversionTasksResponse describeConversionTasks(DescribeConversionTasks describeConversionTasks) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public ImportInstanceResponse importInstance(ImportInstance importInstance) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public ImportVolumeResponse importVolume(ImportVolume importVolume) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
