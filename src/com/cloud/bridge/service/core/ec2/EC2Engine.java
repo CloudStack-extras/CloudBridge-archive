@@ -742,7 +742,19 @@ public class EC2Engine {
     public EC2DescribeAddressesResponse handleRequest(EC2DescribeAddresses request)
     {
         try {
-            return listPublicIpAddresses( request.getPublicIpsSet());
+            EC2DescribeAddressesResponse response = listPublicIpAddresses( request.getPublicIpsSet() );
+
+            for (EC2Address a: response.getAddressSet()) {
+                if (null != a.getAssociatedInstanceId())
+                    continue;
+
+                IpForwardingRuleResponse[] rules = listIpForwardingRules(a.getIpAddress());
+                if (1 == rules.length) {
+                    a.setAssociatedInstanceId(rules[0].getVirtualMachineId().toString());
+                }
+            }
+
+            return response;
 
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 DescribeAddresses - " + error.toString());

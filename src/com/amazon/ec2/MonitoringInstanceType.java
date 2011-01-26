@@ -3,7 +3,7 @@
  * MonitoringInstanceType.java
  *
  * This file was auto-generated from WSDL
- * by the Apache Axis2 version: 1.5  Built on : Apr 30, 2009 (06:07:47 EDT)
+ * by the Apache Axis2 version: 1.5.1  Built on : Oct 19, 2009 (10:59:34 EDT)
  */
             
                 package com.amazon.ec2;
@@ -17,13 +17,13 @@
         implements org.apache.axis2.databinding.ADBBean{
         /* This type was generated from the piece of schema that had
                 name = MonitoringInstanceType
-                Namespace URI = http://ec2.amazonaws.com/doc/2010-08-31/
+                Namespace URI = http://ec2.amazonaws.com/doc/2010-11-15/
                 Namespace Prefix = ns1
                 */
             
 
         private static java.lang.String generatePrefix(java.lang.String namespace) {
-            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-08-31/")){
+            if(namespace.equals("http://ec2.amazonaws.com/doc/2010-11-15/")){
                 return "ns1";
             }
             return org.apache.axis2.databinding.utils.BeanUtil.getUniquePrefix();
@@ -159,7 +159,7 @@
                   if (serializeType){
                
 
-                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-08-31/");
+                   java.lang.String namespacePrefix = registerPrefix(xmlWriter,"http://ec2.amazonaws.com/doc/2010-11-15/");
                    if ((namespacePrefix != null) && (namespacePrefix.trim().length() > 0)){
                        writeAttribute("xsi","http://www.w3.org/2001/XMLSchema-instance","type",
                            namespacePrefix+":MonitoringInstanceType",
@@ -173,7 +173,7 @@
                
                    }
                 if (localEnabledTracker){
-                                    namespace = "http://ec2.amazonaws.com/doc/2010-08-31/";
+                                    namespace = "http://ec2.amazonaws.com/doc/2010-11-15/";
                                     if (! namespace.equals("")) {
                                         prefix = xmlWriter.getPrefix(namespace);
 
@@ -364,7 +364,7 @@
                  java.util.ArrayList attribList = new java.util.ArrayList();
 
                  if (localEnabledTracker){
-                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/",
+                                      elementList.add(new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/",
                                                                       "enabled"));
                                  
                                 elementList.add(
@@ -448,7 +448,7 @@
                                     
                                     while (!reader.isStartElement() && !reader.isEndElement()) reader.next();
                                 
-                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-08-31/","enabled").equals(reader.getName())){
+                                    if (reader.isStartElement() && new javax.xml.namespace.QName("http://ec2.amazonaws.com/doc/2010-11-15/","enabled").equals(reader.getName())){
                                 
                                     java.lang.String content = reader.getElementText();
                                     
