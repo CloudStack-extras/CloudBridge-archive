@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.xml.bind.DatatypeConverter;
 
 import com.cloud.bridge.util.DateHelper;
@@ -65,26 +66,63 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 	    keys.put(key, dates);
 	}
 	
-	public boolean isTrue() {
-		// TODO - implement each type of comparison
-		switch( condition ) {
-		case DateEquals:                 
-			 break;
-		case DateNotEquals:              
-			 break;
-		case DateLessThan:               
-			 break;
-		case DateLessThanEquals:        
-			 break;
-		case DateGreaterThan:            
-			 break;
-		case DateGreaterThanEquals:      
-			 break;
-		default: 
-			return false;
+	/**
+	 * Evaluation logic is as follows:
+	 * 1) An 'AND' operation is used over all defined keys
+	 * 2) An 'OR'  operation is used over all key values
+	 * 
+	 * Each condition has one or more keys, and each keys have one or more values to test.
+	 */
+	public boolean isTrue(HttpServletRequest request) 
+	{	
+		// -> improperly defined condition evaluates to false
+		Set<ConditionKeys> keySet = getAllKeys();
+		if (null == keySet) return false;
+		Iterator<ConditionKeys> itr = keySet.iterator();
+		if (!itr.hasNext()) return false;
+		
+		Calendar tod = Calendar.getInstance();
+		
+		while( itr.hasNext()) 
+		{
+			ConditionKeys keyName = itr.next();
+			Calendar[] valueList = getKeyValues( keyName );
+			boolean keyResult = false;
+			
+			// -> stop when we hit the first true key value (i.e., key values are 'OR'ed together)
+            for( int i=0; i < valueList.length && !keyResult; i++ )
+            {
+            	int difference = tod.compareTo( valueList[i] );
+            	
+            	switch( condition ) {
+		        case DateEquals:   
+		        	 if (0 == difference) keyResult = true;
+			         break;
+		        case DateNotEquals:  
+		        	 if (0 == difference) keyResult = true;
+			         break;
+		        case DateLessThan:     
+		        	 if (0 > difference) keyResult = true;
+			         break;
+		        case DateLessThanEquals:    
+		        	 if (0 > difference || 0 == difference) keyResult = true;
+			         break;
+		        case DateGreaterThan:      
+		        	 if (0 < difference) keyResult = true;
+			         break;
+		        case DateGreaterThanEquals:  
+		        	 if (0 < difference || 0 == difference) keyResult = true;
+		          	 break;
+		        default: 
+			         return false;
+            	}
+            }
+            
+            // -> if all key values are, false then that key is false and then the entire condition is then false
+            if (!keyResult) return false;
 		}
 		
-		return false;
+		return true;
 	}
 	
 	public String toString() {

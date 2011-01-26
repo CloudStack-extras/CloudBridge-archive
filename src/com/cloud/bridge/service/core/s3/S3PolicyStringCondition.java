@@ -21,6 +21,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.http.HttpServletRequest;
+
+import com.cloud.bridge.service.core.s3.S3PolicyCondition.ConditionKeys;
+
 public class S3PolicyStringCondition extends S3PolicyCondition {
 
 	private Map<ConditionKeys,String[]> keys = new HashMap<ConditionKeys,String[]>();
@@ -55,26 +59,58 @@ public class S3PolicyStringCondition extends S3PolicyCondition {
 	    keys.put(key, values);
 	}
 	
-	public boolean isTrue() {
-		// TODO - implement each type of comparison
-		switch( condition ) {
-		case StringEquals:
-			 break;
-		case StringNotEquals:
-			 break;
-		case StringEqualsIgnoreCase:
-			 break;
-		case StringNotEqualsIgnoreCase:
-			 break;
-		case StringLike:
-			 break;		 
-		case StringNotLike:
-			 break;		 
-		default: 
-			return false;
+	public boolean isTrue(HttpServletRequest request) 
+	{	
+		// -> improperly defined condition evaluates to false
+		Set<ConditionKeys> keySet = getAllKeys();
+		if (null == keySet) return false;
+		Iterator<ConditionKeys> itr = keySet.iterator();
+		if (!itr.hasNext()) return false;
+		
+		while( itr.hasNext()) 
+		{
+			ConditionKeys keyName = itr.next();
+			String[] valueList = getKeyValues( keyName );
+			String toCompareWith = null;
+			boolean keyResult = false;
+			
+			// -> stop when we hit the first true key value (i.e., key values are 'OR'ed together)
+            for( int i=0; i < valueList.length && !keyResult; i++ )
+            {
+            	     if (ConditionKeys.UserAgent == keyName) toCompareWith = request.getHeader( "User-Agent" );
+            	else if (ConditionKeys.Referer   == keyName) toCompareWith = request.getHeader( "Referer" );
+            	else continue;
+            	if (null == toCompareWith) continue;
+            		
+            	switch( condition ) {
+        		case StringEquals:
+        			 if (valueList[i].equals( toCompareWith )) keyResult = true;
+       			     break;
+       		    case StringNotEquals:
+       			     if (!valueList[i].equals( toCompareWith )) keyResult = true;
+       			     break;
+       		    case StringEqualsIgnoreCase:
+       			     if (valueList[i].equalsIgnoreCase( toCompareWith )) keyResult = true;
+       			     break;
+       		    case StringNotEqualsIgnoreCase:
+      			     if (!valueList[i].equalsIgnoreCase( toCompareWith )) keyResult = true;
+       			     break;
+       		    case StringLike:
+       		    	 // TODO need to use regex here as done in resource matching
+       			     break;		 
+       		    case StringNotLike:
+      		    	 // TODO need to use regex here as done in resource matching
+       			     break;		 
+		        default: 
+			         return false;
+            	}
+            }
+            
+            // -> if all key values are, false then that key is false and then the entire condition is then false
+            if (!keyResult) return false;
 		}
 		
-		return false;
+		return true;
 	}
 	
 	public String toString() {

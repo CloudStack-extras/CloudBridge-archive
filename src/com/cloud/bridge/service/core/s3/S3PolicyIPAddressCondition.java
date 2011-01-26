@@ -7,6 +7,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.http.HttpServletRequest;
+
 public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 
 	private Map<ConditionKeys,String[]> keys = new HashMap<ConditionKeys,String[]>();
@@ -49,7 +51,7 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 	    keys.put(key, values);
 	}
 	
-	public boolean isTrue() {
+	public boolean isTrue(HttpServletRequest request) {
 		// TODO - implement each type of comparison
 		switch( condition ) {
 		case IpAddress: 

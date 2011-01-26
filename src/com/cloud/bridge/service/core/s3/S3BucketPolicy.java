@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
+
 import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 
 public class S3BucketPolicy {
@@ -66,13 +68,14 @@ public class S3BucketPolicy {
 	 * This function evaluates all applicable policy statements.  Following the "evaluation logic"
 	 * as defined by Amazon the type of access derived from the policy is returned.
 	 * 
+	 * @param request - parameters from the HTTP request
 	 * @param objectToAccess - key to the S3 object in the bucket associated by this policy, should be
 	 *                         null if access is just to the bucket.
 	 * @param userAccount - the user performing the access request
 	 * @param operationRequested - the S3 operation being requested on the objectToAccess (e.g., PutObject)
 	 * @return PolicyAccess type
 	 */
-	public PolicyAccess eval(String objectToAccess, String userAccount, PolicyActions operationRequested) 
+	public PolicyAccess eval(HttpServletRequest request, String objectToAccess, String userAccount, PolicyActions operationRequested) 
 	{
 		PolicyAccess result = PolicyAccess.DEFAULT_DENY;
 		
@@ -82,7 +85,7 @@ public class S3BucketPolicy {
 			S3PolicyStatement oneStatement = itr.next();
 			if (statementIsRelevant( oneStatement, objectToAccess, userAccount, operationRequested ))
 			{
-				if (oneStatement.getConditionBlock().isTrue()) 
+				if (oneStatement.getConditionBlock().isTrue( request )) 
 				{
 					result = oneStatement.getEffect();
 					if (PolicyAccess.DENY == result) return result;

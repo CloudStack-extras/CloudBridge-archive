@@ -212,7 +212,7 @@ public class S3BucketAction implements ServletAction {
     		S3BucketPolicy sbp = parser.parse( policy, bucketName );
     		if (null != sbp) {
     			System.out.println( sbp.toString());
-    			PolicyAccess result = sbp.eval(null, UserContext.current().getCanonicalUserId(), PolicyActions.PutObject);
+    			PolicyAccess result = sbp.eval(request, null, UserContext.current().getCanonicalUserId(), PolicyActions.PutObject);
                 System.out.println( "policy result: " + result );
     		}
             // test
