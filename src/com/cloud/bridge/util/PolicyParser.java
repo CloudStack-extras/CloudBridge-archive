@@ -24,6 +24,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import com.cloud.bridge.service.core.s3.S3BucketPolicy;
+import com.cloud.bridge.service.core.s3.S3ConditionFactory;
 import com.cloud.bridge.service.core.s3.S3PolicyAction;
 import com.cloud.bridge.service.core.s3.S3PolicyCondition;
 import com.cloud.bridge.service.core.s3.S3PolicyConditionBlock;
@@ -46,6 +47,7 @@ public class PolicyParser {
 	private S3PolicyStatement statement = null;
 	private S3PolicyAction actions = null;
 	private S3PolicyCondition condition = null;
+	private S3ConditionFactory condFactory = null;
 	private S3PolicyConditionBlock block = null;
 	private String id =  null;
 	private String sid = null;
@@ -74,6 +76,7 @@ public class PolicyParser {
 	public PolicyParser( boolean debugOn ) {
 		this.debugOn = debugOn;
 		jparser = new JSONParser();
+		condFactory = new S3ConditionFactory();
 	}
 
 	ContentHandler myHandler = new ContentHandler() {
@@ -161,11 +164,16 @@ public class PolicyParser {
 			{
 				 //System.out.println( "in condition: " + condNested + " " + entryNesting + " " + keyNested );
 				 // -> is it just the current key that is done?
-				 if (keyNested == entryNesting) {
-					 String[] values = valueList.toArray(new String[0]);
-					 condition.setKey(condKey, values);
-					 valueList.clear();
-					 condKey = null;
+				 try {
+				     if (keyNested == entryNesting) {
+					     String[] values = valueList.toArray(new String[0]);
+					     condition.setKey( S3PolicyCondition.toConditionKeys( condKey ), values);
+					     valueList.clear();
+					     condKey = null;
+				     }
+				 }
+				 catch( Exception e) {
+					 // TODO add logging
 				 }
 				 
 				 // -> is the condition completely done?
@@ -246,8 +254,7 @@ public class PolicyParser {
 				 keyNested = entryNesting;
 			}
 			else if (null != block) {
-				 condition = new S3PolicyCondition();
-				 condition.setCondition( condition.toPolicyConditions( key ));
+				 condition  = condFactory.createCondition( key );
 				 condNested = entryNesting;
 			}
 			else if (debugOn) {

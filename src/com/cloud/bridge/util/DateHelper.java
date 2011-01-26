@@ -43,6 +43,25 @@ public class DateHelper {
 		return parseDateString(tz, dateString, "yyyy-MM-dd HH:mm:ss");
 	}
 	
+	public static Date parseISO8601DateString(String dateString) throws ParseException {
+        // -> SimpleDateFormat uses GMT[-+]hh:mm for the TZ so first we need to
+		//    convert the string with this value
+        SimpleDateFormat df = new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ssz" );
+        
+        //this is zero time so we need to add that TZ indicator for 
+        if ( dateString.endsWith( "Z" )) {
+             dateString = dateString.substring( 0, dateString.length() - 1) + "GMT-00:00";
+        } 
+        else 
+        {    int inset = 6;       
+             String s0 = dateString.substring( 0, dateString.length() - inset );
+             String s1 = dateString.substring( dateString.length() - inset, dateString.length() );
+             dateString = s0 + "GMT" + s1;
+        }
+        
+        return df.parse( dateString );
+	}
+
 	public static Date parseDateString(TimeZone tz, String dateString, String formatString) {
 		DateFormat df = new SimpleDateFormat(formatString);
 		df.setTimeZone(tz);
