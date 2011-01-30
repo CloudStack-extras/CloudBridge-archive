@@ -21,9 +21,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
-
-import com.cloud.bridge.service.core.s3.S3PolicyCondition.ConditionKeys;
+import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
 
 public class S3PolicyStringCondition extends S3PolicyCondition {
 
@@ -51,40 +49,46 @@ public class S3PolicyStringCondition extends S3PolicyCondition {
 	}
 	
 	/** 
-	 * Convert the key's values into the type depending on the what
-	 * the condition expects.
+	 * Convert the key's values into the type depending on the what the condition expects.
+	 * To implement "like" tests we use regexes.
+	 * 
 	 * @throws ParseException 
 	 */
-	public void setKey(ConditionKeys key, String[] values) throws ParseException {		
+	public void setKey(ConditionKeys key, String[] values) throws ParseException {	
+		
+		if (PolicyConditions.StringLike == condition || PolicyConditions.StringNotLike == condition) 
+		{
+			for( int i=0; i < values.length; i++ ) values[i] = S3PolicyStatement.toRegex( values[i] );
+		}
 	    keys.put(key, values);
 	}
 	
-	public boolean isTrue(HttpServletRequest request) 
+	public boolean isTrue(S3PolicyContext context) 
 	{	
+		String toCompareWith = null;
+
 		// -> improperly defined condition evaluates to false
 		Set<ConditionKeys> keySet = getAllKeys();
 		if (null == keySet) return false;
 		Iterator<ConditionKeys> itr = keySet.iterator();
 		if (!itr.hasNext()) return false;
 		
+		// -> all keys in a condition are ANDed together (one false one terminates the entire condition)
 		while( itr.hasNext()) 
 		{
 			ConditionKeys keyName = itr.next();
 			String[] valueList = getKeyValues( keyName );
-			String toCompareWith = null;
 			boolean keyResult = false;
+
+			// -> not having the proper parameters to evaluate an expression results in false
+        	if (null == (toCompareWith = context.getEvalParam(keyName))) return false;
 			
 			// -> stop when we hit the first true key value (i.e., key values are 'OR'ed together)
             for( int i=0; i < valueList.length && !keyResult; i++ )
-            {
-            	     if (ConditionKeys.UserAgent == keyName) toCompareWith = request.getHeader( "User-Agent" );
-            	else if (ConditionKeys.Referer   == keyName) toCompareWith = request.getHeader( "Referer" );
-            	else continue;
-            	if (null == toCompareWith) continue;
-            		
+            {          	
             	switch( condition ) {
         		case StringEquals:
-        			 if (valueList[i].equals( toCompareWith )) keyResult = true;
+        		     if (valueList[i].equals( toCompareWith )) keyResult = true;
        			     break;
        		    case StringNotEquals:
        			     if (!valueList[i].equals( toCompareWith )) keyResult = true;
@@ -96,17 +100,17 @@ public class S3PolicyStringCondition extends S3PolicyCondition {
       			     if (!valueList[i].equalsIgnoreCase( toCompareWith )) keyResult = true;
        			     break;
        		    case StringLike:
-       		    	 // TODO need to use regex here as done in resource matching
+       				 if (toCompareWith.matches( valueList[i] )) keyResult = true;
        			     break;		 
        		    case StringNotLike:
-      		    	 // TODO need to use regex here as done in resource matching
+      				 if (!toCompareWith.matches( valueList[i] )) keyResult = true;
        			     break;		 
 		        default: 
 			         return false;
             	}
             }
             
-            // -> if all key values are, false then that key is false and then the entire condition is then false
+            // -> if all key values are false, false then that key is false and then the entire condition is then false
             if (!keyResult) return false;
 		}
 		
@@ -120,7 +124,7 @@ public class S3PolicyStringCondition extends S3PolicyCondition {
 		if (null == keySet) return "";
 		Iterator<ConditionKeys> itr = keySet.iterator();
 		
-		value.append( condition + ": \n" );
+		value.append( condition + " (a String condition): \n" );
 		while( itr.hasNext()) {
 			ConditionKeys keyName = itr.next();
 			value.append( keyName );

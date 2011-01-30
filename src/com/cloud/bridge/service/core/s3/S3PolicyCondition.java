@@ -18,8 +18,6 @@ package com.cloud.bridge.service.core.s3;
 import java.text.ParseException;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
-
 import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
 
 /**
@@ -30,7 +28,8 @@ public abstract class S3PolicyCondition {
 
 	public enum ConditionKeys {
 		UnknownKey,
-	    CurrentTime, SecureTransport, SourceIp, SourceArn, UserAgent, EpochTime, Referer
+	    CurrentTime, SecureTransport, SourceIp, SourceArn, UserAgent, EpochTime, Referer,
+	    Acl, Location, Prefix, Delimiter, MaxKeys, CopySource, MetaData, VersionId
 	}
 	
 	protected PolicyConditions condition = null;   
@@ -48,13 +47,21 @@ public abstract class S3PolicyCondition {
 	
 	public static ConditionKeys toConditionKeys(String keyName) 
 	{
-	         if (keyName.equalsIgnoreCase( "aws:CurrentTime"     )) return ConditionKeys.CurrentTime;
-	    else if (keyName.equalsIgnoreCase( "aws:SecureTransport" )) return ConditionKeys.SecureTransport;
-	    else if (keyName.equalsIgnoreCase( "aws:SourceIp"        )) return ConditionKeys.SourceIp;
-	    else if (keyName.equalsIgnoreCase( "aws:SourceArn"       )) return ConditionKeys.SourceArn;
-	    else if (keyName.equalsIgnoreCase( "aws:UserAgent"       )) return ConditionKeys.UserAgent;
-	    else if (keyName.equalsIgnoreCase( "aws:EpochTime"       )) return ConditionKeys.EpochTime;
-	    else if (keyName.equalsIgnoreCase( "aws:Referer"         )) return ConditionKeys.Referer;
+	         if (keyName.equalsIgnoreCase( "aws:CurrentTime"             )) return ConditionKeys.CurrentTime;
+	    else if (keyName.equalsIgnoreCase( "aws:SecureTransport"         )) return ConditionKeys.SecureTransport;
+	    else if (keyName.equalsIgnoreCase( "aws:SourceIp"                )) return ConditionKeys.SourceIp;
+	    else if (keyName.equalsIgnoreCase( "aws:SourceArn"               )) return ConditionKeys.SourceArn;
+	    else if (keyName.equalsIgnoreCase( "aws:UserAgent"               )) return ConditionKeys.UserAgent;
+	    else if (keyName.equalsIgnoreCase( "aws:EpochTime"               )) return ConditionKeys.EpochTime;
+	    else if (keyName.equalsIgnoreCase( "aws:Referer"                 )) return ConditionKeys.Referer;
+	    else if (keyName.equalsIgnoreCase( "s3:x-amz-acl"                )) return ConditionKeys.Acl;
+	    else if (keyName.equalsIgnoreCase( "s3:LocationConstraint"       )) return ConditionKeys.Location;
+	    else if (keyName.equalsIgnoreCase( "s3:prefix"                   )) return ConditionKeys.Prefix;
+	    else if (keyName.equalsIgnoreCase( "s3:delimiter"                )) return ConditionKeys.Delimiter;
+	    else if (keyName.equalsIgnoreCase( "s3:max-keys"                 )) return ConditionKeys.MaxKeys;
+	    else if (keyName.equalsIgnoreCase( "s3:x-amz-copy-source"        )) return ConditionKeys.CopySource;
+	    else if (keyName.equalsIgnoreCase( "s3:x-amz-metadata-directive" )) return ConditionKeys.MetaData;
+	    else if (keyName.equalsIgnoreCase( "s3:VersionId"                )) return ConditionKeys.VersionId;
 	    else return ConditionKeys.UnknownKey;
 	}
 
@@ -75,7 +82,7 @@ public abstract class S3PolicyCondition {
 	public void setKey(ConditionKeys key, String[] values) throws ParseException {
 	}
 
-	public boolean isTrue(HttpServletRequest request) {
+	public boolean isTrue(S3PolicyContext params) {
 		return false;
 	}
 	

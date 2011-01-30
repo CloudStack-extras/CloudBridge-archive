@@ -23,10 +23,12 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
+
 public class S3PolicyBoolCondition extends S3PolicyCondition {
 
 
-	private Map<ConditionKeys,Boolean[]> keys = new HashMap<ConditionKeys,Boolean[]>();
+	private Map<ConditionKeys,String[]> keys = new HashMap<ConditionKeys,String[]>();
 
 	public S3PolicyBoolCondition() {
 	}
@@ -45,32 +47,47 @@ public class S3PolicyBoolCondition extends S3PolicyCondition {
 	 * @param key
 	 * @return String[]
 	 */
-	public Boolean[] getKeyValues(ConditionKeys key) {
+	public String[] getKeyValues(ConditionKeys key) {
 		return keys.get(key);
 	}
 	
 	/** 
-	 * Convert the key's values into the type depending on the what
-	 * the condition expects.
+	 * Documentation on Bool conditions is nearly non-existent.   Only found that
+	 * the 'SecureTransport' key is relvant and have not found any examples.   
+	 * 
 	 * @throws ParseException 
 	 */
 	public void setKey(ConditionKeys key, String[] values) throws ParseException {		
-		Boolean[] twoValued = new Boolean[ values.length ];
-		
-	    for( int i=0; i < values.length; i++ ) twoValued[i] = values[i].equalsIgnoreCase( "true" );
-	    keys.put(key, twoValued);
+	    keys.put(key, values);
 	}
 	
-	public boolean isTrue(HttpServletRequest request) {
-		// TODO - implement each type of comparison
-		switch( condition ) {
-		case Bool:
-			 break;
-		default: 
-			return false;
+	public boolean isTrue(S3PolicyContext context) 
+	{
+		// -> improperly defined condition evaluates to false
+		Set<ConditionKeys> keySet = getAllKeys();
+		if (null == keySet) return false;
+		Iterator<ConditionKeys> itr = keySet.iterator();
+		if (!itr.hasNext()) return false;
+		
+		// -> all keys in a condition are ANDed together (one false one terminates the entire condition)
+		while( itr.hasNext()) 
+		{
+			ConditionKeys keyName = itr.next();
+			// String[] valueList = getKeyValues( keyName );  // <-- not used
+			boolean keyResult = false;
+       	
+        	if (ConditionKeys.SecureTransport == keyName && PolicyConditions.Bool == condition)
+        	{
+        		HttpServletRequest request = context.getHttp();
+        		if (request.isSecure()) keyResult = true;
+        	}
+			
+            // -> if all key values are false, false then that key is false and then the entire condition is then false
+            if (!keyResult) return false;
 		}
 		
-		return false;
+		return true;
+
 	}
 	
 	public String toString() {
@@ -80,15 +97,15 @@ public class S3PolicyBoolCondition extends S3PolicyCondition {
 		if (null == keySet) return "";
 		Iterator<ConditionKeys> itr = keySet.iterator();
 		
-		value.append( condition + ": \n" );
+		value.append( condition + " (a BOOL condition): \n" );
 		while( itr.hasNext()) {
 			ConditionKeys keyName = itr.next();
 			value.append( keyName );
 			value.append( ": \n" );
-			Boolean[] valueList = getKeyValues( keyName );
+			String[] valueList = getKeyValues( keyName );
 			for( int i=0; i < valueList.length; i++ ) {
 				if (0 < i) value.append( "\n" );
-				value.append( valueList[i].booleanValue());
+				value.append( valueList[i]);
 			}
 			value.append( "\n\n" );
 		}

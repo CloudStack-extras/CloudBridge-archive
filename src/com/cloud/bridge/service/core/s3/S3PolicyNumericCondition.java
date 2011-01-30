@@ -21,8 +21,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
-
 public class S3PolicyNumericCondition extends S3PolicyCondition {
 
 	private Map<ConditionKeys,Float[]> keys = new HashMap<ConditionKeys,Float[]>();
@@ -60,26 +58,67 @@ public class S3PolicyNumericCondition extends S3PolicyCondition {
 	    keys.put(key, numbers);
 	}
 	
-	public boolean isTrue(HttpServletRequest request) {
-		// TODO - implement each type of comparison
-		switch( condition ) {
-		case NumericEquals:      
-			 break;
-		case NumericNotEquals:  
-			 break;
-		case NumericLessThan:       
-			 break;
-		case NumericLessThanEquals:
-			 break;
-		case NumericGreaterThan:	  
-			 break;
-		case NumericGreaterThanEquals:
-			 break;
-		default: 
-			return false;
+	public boolean isTrue(S3PolicyContext context) 
+	{		
+		Float toCompareWith;
+		String temp = null;
+		
+		// -> improperly defined condition evaluates to false
+		Set<ConditionKeys> keySet = getAllKeys();
+		if (null == keySet) return false;
+		Iterator<ConditionKeys> itr = keySet.iterator();
+		if (!itr.hasNext()) return false;
+		
+		while( itr.hasNext()) 
+		{
+			ConditionKeys keyName = itr.next();
+			Float[] valueList = getKeyValues( keyName );
+			boolean keyResult = false;
+			
+			// -> not having the proper parameters to evaluate an expression results in false
+        	if (null == (temp = context.getEvalParam(keyName))) return false;
+        	try {
+        	    toCompareWith = new Float( temp );
+        	}
+        	catch( NumberFormatException e ) {
+        		return false;
+        	}
+			
+			// -> stop when we hit the first true key value (i.e., key values are 'OR'ed together)
+            for( int i=0; i < valueList.length && !keyResult; i++ )
+            {            		
+            	int difference = valueList[i].compareTo( toCompareWith );
+            	
+            	switch( condition ) {
+        		case NumericEquals:   
+		        	 if (0 == difference) keyResult = true;
+       			     break;
+       		    case NumericNotEquals:  
+		        	 if (0 != difference) keyResult = true;
+       			     break;
+       		    case NumericLessThan:   
+		        	 if (0 > difference) keyResult = true;
+       			     break;
+       		    case NumericLessThanEquals:
+		        	 if (0 > difference || 0 == difference) keyResult = true;
+       			     break;
+       		    case NumericGreaterThan:	
+		        	 if (0 < difference) keyResult = true;
+       			     break;
+       		    case NumericGreaterThanEquals:
+		        	 if (0 < difference || 0 == difference) keyResult = true;
+       			     break;
+		        default: 
+			         return false;
+            	}
+            }
+            
+            // -> if all key values are, false then that key is false and then the entire condition is then false
+            if (!keyResult) return false;
 		}
 		
-		return false;
+		return true;
+
 	}
 	
 	public String toString() {
@@ -89,7 +128,7 @@ public class S3PolicyNumericCondition extends S3PolicyCondition {
 		if (null == keySet) return "";
 		Iterator<ConditionKeys> itr = keySet.iterator();
 		
-		value.append( condition + ": \n" );
+		value.append( condition + " (a numeric condition):\n" );
 		while( itr.hasNext()) {
 			ConditionKeys keyName = itr.next();
 			value.append( keyName );

@@ -17,12 +17,12 @@ package com.cloud.bridge.service.core.s3;
 
 import java.text.ParseException;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.xml.bind.DatatypeConverter;
 
 import com.cloud.bridge.util.DateHelper;
@@ -53,15 +53,24 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 	}
 	
 	/** 
-	 * Convert the key's values into the type depending on the what
-	 * the condition expects.
+	 * Convert the key's values into the type depending on the what the condition expects.
 	 * @throws ParseException 
 	 */
 	public void setKey(ConditionKeys key, String[] values) throws ParseException {
 		Calendar[] dates = new Calendar[ values.length ];
 		
-	    for( int i=0; i < values.length; i++ )
-		     dates[i] = DateHelper.toCalendar( DateHelper.parseISO8601DateString( values[i] ));
+		// -> aws:EpochTime—Number of seconds since epoch is supported here and can also be used in a numeric condition
+		if ( ConditionKeys.EpochTime == key ) 
+		{
+		     for( int i=0; i < values.length; i++ ) {
+		    	long epochTime = Long.parseLong( values[i] );
+ 		        dates[i] = DateHelper.toCalendar( new Date( epochTime ));
+		     }
+		}
+		else
+		{    for( int i=0; i < values.length; i++ )
+		        dates[i] = DateHelper.toCalendar( DateHelper.parseISO8601DateString( values[i] ));
+		}
 		
 	    keys.put(key, dates);
 	}
@@ -73,7 +82,7 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 	 * 
 	 * Each condition has one or more keys, and each keys have one or more values to test.
 	 */
-	public boolean isTrue(HttpServletRequest request) 
+	public boolean isTrue(S3PolicyContext context) 
 	{	
 		// -> improperly defined condition evaluates to false
 		Set<ConditionKeys> keySet = getAllKeys();
@@ -81,13 +90,14 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 		Iterator<ConditionKeys> itr = keySet.iterator();
 		if (!itr.hasNext()) return false;
 		
+		// -> time to compare with is taken when the condition is evaluated
 		Calendar tod = Calendar.getInstance();
 		
 		while( itr.hasNext()) 
 		{
 			ConditionKeys keyName = itr.next();
 			Calendar[] valueList = getKeyValues( keyName );
-			boolean keyResult = false;
+			boolean keyResult = false;			
 			
 			// -> stop when we hit the first true key value (i.e., key values are 'OR'ed together)
             for( int i=0; i < valueList.length && !keyResult; i++ )
@@ -99,7 +109,7 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 		        	 if (0 == difference) keyResult = true;
 			         break;
 		        case DateNotEquals:  
-		        	 if (0 == difference) keyResult = true;
+		        	 if (0 != difference) keyResult = true;
 			         break;
 		        case DateLessThan:     
 		        	 if (0 > difference) keyResult = true;
@@ -132,7 +142,7 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 		if (null == keySet) return "";
 		Iterator<ConditionKeys> itr = keySet.iterator();
 		
-		value.append( condition + ": \n" );
+		value.append( condition + " (a date condition): \n" );
 		while( itr.hasNext()) {
 			ConditionKeys keyName = itr.next();
 			value.append( keyName );

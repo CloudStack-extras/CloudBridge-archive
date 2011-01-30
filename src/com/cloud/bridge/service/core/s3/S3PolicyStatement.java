@@ -119,7 +119,7 @@ public class S3PolicyStatement {
 	 * Convert the resource string into a regex to allow easy matching.
 	 * We must remember to quote all special regex characters that appear in the string.
 	 */
-	private String toRegex(String param) 
+	public static String toRegex(String param) 
 	{
 		StringBuffer regex = new StringBuffer();
 		for( int i=0; i < param.length(); i++ ) 

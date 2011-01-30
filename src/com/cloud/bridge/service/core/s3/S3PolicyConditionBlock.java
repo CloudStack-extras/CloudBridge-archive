@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-
 public class S3PolicyConditionBlock {
 	
 	private List<S3PolicyCondition> conditionList = new ArrayList<S3PolicyCondition>();
@@ -40,21 +38,20 @@ public class S3PolicyConditionBlock {
 	/**
 	 * Condition blocks are evaluated where as an 'AND' of the result of
 	 * each separate condition in the block.   Thus, a single false value makes
-	 * the entire block evaluate to false.
+	 * the entire block evaluate to false.  If no conditions are present and the
+	 * condition is relevant to the request, then the default condition is considered
+	 * to be true.
 	 */
-	public boolean isTrue(HttpServletRequest request) {
-		
-		int count = 0;
+	public boolean isTrue(S3PolicyContext context) {
 		
 		Iterator<S3PolicyCondition> itr = conditionList.iterator();
 		while( itr.hasNext()) {
-			count++;
 			S3PolicyCondition oneCondition = itr.next();
-			if (!oneCondition.isTrue( request )) return false;
+			if (!oneCondition.isTrue( context )) return false;
 		}
 		
-		// -> if no conditions exist in the block its an error and we return false
-		return (0 < count ? true : false);
+		// -> if no conditions exist in the block it defaults to true
+		return true;
 	}
 	
 	public String toString() {

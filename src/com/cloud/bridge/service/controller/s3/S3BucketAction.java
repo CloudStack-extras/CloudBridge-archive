@@ -70,6 +70,7 @@ import com.cloud.bridge.service.core.s3.S3ListBucketObjectEntry;
 import com.cloud.bridge.service.core.s3.S3ListBucketRequest;
 import com.cloud.bridge.service.core.s3.S3ListBucketResponse;
 import com.cloud.bridge.service.core.s3.S3MultipartUpload;
+import com.cloud.bridge.service.core.s3.S3PolicyContext;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
@@ -212,7 +213,8 @@ public class S3BucketAction implements ServletAction {
     		S3BucketPolicy sbp = parser.parse( policy, bucketName );
     		if (null != sbp) {
     			System.out.println( sbp.toString());
-    			PolicyAccess result = sbp.eval(request, null, UserContext.current().getCanonicalUserId(), PolicyActions.PutObject);
+    			S3PolicyContext context = new S3PolicyContext( request );
+    			PolicyAccess result = sbp.eval(context, null, UserContext.current().getCanonicalUserId(), PolicyActions.PutObject);
                 System.out.println( "policy result: " + result );
     		}
             // test
