@@ -15,16 +15,17 @@
  */
 package com.cloud.bridge.service.core.s3;
 
-import java.net.InetAddress;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import com.cloud.bridge.util.IpAddressRange;
+
 public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 
-	private Map<ConditionKeys,String[]> keys = new HashMap<ConditionKeys,String[]>();
+	private Map<ConditionKeys,IpAddressRange[]> keys = new HashMap<ConditionKeys,IpAddressRange[]>();
 
 	public S3PolicyIPAddressCondition() {
 	}
@@ -43,31 +44,25 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 	 * @param key
 	 * @return String[]
 	 */
-	public String[] getKeyValues(ConditionKeys key) {
+	public IpAddressRange[] getKeyValues(ConditionKeys key) {
 		return keys.get(key);
 	}
 	
 	/** 
-	 * Convert the key's values into the type depending on the what
-	 * the condition expects.
+	 * Convert the key's values into the type depending on the what the condition expects.
 	 * @throws ParseException 
 	 */
 	public void setKey(ConditionKeys key, String[] values) throws ParseException {		
-		
-		//try {
-		//InetAddress addr = InetAddress.getByAddress( values[0], null );
-		//}
-		//catch( Exception e ) {
-		//   System.out.println( "test ip address conversion: " + e.toString());	
-		//}
-		
-	    keys.put(key, values);
+		IpAddressRange[] addresses = new IpAddressRange[ values.length ];
+	
+		for( int i=0; i < values.length; i++ )
+	        addresses[i] = IpAddressRange.parseRange( values[i] );
+
+	    keys.put(key, addresses);
 	}
 	
 	public boolean isTrue(S3PolicyContext context) 
 	{
-		String toCompareWith = null;
-
 		// -> improperly defined condition evaluates to false
 		Set<ConditionKeys> keySet = getAllKeys();
 		if (null == keySet) return false;
@@ -76,26 +71,26 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 		
 		// -> returns the Internet Protocol (IP) address of the client or last proxy that sent the request. 
 		//    For HTTP servlets, same as the value of the CGI variable REMOTE_ADDR. 
-		String remoteAddr = context.getHttp().getRemoteAddr();
-		
+		IpAddressRange toCompareWith = IpAddressRange.parseRange( context.getHttp().getRemoteAddr());
+		if (null == toCompareWith) return false;
+			
 		
 		// -> all keys in a condition are ANDed together (one false one terminates the entire condition)
 		while( itr.hasNext()) 
 		{
 			ConditionKeys keyName = itr.next();
-			String[] valueList = getKeyValues( keyName );
+			IpAddressRange[] valueList = getKeyValues( keyName );
 			boolean keyResult = false;
 
-			// -> not having the proper parameters to evaluate an expression results in false
-        	if (null == (toCompareWith = context.getEvalParam(keyName))) return false;
-			
 			// -> stop when we hit the first true key value (i.e., key values are 'OR'ed together)
             for( int i=0; i < valueList.length && !keyResult; i++ )
             {          	
             	switch( condition ) {
         		case IpAddress: 
+        			 if (valueList[i].contains( toCompareWith )) keyResult = true;
        			     break;
         		case NotIpAddres:
+       			     if (!valueList[i].contains( toCompareWith )) keyResult = true;
        			     break;
 		        default: 
 			         return false;
@@ -121,10 +116,10 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 			ConditionKeys keyName = itr.next();
 			value.append( keyName );
 			value.append( ": \n" );
-			String[] valueList = getKeyValues( keyName );
+			IpAddressRange[] valueList = getKeyValues( keyName );
 			for( int i=0; i < valueList.length; i++ ) {
 				if (0 < i) value.append( "\n" );
-				value.append( valueList[i] );
+				value.append( valueList[i].toString());
 			}
 			value.append( "\n\n" );
 		}
