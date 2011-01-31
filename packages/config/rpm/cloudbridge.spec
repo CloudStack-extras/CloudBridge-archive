@@ -38,6 +38,7 @@ This is the Cloud.com Bridge
 %install
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 ant deploy-rpm-install
+mv ../cloud-bridge-%{_ver}-1 ${RPM_BUILD_ROOT}
 mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/logs
 mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/work
 mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/temp
