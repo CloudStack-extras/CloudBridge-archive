@@ -1,7 +1,7 @@
 %define __os_install_post %{nil}
 %global debug_package %{nil}
 
-%define _ver 0.9.0
+%define _ver 1.0.0
 %define _rel 1
 
 Name:      cloud-bridge
