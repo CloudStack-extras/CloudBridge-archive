@@ -116,7 +116,6 @@ import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 import com.cloud.bridge.util.AuthenticationUtils;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.EC2RestAuth;
-import com.cloud.bridge.util.SSHKeysHelper;
 
 
 public class EC2RestServlet extends HttpServlet {

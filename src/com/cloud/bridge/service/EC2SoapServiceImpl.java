@@ -61,7 +61,6 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddressesResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
-import com.cloud.bridge.util.SSHKeysHelper;
 
 
 public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
