@@ -47,11 +47,13 @@ import com.cloud.bridge.persist.dao.MHostDao;
 import com.cloud.bridge.persist.dao.SHostDao;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
+import com.cloud.bridge.service.core.s3.S3BucketPolicy;
 import com.cloud.bridge.service.core.s3.S3Engine;
 import com.cloud.bridge.service.exception.ConfigurationException;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.DateHelper;
 import com.cloud.bridge.util.NetHelper;
+import com.cloud.bridge.util.Tuple;
 
 /**
  * @author Kelven Yang
@@ -67,11 +69,14 @@ public class ServiceProvider {
     private Timer timer = new Timer();
     private MHost mhost;
     private Properties properties;
-    private boolean useSubDomain = false;			// use DNS sub domain for bucket name
+    private boolean useSubDomain = false;		 // use DNS sub domain for bucket name
     private String serviceEndpoint = null;
-    private String multipartDir = null;  // illegal bucket name used as a folder for storing multiparts
+    private String multipartDir = null;          // illegal bucket name used as a folder for storing multiparts
     private S3Engine engine;
     private EC2Engine EC2_engine = null;
+    
+    // -> cache Bucket Policies here so we don't have to load from db on every access
+    private Map<String,S3BucketPolicy> policyMap = new HashMap<String,S3BucketPolicy>();
     
     protected ServiceProvider() {
     	// register service implementation object
@@ -102,6 +107,39 @@ public class ServiceProvider {
     	if(mhost != null)
     		mhostId = mhost.getId() != null ? mhost.getId().longValue() : 0L;
     	return mhostId;
+    }
+    
+    /** 
+     * We return a tuple to distinguish between two cases:
+     * (1) there is no entry in the map for bucketName, and (2) there is a null entry
+     * in the map for bucketName.   In case 2, the database was inspected for the
+     * bucket policy but it had none so we remember it here to reduce database lookups.
+     * @param bucketName
+     * @return Integer in the tuple means: -1 if no policy defined for the bucket, 0 if one defined
+     *         even if its set at null.
+     */
+    public Tuple<S3BucketPolicy,Integer> getBucketPolicy(String bucketName) {
+    	
+    	if (policyMap.containsKey( bucketName )) {
+    	    S3BucketPolicy policy = policyMap.get( bucketName );
+    	    return new Tuple<S3BucketPolicy,Integer>( policy, 0 );
+    	}
+    	else return new Tuple<S3BucketPolicy,Integer>( null, -1 );
+    }
+    
+    /**
+     * The policy parameter can be set to null, which means that there is no policy
+     * for the bucket so a database lookup is not necessary.
+     * 
+     * @param bucketName
+     * @param policy
+     */
+    public void setBucketPolicy(String bucketName, S3BucketPolicy policy) {
+    	policyMap.put(bucketName, policy);
+    }
+    
+    public void deleteBucketPolicy(String bucketName) {
+    	policyMap.remove(bucketName);
     }
     
     public S3Engine getS3Engine() {
@@ -264,7 +302,7 @@ public class ServiceProvider {
 	}
     
     public void shutdown() {
-    	timer.cancel();
+   	    timer.cancel();
     	
     	if(logger.isInfoEnabled())
     		logger.info("ServiceProvider stopped");

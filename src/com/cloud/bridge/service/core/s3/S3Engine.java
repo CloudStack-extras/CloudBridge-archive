@@ -17,6 +17,7 @@ package com.cloud.bridge.service.core.s3;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -36,6 +37,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import org.hibernate.LockMode;
 import org.hibernate.Session;
+import org.json.simple.parser.ParseException;
 
 import com.cloud.bridge.model.MHost;
 import com.cloud.bridge.model.MHostMount;
@@ -46,6 +48,7 @@ import com.cloud.bridge.model.SMeta;
 import com.cloud.bridge.model.SObject;
 import com.cloud.bridge.model.SObjectItem;
 import com.cloud.bridge.persist.PersistContext;
+import com.cloud.bridge.persist.dao.BucketPolicyDao;
 import com.cloud.bridge.persist.dao.MHostDao;
 import com.cloud.bridge.persist.dao.MHostMountDao;
 import com.cloud.bridge.persist.dao.MultipartLoadDao;
@@ -69,6 +72,7 @@ import com.cloud.bridge.service.exception.OutOfStorageException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.service.exception.UnsupportedException;
 import com.cloud.bridge.util.DateHelper;
+import com.cloud.bridge.util.PolicyParser;
 import com.cloud.bridge.util.StringHelper;
 import com.cloud.bridge.util.Tuple;
 
@@ -1440,6 +1444,41 @@ public class S3Engine {
 		     if (hasPermission( aclDao.listGrants( target, targetId, "*" ), requestedPermission )) return;
         }
         throw new PermissionDeniedException( "Access Denied - user does not have the required permission" );
+	}
+	
+	/**
+	 * This function assumes that the bucket has been tested to make sure it exists before
+	 * it is called.
+	 * 
+	 * @param bucketName
+	 * @return S3BucketPolicy
+	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException, ParseException 
+	 */
+	public static S3BucketPolicy loadPolicy( String bucketName ) 
+	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException, ParseException
+	{
+		Tuple<S3BucketPolicy,Integer> result = ServiceProvider.getInstance().getBucketPolicy( bucketName );
+		S3BucketPolicy policy = result.getFirst();
+		if ( null == policy )
+		{
+			 // -> do we have to load it from the database (any other value means there is no policy)?
+			 if (-1 == result.getSecond().intValue())
+			 {
+				SBucketDao bucketDao = new SBucketDao();
+				SBucket bucket = bucketDao.getByName(bucketName);
+				if (null == bucket) return null;
+
+			    BucketPolicyDao policyDao = new BucketPolicyDao();
+			    String policyInJson = policyDao.getPolicy( bucket.getId());
+			    if (null == policyInJson) return null;
+			    
+	       		PolicyParser parser = new PolicyParser( false );
+	    		policy = parser.parse( policyInJson, bucketName );
+	    		if (null != policy) 
+	    	        ServiceProvider.getInstance().setBucketPolicy(bucketName, policy);
+			 }
+		}
+		return policy;
 	}
 	
 	private static boolean hasPermission( List<SAcl> priviledges, int requestedPermission ) 

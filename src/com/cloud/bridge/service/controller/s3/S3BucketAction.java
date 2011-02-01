@@ -207,18 +207,17 @@ public class S3BucketAction implements ServletAction {
 	        BucketPolicyDao policyDao = new BucketPolicyDao();
 	        policyDao.deletePolicy( bucket.getId());
 	        if (null != policy && !policy.isEmpty()) policyDao.addPolicy( bucket.getId(), policy );
-	        
-	        // test -- TODO parse the policy just before its use and save in a list
+	                
        		PolicyParser parser = new PolicyParser( false );
     		S3BucketPolicy sbp = parser.parse( policy, bucketName );
-    		if (null != sbp) {
-    			System.out.println( sbp.toString());
-    			S3PolicyContext context = new S3PolicyContext( request );
-    			PolicyAccess result = sbp.eval(context, null, UserContext.current().getCanonicalUserId(), PolicyActions.PutObject);
-                System.out.println( "policy result: " + result );
+    		if (null != sbp) 
+    		{
+    	        ServiceProvider.getInstance().setBucketPolicy(bucketName, sbp);
+    			//System.out.println( sbp.toString());
+    			//S3PolicyContext context = new S3PolicyContext( request );
+    			//PolicyAccess result = sbp.eval(context, null, UserContext.current().getCanonicalUserId(), PolicyActions.PutObject);
+                //System.out.println( "policy result: " + result );
     		}
-            // test
-    		
     		response.setStatus(200);
     		
     	}
@@ -289,6 +288,7 @@ public class S3BucketAction implements ServletAction {
 	    		 response.setStatus(204);
 	        }
 	        else {
+	   	         ServiceProvider.getInstance().deleteBucketPolicy( bucketName );
     	         policyDao.deletePolicy( bucket.getId());
     		     response.setStatus(200);
 	        }
