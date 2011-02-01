@@ -59,7 +59,7 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 	public void setKey(ConditionKeys key, String[] values) throws ParseException {
 		Calendar[] dates = new Calendar[ values.length ];
 		
-		// -> aws:EpochTime—Number of seconds since epoch is supported here and can also be used in a numeric condition
+		// -> aws:EpochTime - Number of seconds since epoch is supported here and can also be used in a numeric condition
 		if ( ConditionKeys.EpochTime == key ) 
 		{
 		     for( int i=0; i < values.length; i++ ) {

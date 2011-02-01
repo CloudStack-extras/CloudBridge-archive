@@ -1,7 +1,7 @@
 %define __os_install_post %{nil}
 %global debug_package %{nil}
 
-%define _ver 0.9.0
+%define _ver 1.0.0
 %define _rel 1
 
 Name:      cloud-bridge
@@ -38,6 +38,7 @@ This is the Cloud.com Bridge
 %install
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 ant deploy-rpm-install
+mv ../cloud-bridge-%{_ver}-1 ${RPM_BUILD_ROOT}
 mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/logs
 mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/work
 mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/temp

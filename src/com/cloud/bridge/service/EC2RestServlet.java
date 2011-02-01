@@ -112,10 +112,10 @@ import com.cloud.bridge.service.core.ec2.EC2Volume;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
+import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 import com.cloud.bridge.util.AuthenticationUtils;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.EC2RestAuth;
-import com.cloud.bridge.util.SSHKeysHelper;
 
 
 public class EC2RestServlet extends HttpServlet {
@@ -245,8 +245,7 @@ public class EC2RestServlet extends HttpServlet {
        	    else if (action.equalsIgnoreCase( "GetPasswordData"           )) getPasswordData(request, response);
     	    else {
         		logger.error("Unsupported action " + action);
-        		response.setStatus(501);
-            	endResponse(response, "Unsupported - " + action );
+        		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
     	    }
     	         
         } catch( EC2ServiceException e ) {

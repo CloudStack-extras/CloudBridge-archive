@@ -40,7 +40,7 @@
 		<property name="tomcat.home" location="${catalina.dir}" />
 		<property name="deploy.dir" location="${tomcat.home}" />
 
-		<property name="rpm.install.dir" location="${base.dir}/../../../../../../packages/config/rpm/tmp/BUILDROOT/cloud-bridge-${version}-1.i386" />
+                <property name="rpm.install.dir" location="${base.dir}/../../../../../../packages/config/rpm/tmp/BUILD/cloud-bridge-${version}-1" />
 		<property name="rpm.tomcat.dir" location="${rpm.install.dir}/usr/share/cloud/bridge" />
 		<property name="debian.install.dir" location="${base.dir}/packages/config/debian/tmp" />
 		<property name="debian.tomcat.dir" location="${debian.install.dir}/usr/share/cloud/bridge" />

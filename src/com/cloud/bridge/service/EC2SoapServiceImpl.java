@@ -60,7 +60,7 @@ import com.cloud.bridge.service.core.ec2.EC2Address;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddressesResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
-import com.cloud.bridge.util.SSHKeysHelper;
+import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 
 
 public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
@@ -72,11 +72,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	this.engine = engine;
     }
 
-	public AssociateDhcpOptionsResponse associateDhcpOptions(AssociateDhcpOptions associateDhcpOptions) {
-		// TODO Auto-generated method stub
-		return null;
-	};
-	
 	public AttachVolumeResponse attachVolume(AttachVolume attachVolume) {
 		EC2Volume request = new EC2Volume();
 		AttachVolumeType avt = attachVolume.getAttachVolume();
@@ -85,11 +80,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setInstanceId( avt.getInstanceId());
 		request.setDevice( avt.getDevice());
 		return toAttachVolumeResponse( engine.attachVolume( request ));
-	}
-
-	public AttachVpnGatewayResponse attachVpnGateway(AttachVpnGateway attachVpnGateway) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 	
 	public AuthorizeSecurityGroupIngressResponse authorizeSecurityGroupIngress(AuthorizeSecurityGroupIngress authorizeSecurityGroupIngress) {
@@ -145,36 +135,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         return request;
     }
 
-	public BundleInstanceResponse bundleInstance(BundleInstance bundleInstance) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public CancelBundleTaskResponse cancelBundleTask(CancelBundleTask cancelBundleTask) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public CancelSpotInstanceRequestsResponse cancelSpotInstanceRequests(CancelSpotInstanceRequests cancelSpotInstanceRequests) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public ConfirmProductInstanceResponse confirmProductInstance(ConfirmProductInstance confirmProductInstance) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public CreateCustomerGatewayResponse createCustomerGateway(CreateCustomerGateway createCustomerGateway) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public CreateDhcpOptionsResponse createDhcpOptions(CreateDhcpOptions createDhcpOptions) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public CreateImageResponse createImage(CreateImage createImage) {
 		EC2CreateImage request = new EC2CreateImage();
 		CreateImageType cit = createImage.getCreateImage();
@@ -199,16 +159,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toCreateSnapshotResponse( engine.createSnapshot( cst.getVolumeId()), engine);
 	}
 
-	public CreateSpotDatafeedSubscriptionResponse createSpotDatafeedSubscription(CreateSpotDatafeedSubscription createSpotDatafeedSubscription) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public CreateSubnetResponse createSubnet(CreateSubnet createSubnet) {
-		// TODO Auto-generate
-		return null;
-	}
-
 	public CreateVolumeResponse createVolume(CreateVolume createVolume) {
 		EC2CreateVolume request = new EC2CreateVolume();
 		CreateVolumeType cvt = createVolume.getCreateVolume();
@@ -217,31 +167,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setSnapshotId( cvt.getSnapshotId());
 		request.setZoneName( cvt.getAvailabilityZone());
 		return toCreateVolumeResponse( engine.handleRequest( request ));
-	}
-
-	public CreateVpcResponse createVpc(CreateVpc createVpc) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public CreateVpnConnectionResponse createVpnConnection(CreateVpnConnection createVpnConnection) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public CreateVpnGatewayResponse createVpnGateway(CreateVpnGateway createVpnGateway) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DeleteCustomerGatewayResponse deleteCustomerGateway(DeleteCustomerGateway deleteCustomerGateway) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DeleteDhcpOptionsResponse deleteDhcpOptions(DeleteDhcpOptions deleteDhcpOptions) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public DeleteSecurityGroupResponse deleteSecurityGroup(DeleteSecurityGroup deleteSecurityGroup) {
@@ -257,37 +182,12 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDeleteSnapshotResponse( engine.deleteSnapshot( dst.getSnapshotId()));
 	}
 
-	public DeleteSpotDatafeedSubscriptionResponse deleteSpotDatafeedSubscription(DeleteSpotDatafeedSubscription deleteSpotDatafeedSubscription) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DeleteSubnetResponse deleteSubnet(DeleteSubnet deleteSubnet) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public DeleteVolumeResponse deleteVolume(DeleteVolume deleteVolume) {
 		EC2Volume request = new EC2Volume();
 		DeleteVolumeType avt = deleteVolume.getDeleteVolume();
 		
 		request.setId( avt.getVolumeId());
 		return toDeleteVolumeResponse( engine.deleteVolume( request ));
-	}
-
-	public DeleteVpcResponse deleteVpc(DeleteVpc deleteVpc) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DeleteVpnConnectionResponse deleteVpnConnection(DeleteVpnConnection deleteVpnConnection) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DeleteVpnGatewayResponse deleteVpnGateway(DeleteVpnGateway deleteVpnGateway) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public DeregisterImageResponse deregisterImage(DeregisterImage deregisterImage) {
@@ -308,21 +208,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			for( int i=0; i < items.length; i++ ) request.addZone( items[i].getZoneName());
 		}
 		return toDescribeAvailabilityZonesResponse( engine.handleRequest( request ));
-	}
-
-	public DescribeBundleTasksResponse describeBundleTasks(DescribeBundleTasks describeBundleTasks) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribeCustomerGatewaysResponse describeCustomerGateways(DescribeCustomerGateways describeCustomerGateways) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribeDhcpOptionsResponse describeDhcpOptions(DescribeDhcpOptions describeDhcpOptions) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	/**
@@ -435,21 +320,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         return toDisassociateAddressResponse( engine.disassociateAddress(publicIp) );
     }
 
-	public DescribeRegionsResponse describeRegions(DescribeRegions describeRegions) {
-		return null;
-	}
-
-	public DescribeReservedInstancesResponse describeReservedInstances(DescribeReservedInstances describeReservedInstances) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribeReservedInstancesOfferingsResponse describeReservedInstancesOfferings(
-			DescribeReservedInstancesOfferings describeReservedInstancesOfferings) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public DescribeSecurityGroupsResponse describeSecurityGroups(DescribeSecurityGroups describeSecurityGroups) {
 	    EC2DescribeSecurityGroups request = new EC2DescribeSecurityGroups();
         DescribeSecurityGroupsType sgt = describeSecurityGroups.getDescribeSecurityGroups();
@@ -461,10 +331,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			for( int i=0; i < items.length; i++ ) request.addGroupName( items[i].getGroupName());
 		}
 		return toDescribeSecurityGroupsResponse( engine.handleRequest( request ));
-	}
-
-	public DescribeSnapshotAttributeResponse describeSnapshotAttribute(DescribeSnapshotAttribute describeSnapshotAttribute) {
-		return null;
 	}
 
 	public DescribeSnapshotsResponse describeSnapshots(DescribeSnapshots describeSnapshots) {
@@ -481,28 +347,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDescribeSnapshotsResponse(engine.handleRequest(request));
 	}
 
-	public DescribeSpotDatafeedSubscriptionResponse describeSpotDatafeedSubscription(
-			DescribeSpotDatafeedSubscription describeSpotDatafeedSubscription) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribeSpotInstanceRequestsResponse describeSpotInstanceRequests(
-			DescribeSpotInstanceRequests describeSpotInstanceRequests) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribeSpotPriceHistoryResponse describeSpotPriceHistory(DescribeSpotPriceHistory describeSpotPriceHistory) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribeSubnetsResponse describeSubnets(DescribeSubnets describeSubnets) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public DescribeVolumesResponse describeVolumes(DescribeVolumes describeVolumes) {
 		EC2DescribeVolumes request = new EC2DescribeVolumes();
 		DescribeVolumesType dvt = describeVolumes.getDescribeVolumes();
@@ -517,21 +361,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDescribeVolumesResponse( engine.handleRequest( request ));
 	}
 
-	public DescribeVpcsResponse describeVpcs(DescribeVpcs describeVpcs) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribeVpnConnectionsResponse describeVpnConnections(DescribeVpnConnections describeVpnConnections) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribeVpnGatewaysResponse describeVpnGateways(DescribeVpnGateways describeVpnGateways) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public DetachVolumeResponse detachVolume(DetachVolume detachVolume) {
 		EC2Volume request = new EC2Volume();
 		DetachVolumeType avt = detachVolume.getDetachVolume();
@@ -540,16 +369,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setInstanceId( avt.getInstanceId());
 		request.setDevice( avt.getDevice());
 		return toDetachVolumeResponse( engine.detachVolume( request ));
-	}
-
-	public DetachVpnGatewayResponse detachVpnGateway(DetachVpnGateway detachVpnGateway) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public GetConsoleOutputResponse getConsoleOutput(GetConsoleOutput getConsoleOutput) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public ModifyImageAttributeResponse modifyImageAttribute(ModifyImageAttribute modifyImageAttribute) {
@@ -564,63 +383,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		    return toModifyImageAttributeResponse( engine.modifyImageAttribute( request ));
 		}
 		throw new EC2ServiceException( "Unsupported - can only modify image description", 501 );
-	}
-
-	public ModifyInstanceAttributeResponse modifyInstanceAttribute(ModifyInstanceAttribute modifyInstanceAttribute) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public ModifySnapshotAttributeResponse modifySnapshotAttribute(ModifySnapshotAttribute modifySnapshotAttribute) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
-	public ActivateLicenseResponse activateLicense(ActivateLicense activateLicense) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public CreatePlacementGroupResponse createPlacementGroup(CreatePlacementGroup createPlacementGroup) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DeactivateLicenseResponse deactivateLicense(DeactivateLicense deactivateLicense) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DeletePlacementGroupResponse deletePlacementGroup(DeletePlacementGroup deletePlacementGroup) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribeLicensesResponse describeLicenses(DescribeLicenses describeLicenses) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public DescribePlacementGroupsResponse describePlacementGroups(DescribePlacementGroups describePlacementGroups) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
-	public DescribeTagsResponse describeTags(DescribeTags describeTags) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
-	public CreateTagsResponse createTags(CreateTags createTags) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
-	public DeleteTagsResponse deleteTags(DeleteTags deleteTags) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
+	}	
 
 	/**
 	 * Did not find a matching service offering so for now we just return disabled
@@ -654,12 +417,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 
-	public PurchaseReservedInstancesOfferingResponse purchaseReservedInstancesOffering(
-			PurchaseReservedInstancesOffering purchaseReservedInstancesOffering) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public RebootInstancesResponse rebootInstances(RebootInstances rebootInstances) {
 		EC2RebootInstances request = new EC2RebootInstances();
 		RebootInstancesType rit = rebootInstances.getRebootInstances();
@@ -686,11 +443,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toRegisterImageResponse( engine.handleRequest( request ));
 	}
 
-	public RequestSpotInstancesResponse requestSpotInstances(RequestSpotInstances requestSpotInstances) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public ResetImageAttributeResponse resetImageAttribute(ResetImageAttribute resetImageAttribute) {
 		EC2Image request = new EC2Image();
 		ResetImageAttributeType riat = resetImageAttribute.getResetImageAttribute();
@@ -698,16 +450,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setId( riat.getImageId());
 		request.setDescription( "" );
 		return toResetImageAttributeResponse( engine.modifyImageAttribute( request ));
-	}
-
-	public ResetInstanceAttributeResponse resetInstanceAttribute(ResetInstanceAttribute resetInstanceAttribute) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public ResetSnapshotAttributeResponse resetSnapshotAttribute(ResetSnapshotAttribute resetSnapshotAttribute) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public RunInstancesResponse runInstances(RunInstances runInstances) {
@@ -1788,23 +1530,228 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		}};
 	}
 
+	
+	
+	
+	// Actions not yet implemented:
+	
+	public ActivateLicenseResponse activateLicense(ActivateLicense activateLicense) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public AssociateDhcpOptionsResponse associateDhcpOptions(AssociateDhcpOptions associateDhcpOptions) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	};
+	
+	public AttachVpnGatewayResponse attachVpnGateway(AttachVpnGateway attachVpnGateway) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public BundleInstanceResponse bundleInstance(BundleInstance bundleInstance) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public CancelBundleTaskResponse cancelBundleTask(CancelBundleTask cancelBundleTask) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
 	public CancelConversionTaskResponse cancelConversionTask(CancelConversionTask cancelConversionTask) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public CancelSpotInstanceRequestsResponse cancelSpotInstanceRequests(CancelSpotInstanceRequests cancelSpotInstanceRequests) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public ConfirmProductInstanceResponse confirmProductInstance(ConfirmProductInstance confirmProductInstance) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public CreateCustomerGatewayResponse createCustomerGateway(CreateCustomerGateway createCustomerGateway) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public CreateDhcpOptionsResponse createDhcpOptions(CreateDhcpOptions createDhcpOptions) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public CreatePlacementGroupResponse createPlacementGroup(CreatePlacementGroup createPlacementGroup) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public CreateSpotDatafeedSubscriptionResponse createSpotDatafeedSubscription(CreateSpotDatafeedSubscription createSpotDatafeedSubscription) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public CreateSubnetResponse createSubnet(CreateSubnet createSubnet) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public CreateTagsResponse createTags(CreateTags createTags) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public CreateVpcResponse createVpc(CreateVpc createVpc) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public CreateVpnConnectionResponse createVpnConnection(CreateVpnConnection createVpnConnection) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public CreateVpnGatewayResponse createVpnGateway(CreateVpnGateway createVpnGateway) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DeactivateLicenseResponse deactivateLicense(DeactivateLicense deactivateLicense) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DeleteCustomerGatewayResponse deleteCustomerGateway(DeleteCustomerGateway deleteCustomerGateway) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DeleteDhcpOptionsResponse deleteDhcpOptions(DeleteDhcpOptions deleteDhcpOptions) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DeletePlacementGroupResponse deletePlacementGroup(DeletePlacementGroup deletePlacementGroup) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DeleteSpotDatafeedSubscriptionResponse deleteSpotDatafeedSubscription(DeleteSpotDatafeedSubscription deleteSpotDatafeedSubscription) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DeleteSubnetResponse deleteSubnet(DeleteSubnet deleteSubnet) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+		
+	public DeleteTagsResponse deleteTags(DeleteTags deleteTags) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DeleteVpcResponse deleteVpc(DeleteVpc deleteVpc) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DeleteVpnConnectionResponse deleteVpnConnection(DeleteVpnConnection deleteVpnConnection) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DeleteVpnGatewayResponse deleteVpnGateway(DeleteVpnGateway deleteVpnGateway) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DescribeBundleTasksResponse describeBundleTasks(DescribeBundleTasks describeBundleTasks) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
 	}
 
 	public DescribeConversionTasksResponse describeConversionTasks(DescribeConversionTasks describeConversionTasks) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DescribeCustomerGatewaysResponse describeCustomerGateways(DescribeCustomerGateways describeCustomerGateways) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DescribeDhcpOptionsResponse describeDhcpOptions(DescribeDhcpOptions describeDhcpOptions) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DescribeLicensesResponse describeLicenses(DescribeLicenses describeLicenses) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DescribePlacementGroupsResponse describePlacementGroups(DescribePlacementGroups describePlacementGroups) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DescribeRegionsResponse describeRegions(DescribeRegions describeRegions) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DescribeReservedInstancesResponse describeReservedInstances(DescribeReservedInstances describeReservedInstances) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DescribeReservedInstancesOfferingsResponse describeReservedInstancesOfferings(DescribeReservedInstancesOfferings describeReservedInstancesOfferings) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DescribeSnapshotAttributeResponse describeSnapshotAttribute(DescribeSnapshotAttribute describeSnapshotAttribute) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DescribeSpotDatafeedSubscriptionResponse describeSpotDatafeedSubscription(DescribeSpotDatafeedSubscription describeSpotDatafeedSubscription) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DescribeSpotInstanceRequestsResponse describeSpotInstanceRequests(DescribeSpotInstanceRequests describeSpotInstanceRequests) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DescribeSpotPriceHistoryResponse describeSpotPriceHistory(DescribeSpotPriceHistory describeSpotPriceHistory) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DescribeSubnetsResponse describeSubnets(DescribeSubnets describeSubnets) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DescribeTagsResponse describeTags(DescribeTags describeTags) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public DescribeVpcsResponse describeVpcs(DescribeVpcs describeVpcs) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DescribeVpnConnectionsResponse describeVpnConnections(DescribeVpnConnections describeVpnConnections) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DescribeVpnGatewaysResponse describeVpnGateways(DescribeVpnGateways describeVpnGateways) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public DetachVpnGatewayResponse detachVpnGateway(DetachVpnGateway detachVpnGateway) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public GetConsoleOutputResponse getConsoleOutput(GetConsoleOutput getConsoleOutput) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
 	}
 
 	public ImportInstanceResponse importInstance(ImportInstance importInstance) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
 	}
 
 	public ImportVolumeResponse importVolume(ImportVolume importVolume) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public ModifyInstanceAttributeResponse modifyInstanceAttribute(ModifyInstanceAttribute modifyInstanceAttribute) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public ModifySnapshotAttributeResponse modifySnapshotAttribute(ModifySnapshotAttribute modifySnapshotAttribute) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+	
+	public PurchaseReservedInstancesOfferingResponse purchaseReservedInstancesOffering(PurchaseReservedInstancesOffering purchaseReservedInstancesOffering) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public RequestSpotInstancesResponse requestSpotInstances(RequestSpotInstances requestSpotInstances) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public ResetInstanceAttributeResponse resetInstanceAttribute(ResetInstanceAttribute resetInstanceAttribute) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
+	}
+
+	public ResetSnapshotAttributeResponse resetSnapshotAttribute(ResetSnapshotAttribute resetSnapshotAttribute) {
+		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
 	}
 }
