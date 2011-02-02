@@ -72,10 +72,9 @@ public class S3BucketPolicy {
 	 * @param objectToAccess - key to the S3 object in the bucket associated by this policy, should be
 	 *                         null if access is just to the bucket.
 	 * @param userAccount - the user performing the access request
-	 * @param operationRequested - the S3 operation being requested on the objectToAccess (e.g., PutObject)
 	 * @return PolicyAccess type
 	 */
-	public PolicyAccess eval(S3PolicyContext context, String objectToAccess, String userAccount, PolicyActions operationRequested) 
+	public PolicyAccess eval(S3PolicyContext context, String objectToAccess, String userAccount) 
 	{
 		PolicyAccess result = PolicyAccess.DEFAULT_DENY;
 		
@@ -83,7 +82,7 @@ public class S3BucketPolicy {
 		while( itr.hasNext()) 
 		{
 			S3PolicyStatement oneStatement = itr.next();
-			if (statementIsRelevant( oneStatement, objectToAccess, userAccount, operationRequested ))
+			if (statementIsRelevant( oneStatement, objectToAccess, userAccount, context.getRequestedAction()))
 			{
 				if (oneStatement.getConditionBlock().isTrue( context )) 
 				{

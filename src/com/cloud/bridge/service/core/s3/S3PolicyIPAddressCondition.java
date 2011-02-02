@@ -21,6 +21,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.http.HttpServletRequest;
+
 import com.cloud.bridge.util.IpAddressRange;
 
 public class S3PolicyIPAddressCondition extends S3PolicyCondition {
@@ -71,7 +73,7 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 		
 		// -> returns the Internet Protocol (IP) address of the client or last proxy that sent the request. 
 		//    For HTTP servlets, same as the value of the CGI variable REMOTE_ADDR. 
-		IpAddressRange toCompareWith = IpAddressRange.parseRange( context.getHttp().getRemoteAddr());
+		IpAddressRange toCompareWith = IpAddressRange.parseRange( context.getRemoveAddr());
 		if (null == toCompareWith) return false;
 			
 		

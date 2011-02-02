@@ -62,7 +62,9 @@ import com.cloud.bridge.service.S3BucketAdapter;
 import com.cloud.bridge.service.S3FileSystemBucketAdapter;
 import com.cloud.bridge.service.ServiceProvider;
 import com.cloud.bridge.service.UserContext;
+import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
 import com.cloud.bridge.service.core.s3.S3CopyObjectRequest.MetadataDirective;
+import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 import com.cloud.bridge.service.exception.HostNotMountedException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
@@ -260,7 +262,7 @@ public class S3Engine {
 		SBucket sbucket = bucketDao.getByName(bucketName);
 		if (sbucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 		
-    	accessAllowed( "SBucket", sbucket.getId(), SAcl.PERMISSION_READ ); 
+		verifyAccess( null, "SBucket", sbucket.getId(), SAcl.PERMISSION_READ ); 
 
 		
 		// when we query, request one more item so that we know how to set isTruncated flag 
@@ -324,7 +326,7 @@ public class S3Engine {
     		return response;
     	}
  
-    	accessAllowed( "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE_ACL ); 
+    	verifyAccess( null, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE_ACL ); 
 
     	SAclDao aclDao = new SAclDao();
     	aclDao.save("SBucket", sbucket.getId(), request.getAcl());
@@ -347,7 +349,7 @@ public class S3Engine {
     	owner.setDisplayName("");
     	policy.setOwner(owner);
     	
-    	accessAllowed( "SBucket", sbucket.getId(), SAcl.PERMISSION_READ_ACL ); 
+    	verifyAccess( null, "SBucket", sbucket.getId(), SAcl.PERMISSION_READ_ACL ); 
 
     	SAclDao aclDao = new SAclDao();
     	List<SAcl> grants = aclDao.listGrants("SBucket", sbucket.getId());
@@ -387,7 +389,7 @@ public class S3Engine {
     	    String initiator = uploadDao.getInitiator( uploadId );
     	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
     	    	// -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
-    			accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    	    	verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
     	    }
 
     	    // -> first get a list of all the uploaded files and delete one by one
@@ -425,7 +427,7 @@ public class S3Engine {
 			logger.error( "initiateMultipartUpload failed since " + bucketName + " does not exist" );
 			response.setResultCode(404);
 		}
-		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 		createUploadFolder( bucketName ); 
 
         try {
@@ -463,7 +465,7 @@ public class S3Engine {
 			logger.error( "saveUploadedPart failed since " + bucketName + " does not exist" );
 			response.setResultCode(404);
 		}
-		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 		
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
@@ -526,7 +528,7 @@ public class S3Engine {
 			logger.error( "completeMultipartUpload( failed since " + bucketName + " does not exist" );
 			response.setResultCode(404);
 		}
-		accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 		
 
 		// [B] Now we need to create the final re-assembled object
@@ -693,7 +695,7 @@ public class S3Engine {
     		return response;
     	}
     	
-    	accessAllowed( "SObject", sobject.getId(), SAcl.PERMISSION_WRITE_ACL ); 
+    	verifyAccess( null, "SObject", sobject.getId(), SAcl.PERMISSION_WRITE_ACL ); 
     	
     	SAclDao aclDao = new SAclDao();
     	aclDao.save("SObject", sobject.getId(), request.getAcl());
@@ -721,7 +723,7 @@ public class S3Engine {
     	owner.setDisplayName("");
     	policy.setOwner(owner);
     	
-    	accessAllowed( "SObject", sobject.getId(), SAcl.PERMISSION_READ_ACL ); 
+    	verifyAccess( null, "SObject", sobject.getId(), SAcl.PERMISSION_READ_ACL ); 
 
     	SAclDao aclDao = new SAclDao();
     	List<SAcl> grants = aclDao.listGrants("SObject", sobject.getId());
@@ -785,7 +787,7 @@ public class S3Engine {
 	
 		
 	    // [C] Handle all the IFModifiedSince ... conditions, and access privileges
-		accessAllowed( "SObject", item.getId(), SAcl.PERMISSION_READ );
+		verifyAccess( null, "SObject", item.getId(), SAcl.PERMISSION_READ );
 
 		// -> http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.27 (HTTP If-Range header)
 		if (request.isReturnCompleteObjectOnConditionFailure() && (0 <= bytesStart && 0 <= bytesEnd)) ifRange = true;
@@ -876,7 +878,7 @@ public class S3Engine {
 			return response;
 		}
 		
-		accessAllowed( "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
+		verifyAccess( null, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
 		
 		
 		// -> versioning controls what delete means
@@ -1228,7 +1230,7 @@ public class S3Engine {
 		SObject object = objectDao.getByNameKey(bucket, nameKey);
 		if ( object != null ) 
 		{
-			 accessAllowed( "SObject", object.getId(), SAcl.PERMISSION_WRITE ); 
+			verifyAccess( null, "SObject", object.getId(), SAcl.PERMISSION_WRITE ); 
 
 			 // -> if versioning is on create new object items
 			 if ( SBucket.VERSIONING_ENABLED  == versioningStatus )
@@ -1414,6 +1416,44 @@ public class S3Engine {
         aclDao.save( target, objectId, defaultAcl );
 	}
 
+	/**
+	 * To determine access to a bucket or an object in a bucket evaluate first a define
+	 * bucket policy and then any defined ACLs.
+	 * 
+	 * @param context - all data needed for bucket policies
+	 * @param target - used for ACL evaluation, object identifier
+	 * @param targetId - used for ACL evaluation
+	 * @param requestedPermission - ACL type access requested
+	 * 
+	 * @throws ParseException, SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
+	 */
+	public static void verifyAccess( S3PolicyContext context, String target, long targetId, int requestedPermission ) 
+	{
+		S3BucketPolicy policy = null;
+		
+		// -> on error of getting a policy ignore it
+		try {
+		    if (null != context) policy = loadPolicy( context ); 
+		}
+		catch( Exception e ) {
+			logger.error( "verifyAccess - loadPolicy failed: [" + e.toString() + "], bucket: " + context.getBucketName() + " policy ignored");
+		}
+		
+		if ( null != policy ) 
+		{
+			 PolicyAccess result = policy.eval(context, null, UserContext.current().getCanonicalUserId());
+             switch( result ) {
+             case DENY:
+                 throw new PermissionDeniedException( "Access Denied - bucket policy DENY result" );
+             
+             case DEFAULT_DENY:
+             case ALLOW:   // ? done on allow?
+            	 accessAllowed( target, targetId, requestedPermission );
+            	 break;
+             }
+		}
+		else accessAllowed( target, targetId, requestedPermission );
+	}
 	
 	/**
 	 * This function verifies that the accessing client has the requested
@@ -1443,39 +1483,39 @@ public class S3Engine {
 		     // -> or maybe there is any principal authenticated ACL set for this <target, targetId>?
 		     if (hasPermission( aclDao.listGrants( target, targetId, "*" ), requestedPermission )) return;
         }
-        throw new PermissionDeniedException( "Access Denied - user does not have the required permission" );
+        throw new PermissionDeniedException( "Access Denied - ACLs do not give user the required permission" );
 	}
 	
 	/**
 	 * This function assumes that the bucket has been tested to make sure it exists before
 	 * it is called.
 	 * 
-	 * @param bucketName
+	 * @param context 
 	 * @return S3BucketPolicy
 	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException, ParseException 
 	 */
-	public static S3BucketPolicy loadPolicy( String bucketName ) 
+	public static S3BucketPolicy loadPolicy( S3PolicyContext context ) 
 	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException, ParseException
 	{
-		Tuple<S3BucketPolicy,Integer> result = ServiceProvider.getInstance().getBucketPolicy( bucketName );
+		Tuple<S3BucketPolicy,Integer> result = ServiceProvider.getInstance().getBucketPolicy( context.getBucketName());
 		S3BucketPolicy policy = result.getFirst();
 		if ( null == policy )
 		{
 			 // -> do we have to load it from the database (any other value means there is no policy)?
 			 if (-1 == result.getSecond().intValue())
 			 {
-				SBucketDao bucketDao = new SBucketDao();
-				SBucket bucket = bucketDao.getByName(bucketName);
-				if (null == bucket) return null;
-
 			    BucketPolicyDao policyDao = new BucketPolicyDao();
-			    String policyInJson = policyDao.getPolicy( bucket.getId());
-			    if (null == policyInJson) return null;
+			    String policyInJson = policyDao.getPolicy( context.getBucketId());
+			    // -> place in cache that no policy exists in the database
+			    if (null == policyInJson) {
+	    	        ServiceProvider.getInstance().setBucketPolicy(context.getBucketName(), null);
+			    	return null;
+			    }
 			    
 	       		PolicyParser parser = new PolicyParser( false );
-	    		policy = parser.parse( policyInJson, bucketName );
+	    		policy = parser.parse( policyInJson, context.getBucketName());
 	    		if (null != policy) 
-	    	        ServiceProvider.getInstance().setBucketPolicy(bucketName, policy);
+	    	        ServiceProvider.getInstance().setBucketPolicy(context.getBucketName(), policy);
 			 }
 		}
 		return policy;

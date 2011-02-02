@@ -78,8 +78,7 @@ public class S3PolicyBoolCondition extends S3PolicyCondition {
        	
         	if (ConditionKeys.SecureTransport == keyName && PolicyConditions.Bool == condition)
         	{
-        		HttpServletRequest request = context.getHttp();
-        		if (request.isSecure()) keyResult = true;
+        		if (context.getIsHTTPSecure()) keyResult = true;
         	}
 			
             // -> if all key values are false, false then that key is false and then the entire condition is then false

@@ -854,7 +854,7 @@ public class S3ObjectAction implements ServletAction {
     	    {
     	    	try {
     	    	    // -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
-    			    S3Engine.accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    			    S3Engine.verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
     	    	}
     	    	catch (PermissionDeniedException e) {
     	    		response.setStatus(403);

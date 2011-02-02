@@ -20,6 +20,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 import com.cloud.bridge.service.core.s3.S3PolicyCondition.ConditionKeys;
 
 /**
@@ -28,7 +29,10 @@ import com.cloud.bridge.service.core.s3.S3PolicyCondition.ConditionKeys;
  */
 public class S3PolicyContext {
 
-	private HttpServletRequest request;
+	private HttpServletRequest request = null;;
+	private String bucketName = null;
+	private long bucketId = 0;
+	private PolicyActions requestedAction;
 	private Map<ConditionKeys,String> evalParams = new HashMap<ConditionKeys,String>();
 
 	public S3PolicyContext(HttpServletRequest request) {
@@ -37,6 +41,42 @@ public class S3PolicyContext {
 	
 	public HttpServletRequest getHttp() {
 		return request;
+	}
+	
+	public String getRemoveAddr() {
+        if ( null == request ) 
+         	 return null;
+        else return request.getRemoteAddr();
+	}
+	
+	public boolean getIsHTTPSecure() {
+	    if ( null == request )
+	    	 return false;
+	    else return request.isSecure();
+	}
+	
+	public String getBucketName() {
+		return bucketName;
+	}
+	
+	public void setBucketName(String bucketName) {
+		this.bucketName = bucketName;
+	}
+	
+	public long getBucketId() {
+		return bucketId;
+	}
+	
+	public void setBucketId(long bucketId) {
+		this.bucketId = bucketId;
+	}
+	
+	public PolicyActions getRequestedAction() {
+		return requestedAction;
+	}
+	
+	public void setRequestedAction(PolicyActions action) {
+		this.requestedAction = action;
 	}
 	
 	public String getEvalParam(ConditionKeys key) 
