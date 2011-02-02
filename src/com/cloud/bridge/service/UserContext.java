@@ -15,6 +15,8 @@
  */
 package com.cloud.bridge.service;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.log4j.Logger;
 
 import com.cloud.bridge.service.exception.InternalErrorException;
@@ -33,6 +35,7 @@ public class UserContext {
 	private String secretKey;
 	private String canonicalUserId;  // -> for us this is the accessKey
 	private String description;
+	private HttpServletRequest request = null;
 	
 	public UserContext() {
 	}
@@ -50,12 +53,17 @@ public class UserContext {
 		annonymous = true;
 	}
 	
-	public void initContext(String accessKey, String secretKey, String canonicalUserId, String description) {
+	public void initContext(String accessKey, String secretKey, String canonicalUserId, String description, HttpServletRequest request) {
 		this.accessKey = accessKey;
 		this.secretKey = secretKey;
 		this.canonicalUserId = canonicalUserId;
 		this.description = description;
 		this.annonymous = false;
+		this.request = request;
+	}
+	
+	public HttpServletRequest getHttp() {
+		return request;
 	}
 	
 	public String getAccessKey() {

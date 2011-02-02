@@ -77,11 +77,13 @@ import com.cloud.bridge.service.core.s3.S3GetObjectResponse;
 import com.cloud.bridge.service.core.s3.S3ListBucketObjectEntry;
 import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3MultipartPart;
+import com.cloud.bridge.service.core.s3.S3PolicyContext;
 import com.cloud.bridge.service.core.s3.S3PutObjectInlineRequest;
 import com.cloud.bridge.service.core.s3.S3PutObjectInlineResponse;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.core.s3.S3SetObjectAccessControlPolicyRequest;
+import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.Converter;
@@ -854,7 +856,8 @@ public class S3ObjectAction implements ServletAction {
     	    {
     	    	try {
     	    	    // -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
-    			    S3Engine.verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+        			S3PolicyContext context = new S3PolicyContext( PolicyActions.ListMultipartUploadParts, bucketName, bucket.getId());
+    	    		S3Engine.verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
     	    	}
     	    	catch (PermissionDeniedException e) {
     	    		response.setStatus(403);

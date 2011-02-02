@@ -65,6 +65,7 @@ import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
 import com.cloud.bridge.service.core.s3.S3CopyObjectRequest.MetadataDirective;
 import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
+import com.cloud.bridge.service.core.s3.S3PolicyCondition.ConditionKeys;
 import com.cloud.bridge.service.exception.HostNotMountedException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
@@ -262,7 +263,11 @@ public class S3Engine {
 		SBucket sbucket = bucketDao.getByName(bucketName);
 		if (sbucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 		
-		verifyAccess( null, "SBucket", sbucket.getId(), SAcl.PERMISSION_READ ); 
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.ListBucket, bucketName, sbucket.getId());
+		context.setEvalParam( ConditionKeys.MaxKeys, new String( "" + maxKeys ));
+		context.setEvalParam( ConditionKeys.Prefix, prefix );
+		context.setEvalParam( ConditionKeys.Delimiter, delimiter );
+		verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_READ ); 
 
 		
 		// when we query, request one more item so that we know how to set isTruncated flag 
@@ -319,7 +324,8 @@ public class S3Engine {
     {
     	S3Response response = new S3Response();	
     	SBucketDao bucketDao = new SBucketDao();
-    	SBucket sbucket = bucketDao.getByName(request.getBucketName());
+    	String bucketName = request.getBucketName();
+    	SBucket sbucket = bucketDao.getByName(bucketName);
     	if(sbucket == null) {
     		response.setResultCode(404);
     		response.setResultDescription("Bucket does not exist");
@@ -387,9 +393,11 @@ public class S3Engine {
     	    
     	    // -> the multipart initiator or bucket owner can do this action
     	    String initiator = uploadDao.getInitiator( uploadId );
-    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) {
+    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) 
+    	    {
     	    	// -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
-    	    	verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    			S3PolicyContext context = new S3PolicyContext( PolicyActions.AbortMultipartUpload, bucketName, bucket.getId());
+    	    	verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
     	    }
 
     	    // -> first get a list of all the uploaded files and delete one by one
@@ -427,7 +435,10 @@ public class S3Engine {
 			logger.error( "initiateMultipartUpload failed since " + bucketName + " does not exist" );
 			response.setResultCode(404);
 		}
-		verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+	    
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName, bucket.getId());
+		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+
 		createUploadFolder( bucketName ); 
 
         try {
@@ -465,7 +476,8 @@ public class S3Engine {
 			logger.error( "saveUploadedPart failed since " + bucketName + " does not exist" );
 			response.setResultCode(404);
 		}
-		verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName, bucket.getId());
+		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 		
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
 		S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());
@@ -528,7 +540,8 @@ public class S3Engine {
 			logger.error( "completeMultipartUpload( failed since " + bucketName + " does not exist" );
 			response.setResultCode(404);
 		}
-		verifyAccess( null, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName, bucket.getId());
+		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 		
 
 		// [B] Now we need to create the final re-assembled object
@@ -747,7 +760,8 @@ public class S3Engine {
 
     	// [A] Verify that the bucket and the object exist
 		SBucketDao bucketDao = new SBucketDao();
-		SBucket sbucket = bucketDao.getByName(request.getBucketName());
+		String bucketName = request.getBucketName();
+		SBucket sbucket = bucketDao.getByName(bucketName);
 		if (sbucket == null) {
 			response.setResultCode(404);
 			response.setResultDescription("Bucket " + request.getBucketName() + " does not exist");
@@ -878,9 +892,7 @@ public class S3Engine {
 			return response;
 		}
 		
-		verifyAccess( null, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
-		
-		
+				
 		// -> versioning controls what delete means
 		String storedPath = null;
 		SObjectItem item = null;
@@ -888,6 +900,10 @@ public class S3Engine {
 		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) 
 	    {
 			 String wantVersion = request.getVersion();
+			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteObjectVersion, bucketName, sbucket.getId());
+			 if (null != wantVersion) context.setEvalParam( ConditionKeys.VersionId, wantVersion );
+			 verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
+
 			 if (null == wantVersion) {
 				 // -> if versioning is on and no versionId is given then we just write a deletion marker
 				 sobject.setDeletionMark( UUID.randomUUID().toString());
@@ -916,8 +932,11 @@ public class S3Engine {
 			      }
 			 }
 	    }
-		else {
-			 // -> if versioning if off then we do delete the null object
+		else 
+		{	 // -> if versioning is off then we do delete the null object
+			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteObject, bucketName, sbucket.getId());
+			 verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
+
 			 if ( null == (item = sobject.getLatestVersion( true ))) {
 		    	  response.setResultCode(404);
 		    	  return response;
@@ -1433,7 +1452,11 @@ public class S3Engine {
 		
 		// -> on error of getting a policy ignore it
 		try {
-		    if (null != context) policy = loadPolicy( context ); 
+			// -> in SOAP the HttpServletRequest object is hidden and not passed around
+		    if (null != context) {
+		    	context.setHttp( UserContext.current().getHttp());
+		    	policy = loadPolicy( context ); 
+		    }
 		}
 		catch( Exception e ) {
 			logger.error( "verifyAccess - loadPolicy failed: [" + e.toString() + "], bucket: " + context.getBucketName() + " policy ignored");

@@ -17,6 +17,8 @@ package com.cloud.bridge.auth.s3;
 
 import java.sql.SQLException;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPBody;
 import org.apache.log4j.Logger;
@@ -84,6 +86,10 @@ public class AuthenticationHandler implements Handler {
     	 String timestamp  = null;
     	 String secretKey  = null;
     	 String temp       = null;
+    	 
+    	 // [A] Obtain the HttpServletRequest object 
+    	 HttpServletRequest httpObj =(HttpServletRequest)msgContext.getProperty("transport.http.servletRequest");
+    	 if (null != httpObj) System.out.println("S3 SOAP auth test header access - acceptable Encoding type: "+ httpObj.getHeader("Accept-Encoding"));
     	 
     	 // [A] Try to recalculate the signature for non-anonymous requests
     	 try
@@ -155,7 +161,7 @@ public class AuthenticationHandler implements Handler {
     	
         // -> for SOAP requests the Cloud API keys are sent here and only here
     	S3SoapAuth.verifySignature( msgSig, operation, timestamp, accessKey, secretKey );   	
-        UserContext.current().initContext( accessKey, secretKey, accessKey, "S3 SOAP request" );
+        UserContext.current().initContext( accessKey, secretKey, accessKey, "S3 SOAP request", httpObj );
         return InvocationResponse.CONTINUE;
      }
 

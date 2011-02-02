@@ -35,12 +35,18 @@ public class S3PolicyContext {
 	private PolicyActions requestedAction;
 	private Map<ConditionKeys,String> evalParams = new HashMap<ConditionKeys,String>();
 
-	public S3PolicyContext(HttpServletRequest request) {
-		this.request = request;
+	public S3PolicyContext(PolicyActions requestedAction, String bucketName, long bucketId) {
+		this.requestedAction = requestedAction;
+		this.bucketName = bucketName;
+		this.bucketId = bucketId;
 	}
 	
 	public HttpServletRequest getHttp() {
 		return request;
+	}
+	
+	public void setHttp(HttpServletRequest request) {
+		this.request = request;
 	}
 	
 	public String getRemoveAddr() {

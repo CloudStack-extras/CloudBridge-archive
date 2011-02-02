@@ -116,7 +116,7 @@ public class AuthenticationHandler implements Handler {
 	        	      logger.error( "Cert does not map to Cloud API keys: " + uniqueId );
 	        		  throw new AxisFault( "User not properly registered: Certificate does not map to Cloud API Keys", "Client.Blocked" );
 	     	     }
-	     	     else UserContext.current().initContext( cloudKeys.getAccessKey(), cloudKeys.getSecretKey(), cloudKeys.getAccessKey(), "SOAP Request" );
+	     	     else UserContext.current().initContext( cloudKeys.getAccessKey(), cloudKeys.getSecretKey(), cloudKeys.getAccessKey(), "SOAP Request", null );
 System.out.println( "end of cert match: " + UserContext.current().getSecretKey());
 	        }
     	} catch (AxisFault e) {
