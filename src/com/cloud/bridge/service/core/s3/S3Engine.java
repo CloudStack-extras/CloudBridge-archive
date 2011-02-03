@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
@@ -1098,11 +1097,13 @@ public class S3Engine {
 				Iterator<SObjectItem> it = sobject.getItems().iterator();
 				SObjectItem lastestItem = null;
 				int maxVersion = 0;
+				int version = 0;
 				while(it.hasNext()) 
 				{
 					SObjectItem item = (SObjectItem)it.next();
-					int version = Integer.parseInt(item.getVersion());
-					if(version > maxVersion) {
+					String versionStr = item.getVersion();
+					if (null != versionStr) version = Integer.parseInt(item.getVersion());
+					if (version > maxVersion) {
 						maxVersion = version;
 						lastestItem = item;
 					}
@@ -1465,7 +1466,7 @@ public class S3Engine {
 		if ( null != policy ) 
 		{
 			 PolicyAccess result = policy.eval(context, null, UserContext.current().getCanonicalUserId());
-             switch( result ) {
+			 switch( result ) {
              case DENY:
                  throw new PermissionDeniedException( "Access Denied - bucket policy DENY result" );
              

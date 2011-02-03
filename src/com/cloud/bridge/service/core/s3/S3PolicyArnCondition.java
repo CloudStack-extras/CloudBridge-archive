@@ -21,10 +21,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
 
 public class S3PolicyArnCondition extends S3PolicyCondition {
-
+    protected final static Logger logger = Logger.getLogger(S3PolicyArnCondition.class);
 
 	private Map<ConditionKeys,String[]> keys = new HashMap<ConditionKeys,String[]>();
 
@@ -101,6 +103,7 @@ public class S3PolicyArnCondition extends S3PolicyCondition {
 		        default: 
 			         return false;
             	}
+    			logger.info( "S3PolicyArnCondition eval: " + condition + ", key: " + keyName + ", valuePassedIn: " + toCompareWith + ", valueInRule: " + valueList[i] + ", result: " + keyResult );
             }
             
             // -> if all key values are false, false then that key is false and then the entire condition is then false

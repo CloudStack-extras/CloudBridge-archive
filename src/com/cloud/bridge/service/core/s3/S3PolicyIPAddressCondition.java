@@ -21,11 +21,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
+import org.apache.log4j.Logger;
 
 import com.cloud.bridge.util.IpAddressRange;
 
 public class S3PolicyIPAddressCondition extends S3PolicyCondition {
+    protected final static Logger logger = Logger.getLogger(S3PolicyIPAddressCondition.class);
 
 	private Map<ConditionKeys,IpAddressRange[]> keys = new HashMap<ConditionKeys,IpAddressRange[]>();
 
@@ -97,6 +98,7 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 		        default: 
 			         return false;
             	}
+    			logger.info( "S3PolicyIPAddressCondition eval: " + condition + ", key: " + keyName + ", valuePassedIn: " + toCompareWith.toString() + ", valueInRule: " + valueList[i].toString() + ", result: " + keyResult );
             }
             
             // -> if all key values are false, false then that key is false and then the entire condition is then false

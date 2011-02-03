@@ -25,9 +25,12 @@ import java.util.Set;
 
 import javax.xml.bind.DatatypeConverter;
 
+import org.apache.log4j.Logger;
+
 import com.cloud.bridge.util.DateHelper;
 
 public class S3PolicyDateCondition extends S3PolicyCondition {
+    protected final static Logger logger = Logger.getLogger(S3PolicyDateCondition.class);
 
 	private Map<ConditionKeys,Calendar[]> keys = new HashMap<ConditionKeys,Calendar[]>();
 
@@ -126,6 +129,7 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 		        default: 
 			         return false;
             	}
+    			logger.info( "S3PolicyDateCondition eval: " + condition + ", key: " + keyName + ", valuePassedIn: " + DatatypeConverter.printDateTime(tod) + ", valueInRule: " + DatatypeConverter.printDateTime(valueList[i]) + ", result: " + keyResult );
             }
             
             // -> if all key values are, false then that key is false and then the entire condition is then false

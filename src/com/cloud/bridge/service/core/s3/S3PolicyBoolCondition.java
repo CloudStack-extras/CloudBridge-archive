@@ -23,10 +23,12 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.log4j.Logger;
+
 import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
 
 public class S3PolicyBoolCondition extends S3PolicyCondition {
-
+    protected final static Logger logger = Logger.getLogger(S3PolicyBoolCondition.class);
 
 	private Map<ConditionKeys,String[]> keys = new HashMap<ConditionKeys,String[]>();
 
@@ -79,6 +81,7 @@ public class S3PolicyBoolCondition extends S3PolicyCondition {
         	if (ConditionKeys.SecureTransport == keyName && PolicyConditions.Bool == condition)
         	{
         		if (context.getIsHTTPSecure()) keyResult = true;
+    			logger.info( "S3PolicyBoolCondition eval: " + condition + ", key: " + keyName + ", result: " + keyResult );
         	}
 			
             // -> if all key values are false, false then that key is false and then the entire condition is then false
