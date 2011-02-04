@@ -24,6 +24,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import org.xml.sax.SAXException;
+import org.json.simple.JSONValue;
 
 import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
@@ -49,12 +50,16 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.security.SignatureException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -2958,6 +2963,31 @@ public class EC2Engine {
     	return request;
     }
     
+    Map execute(String query, String... args) throws IOException, SignatureException {
+        for (int i = 0; i < args.length; i++) {
+            args[i] = safeURLencode(args[i]);
+        }
+        return execute(String.format(query, args));
+    }
+
+    Map execute(String query) throws IOException, SignatureException {
+        query += "&response=json&apiKey=" + safeURLencode(UserContext.current().getAccessKey());
+        String sig = calculateSignature(query);
+        String url = getServerURL() + query + "&signature=" + safeURLencode(sig);
+        InputStream in = openURL(url, "Unknown", true);
+        return (Map) JSONValue.parse(new InputStreamReader(in));
+    }
+
+    String calculateSignature(String query) throws SignatureException {
+        String[] params = query.split("&");
+        Arrays.sort(params);
+        StringBuilder b = new StringBuilder(params[0]);
+        for (int i = 1; i < params.length; i++) {
+            b.append("&" + params[i]);
+        }
+        return calculateRFC2104HMAC(b.toString().toLowerCase(), UserContext.current().getSecretKey());
+    }
+
     private String genAPIURL( String query, String signature) throws UnsupportedEncodingException 
     {
 		UserContext ctx = UserContext.current();
@@ -3021,6 +3051,13 @@ public class EC2Engine {
 	private Document resolveURL( String uri, String command, boolean logRequest ) 
 	    throws IOException, SAXException, ParserConfigurationException, EC2ServiceException  
 	{	
+		DocumentBuilder db = dbf.newDocumentBuilder();
+		return db.parse(openURL(uri, command, logRequest));
+    }
+
+    private InputStream openURL(String uri, String command, boolean logRequest)
+        throws IOException, EC2ServiceException  
+    {
 		if (logRequest) logger.debug( "Cloud API call + [" + uri + "]" );
 		String errorMsg = null;
         URL cloudapi = new URL( uri );
@@ -3034,8 +3071,7 @@ public class EC2Engine {
         		 throw new EC2ServiceException(ServerError.InternalError, code.toString() + " " + errorMsg);
         	else throw new EC2ServiceException(ServerError.InternalError, command + " cloud API HTTP Error: " + code.toString());
         }
-		DocumentBuilder db = dbf.newDocumentBuilder();
-		return db.parse( connect.getInputStream());
+        return connect.getInputStream();
     }
 	
 	/**
