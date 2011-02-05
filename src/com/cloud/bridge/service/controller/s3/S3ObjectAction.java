@@ -771,7 +771,7 @@ public class S3ObjectAction implements ServletAction {
 		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().concatentateMultipartUploads( response, engineRequest, parts, os );
 		int result = engineResponse.getResultCode();
 		// -> free all multipart state since we now have one concatentated object
-		if (200 == result) executeAbortMultipartUpload( request, response );
+		if (200 == result) ServiceProvider.getInstance().getS3Engine().freeUploadParts( bucket, uploadId, false ); 
 		
 		// -> if all successful then clean up all left over parts
 		if ( 200 == result ) 
@@ -799,7 +799,7 @@ public class S3ObjectAction implements ServletAction {
     	if (null != temp) uploadId = Integer.parseInt( temp );
     	
     	try {
-			int result = ServiceProvider.getInstance().getS3Engine().freeUploadParts( bucket, uploadId ); 
+			int result = ServiceProvider.getInstance().getS3Engine().freeUploadParts( bucket, uploadId, true ); 
             response.setStatus( result );
 	    }
 		catch( Exception e ) {

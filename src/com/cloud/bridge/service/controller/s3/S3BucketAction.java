@@ -46,6 +46,7 @@ import org.w3c.dom.NodeList;
 import com.amazon.s3.GetBucketAccessControlPolicyResponse;
 import com.amazon.s3.ListAllMyBucketsResponse;
 import com.amazon.s3.ListBucketResponse;
+import com.cloud.bridge.model.SAcl;
 import com.cloud.bridge.model.SBucket;
 import com.cloud.bridge.persist.dao.BucketPolicyDao;
 import com.cloud.bridge.persist.dao.MultipartLoadDao;
@@ -63,6 +64,7 @@ import com.cloud.bridge.service.core.s3.S3CreateBucketConfiguration;
 import com.cloud.bridge.service.core.s3.S3CreateBucketRequest;
 import com.cloud.bridge.service.core.s3.S3CreateBucketResponse;
 import com.cloud.bridge.service.core.s3.S3DeleteBucketRequest;
+import com.cloud.bridge.service.core.s3.S3Engine;
 import com.cloud.bridge.service.core.s3.S3GetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsRequest;
 import com.cloud.bridge.service.core.s3.S3ListAllMyBucketsResponse;
@@ -76,6 +78,7 @@ import com.cloud.bridge.service.core.s3.S3Response;
 import com.cloud.bridge.service.core.s3.S3SetBucketAccessControlPolicyRequest;
 import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
 import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
+import com.cloud.bridge.service.core.s3.S3PolicyCondition.ConditionKeys;
 import com.cloud.bridge.service.exception.InvalidRequestContentException;
 import com.cloud.bridge.service.exception.NetworkIOException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
@@ -184,8 +187,7 @@ public class S3BucketAction implements ServletAction {
 		} 
 		else throw new IllegalArgumentException("Unsupported method in REST request");
 	}
-	
-	
+		
 	private void executePutBucketPolicy(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
@@ -198,11 +200,25 @@ public class S3BucketAction implements ServletAction {
 	    	response.setStatus(404);
 	    	return;
 		}
-		
-		String client = UserContext.current().getCanonicalUserId();
-		if (!client.equals( bucket.getOwnerCanonicalId()))
-		    throw new PermissionDeniedException( "Access Denied - only the owner or someone with PutPolicy permissions can put a policy." );
 	
+		// [A] "The bucket owner by default has permissions to attach bucket policies to their buckets using PUT Bucket policy." 
+	    String client = UserContext.current().getCanonicalUserId();
+	    if (!client.equals( bucket.getOwnerCanonicalId())) 
+	    {
+			S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketPolicy, bucketName, bucket.getId());
+		    switch( S3Engine.verifyPolicy( context )) {
+		    case ALLOW:
+                 break;
+             
+		    case DEFAULT_DENY:
+		    case DENY:
+                 response.setStatus(403);
+                 return;
+		    }
+		}
+			
+	    
+	    // [B] Place the policy into the database over writting an existing policy
     	try {
 	        BucketPolicyDao policyDao = new BucketPolicyDao();
 	        policyDao.deletePolicy( bucket.getId());
@@ -210,13 +226,8 @@ public class S3BucketAction implements ServletAction {
 	                
        		PolicyParser parser = new PolicyParser( false );
     		S3BucketPolicy sbp = parser.parse( policy, bucketName );
-    		if (null != sbp) 
-    		{
-    	        ServiceProvider.getInstance().setBucketPolicy(bucketName, sbp);
-    			//S3PolicyContext context = new S3PolicyContext( request );
-    		}
-    		response.setStatus(200);
-    		
+    		if (null != sbp) ServiceProvider.getInstance().setBucketPolicy(bucketName, sbp);
+    		response.setStatus(200);  		
     	}
 		catch( Exception e ) {
 			logger.error("Put Bucket Policy failed due to " + e.getMessage(), e);	
@@ -226,8 +237,7 @@ public class S3BucketAction implements ServletAction {
 	
 	private void executeGetBucketPolicy(HttpServletRequest request, HttpServletResponse response) 
 	{
-		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
-		
+		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);		
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket bucket = bucketDao.getByName(bucketName);
 		if (bucket == null) {
@@ -236,12 +246,24 @@ public class S3BucketAction implements ServletAction {
 	    	return;
 		}
 
-		String client = UserContext.current().getCanonicalUserId();
-		if (!client.equals( bucket.getOwnerCanonicalId())) {
-		    response.setStatus(405);
-		    return;
+		// [A] "The bucket owner by default has permissions to retrieve bucket policies using GET Bucket policy."
+	    String client = UserContext.current().getCanonicalUserId();
+	    if (!client.equals( bucket.getOwnerCanonicalId())) 
+	    {
+			S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketPolicy, bucketName, bucket.getId());
+		    switch( S3Engine.verifyPolicy( context )) {
+		    case ALLOW:
+                 break;
+             
+		    case DEFAULT_DENY:
+		    case DENY:
+                 response.setStatus(403);
+                 return;
+		    }
 		}
 
+	    
+	    // [B] Pull the policy from the database if one exists
     	try {
 	        BucketPolicyDao policyDao = new BucketPolicyDao();
 	        String policy = policyDao.getPolicy( bucket.getId());
@@ -652,7 +674,7 @@ public class S3BucketAction implements ServletAction {
 	 */
 	public void executeListMultipartUploads(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
-		// [A] Obtain parameters and do basic bucket verifcation
+		// [A] Obtain parameters and do basic bucket verification
 		String bucketName     = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String delimiter      = request.getParameter("delimiter");
 		String keyMarker      = request.getParameter("key-marker");
@@ -682,8 +704,13 @@ public class S3BucketAction implements ServletAction {
 	    	response.setStatus(404);
 	    	return;
 		}
-  	
 		
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.ListBucketMultipartUploads, bucketName, bucket.getId());
+		context.setEvalParam( ConditionKeys.Prefix, prefix );
+		context.setEvalParam( ConditionKeys.Delimiter, delimiter );
+		S3Engine.verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_READ );
+
+  			
 		// [B] Query the multipart table to get the list of current uploads
     	try {
 	        MultipartLoadDao uploadDao = new MultipartLoadDao();

@@ -111,8 +111,18 @@ public class S3Engine {
 		if ( MetadataDirective.COPY == request.getDirective()) 
 		     getRequest.setReturnMetadata( true );
 		else getRequest.setReturnMetadata( false );		
-	    S3GetObjectResponse originalObject = handleRequest(getRequest); 
-	
+			
+		//-> before we do anything verify the permissions on a copy basis
+		SBucketDao bucketDao = new SBucketDao();
+		String  destinationBucketName = request.getDestinationBucketName();
+		SBucket sbucket = bucketDao.getByName( destinationBucketName );
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, destinationBucketName, sbucket.getId());
+		context.setEvalParam( ConditionKeys.MetaData, request.getDirective().toString());
+		context.setEvalParam( ConditionKeys.CopySource, "/" + request.getSourceBucketName() + "/" + request.getSourceKey());
+		if (PolicyAccess.DENY == verifyPolicy( context )) 
+            throw new PermissionDeniedException( "Access Denied - bucket policy DENY result" );
+			  		
+	    S3GetObjectResponse originalObject = handleRequest(getRequest); 	
 	    int resultCode = originalObject.getResultCode();
 	    if (200 != resultCode) {
 	    	response.setResultCode( resultCode );
@@ -202,14 +212,30 @@ public class S3Engine {
     {
     	S3Response response  = new S3Response();   	
 		SBucketDao bucketDao = new SBucketDao();
-		SBucket    sbucket   = bucketDao.getByName(request.getBucketName());
+		String bucketName = request.getBucketName();
+		SBucket    sbucket   = bucketDao.getByName( bucketName );
 		
 		if ( sbucket != null ) 
-		{
-			 // -> does not matter what the ACLs say only the owner can delete a bucket
-			 String client = UserContext.current().getCanonicalUserId();
-			 if (!client.equals( sbucket.getOwnerCanonicalId()))
-			     throw new PermissionDeniedException( "Access Denied - only the owner can delete a bucket" );
+		{			 
+			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteBucket, bucketName, sbucket.getId());
+			 switch( verifyPolicy( context )) {
+			 case ALLOW:
+				  // -> bucket policy can give users permission to delete a bucket while ACLs cannot
+				  break;
+				  
+			 case DENY:
+	              throw new PermissionDeniedException( "Access Denied - bucket policy DENY result" );
+				  
+			 case DEFAULT_DENY:
+			 default:
+				  // -> does not matter what the ACLs say only the owner can delete a bucket
+				  String client = UserContext.current().getCanonicalUserId();
+				  if (!client.equals( sbucket.getOwnerCanonicalId())) {
+				      throw new PermissionDeniedException( "Access Denied - only the owner can delete a bucket" );
+				  }
+				  break;
+			 }
+
 			 
 			 // -> delete the file
 			 Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(sbucket);
@@ -331,7 +357,8 @@ public class S3Engine {
     		return response;
     	}
  
-    	verifyAccess( null, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE_ACL ); 
+	    S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketAcl, bucketName, sbucket.getId());
+    	verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE_ACL ); 
 
     	SAclDao aclDao = new SAclDao();
     	aclDao.save("SBucket", sbucket.getId(), request.getAcl());
@@ -345,16 +372,18 @@ public class S3Engine {
     {
     	S3AccessControlPolicy policy = new S3AccessControlPolicy();   	
     	SBucketDao bucketDao = new SBucketDao();
-    	SBucket sbucket = bucketDao.getByName(request.getBucketName());
+    	String bucketName = request.getBucketName();
+    	SBucket sbucket = bucketDao.getByName( bucketName );
     	if (sbucket == null)
-    		throw new NoSuchObjectException("Bucket " + request.getBucketName() + " does not exist");
+    		throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
     	
     	S3CanonicalUser owner = new S3CanonicalUser();
     	owner.setID(sbucket.getOwnerCanonicalId());
     	owner.setDisplayName("");
     	policy.setOwner(owner);
     	
-    	verifyAccess( null, "SBucket", sbucket.getId(), SAcl.PERMISSION_READ_ACL ); 
+	    S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketAcl, bucketName, sbucket.getId());
+    	verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_READ_ACL ); 
 
     	SAclDao aclDao = new SAclDao();
     	List<SAcl> grants = aclDao.listGrants("SBucket", sbucket.getId());
@@ -368,9 +397,10 @@ public class S3Engine {
      * 
      * @param bucketName
      * @param uploadId
+     * @param verifyPermission - if false then don't check the user's permission to clean up the state
      * @return
      */
-    public int freeUploadParts(String bucketName, int uploadId)
+    public int freeUploadParts(String bucketName, int uploadId, boolean verifyPermission)
     {
 		// -> we need to look up the final bucket to figure out which mount point to use to save the part in
 		SBucketDao bucketDao = new SBucketDao();
@@ -391,12 +421,15 @@ public class S3Engine {
     	    }
     	    
     	    // -> the multipart initiator or bucket owner can do this action
-    	    String initiator = uploadDao.getInitiator( uploadId );
-    	    if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) 
+    	    if (verifyPermission)
     	    {
-    	    	// -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
-    			S3PolicyContext context = new S3PolicyContext( PolicyActions.AbortMultipartUpload, bucketName, bucket.getId());
-    	    	verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    	        String initiator = uploadDao.getInitiator( uploadId );
+    	        if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) 
+    	        {
+    	    	    // -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
+    			    S3PolicyContext context = new S3PolicyContext( PolicyActions.AbortMultipartUpload, bucketName, bucket.getId());
+    	    	    verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    	        }
     	    }
 
     	    // -> first get a list of all the uploaded files and delete one by one
@@ -436,6 +469,7 @@ public class S3Engine {
 		}
 	    
 		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName, bucket.getId());
+		context.setEvalParam( ConditionKeys.Acl, request.getCannedAccess());
 		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 
 		createUploadFolder( bucketName ); 
@@ -538,10 +572,7 @@ public class S3Engine {
 		if (bucket == null) {
 			logger.error( "completeMultipartUpload( failed since " + bucketName + " does not exist" );
 			response.setResultCode(404);
-		}
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName, bucket.getId());
-		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
-		
+		}		
 
 		// [B] Now we need to create the final re-assembled object
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, null, request.getCannedAccess());
@@ -691,10 +722,11 @@ public class S3Engine {
     {
     	S3Response response  = new S3Response(); 	
     	SBucketDao bucketDao = new SBucketDao();
-    	SBucket sbucket = bucketDao.getByName(request.getBucketName());
+    	String bucketName = request.getBucketName();
+    	SBucket sbucket = bucketDao.getByName( bucketName );
     	if(sbucket == null) {
     		response.setResultCode(404);
-    		response.setResultDescription("Bucket " + request.getBucketName() + "does not exist");
+    		response.setResultDescription("Bucket " + bucketName + "does not exist");
     		return response;
     	}
     	
@@ -703,11 +735,12 @@ public class S3Engine {
     	
     	if(sobject == null) {
     		response.setResultCode(404);
-    		response.setResultDescription("Object " + request.getKey() + " in bucket " + request.getBucketName() + " does not exist");
+    		response.setResultDescription("Object " + request.getKey() + " in bucket " + bucketName + " does not exist");
     		return response;
     	}
-    	
-    	verifyAccess( null, "SObject", sobject.getId(), SAcl.PERMISSION_WRITE_ACL ); 
+    
+	    S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObjectAcl, bucketName, sbucket.getId());
+    	verifyAccess( context, "SObject", sobject.getId(), SAcl.PERMISSION_WRITE_ACL ); 
     	
     	SAclDao aclDao = new SAclDao();
     	aclDao.save("SObject", sobject.getId(), request.getAcl());
@@ -721,9 +754,10 @@ public class S3Engine {
     {
     	S3AccessControlPolicy policy = new S3AccessControlPolicy();	
     	SBucketDao bucketDao = new SBucketDao();
-    	SBucket sbucket = bucketDao.getByName(request.getBucketName());
+    	String bucketName = request.getBucketName();
+    	SBucket sbucket = bucketDao.getByName( bucketName );
     	if (sbucket == null)
-    		throw new NoSuchObjectException("Bucket " + request.getBucketName() + " does not exist");
+    		throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
     	
     	SObjectDao sobjectDao = new SObjectDao();
     	SObject sobject = sobjectDao.getByNameKey(sbucket, request.getKey());
@@ -735,7 +769,8 @@ public class S3Engine {
     	owner.setDisplayName("");
     	policy.setOwner(owner);
     	
-    	verifyAccess( null, "SObject", sobject.getId(), SAcl.PERMISSION_READ_ACL ); 
+	    S3PolicyContext context = new S3PolicyContext( PolicyActions.GetObjectAcl, bucketName, sbucket.getId());
+    	verifyAccess( context, "SObject", sobject.getId(), SAcl.PERMISSION_READ_ACL ); 
 
     	SAclDao aclDao = new SAclDao();
     	List<SAcl> grants = aclDao.listGrants("SObject", sobject.getId());
@@ -752,6 +787,7 @@ public class S3Engine {
     public S3GetObjectResponse handleRequest(S3GetObjectRequest request) 
     {
     	S3GetObjectResponse response = new S3GetObjectResponse();
+    	S3PolicyContext context = null;
     	boolean ifRange = false;
 		long bytesStart = request.getByteRangeStart();
 		long bytesEnd   = request.getByteRangeEnd();
@@ -788,6 +824,13 @@ public class S3Engine {
 		SObjectItem item = null;
         int versioningStatus = sbucket.getVersioningStatus();
 		String wantVersion = request.getVersion();
+		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) {
+			 context = new S3PolicyContext( PolicyActions.GetObjectVersion, bucketName, sbucket.getId());
+			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
+		}
+		else context = new S3PolicyContext( PolicyActions.GetObject, bucketName, sbucket.getId());		
+		verifyAccess( context, "SObject", item.getId(), SAcl.PERMISSION_READ );		
+		
 		if ( SBucket.VERSIONING_ENABLED == versioningStatus && null != wantVersion)
 			 item = sobject.getVersion( wantVersion );
 		else item = sobject.getLatestVersion(( SBucket.VERSIONING_ENABLED != versioningStatus ));    
@@ -800,8 +843,6 @@ public class S3Engine {
 	
 		
 	    // [C] Handle all the IFModifiedSince ... conditions, and access privileges
-		verifyAccess( null, "SObject", item.getId(), SAcl.PERMISSION_READ );
-
 		// -> http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.27 (HTTP If-Range header)
 		if (request.isReturnCompleteObjectOnConditionFailure() && (0 <= bytesStart && 0 <= bytesEnd)) ifRange = true;
 
@@ -900,7 +941,7 @@ public class S3Engine {
 	    {
 			 String wantVersion = request.getVersion();
 			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteObjectVersion, bucketName, sbucket.getId());
-			 if (null != wantVersion) context.setEvalParam( ConditionKeys.VersionId, wantVersion );
+			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
 			 verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
 
 			 if (null == wantVersion) {
@@ -1245,12 +1286,18 @@ public class S3Engine {
 		int      versioningStatus    = bucket.getVersioningStatus();
 		
 		Session session = PersistContext.getSession();
-				
-		// [A] If versoning is off them we over write a null object item
+			
+		// [A] To write into a bucket the user must have write permission to that bucket
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucket.getName(), bucket.getId());
+		context.setEvalParam( ConditionKeys.Acl, cannedAccessPolicy);
+		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+
+		// [A] If versioning is off them we over write a null object item
 		SObject object = objectDao.getByNameKey(bucket, nameKey);
 		if ( object != null ) 
 		{
-			verifyAccess( null, "SObject", object.getId(), SAcl.PERMISSION_WRITE ); 
+			 // -> if the object already exists does the user have permission to write to it?
+			 accessAllowed( "SObject", object.getId(), SAcl.PERMISSION_WRITE ); 
 
 			 // -> if versioning is on create new object items
 			 if ( SBucket.VERSIONING_ENABLED  == versioningStatus )
@@ -1290,9 +1337,6 @@ public class S3Engine {
 		} 
 		else 
 		{    // -> there is no object nor an object item
-			 // -> to create a new object in a bucket then we need write access to that bucket
-			 accessAllowed( "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE ); 
-
 			 object = new SObject();
 			 object.setBucket(bucket);
 			 object.setNameKey(nameKey);
@@ -1311,8 +1355,9 @@ public class S3Engine {
 		     item.setLastModifiedTime(ts);
 		     session.save(item);
 		}
-				
-		// [B] We will use the item DB id as the file name, MD5/contentLength will be stored later
+			
+		
+		// [C] We will use the item DB id as the file name, MD5/contentLength will be stored later
 		String suffix = null;
 		int dotPos = nameKey.lastIndexOf('.');
 		if (dotPos >= 0) suffix = nameKey.substring(dotPos);
@@ -1436,18 +1481,7 @@ public class S3Engine {
         aclDao.save( target, objectId, defaultAcl );
 	}
 
-	/**
-	 * To determine access to a bucket or an object in a bucket evaluate first a define
-	 * bucket policy and then any defined ACLs.
-	 * 
-	 * @param context - all data needed for bucket policies
-	 * @param target - used for ACL evaluation, object identifier
-	 * @param targetId - used for ACL evaluation
-	 * @param requestedPermission - ACL type access requested
-	 * 
-	 * @throws ParseException, SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
-	 */
-	public static void verifyAccess( S3PolicyContext context, String target, long targetId, int requestedPermission ) 
+	public static PolicyAccess verifyPolicy( S3PolicyContext context )
 	{
 		S3BucketPolicy policy = null;
 		
@@ -1464,19 +1498,35 @@ public class S3Engine {
 		}
 		
 		if ( null != policy ) 
-		{
-			 PolicyAccess result = policy.eval(context, null, UserContext.current().getCanonicalUserId());
-			 switch( result ) {
-             case DENY:
-                 throw new PermissionDeniedException( "Access Denied - bucket policy DENY result" );
+			 return policy.eval(context, null, UserContext.current().getCanonicalUserId());
+		else return PolicyAccess.DEFAULT_DENY;
+	}
+	
+	/**
+	 * To determine access to a bucket or an object in a bucket evaluate first a define
+	 * bucket policy and then any defined ACLs.
+	 * 
+	 * @param context - all data needed for bucket policies
+	 * @param target - used for ACL evaluation, object identifier
+	 * @param targetId - used for ACL evaluation
+	 * @param requestedPermission - ACL type access requested
+	 * 
+	 * @throws ParseException, SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
+	 */
+	public static void verifyAccess( S3PolicyContext context, String target, long targetId, int requestedPermission ) 
+	{
+		switch( verifyPolicy( context ) ) {
+        case ALLOW:   // overrides ACLs (?)
+             return;
+
+        case DENY:
+             throw new PermissionDeniedException( "Access Denied - bucket policy DENY result" );
              
-             case DEFAULT_DENY:
-             case ALLOW:   // ? done on allow?
-            	 accessAllowed( target, targetId, requestedPermission );
-            	 break;
-             }
-		}
-		else accessAllowed( target, targetId, requestedPermission );
+        case DEFAULT_DENY:
+        default:
+             accessAllowed( target, targetId, requestedPermission );
+             break;
+        }
 	}
 	
 	/**
