@@ -153,6 +153,14 @@ public class S3Engine {
 		return response;
 	}
 
+	/**
+	 * So how do we allow a bucket policy action of "s3:CreateBucket" when a bucket needs to
+	 * exist first before a policy can be defined for it?   This is unclear from the Amazon
+	 * documentation.
+	 *  
+	 * @param request
+	 * @return
+	 */
     public S3CreateBucketResponse handleRequest(S3CreateBucketRequest request) 
     {
     	S3CreateBucketResponse response = new S3CreateBucketResponse();
@@ -288,7 +296,8 @@ public class S3Engine {
 		SBucket sbucket = bucketDao.getByName(bucketName);
 		if (sbucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 		
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.ListBucket, bucketName, sbucket.getId());
+		PolicyActions action = (includeVersions ? PolicyActions.ListBucketVersions : PolicyActions.ListBucket);
+		S3PolicyContext context = new S3PolicyContext( action, bucketName, sbucket.getId());
 		context.setEvalParam( ConditionKeys.MaxKeys, new String( "" + maxKeys ));
 		context.setEvalParam( ConditionKeys.Prefix, prefix );
 		context.setEvalParam( ConditionKeys.Delimiter, delimiter );
@@ -319,6 +328,14 @@ public class S3Engine {
 		return response;
     }
     
+    /**
+     * It is unclear how any access control can be place on this function.   There is no one
+     * object to set an ACL or bucket policy on.   So do we test each and every bucket before
+     * we include it in the list?   This is not clearly defined in the Amazon documentation.
+     * 
+     * @param request
+     * @return
+     */
     public S3ListAllMyBucketsResponse handleRequest(S3ListAllMyBucketsRequest request) 
     {
     	S3ListAllMyBucketsResponse response = new S3ListAllMyBucketsResponse();   	
@@ -575,6 +592,7 @@ public class S3Engine {
 		}		
 
 		// [B] Now we need to create the final re-assembled object
+		//  -> the allocObjectItem checks for the bucket policy PutObject permissions
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, null, request.getCannedAccess());
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
 		
@@ -628,6 +646,7 @@ public class S3Engine {
 		
 
 		// -> is the caller allowed to write the object?
+		//  -> the allocObjectItem checks for the bucket policy PutObject permissions
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl, request.getCannedAccess());
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
 		
@@ -682,6 +701,7 @@ public class S3Engine {
 		if(bucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 		
 		// -> is the caller allowed to write the object?	
+		//  -> the allocObjectItem checks for the bucket policy PutObject permissions
 		Tuple<SObject, SObjectItem> tupleObjectItem = allocObjectItem(bucket, key, meta, acl, null);
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);
     	
@@ -718,6 +738,12 @@ public class S3Engine {
     	return response;
     }
 
+    /**
+     * We don't seem to support PutObjectVersionAcl?
+     * 
+     * @param request
+     * @return
+     */
     public S3Response handleRequest(S3SetObjectAccessControlPolicyRequest request) 
     {
     	S3Response response  = new S3Response(); 	
@@ -750,6 +776,12 @@ public class S3Engine {
     	return response;
     }
     
+    /**
+     * We don't seem to support GetObjectVersionAcl?
+     * 
+     * @param request
+     * @return
+     */
     public S3AccessControlPolicy handleRequest(S3GetObjectAccessControlPolicyRequest request) 
     {
     	S3AccessControlPolicy policy = new S3AccessControlPolicy();	

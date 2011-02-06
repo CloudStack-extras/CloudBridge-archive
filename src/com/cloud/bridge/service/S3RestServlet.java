@@ -274,7 +274,6 @@ public class S3RestServlet extends HttpServlet {
     	}
     	    	
     	// [C] Calculate the signature from the request's headers
-    	/*
     	auth.setDateHeader( request.getHeader( "Date" ));
     	auth.setContentTypeHeader( request.getHeader( "Content-Type" ));
     	auth.setContentMD5Header( request.getHeader( "Content-MD5" ));
@@ -300,12 +299,10 @@ public class S3RestServlet extends HttpServlet {
 				UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), AWSAccessKey, info.getDescription(), request);
 				return;
 			}
-	*/
 			// -> turn off auth - just for testing
-			UserContext.current().initContext("Mark", "123", "Mark", "testing", request);
-            return;
+			//UserContext.current().initContext("Mark", "123", "Mark", "testing", request);
+            //return;
           
-    	/*
 		} catch (SignatureException e) {
 			throw new PermissionDeniedException(e);
 			
@@ -313,7 +310,6 @@ public class S3RestServlet extends HttpServlet {
 	    	throw new PermissionDeniedException(e);
 		}
 		throw new PermissionDeniedException("Invalid signature");
-	*/
     }
     
     private ServletAction routeRequest(HttpServletRequest request) {
@@ -463,6 +459,7 @@ public class S3RestServlet extends HttpServlet {
   			    return;
     		}
     		   		
+    		// -> PutObject S3 Bucket Policy would be done in the engine.handleRequest() call
     		UserContext.current().initContext( AWSAccessKey, info.getSecretKey(), AWSAccessKey, "S3 DIME request", request );
             putResponse = engine.handleRequest( putRequest );
             
@@ -479,6 +476,11 @@ public class S3RestServlet extends HttpServlet {
         	endResponse(response, xml.toString());
 			PersistContext.commitTransaction();
         } 
+        catch(PermissionDeniedException e) {
+		    logger.error("Unexpected exception " + e.getMessage(), e);
+		    response.setStatus(403);
+    	    endResponse(response, "Access denied");   	
+        }
         catch(Throwable e) 
         {
     		logger.error("Unexpected exception " + e.getMessage(), e);

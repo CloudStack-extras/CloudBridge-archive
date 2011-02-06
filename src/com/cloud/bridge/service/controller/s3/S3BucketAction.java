@@ -202,19 +202,23 @@ public class S3BucketAction implements ServletAction {
 		}
 	
 		// [A] "The bucket owner by default has permissions to attach bucket policies to their buckets using PUT Bucket policy." 
+		//  -> the bucket owner may want to restrict the IP address from where this can be executed
 	    String client = UserContext.current().getCanonicalUserId();
-	    if (!client.equals( bucket.getOwnerCanonicalId())) 
-	    {
-			S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketPolicy, bucketName, bucket.getId());
-		    switch( S3Engine.verifyPolicy( context )) {
-		    case ALLOW:
-                 break;
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketPolicy, bucketName, bucket.getId());
+	    switch( S3Engine.verifyPolicy( context )) {
+	    case ALLOW:
+             break;
              
-		    case DEFAULT_DENY:
-		    case DENY:
-                 response.setStatus(403);
-                 return;
-		    }
+		case DEFAULT_DENY:
+		     if (!client.equals( bucket.getOwnerCanonicalId())) {
+		    	 response.setStatus(405);
+		    	 return;
+		     }
+		     break;
+		    	 
+		case DENY:
+             response.setStatus(403);
+             return;
 		}
 			
 	    
@@ -247,19 +251,23 @@ public class S3BucketAction implements ServletAction {
 		}
 
 		// [A] "The bucket owner by default has permissions to retrieve bucket policies using GET Bucket policy."
-	    String client = UserContext.current().getCanonicalUserId();
-	    if (!client.equals( bucket.getOwnerCanonicalId())) 
-	    {
-			S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketPolicy, bucketName, bucket.getId());
-		    switch( S3Engine.verifyPolicy( context )) {
-		    case ALLOW:
-                 break;
+		//  -> the bucket owner may want to restrict the IP address from where this can be executed
+		String client = UserContext.current().getCanonicalUserId();
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketPolicy, bucketName, bucket.getId());
+		switch( S3Engine.verifyPolicy( context )) {
+		case ALLOW:
+             break;
              
-		    case DEFAULT_DENY:
-		    case DENY:
-                 response.setStatus(403);
-                 return;
-		    }
+		case DEFAULT_DENY:
+		  	 if (!client.equals( bucket.getOwnerCanonicalId())) {
+		   		 response.setStatus(405);
+		   		 return;
+		   	 }
+		   	 break;
+		    	 
+		case DENY:
+             response.setStatus(403);
+             return;
 		}
 
 	    
@@ -406,6 +414,7 @@ public class S3BucketAction implements ServletAction {
 	
 	public void executeGetBucketVersioning(HttpServletRequest request, HttpServletResponse response) throws IOException
 	{
+		// [A] Does the bucket exist?
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String versioningStatus = null;
 		
@@ -422,11 +431,19 @@ public class S3BucketAction implements ServletAction {
 			return;
 		}
 		
+		// [B] The owner may want to restrict the IP address at which this can be performed
 		String client = UserContext.current().getCanonicalUserId();
 		if (!client.equals( sbucket.getOwnerCanonicalId()))
 		    throw new PermissionDeniedException( "Access Denied - only the owner can read bucket versioning" );
 
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketVersioning, bucketName, sbucket.getId());
+	    if (PolicyAccess.DENY == S3Engine.verifyPolicy( context )) {
+             response.setStatus(403);
+             return;
+	    }
 
+
+	    // [C]
 		switch( sbucket.getVersioningStatus()) {
 		default:
 		case 0: versioningStatus = "";
@@ -620,6 +637,7 @@ public class S3BucketAction implements ServletAction {
 	        }
 	      
 			// -> does not matter what the ACLs say only the owner can turn on versioning on a bucket
+	        // -> the bucket owner may want to restrict the IP address from which this can occur
 			SBucketDao bucketDao = new SBucketDao();
 			SBucket sbucket = bucketDao.getByName( bucketName );
 		
@@ -627,6 +645,13 @@ public class S3BucketAction implements ServletAction {
 			if (!client.equals( sbucket.getOwnerCanonicalId()))
 			    throw new PermissionDeniedException( "Access Denied - only the owner can turn on versioing on a bucket" );
 		
+			S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketVersioning, bucketName, sbucket.getId());
+		    if (PolicyAccess.DENY == S3Engine.verifyPolicy( context )) {
+	             response.setStatus(403);
+	             return;
+		    }
+
+			
 			     if (versioningStatus.equalsIgnoreCase( "Enabled"  )) sbucket.setVersioningStatus( 1 );
 			else if (versioningStatus.equalsIgnoreCase( "Suspended")) sbucket.setVersioningStatus( 2 );
 			else { 
