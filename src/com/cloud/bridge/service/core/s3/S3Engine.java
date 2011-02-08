@@ -115,8 +115,10 @@ public class S3Engine {
 		//-> before we do anything verify the permissions on a copy basis
 		SBucketDao bucketDao = new SBucketDao();
 		String  destinationBucketName = request.getDestinationBucketName();
+		String  destinationKeyName = request.getDestinationKey();
 		SBucket sbucket = bucketDao.getByName( destinationBucketName );
 		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, destinationBucketName, sbucket.getId());
+		context.setKeyName( destinationKeyName );
 		context.setEvalParam( ConditionKeys.MetaData, request.getDirective().toString());
 		context.setEvalParam( ConditionKeys.CopySource, "/" + request.getSourceBucketName() + "/" + request.getSourceKey());
 		if (PolicyAccess.DENY == verifyPolicy( context )) 
@@ -136,7 +138,7 @@ public class S3Engine {
 	    // [B] Put the object into the destination bucket
 	    S3PutObjectInlineRequest putRequest = new S3PutObjectInlineRequest();
 	    putRequest.setBucketName(request.getDestinationBucketName()) ;
-	    putRequest.setKey(request.getDestinationKey());
+	    putRequest.setKey(destinationKeyName);
 		if ( MetadataDirective.COPY == request.getDirective()) 
 			 putRequest.setMetaEntries(originalObject.getMetaEntries());
 		else putRequest.setMetaEntries(request.getMetaEntries());	
@@ -432,7 +434,8 @@ public class S3Engine {
 
 		try {
     	    MultipartLoadDao uploadDao = new MultipartLoadDao();
-    	    if (null == uploadDao.multipartExits( uploadId )) {
+    	    Tuple<String,String> exists = uploadDao.multipartExits( uploadId );
+    	    if (null == exists) {
     			logger.error( "initiateMultipartUpload failed since multipart upload" + uploadId + " does not exist" );
     	    	return 404;
     	    }
@@ -445,7 +448,8 @@ public class S3Engine {
     	        {
     	    	    // -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
     			    S3PolicyContext context = new S3PolicyContext( PolicyActions.AbortMultipartUpload, bucketName, bucket.getId());
-    	    	    verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    	    	    context.setKeyName( exists.getSecond());
+    			    verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
     	        }
     	    }
 
@@ -476,6 +480,7 @@ public class S3Engine {
     {
     	S3PutObjectInlineResponse response = new S3PutObjectInlineResponse();	
 		String bucketName = request.getBucketName();
+		String nameKey = request.getKey();
 
 		// -> does the bucket exist and can we write to it?
 		SBucketDao bucketDao = new SBucketDao();
@@ -486,6 +491,7 @@ public class S3Engine {
 		}
 	    
 		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName, bucket.getId());
+		context.setKeyName( nameKey );
 		context.setEvalParam( ConditionKeys.Acl, request.getCannedAccess());
 		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 
@@ -493,7 +499,7 @@ public class S3Engine {
 
         try {
     	    MultipartLoadDao uploadDao = new MultipartLoadDao();
-    	    int uploadId = uploadDao.initiateUpload( UserContext.current().getAccessKey(), bucketName, request.getKey(), request.getCannedAccess(), request.getMetaEntries());
+    	    int uploadId = uploadDao.initiateUpload( UserContext.current().getAccessKey(), bucketName, nameKey, request.getCannedAccess(), request.getMetaEntries());
     	    response.setUploadId( uploadId );
     	    response.setResultCode(200);
     	    
@@ -527,6 +533,7 @@ public class S3Engine {
 			response.setResultCode(404);
 		}
 		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName, bucket.getId());
+		context.setKeyName( request.getKey());
 		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 		
 		Tuple<SHost, String> tupleBucketHost = getBucketStorageHost(bucket);		
@@ -757,7 +764,8 @@ public class S3Engine {
     	}
     	
     	SObjectDao sobjectDao = new SObjectDao();
-    	SObject sobject = sobjectDao.getByNameKey(sbucket, request.getKey());
+    	String nameKey = request.getKey();
+    	SObject sobject = sobjectDao.getByNameKey( sbucket, nameKey );
     	
     	if(sobject == null) {
     		response.setResultCode(404);
@@ -766,7 +774,8 @@ public class S3Engine {
     	}
     
 	    S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObjectAcl, bucketName, sbucket.getId());
-    	verifyAccess( context, "SObject", sobject.getId(), SAcl.PERMISSION_WRITE_ACL ); 
+    	context.setKeyName( nameKey );
+	    verifyAccess( context, "SObject", sobject.getId(), SAcl.PERMISSION_WRITE_ACL ); 
     	
     	SAclDao aclDao = new SAclDao();
     	aclDao.save("SObject", sobject.getId(), request.getAcl());
@@ -792,7 +801,8 @@ public class S3Engine {
     		throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
     	
     	SObjectDao sobjectDao = new SObjectDao();
-    	SObject sobject = sobjectDao.getByNameKey(sbucket, request.getKey());
+    	String nameKey = request.getKey();
+    	SObject sobject = sobjectDao.getByNameKey( sbucket, nameKey );
     	if (sobject == null)
     		throw new NoSuchObjectException("Object " + request.getKey() + " does not exist");
     	
@@ -802,7 +812,8 @@ public class S3Engine {
     	policy.setOwner(owner);
     	
 	    S3PolicyContext context = new S3PolicyContext( PolicyActions.GetObjectAcl, bucketName, sbucket.getId());
-    	verifyAccess( context, "SObject", sobject.getId(), SAcl.PERMISSION_READ_ACL ); 
+    	context.setKeyName( nameKey );
+	    verifyAccess( context, "SObject", sobject.getId(), SAcl.PERMISSION_READ_ACL ); 
 
     	SAclDao aclDao = new SAclDao();
     	List<SAcl> grants = aclDao.listGrants("SObject", sobject.getId());
@@ -834,9 +845,10 @@ public class S3Engine {
 			response.setResultDescription("Bucket " + request.getBucketName() + " does not exist");
 			return response;
 		}
-		
+
 		SObjectDao objectDao = new SObjectDao();
-		SObject sobject = objectDao.getByNameKey(sbucket, request.getKey());
+		String nameKey = request.getKey();
+		SObject sobject = objectDao.getByNameKey( sbucket, nameKey );
 		if (sobject == null) {
 			response.setResultCode(404);
 			response.setResultDescription("Object " + request.getKey() + " does not exist in bucket " + request.getBucketName());
@@ -851,18 +863,11 @@ public class S3Engine {
 			return response;
 		}
 		
-		
+
 		// [B] Versioning allow the client to ask for a specific version not just the latest
 		SObjectItem item = null;
         int versioningStatus = sbucket.getVersioningStatus();
 		String wantVersion = request.getVersion();
-		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) {
-			 context = new S3PolicyContext( PolicyActions.GetObjectVersion, bucketName, sbucket.getId());
-			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
-		}
-		else context = new S3PolicyContext( PolicyActions.GetObject, bucketName, sbucket.getId());		
-		verifyAccess( context, "SObject", item.getId(), SAcl.PERMISSION_READ );		
-		
 		if ( SBucket.VERSIONING_ENABLED == versioningStatus && null != wantVersion)
 			 item = sobject.getVersion( wantVersion );
 		else item = sobject.getLatestVersion(( SBucket.VERSIONING_ENABLED != versioningStatus ));    
@@ -872,8 +877,16 @@ public class S3Engine {
 			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
 			return response;  		
     	}
-	
 		
+		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) {
+			 context = new S3PolicyContext( PolicyActions.GetObjectVersion, bucketName, sbucket.getId());
+			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
+		}
+		else context = new S3PolicyContext( PolicyActions.GetObject, bucketName, sbucket.getId());		
+ 		context.setKeyName( nameKey );
+		verifyAccess( context, "SObject", item.getId(), SAcl.PERMISSION_READ );		
+		
+			
 	    // [C] Handle all the IFModifiedSince ... conditions, and access privileges
 		// -> http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.27 (HTTP If-Range header)
 		if (request.isReturnCompleteObjectOnConditionFailure() && (0 <= bytesStart && 0 <= bytesEnd)) ifRange = true;
@@ -957,7 +970,8 @@ public class S3Engine {
 		}
 		
 		SObjectDao objectDao = new SObjectDao();
-		SObject sobject = objectDao.getByNameKey( sbucket, request.getKey());
+		String nameKey = request.getKey();
+		SObject sobject = objectDao.getByNameKey( sbucket, nameKey );
 		if (sobject == null) {
 			response.setResultCode(404);
 			response.setResultDescription("Bucket does not exist");
@@ -973,6 +987,7 @@ public class S3Engine {
 	    {
 			 String wantVersion = request.getVersion();
 			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteObjectVersion, bucketName, sbucket.getId());
+			 context.setKeyName( nameKey );
 			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
 			 verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
 
@@ -1007,6 +1022,7 @@ public class S3Engine {
 		else 
 		{	 // -> if versioning is off then we do delete the null object
 			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteObject, bucketName, sbucket.getId());
+			 context.setKeyName( nameKey );
 			 verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
 
 			 if ( null == (item = sobject.getLatestVersion( true ))) {
@@ -1321,6 +1337,7 @@ public class S3Engine {
 			
 		// [A] To write into a bucket the user must have write permission to that bucket
 		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucket.getName(), bucket.getId());
+		context.setKeyName( nameKey );
 		context.setEvalParam( ConditionKeys.Acl, cannedAccessPolicy);
 		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 
@@ -1528,9 +1545,9 @@ public class S3Engine {
 		catch( Exception e ) {
 			logger.error( "verifyAccess - loadPolicy failed: [" + e.toString() + "], bucket: " + context.getBucketName() + " policy ignored");
 		}
-		
+
 		if ( null != policy ) 
-			 return policy.eval(context, null, UserContext.current().getCanonicalUserId());
+			 return policy.eval(context, UserContext.current().getCanonicalUserId());
 		else return PolicyAccess.DEFAULT_DENY;
 	}
 	

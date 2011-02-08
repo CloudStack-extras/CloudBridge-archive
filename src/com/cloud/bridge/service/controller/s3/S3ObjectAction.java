@@ -296,7 +296,7 @@ public class S3ObjectAction implements ServletAction {
 		String   bucket    = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String   key       = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 		String[] paramList = null;
-		
+	
 		S3GetObjectRequest engineRequest = new S3GetObjectRequest();
 		engineRequest.setBucketName(bucket);
 		engineRequest.setKey(key);
@@ -324,8 +324,7 @@ public class S3ObjectAction implements ServletAction {
 		     String version = engineResponse.getVersion();
 		     if (null != version) response.addHeader( "x-amz-version-id", version );
 		}
-		
-		
+				
 		// -> was the get conditional?
 		if (!conditionPassed( request, response, engineResponse.getLastModified().getTime(), engineResponse.getETag())) 
 			return;
@@ -845,10 +844,12 @@ public class S3ObjectAction implements ServletAction {
 	
     	try {
 	        MultipartLoadDao uploadDao = new MultipartLoadDao();
-	        if (null == (owner = uploadDao.multipartExits( uploadId ))) {
+	        Tuple<String,String> exists = uploadDao.multipartExits( uploadId );
+	        if (null == exists) {
 	    	   response.setStatus(404);
 	    	   return;
 	        }
+    	    owner = exists.getFirst();
 	        
     	    // -> the multipart initiator or bucket owner can do this action
     	    initiator = uploadDao.getInitiator( uploadId );
@@ -857,7 +858,8 @@ public class S3ObjectAction implements ServletAction {
     	    	try {
     	    	    // -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
         			S3PolicyContext context = new S3PolicyContext( PolicyActions.ListMultipartUploadParts, bucketName, bucket.getId());
-    	    		S3Engine.verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
+    	    		context.setKeyName( exists.getSecond());
+        			S3Engine.verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
     	    	}
     	    	catch (PermissionDeniedException e) {
     	    		response.setStatus(403);

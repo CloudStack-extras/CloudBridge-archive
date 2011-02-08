@@ -31,6 +31,7 @@ public class S3PolicyContext {
 
 	private HttpServletRequest request = null;;
 	private String bucketName = null;
+	private String keyName = null;
 	private long bucketId = 0;
 	private PolicyActions requestedAction;
 	private Map<ConditionKeys,String> evalParams = new HashMap<ConditionKeys,String>();
@@ -67,6 +68,14 @@ public class S3PolicyContext {
 	
 	public void setBucketName(String bucketName) {
 		this.bucketName = bucketName;
+	}
+
+	public String getKeyName() {
+		return keyName;
+	}
+	
+	public void setKeyName(String keyName) {
+		this.keyName = keyName;
 	}
 	
 	public long getBucketId() {

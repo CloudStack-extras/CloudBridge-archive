@@ -71,22 +71,27 @@ public class MultipartLoadDao {
 	 * accessKey.
 	 * 
 	 * @param uploadId
-	 * @return creator of the multipart upload
+	 * @return creator of the multipart upload, and NameKey of upload
 	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
 	 */
-	public String multipartExits( int uploadId ) 
+	public Tuple<String,String> multipartExits( int uploadId ) 
 	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	{
 	    PreparedStatement statement = null;
 	    String accessKey = null;
+	    String nameKey = null;
 		
         openConnection();	
         try {            
-		    statement = conn.prepareStatement ( "SELECT AccessKey FROM multipart_uploads WHERE ID=?" );
+		    statement = conn.prepareStatement ( "SELECT AccessKey, NameKey FROM multipart_uploads WHERE ID=?" );
 	        statement.setInt( 1, uploadId );
 	        ResultSet rs = statement.executeQuery();
-		    if (rs.next()) accessKey = rs.getString( "AccessKey" );
-            return accessKey;
+		    if ( rs.next()) {
+		    	 accessKey = rs.getString( "AccessKey" );
+		    	 nameKey = rs.getString( "NameKey" );
+		    	 return new Tuple<String,String>( accessKey, nameKey );
+		    }
+		    else return null;
         
         } finally {
             closeConnection();
