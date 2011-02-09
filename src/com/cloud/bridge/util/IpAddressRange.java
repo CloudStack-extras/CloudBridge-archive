@@ -22,36 +22,34 @@ package com.cloud.bridge.util;
  */
 public class IpAddressRange {
 
-	private int minAddress;
-	private int maxAddress;
+	private long minAddress;
+	private long maxAddress;
 	
 	public IpAddressRange() {
 		
 	}
 	
-	public int getMinAddress() {
+	public long getMinAddress() {
 		return minAddress;
 	}
 	
-	public void setMinAddress(int param) {
+	public void setMinAddress(long param) {
 		this.minAddress = param;
 	}
 	
-	public int getMaxAddress() {
+	public long getMaxAddress() {
 		return maxAddress;
 	}
 	
-	public void setMaxAddress(int param) {
+	public void setMaxAddress(long param) {
 		this.maxAddress = param;
 	}
 	
 	public String toString() 
 	{
 		StringBuffer value = new StringBuffer();
-		value.append( "ip range min: " + minAddress );
-		value.append( "\n" );
-		value.append( "ip range max: " + maxAddress );
-		value.append( "\n" );
+		value.append( "(ip range min: " + minAddress );
+		value.append( ", max: " + maxAddress + ")" );
 		return value.toString();
 	}
 	
@@ -61,7 +59,7 @@ public class IpAddressRange {
 	 * @return boolean
 	 */
 	public boolean contains(IpAddressRange left) {	
-		int leftMin = left.getMinAddress();
+		long leftMin = left.getMinAddress();
 		
 		if ( leftMin < minAddress || leftMin > maxAddress ) 
 			 return false;
@@ -71,8 +69,8 @@ public class IpAddressRange {
 	public static IpAddressRange parseRange(String ipAddress) 
 	{
 		IpAddressRange range = null;
-		int maskBits = 0;
-		int address = 0;
+		long maskBits = 0;
+		long address = 0;
 		
 		if (null == ipAddress) return null;
 		
@@ -102,19 +100,27 @@ public class IpAddressRange {
 		return range;
 	}
 	
-	private static int ipToInt(String ipAddress) 
-	{
-		String[] parts = ipAddress.split( "." );
+	/** 
+	 * In order to do unsigned math here we must use long types so that high order bits 
+	 * are not used as the sign of the number.
+	 * 
+	 * @param ipAddress
+	 * @return
+	 */
+	private static long ipToInt(String ipAddress) 
+	{	
+		String[] parts = ipAddress.split( "[.]" );
 		if (4 != parts.length) return 0;
 		
-		int[] address = new int[4];
-		address[0] = Integer.parseInt( parts[0] ) & 0xFF;
-		address[1] = Integer.parseInt( parts[1] ) & 0xFF;
-		address[2] = Integer.parseInt( parts[2] ) & 0xFF;
-		address[3] = Integer.parseInt( parts[3] ) & 0xFF;
+		long[] address = new long[4];
+		address[0] = Long.parseLong( parts[0] );
+		address[1] = Long.parseLong( parts[1] );
+		address[2] = Long.parseLong( parts[2] );
+		address[3] = Long.parseLong( parts[3] );
 		
 		if (address[0] > 255 || address[1] > 255 || address[2] > 255 || address[3] > 255) return 0;
-		
-		return (address[0]<<24) | (address[1]<<16) | (address[2]<<8) | address[3];
+
+		long value = (address[0]<<24) | (address[1]<<16) | (address[2]<<8) | address[3];
+		return value;
 	}	
 }

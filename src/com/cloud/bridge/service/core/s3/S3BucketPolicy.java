@@ -74,7 +74,7 @@ public class S3BucketPolicy {
 	 * @param userAccount - the user performing the access request
 	 * @return PolicyAccess type
 	 */
-	public PolicyAccess eval(S3PolicyContext context, String objectToAccess, String userAccount) 
+	public PolicyAccess eval(S3PolicyContext context, String userAccount) 
 	{
 		PolicyAccess result = PolicyAccess.DEFAULT_DENY;
 		
@@ -82,7 +82,7 @@ public class S3BucketPolicy {
 		while( itr.hasNext()) 
 		{
 			S3PolicyStatement oneStatement = itr.next();
-			if (statementIsRelevant( oneStatement, objectToAccess, userAccount, context.getRequestedAction()))
+			if (statementIsRelevant( oneStatement, context.getKeyName(), userAccount, context.getRequestedAction()))
 			{
 				if (oneStatement.getConditionBlock().isTrue( context )) 
 				{
