@@ -32,6 +32,7 @@ import com.cloud.bridge.service.core.s3.S3PolicyPrincipal;
 import com.cloud.bridge.service.core.s3.S3PolicyStatement;
 import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
 import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
+import com.cloud.bridge.service.exception.PermissionDeniedException;
 
 /**
  * This class uses the JSON simple parser to convert the JSON of a Bucket Policy
@@ -81,14 +82,16 @@ public class PolicyParser {
 		condFactory = new S3ConditionFactory();
 	}
 
-	ContentHandler myHandler = new ContentHandler() {
-
-		public boolean endArray() throws ParseException {
+	ContentHandler myHandler = new ContentHandler() 
+	{
+		public boolean endArray() throws ParseException 
+		{
 			if (debugOn) System.out.println("endArray()");
 			return true;
 		}
 
-		public void endJSON() throws ParseException {
+		public void endJSON() throws ParseException 
+		{
 			if (debugOn) System.out.println("endJSON()");
 			
 			if (null != statement) {
@@ -100,7 +103,8 @@ public class PolicyParser {
 			}
 		}
 
-		public boolean endObject() throws ParseException {
+		public boolean endObject() throws ParseException 
+		{
 			if (debugOn) System.out.println("endObject(), nesting: " + entryNesting);
 			
 			if (null != statement && 1 >= entryNesting) {
@@ -115,7 +119,8 @@ public class PolicyParser {
 			return true;
 		}
 
-		public boolean endObjectEntry() throws ParseException {
+		public boolean endObjectEntry() throws ParseException, PermissionDeniedException
+		{
 			if (debugOn) System.out.println("endObjectEntry(), nesting: " + entryNesting);
 			
 			     if (inSid) {
@@ -133,8 +138,11 @@ public class PolicyParser {
 			}
 			else if (inResource) 
 			{
-				 if (null != statement && resource.startsWith("arn:aws:s3:::")) {
-					 statement.setResource( resource.substring(13) );
+				 if (null != statement && resource.startsWith("arn:aws:s3:::")) 
+				 {
+					 String resourcePath = resource.substring(13);
+					 verifySameBucket( resourcePath );
+					 statement.setResource( resourcePath );
 				 }
 				 inResource = false;
 			}
@@ -196,7 +204,8 @@ public class PolicyParser {
 			return true;
 		}
 
-		public boolean primitive(Object value) throws ParseException, IOException {
+		public boolean primitive(Object value) throws ParseException, PermissionDeniedException
+		{
 			if (debugOn) System.out.println("primitive(): " + value);
 			
 			     if (inSid) sid = (String)value;
@@ -210,22 +219,25 @@ public class PolicyParser {
 			else if (inVersion) {
 		    	 String version = (String)value;
 		    	 if (!version.equals( "2008-10-17" )) 
-		    		 throw new IOException( "S3 Bucket Policy has unsupported version: " + version );
+		    		 throw new PermissionDeniedException( "S3 Bucket Policy has unsupported version: " + version );
 		     }
 
 			return true;
 		}
 
-		public boolean startArray() throws ParseException {
+		public boolean startArray() throws ParseException 
+		{
 			if (debugOn) System.out.println("startArray()");
 			return true;
 		}
 
-		public void startJSON() throws ParseException {
+		public void startJSON() throws ParseException 
+		{
 			if (debugOn) System.out.println("startJSON()");
 		}
 
-		public boolean startObject() throws ParseException {
+		public boolean startObject() throws ParseException 
+		{
 			if (debugOn) System.out.println("startObject(), nesting: " + entryNesting);
 			
 			if (1 == entryNesting && inStatement) statement = new S3PolicyStatement();
@@ -233,7 +245,8 @@ public class PolicyParser {
 			return true;
 		}
 
-		public boolean startObjectEntry(String key) throws ParseException {
+		public boolean startObjectEntry(String key) throws ParseException 
+		{
 			entryNesting++;
 			if (debugOn) System.out.println("startObjectEntry(), key: [" + key + "]");
 	
@@ -268,11 +281,33 @@ public class PolicyParser {
 	};    			
 
 	
-	public S3BucketPolicy parse( String policy, String bucketName ) throws ParseException {
-		
+	public S3BucketPolicy parse( String policy, String bucketName ) throws ParseException, PermissionDeniedException
+	{	
 		bucketPolicy = new S3BucketPolicy();
 		bucketPolicy.setBucketName( bucketName );
 	    jparser.parse(policy, myHandler);
 	    return bucketPolicy;
+	}
+	
+	
+	/**
+	 * From Amazon on S3 Policies: 
+	 * "Each policy must cover only a single bucket and resources within that bucket (when writing a 
+	 * policy, don't include statements that refer to other buckets or resources in other buckets)"
+	 * 
+	 * @param resourcePath
+	 */
+	private void verifySameBucket( String resourcePath ) throws PermissionDeniedException
+	{
+		String testBucketName = resourcePath;
+		String bucketName = bucketPolicy.getBucketName();
+		
+		// -> extract just the bucket name
+		int offset = testBucketName.indexOf( "/" );
+		if (-1 != offset) testBucketName = testBucketName.substring( 0, offset );
+		
+		if (!testBucketName.equals( bucketName )) 
+			throw new PermissionDeniedException( "The S3 Bucket Policy must only refer to the single bucket: \"" + bucketName  + 
+					"\", but it referres to the following resource: \"" + resourcePath + "\"" );
 	}
 }

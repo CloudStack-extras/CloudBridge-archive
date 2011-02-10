@@ -142,7 +142,7 @@ public class S3RestServlet extends HttpServlet {
         } catch(PermissionDeniedException e) {
     		logger.error("Unexpected exception " + e.getMessage(), e);
     		response.setStatus(403);
-        	endResponse(response, "Access denied");
+        	endResponse(response, "Access denied - " + e.toString());
         	
         } catch(Throwable e) {
     		logger.error("Unexpected exception " + e.getMessage(), e);

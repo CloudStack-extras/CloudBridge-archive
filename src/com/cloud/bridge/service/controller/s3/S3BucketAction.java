@@ -233,6 +233,10 @@ public class S3BucketAction implements ServletAction {
     		if (null != sbp) ServiceProvider.getInstance().setBucketPolicy(bucketName, sbp);
     		response.setStatus(200);  		
     	}
+    	catch( PermissionDeniedException e ) {
+			logger.error("Put Bucket Policy failed due to " + e.getMessage(), e);	
+			throw e; 		
+    	}
 		catch( Exception e ) {
 			logger.error("Put Bucket Policy failed due to " + e.getMessage(), e);	
 			response.setStatus(500);
