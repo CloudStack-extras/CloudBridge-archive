@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-
 import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 
 public class S3BucketPolicy {
@@ -84,7 +82,9 @@ public class S3BucketPolicy {
 			S3PolicyStatement oneStatement = itr.next();
 			if (statementIsRelevant( oneStatement, context.getKeyName(), userAccount, context.getRequestedAction()))
 			{
-				if (oneStatement.getConditionBlock().isTrue( context )) 
+				// -> a missing condition block means the statement is true 
+				S3PolicyConditionBlock block = oneStatement.getConditionBlock();				
+			    if (null == block || block.isTrue( context )) 
 				{
 					result = oneStatement.getEffect();
 					if (PolicyAccess.DENY == result) return result;
@@ -126,12 +126,23 @@ public class S3BucketPolicy {
 		// [A] Is the userAccount one of the principals of the policy statement?
 		S3PolicyPrincipal principals = oneStatement.getPrincipals();
 		if (null == principals || !principals.contains( userAccount )) return false;
-		//System.out.println( "Statement: " + oneStatement.getSid() + " principal matches");
+		System.out.println( "Statement: " + oneStatement.getSid() + " principal matches");
+		
 		
 		// [B] Is the operationRequested included in the policy statement?
-		S3PolicyAction actions = oneStatement.getActions();
-		if (null == actions || !actions.contains( operationRequested )) return false;
-		//System.out.println( "Statement: " + oneStatement.getSid() + " action matches");
+		//  -> if the value in "NotAction:" matches that requested then the statement does not apply
+		//  (i.e., "refers to all actions other" than defined).
+		PolicyActions notActions = oneStatement.getNotAction();
+	    System.out.println( "Statement: NotAction:" + notActions );
+
+    	if ( PolicyActions.UnknownAction != notActions ) {
+    		 if (notActions == operationRequested) return false;
+    	}
+    	else {
+		     S3PolicyAction actions = oneStatement.getActions();
+		     if (null == actions || !actions.contains( operationRequested )) return false;
+		     System.out.println( "Statement: " + oneStatement.getSid() + " action matches");
+    	}
 		
 		// [C] Does the objectToAccess included in the resource of the policy statement?
 		//  -> is it just the bucket being accessed?
@@ -141,7 +152,7 @@ public class S3BucketPolicy {
 		
 	    if (!oneStatement.containsResource( path )) return false;
 		
-	    //System.out.println( "Statement: " + oneStatement.getSid() + " is relevant to access request");
+	    System.out.println( "Statement: " + oneStatement.getSid() + " is relevant to access request");
 		return true;
 	}
 }

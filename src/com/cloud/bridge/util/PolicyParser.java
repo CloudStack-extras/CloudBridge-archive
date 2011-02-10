@@ -31,6 +31,7 @@ import com.cloud.bridge.service.core.s3.S3PolicyConditionBlock;
 import com.cloud.bridge.service.core.s3.S3PolicyPrincipal;
 import com.cloud.bridge.service.core.s3.S3PolicyStatement;
 import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
+import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 
 /**
  * This class uses the JSON simple parser to convert the JSON of a Bucket Policy
@@ -46,14 +47,15 @@ public class PolicyParser {
 	private S3PolicyPrincipal principals = null;
 	private S3PolicyStatement statement = null;
 	private S3PolicyAction actions = null;
+	private S3PolicyAction convertActions = new S3PolicyAction();
 	private S3PolicyCondition condition = null;
 	private S3ConditionFactory condFactory = null;
 	private S3PolicyConditionBlock block = null;
+	private PolicyActions notAction = PolicyActions.UnknownAction;
 	private String id =  null;
 	private String sid = null;
 	private String effect = null;
 	private String resource = null;
-	private String notAction = null;
 	private String condKey = null;   // -> the next key in a condition
 	private List<String> valueList = new ArrayList<String>();
 	
@@ -200,9 +202,9 @@ public class PolicyParser {
 			     if (inSid) sid = (String)value;
 			else if (inEffect) effect = (String)value;
 			else if (inResource) resource = (String)value;
-			else if (inNotAction) notAction = (String)value;
+			else if (inNotAction) notAction = convertActions.toPolicyActions((String)value);
 			else if (inId) id = (String)value;
-			else if (null != actions   ) actions.addAction( actions.toPolicyActions((String)value));
+			else if (null != actions   ) actions.addAction( convertActions.toPolicyActions((String)value));
 			else if (null != principals) principals.addPrincipal( (String)value );
 			else if (null != condition) valueList.add( (String)value );
 			else if (inVersion) {

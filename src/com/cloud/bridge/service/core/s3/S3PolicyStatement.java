@@ -16,18 +16,20 @@
 package com.cloud.bridge.service.core.s3;
 
 import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
+import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 
 public class S3PolicyStatement {
 	private String sid;
 	private PolicyAccess effect;
 	private S3PolicyPrincipal principals;
     private S3PolicyAction actions;
-    private String notAction;
+    private PolicyActions notAction;
     private String resource;
     private String regexResource;
     private S3PolicyConditionBlock block;
 	
 	public S3PolicyStatement() {
+		notAction = PolicyActions.UnknownAction;
 	}
 
 	public S3PolicyAction getActions() {
@@ -84,11 +86,11 @@ public class S3PolicyStatement {
 		return false;
 	}
 	
-	public String getNotAction() {
+	public PolicyActions getNotAction() {
 		return notAction;
 	}
 	
-	public void setNotAction(String param) {
+	public void setNotAction(PolicyActions param) {
 		notAction = param;
 	}
 
