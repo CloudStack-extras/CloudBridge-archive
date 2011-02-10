@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 package com.cloud.bridge.service.core.s3;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -266,7 +267,7 @@ public class S3Engine {
 				{
 					SObjectItem oneItem = (SObjectItem)is.next();
 		    		deleteMetaData( oneItem.getId());
-		    		deleteObjectAcls( oneItem.getId());
+		    		deleteObjectAcls( "SObjectItem", oneItem.getId());
 				}				
 			 }			 
 			 deleteBucketAcls( sbucket.getId());
@@ -746,13 +747,17 @@ public class S3Engine {
     }
 
     /**
-     * We don't seem to support PutObjectVersionAcl?
+     * The ACL of an object is set at the object version level. By default, PUT sets the ACL of the latest 
+     * version of an object. To set the ACL of a different version, use the versionId subresource. 
      * 
      * @param request
      * @return
      */
     public S3Response handleRequest(S3SetObjectAccessControlPolicyRequest request) 
     {
+    	S3PolicyContext context = null;
+    	
+    	// [A] First find the object in the bucket
     	S3Response response  = new S3Response(); 	
     	SBucketDao bucketDao = new SBucketDao();
     	String bucketName = request.getBucketName();
@@ -765,20 +770,47 @@ public class S3Engine {
     	
     	SObjectDao sobjectDao = new SObjectDao();
     	String nameKey = request.getKey();
-    	SObject sobject = sobjectDao.getByNameKey( sbucket, nameKey );
-    	
+    	SObject sobject = sobjectDao.getByNameKey( sbucket, nameKey );   	
     	if(sobject == null) {
     		response.setResultCode(404);
     		response.setResultDescription("Object " + request.getKey() + " in bucket " + bucketName + " does not exist");
     		return response;
     	}
-    
-	    S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObjectAcl, bucketName, sbucket.getId());
-    	context.setKeyName( nameKey );
-	    verifyAccess( context, "SObject", sobject.getId(), SAcl.PERMISSION_WRITE_ACL ); 
     	
+		String deletionMark = sobject.getDeletionMark();
+		if (null != deletionMark) {
+			response.setResultCode(404);
+			response.setResultDescription("Object " + request.getKey() + " has been deleted (1)");
+			return response;
+		}
+		
+
+		// [B] Versioning allow the client to ask for a specific version not just the latest
+		SObjectItem item = null;
+        int versioningStatus = sbucket.getVersioningStatus();
+		String wantVersion = request.getVersion();
+		if ( SBucket.VERSIONING_ENABLED == versioningStatus && null != wantVersion)
+			 item = sobject.getVersion( wantVersion );
+		else item = sobject.getLatestVersion(( SBucket.VERSIONING_ENABLED != versioningStatus ));    
+    	
+		if (item == null) {
+    		response.setResultCode(404);
+			response.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
+			return response;  		
+    	}
+
+		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) {
+			 context = new S3PolicyContext( PolicyActions.PutObjectAclVersion, bucketName, sbucket.getId());
+			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
+			 response.setVersion( item.getVersion());
+		}
+		else context = new S3PolicyContext( PolicyActions.PutObjectAcl, bucketName, sbucket.getId());		
+		context.setKeyName( nameKey );
+		verifyAccess( context, "SObjectItem", item.getId(), SAcl.PERMISSION_WRITE_ACL );		
+
+		// -> the acl always goes on the instance of the object
     	SAclDao aclDao = new SAclDao();
-    	aclDao.save("SObject", sobject.getId(), request.getAcl());
+    	aclDao.save("SObjectItem", item.getId(), request.getAcl());
     	
     	response.setResultCode(200);
     	response.setResultDescription("OK");
@@ -786,13 +818,17 @@ public class S3Engine {
     }
     
     /**
-     * We don't seem to support GetObjectVersionAcl?
+     * By default, GET returns ACL information about the latest version of an object. To return ACL 
+     * information about a different version, use the versionId subresource
      * 
      * @param request
      * @return
      */
     public S3AccessControlPolicy handleRequest(S3GetObjectAccessControlPolicyRequest request) 
     {
+    	S3PolicyContext context = null;
+
+    	// [A] Does the object exist that holds the ACL we are looking for?
     	S3AccessControlPolicy policy = new S3AccessControlPolicy();	
     	SBucketDao bucketDao = new SBucketDao();
     	String bucketName = request.getBucketName();
@@ -805,19 +841,49 @@ public class S3Engine {
     	SObject sobject = sobjectDao.getByNameKey( sbucket, nameKey );
     	if (sobject == null)
     		throw new NoSuchObjectException("Object " + request.getKey() + " does not exist");
+    		
+		String deletionMark = sobject.getDeletionMark();
+		if (null != deletionMark) {
+			policy.setResultCode(404);
+			policy.setResultDescription("Object " + request.getKey() + " has been deleted (1)");
+			return policy;
+		}
+		
+
+		// [B] Versioning allow the client to ask for a specific version not just the latest
+		SObjectItem item = null;
+        int versioningStatus = sbucket.getVersioningStatus();
+		String wantVersion = request.getVersion();
+		if ( SBucket.VERSIONING_ENABLED == versioningStatus && null != wantVersion)
+			 item = sobject.getVersion( wantVersion );
+		else item = sobject.getLatestVersion(( SBucket.VERSIONING_ENABLED != versioningStatus ));    
     	
+		if (item == null) {
+    		policy.setResultCode(404);
+			policy.setResultDescription("Object " + request.getKey() + " has been deleted (2)");
+			return policy;  		
+    	}
+
+		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) {
+			 context = new S3PolicyContext( PolicyActions.GetObjectVersionAcl, bucketName, sbucket.getId());
+			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
+			 policy.setVersion( item.getVersion());
+		}
+		else context = new S3PolicyContext( PolicyActions.GetObjectAcl, bucketName, sbucket.getId());		
+		context.setKeyName( nameKey );
+		verifyAccess( context, "SObjectItem", item.getId(), SAcl.PERMISSION_READ_ACL );		
+
+    	
+        // [C] ACLs are ALWAYS on an instance of the object
     	S3CanonicalUser owner = new S3CanonicalUser();
     	owner.setID(sobject.getOwnerCanonicalId());
     	owner.setDisplayName("");
     	policy.setOwner(owner);
-    	
-	    S3PolicyContext context = new S3PolicyContext( PolicyActions.GetObjectAcl, bucketName, sbucket.getId());
-    	context.setKeyName( nameKey );
-	    verifyAccess( context, "SObject", sobject.getId(), SAcl.PERMISSION_READ_ACL ); 
-
+		policy.setResultCode(200);
+   	
     	SAclDao aclDao = new SAclDao();
-    	List<SAcl> grants = aclDao.listGrants("SObject", sobject.getId());
-    	policy.setGrants(S3Grant.toGrants(grants));    	
+    	List<SAcl> grants = aclDao.listGrants( "SObjectItem", item.getId());
+    	policy.setGrants(S3Grant.toGrants(grants));    
     	return policy;
     }
     
@@ -884,7 +950,7 @@ public class S3Engine {
 		}
 		else context = new S3PolicyContext( PolicyActions.GetObject, bucketName, sbucket.getId());		
  		context.setKeyName( nameKey );
-		verifyAccess( context, "SObject", item.getId(), SAcl.PERMISSION_READ );		
+		verifyAccess( context, "SObjectItem", item.getId(), SAcl.PERMISSION_READ );		
 		
 			
 	    // [C] Handle all the IFModifiedSince ... conditions, and access privileges
@@ -1036,7 +1102,7 @@ public class S3Engine {
 		    	      // -> cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects.
 		    	      storedPath = item.getStoredPath();
 		    		  deleteMetaData( item.getId());
-		    		  deleteObjectAcls( item.getId());
+		    		  deleteObjectAcls( "SObjectItem", item.getId());
 		    	      objectDao.delete( sobject );
 		    	  }
 		     }
@@ -1068,9 +1134,9 @@ public class S3Engine {
 		}
 	}
 
-	private void deleteObjectAcls( long itemId ) {
+	private void deleteObjectAcls( String target, long itemId ) {
 	    SAclDao aclDao = new SAclDao();
-	    List<SAcl> itemAclData = aclDao.listGrants( "SObject", itemId );
+	    List<SAcl> itemAclData = aclDao.listGrants( target, itemId );
 	    if (null != itemAclData) 
 	    {
 	        ListIterator it = itemAclData.listIterator();
@@ -1345,11 +1411,8 @@ public class S3Engine {
 		SObject object = objectDao.getByNameKey(bucket, nameKey);
 		if ( object != null ) 
 		{
-			 // -> if the object already exists does the user have permission to write to it?
-			 accessAllowed( "SObject", object.getId(), SAcl.PERMISSION_WRITE ); 
-
 			 // -> if versioning is on create new object items
-			 if ( SBucket.VERSIONING_ENABLED  == versioningStatus )
+			 if ( SBucket.VERSIONING_ENABLED == versioningStatus )
 			 {
 			      session.lock(object, LockMode.UPGRADE);
 			      versionSeq = object.getNextSequence();
@@ -1418,17 +1481,18 @@ public class S3Engine {
 		
 		
 		// [C] Are we setting an ACL along with the object
+		//  -> the ACL is ALWAYS set on a particular instance of the object (i.e., a version)
 		if ( null != cannedAccessPolicy )
 		{
-			 setCannedAccessControls( cannedAccessPolicy, "SObject", object.getId(), bucket ); 
+			 setCannedAccessControls( cannedAccessPolicy, "SObjectItem", item.getId(), bucket ); 
 		}
 		else if ((null == acl || 0 == acl.size()) && !newVersion ) 
 		{
 			 // -> this is termed the "private" or default ACL, "Owner gets FULL_CONTROL"
-			 setSingleAcl( "SObject", object.getId(), SAcl.PERMISSION_FULL ); 
+			 setSingleAcl( "SObjectItem", item.getId(), SAcl.PERMISSION_FULL ); 
 		}
 		else if (null != acl) {
-			 aclDao.save( "SObject", object.getId(), acl );
+			 aclDao.save( "SObjectItem", item.getId(), acl );
 		}
 		
 		session.update(item);		
@@ -1596,8 +1660,8 @@ public class S3Engine {
 		String userId = UserContext.current().getCanonicalUserId();
         if ( 0 == userId.length())
         {
-            // -> is an anonymous principal ACL set for this <target, targetId>?
-		    if (hasPermission( aclDao.listGrants( target, targetId, "A" ), requestedPermission )) return;
+             // -> is an anonymous principal ACL set for this <target, targetId>?
+		     if (hasPermission( aclDao.listGrants( target, targetId, "A" ), requestedPermission )) return;
         }
         else
         {    // -> no priviledges means no access allowed		

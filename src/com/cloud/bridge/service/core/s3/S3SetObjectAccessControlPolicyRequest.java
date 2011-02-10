@@ -21,6 +21,7 @@ package com.cloud.bridge.service.core.s3;
 public class S3SetObjectAccessControlPolicyRequest extends S3Request {
 	protected String bucketName;
 	protected String key;
+	protected String version;
 	protected S3AccessControlList acl;
 
 	public S3SetObjectAccessControlPolicyRequest() {
@@ -41,6 +42,14 @@ public class S3SetObjectAccessControlPolicyRequest extends S3Request {
 
 	public void setKey(String key) {
 		this.key = key;
+	}
+
+	public String getVersion() {
+		return version;
+	}
+	
+	public void setVersion(String version) {
+		this.version = version;
 	}
 
 	public S3AccessControlList getAcl() {

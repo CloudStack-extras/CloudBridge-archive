@@ -237,21 +237,38 @@ public class S3ObjectAction implements ServletAction {
 
 	private void executeGetObjectAcl(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
+		String[] paramList = null;
+
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String key        = (String)request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 
 		S3GetObjectAccessControlPolicyRequest engineRequest = new S3GetObjectAccessControlPolicyRequest();
 		engineRequest.setBucketName( bucketName );
 		engineRequest.setKey( key );
+		
+		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
+		String queryString = request.getQueryString();
+		if (null != queryString) {
+			paramList = queryString.split( "[&=]" );
+		    if (null != paramList) engineRequest.setVersion( returnParameter( paramList, "versionId" ));
+		}
 
 		S3AccessControlPolicy engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);
-		
+	    int resultCode = engineResponse.getResultCode();
+	    if (200 != resultCode) {
+	        response.setStatus( resultCode );
+	        return;
+	    }
+	    String version = engineResponse.getVersion();
+	    if (null != version) response.addHeader( "x-amz-version-id", version );
+	    
+	
 		// -> serialize using the apache's Axiom classes
 		GetObjectAccessControlPolicyResponse onePolicy = S3SoapServiceImpl.toGetObjectAccessControlPolicyResponse( engineResponse );
-	
+
 		try {
 		    OutputStream os = response.getOutputStream();
-		    response.setStatus(200);	
+		    response.setStatus( resultCode );	
 	        response.setContentType("text/xml; charset=UTF-8");
 		    XMLStreamWriter xmlWriter = xmlOutFactory.createXMLStreamWriter( os );
 		    String documentStart = new String( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" );
@@ -270,6 +287,7 @@ public class S3ObjectAction implements ServletAction {
 	private void executePutObjectAcl(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
 		S3PutObjectRequest putRequest = null;
+		String[] paramList = null;
 		
 		// -> reuse the Access Control List parsing code that was added to support DIME
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
@@ -280,14 +298,23 @@ public class S3ObjectAction implements ServletAction {
 		catch( Exception e ) {
 			throw new IOException( e.toString());
 		}
-		
+			
 		// -> reuse the SOAP code to save the passed in ACLs
 		S3SetObjectAccessControlPolicyRequest engineRequest = new S3SetObjectAccessControlPolicyRequest();
 		engineRequest.setBucketName( bucketName );
 		engineRequest.setKey( key );
 		engineRequest.setAcl( putRequest.getAcl());
-		
+
+		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
+		String queryString = request.getQueryString();
+		if (null != queryString) {
+			paramList = queryString.split( "[&=]" );
+		    if (null != paramList) engineRequest.setVersion( returnParameter( paramList, "versionId" ));
+		}
+
 	    S3Response engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);	
+	    String version = engineResponse.getVersion();
+	    if (null != version) response.addHeader( "x-amz-version-id", version );
 	    response.setStatus( engineResponse.getResultCode());
 	}
 

@@ -4,7 +4,7 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's S3 API User's Guide</H1>
-1/12/2011                   
+2/10/2011                   
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#part1">Part 1. Cloud.com's Specific Implementation Details</A></LI>
@@ -47,17 +47,9 @@ For REST access the endpoint is:
 <H3 id="differences">Unsupported S3 Features</H3>
 <font size=+1><I>Bucket Policies</I></font>
 <P>
-The largest missing S3 feature is bucket polcies.   
-Bucket policies are used with ACLs to define access rights to objects in a bucket.   
-A bucket policy takes precedence over existing ACLs and are used to: 
-(a) allow/deny bucket-level permissions (ACLs cannot deny access), and
-(b) allow/deny access on any object in a bucket.
-Bucket polies are written in JSON with an Amazon defined set of strings (i.e., "an access policy language" <A href="#ref2">[2]</A>) 
-that compose a set of rules to be evaluated.
+The following S3 Bucket Policy "actions related to buckets" that are not yet implemented:
+s3:CreateBucket, and s3:ListAllMyBuckets.
 <P>
-<font size=+1><I>Copy Object</I></font>
-<P>
-The SOAP "CopyObject" and its REST equivalent "PUT Object (Copy)" features are not yet implemented.
 <P></br>
 <H2 id="part2">Part 2. Generic S3 Details</H2>
 <H3 id="functions">List of S3 Functions Implemented</H3>
@@ -80,6 +72,7 @@ GET Object acl
 HEAD Object
 POST Object
 PUT Object
+PUT Object (Copy)
 Initiate Multipart Upload
 Upload Part
 Complete Multipart Upload

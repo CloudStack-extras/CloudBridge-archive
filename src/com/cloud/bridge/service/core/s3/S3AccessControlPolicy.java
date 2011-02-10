@@ -18,11 +18,12 @@ package com.cloud.bridge.service.core.s3;
 /**
  * @author Kelven Yang
  */
-public class S3AccessControlPolicy {
+public class S3AccessControlPolicy  extends S3Response {
 	protected S3CanonicalUser owner;
 	protected S3Grant[] grants;
 	
 	public S3AccessControlPolicy() {
+		super();
 	}
 
 	public S3CanonicalUser getOwner() {

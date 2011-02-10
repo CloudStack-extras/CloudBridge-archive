@@ -20,6 +20,7 @@ package com.cloud.bridge.service.core.s3;
  */
 public class S3Response {
 	protected int resultCode;
+	protected String version;
 	protected String resultDescription;
 	
 	public S3Response() {
@@ -38,6 +39,14 @@ public class S3Response {
 		resultCode = code;
 	}
 	
+	public String getVersion() {
+		return version;
+	}
+	
+	public void setVersion(String version) {
+		this.version = version;
+	}
+
 	public String getResultDescription() {
 		return resultDescription; 
 	}
