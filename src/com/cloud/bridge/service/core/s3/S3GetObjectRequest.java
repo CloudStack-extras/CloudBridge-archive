@@ -15,8 +15,6 @@
  */
 package com.cloud.bridge.service.core.s3;
 
-import java.util.Calendar;
-
 /**
  * @author Kelven Yang
  */

@@ -17,6 +17,7 @@ package com.cloud.bridge.service.core.s3;
 
 import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
 import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
+import com.cloud.bridge.service.exception.PermissionDeniedException;
 
 public class S3PolicyStatement {
 	private String sid;
@@ -102,6 +103,25 @@ public class S3PolicyStatement {
 		block = param;
 	}
 
+	/**
+	 * Does the statement have all the required fields?
+	 */
+	public void verify() throws PermissionDeniedException
+	{	
+		StringBuffer value = new StringBuffer();
+		int errors = 0;
+		
+		value.append( "S3 Bucket Policy Statement is:" );
+		if (null == sid       ) { errors++; value.append( " missing Sid," );  	  }
+		if (null == effect    ) { errors++;	value.append( " missing Effect," );     }
+		if (null == principals) { errors++;	value.append( " missing Prinicipal," ); }
+		if (null == actions && PolicyActions.UnknownAction == notAction)
+		                        { errors++;	value.append( " missing an Action (or NotAction)," );	}
+		if (null == resource  ) { errors++; value.append( " missing Resource" );   }
+		
+		if (0 < errors) throw new PermissionDeniedException( value.toString());
+	}
+	
 	public String toString() {
 		
 		StringBuffer value = new StringBuffer();	

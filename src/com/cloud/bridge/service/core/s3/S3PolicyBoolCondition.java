@@ -21,11 +21,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.log4j.Logger;
 
 import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
+
 
 public class S3PolicyBoolCondition extends S3PolicyCondition {
     protected final static Logger logger = Logger.getLogger(S3PolicyBoolCondition.class);

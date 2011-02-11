@@ -19,7 +19,6 @@ import java.util.Date;
 import java.util.List;
 
 import com.cloud.bridge.model.SAcl;
-import com.cloud.bridge.model.SMeta;
 import com.cloud.bridge.persist.EntityDao;
 import com.cloud.bridge.persist.PersistContext;
 import com.cloud.bridge.service.core.s3.S3AccessControlList;

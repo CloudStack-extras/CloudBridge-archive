@@ -18,7 +18,6 @@ package com.cloud.bridge.util;
 import java.io.File;
 import java.net.URL;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 
 import org.apache.axis2.context.MessageContext;

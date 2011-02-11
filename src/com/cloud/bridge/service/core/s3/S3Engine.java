@@ -1699,7 +1699,7 @@ public class S3Engine {
 			    	return null;
 			    }
 			    
-	       		PolicyParser parser = new PolicyParser( false );
+	       		PolicyParser parser = new PolicyParser();
 	    		policy = parser.parse( policyInJson, context.getBucketName());
 	    		if (null != policy) 
 	    	        ServiceProvider.getInstance().setBucketPolicy(context.getBucketName(), policy);

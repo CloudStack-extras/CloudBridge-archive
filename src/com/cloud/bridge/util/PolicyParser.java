@@ -15,10 +15,10 @@
  */
 package com.cloud.bridge.util;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.json.simple.parser.ContentHandler;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -43,6 +43,7 @@ import com.cloud.bridge.service.exception.PermissionDeniedException;
  * here simple counts and flags will do the same as a stack.
  */
 public class PolicyParser {
+    protected final static Logger logger = Logger.getLogger(PolicyParser.class);
 
 	private S3BucketPolicy bucketPolicy = null;
 	private S3PolicyPrincipal principals = null;
@@ -65,7 +66,6 @@ public class PolicyParser {
 	private int condNested = 0;      // -> at what level of nesting is the condition defined
 	private int keyNested = 0;       // -> at what level of nesting is the condition key defined
 	
-	private boolean debugOn = false;
 	private boolean inId  = false;   // -> currently in an "Id" element
 	private boolean inSid = false;
 	private boolean inAWS = false;
@@ -76,8 +76,8 @@ public class PolicyParser {
 	private boolean inStatement = false;
 	
 	
-	public PolicyParser( boolean debugOn ) {
-		this.debugOn = debugOn;
+	public PolicyParser() 
+	{
 		jparser = new JSONParser();
 		condFactory = new S3ConditionFactory();
 	}
@@ -86,31 +86,43 @@ public class PolicyParser {
 	{
 		public boolean endArray() throws ParseException 
 		{
-			if (debugOn) System.out.println("endArray()");
+			logger.debug( "endArray()" );
 			return true;
 		}
 
-		public void endJSON() throws ParseException 
+		public void endJSON() throws ParseException, PermissionDeniedException
 		{
-			if (debugOn) System.out.println("endJSON()");
+			logger.debug( "endJSON()" );
 			
-			if (null != statement) {
+			if (null != statement) 
+			{
 				//System.out.println( "endJSON() - statement");
-				if (null != block) statement.setConditionBlock( block );
-			    if (null != bucketPolicy) bucketPolicy.addStatement( statement );
+				if (null != block) 
+					statement.setConditionBlock( block );
+				
+			    if (null != bucketPolicy) {
+			    	statement.verify();
+			    	bucketPolicy.addStatement( statement );
+			    }
 			    statement = null;
 			    block = null;
 			}
 		}
 
-		public boolean endObject() throws ParseException 
+		public boolean endObject() throws ParseException, PermissionDeniedException
 		{
-			if (debugOn) System.out.println("endObject(), nesting: " + entryNesting);
+			logger.debug( "endObject(), nesting: " + entryNesting );
 			
-			if (null != statement && 1 >= entryNesting) {
+			if (null != statement && 1 >= entryNesting) 
+			{
 				//System.out.println( "endObject() - statement");
-				if (null != block) statement.setConditionBlock( block );
-				if (null != bucketPolicy) bucketPolicy.addStatement( statement );
+				if (null != block) 
+					statement.setConditionBlock( block );
+				
+				if (null != bucketPolicy) {
+					statement.verify();
+					bucketPolicy.addStatement( statement );
+				}
 				statement = null;
 				block = null;
 			}
@@ -121,7 +133,7 @@ public class PolicyParser {
 
 		public boolean endObjectEntry() throws ParseException, PermissionDeniedException
 		{
-			if (debugOn) System.out.println("endObjectEntry(), nesting: " + entryNesting);
+			logger.debug( "endObjectEntry(), nesting: " + entryNesting );
 			
 			     if (inSid) {
 				 if (null != statement) statement.setSid( sid );
@@ -183,7 +195,7 @@ public class PolicyParser {
 				     }
 				 }
 				 catch( Exception e) {
-					 // TODO add logging
+					 logger.error( "Policy Parser condition error: " + e.toString());
 				 }
 				 
 				 // -> is the condition completely done?
@@ -194,8 +206,13 @@ public class PolicyParser {
 			}
 			else if (null != statement && 1 == entryNesting) 
 			{
-				 if (null != block) statement.setConditionBlock( block );
-				 if (null != bucketPolicy) bucketPolicy.addStatement( statement );
+				 if (null != block) 
+					 statement.setConditionBlock( block );
+				 
+				 if (null != bucketPolicy) {
+					 statement.verify();
+					 bucketPolicy.addStatement( statement );
+				 }
 				 statement = null;
 				 block = null;
 			}
@@ -206,7 +223,7 @@ public class PolicyParser {
 
 		public boolean primitive(Object value) throws ParseException, PermissionDeniedException
 		{
-			if (debugOn) System.out.println("primitive(): " + value);
+			logger.debug( "primitive(): " + value );
 			
 			     if (inSid) sid = (String)value;
 			else if (inEffect) effect = (String)value;
@@ -220,25 +237,25 @@ public class PolicyParser {
 		    	 String version = (String)value;
 		    	 if (!version.equals( "2008-10-17" )) 
 		    		 throw new PermissionDeniedException( "S3 Bucket Policy has unsupported version: " + version );
-		     }
+		    }
 
 			return true;
 		}
 
 		public boolean startArray() throws ParseException 
 		{
-			if (debugOn) System.out.println("startArray()");
+			logger.debug( "startArray()" );
 			return true;
 		}
 
 		public void startJSON() throws ParseException 
 		{
-			if (debugOn) System.out.println("startJSON()");
+			logger.debug( "startJSON()" );
 		}
 
 		public boolean startObject() throws ParseException 
 		{
-			if (debugOn) System.out.println("startObject(), nesting: " + entryNesting);
+			logger.debug( "startObject(), nesting: " + entryNesting );
 			
 			if (1 == entryNesting && inStatement) statement = new S3PolicyStatement();
 			
@@ -248,7 +265,7 @@ public class PolicyParser {
 		public boolean startObjectEntry(String key) throws ParseException 
 		{
 			entryNesting++;
-			if (debugOn) System.out.println("startObjectEntry(), key: [" + key + "]");
+			logger.debug( "startObjectEntry(), key: [" + key + "]" );
 	
 			inSid = false; inAWS = false; inEffect = false; inResource = false; 
 			inNotAction = false; inVersion = false; inId = false;
@@ -272,9 +289,7 @@ public class PolicyParser {
 				 condition  = condFactory.createCondition( key );
 				 condNested = entryNesting;
 			}
-			else if (debugOn) {
-				 System.out.println("startObjectEntry() no match");
-			}
+			else logger.debug( "startObjectEntry() no match" );
 			     
 			return true;
 		}

@@ -21,8 +21,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
-
 public class S3PolicyAction {
 
 	public enum PolicyActions {

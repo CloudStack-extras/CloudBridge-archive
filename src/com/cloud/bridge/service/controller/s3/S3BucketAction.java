@@ -224,12 +224,14 @@ public class S3BucketAction implements ServletAction {
 	    
 	    // [B] Place the policy into the database over writting an existing policy
     	try {
+    		// -> first make sure that the policy is valid by parsing it
+       		PolicyParser parser = new PolicyParser();
+    		S3BucketPolicy sbp = parser.parse( policy, bucketName );
+
 	        BucketPolicyDao policyDao = new BucketPolicyDao();
 	        policyDao.deletePolicy( bucket.getId());
 	        if (null != policy && !policy.isEmpty()) policyDao.addPolicy( bucket.getId(), policy );
 	                
-       		PolicyParser parser = new PolicyParser( false );
-    		S3BucketPolicy sbp = parser.parse( policy, bucketName );
     		if (null != sbp) ServiceProvider.getInstance().setBucketPolicy(bucketName, sbp);
     		response.setStatus(200);  		
     	}
