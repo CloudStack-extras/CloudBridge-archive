@@ -847,10 +847,7 @@ public class EC2Engine {
             Map async   = execute("command=disableStaticNat&ipAddressId=%s", ipId);
 
             String jobId = async.get("jobid").toString();
-            if (!waitForAsynch(jobId)) {
-                return false;
-            }
-            return true;
+            return waitForAsynch(jobId);
 
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 DisassociateAddress - " + error.toString());
