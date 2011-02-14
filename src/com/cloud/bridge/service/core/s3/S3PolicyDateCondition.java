@@ -27,6 +27,7 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.apache.log4j.Logger;
 
+import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.DateHelper;
 
 public class S3PolicyDateCondition extends S3PolicyCondition {
@@ -138,9 +139,15 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 		
 		return true;
 	}
-	
-	public String toString() {
-		
+
+	public void verify() throws PermissionDeniedException
+	{
+		if (0 == keys.size())
+   	       throw new PermissionDeniedException( "S3 Bucket Policy Date Condition needs at least one key-value pairs" );
+	}
+
+	public String toString() 
+	{	
 		StringBuffer value = new StringBuffer();
 		Set<ConditionKeys> keySet = getAllKeys();
 		if (null == keySet) return "";

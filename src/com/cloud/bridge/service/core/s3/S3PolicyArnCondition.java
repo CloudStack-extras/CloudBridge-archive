@@ -24,6 +24,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
+import com.cloud.bridge.service.exception.PermissionDeniedException;
 
 public class S3PolicyArnCondition extends S3PolicyCondition {
     protected final static Logger logger = Logger.getLogger(S3PolicyArnCondition.class);
@@ -112,9 +113,15 @@ public class S3PolicyArnCondition extends S3PolicyCondition {
 		
 		return true;
 	}
-	
-	public String toString() {
-		
+
+	public void verify() throws PermissionDeniedException
+	{
+		if (0 == keys.size())
+   	       throw new PermissionDeniedException( "S3 Bucket Policy Arn Condition needs at least one key-value pairs" );
+	}
+
+	public String toString() 
+	{	
 		StringBuffer value = new StringBuffer();
 		Set<ConditionKeys> keySet = getAllKeys();
 		if (null == keySet) return "";

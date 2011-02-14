@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.cloud.bridge.service.exception.PermissionDeniedException;
+
 public class S3PolicyConditionBlock {
 	
 	private List<S3PolicyCondition> conditionList = new ArrayList<S3PolicyCondition>();
@@ -42,8 +44,8 @@ public class S3PolicyConditionBlock {
 	 * condition is relevant to the request, then the default condition is considered
 	 * to be true.
 	 */
-	public boolean isTrue(S3PolicyContext context) {
-		
+	public boolean isTrue(S3PolicyContext context) 
+	{	
 		Iterator<S3PolicyCondition> itr = conditionList.iterator();
 		while( itr.hasNext()) {
 			S3PolicyCondition oneCondition = itr.next();
@@ -54,8 +56,14 @@ public class S3PolicyConditionBlock {
 		return true;
 	}
 	
-	public String toString() {
-		
+	public void verify() throws PermissionDeniedException
+	{
+		if (0 == conditionList.size())
+   	       throw new PermissionDeniedException( "S3 Bucket Policy Condition Block needs at least one condition" );
+	}
+
+	public String toString() 
+	{	
 		StringBuffer value = new StringBuffer();
 		Iterator<S3PolicyCondition> itr = conditionList.iterator();
 		

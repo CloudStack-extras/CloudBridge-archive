@@ -23,6 +23,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.cloud.bridge.service.exception.PermissionDeniedException;
+
 public class S3PolicyNumericCondition extends S3PolicyCondition {
     protected final static Logger logger = Logger.getLogger(S3PolicyNumericCondition.class);
 
@@ -125,8 +127,14 @@ public class S3PolicyNumericCondition extends S3PolicyCondition {
 
 	}
 	
-	public String toString() {
-		
+	public void verify() throws PermissionDeniedException
+	{
+		if (0 == keys.size())
+   	       throw new PermissionDeniedException( "S3 Bucket Policy Numeric Condition needs at least one key-value pairs" );
+	}
+
+	public String toString() 
+	{	
 		StringBuffer value = new StringBuffer();
 		Set<ConditionKeys> keySet = getAllKeys();
 		if (null == keySet) return "";

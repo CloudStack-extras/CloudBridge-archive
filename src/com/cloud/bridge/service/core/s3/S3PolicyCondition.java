@@ -19,6 +19,7 @@ import java.text.ParseException;
 import java.util.Set;
 
 import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
+import com.cloud.bridge.service.exception.PermissionDeniedException;
 
 /**
  * In the Bucket Policy language a condition block can hold one or more conditions.
@@ -84,6 +85,9 @@ public abstract class S3PolicyCondition {
 
 	public boolean isTrue(S3PolicyContext params) {
 		return false;
+	}
+	
+	public void verify() throws PermissionDeniedException {
 	}
 	
 	public String toString() {

@@ -32,6 +32,7 @@ import com.cloud.bridge.service.core.s3.S3PolicyPrincipal;
 import com.cloud.bridge.service.core.s3.S3PolicyStatement;
 import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
 import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
+import com.cloud.bridge.service.core.s3.S3PolicyCondition.ConditionKeys;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
 
 /**
@@ -97,9 +98,10 @@ public class PolicyParser {
 			if (null != statement) 
 			{
 				//System.out.println( "endJSON() - statement");
-				if (null != block) 
+				if (null != block) {
+					block.verify();
 					statement.setConditionBlock( block );
-				
+				}				
 			    if (null != bucketPolicy) {
 			    	statement.verify();
 			    	bucketPolicy.addStatement( statement );
@@ -116,9 +118,10 @@ public class PolicyParser {
 			if (null != statement && 1 >= entryNesting) 
 			{
 				//System.out.println( "endObject() - statement");
-				if (null != block) 
+				if (null != block) { 
+					block.verify();
 					statement.setConditionBlock( block );
-				
+				}			
 				if (null != bucketPolicy) {
 					statement.verify();
 					bucketPolicy.addStatement( statement );
@@ -144,7 +147,8 @@ public class PolicyParser {
 			     if (null != statement) 
 			     {
 			    	      if (effect.equalsIgnoreCase("Allow")) statement.setEffect( PolicyAccess.ALLOW );
-			    	 else if (effect.equalsIgnoreCase("Deny" )) statement.setEffect( PolicyAccess.DENY );
+			    	 else if (effect.equalsIgnoreCase("Deny" )) statement.setEffect( PolicyAccess.DENY  );
+			    	 else throw new PermissionDeniedException( "S3 Bucket Policy Effect of: " + effect + " is unknown" );
 			     }
 			     inEffect = false;
 			}
@@ -187,12 +191,22 @@ public class PolicyParser {
 				 //System.out.println( "in condition: " + condNested + " " + entryNesting + " " + keyNested );
 				 // -> is it just the current key that is done?
 				 try {
-				     if (keyNested == entryNesting) {
+				     if (keyNested == entryNesting) 
+				     {
 					     String[] values = valueList.toArray(new String[0]);
-					     condition.setKey( S3PolicyCondition.toConditionKeys( condKey ), values);
+					     ConditionKeys tempKey = S3PolicyCondition.toConditionKeys( condKey );
+					     System.out.println( "set conditionkeys: " + condKey + " encoded: " + tempKey );
+					     if (ConditionKeys.UnknownKey == tempKey) {
+					    	 throw new PermissionDeniedException( "S3 Bucket Policy Condition key of: " + condKey + " is unknown" );
+					     }				     
+					     condition.setKey( tempKey, values );					     
 					     valueList.clear();
 					     condKey = null;
 				     }
+				 }
+				 catch( PermissionDeniedException e ) {
+					 logger.error( "Policy Parser condition error: " + e.toString());
+                     throw e;			 
 				 }
 				 catch( Exception e) {
 					 logger.error( "Policy Parser condition error: " + e.toString());
@@ -200,15 +214,17 @@ public class PolicyParser {
 				 
 				 // -> is the condition completely done?
 				 if (condNested == entryNesting) {
+					 condition.verify();
 					 block.addCondition( condition );
 					 condition = null;
 				 }
 			}
 			else if (null != statement && 1 == entryNesting) 
 			{
-				 if (null != block) 
+				 if (null != block) { 
+					 block.verify();
 					 statement.setConditionBlock( block );
-				 
+				 }				 
 				 if (null != bucketPolicy) {
 					 statement.verify();
 					 bucketPolicy.addStatement( statement );
@@ -225,14 +241,37 @@ public class PolicyParser {
 		{
 			logger.debug( "primitive(): " + value );
 			
-			     if (inSid) sid = (String)value;
-			else if (inEffect) effect = (String)value;
-			else if (inResource) resource = (String)value;
-			else if (inNotAction) notAction = convertActions.toPolicyActions((String)value);
-			else if (inId) id = (String)value;
-			else if (null != actions   ) actions.addAction( convertActions.toPolicyActions((String)value));
-			else if (null != principals) principals.addPrincipal( (String)value );
-			else if (null != condition) valueList.add( (String)value );
+			     if (inSid) {
+			    	 sid = (String)value;
+			     }
+			else if (inEffect) {
+				 effect = (String)value;
+			}
+			else if (inResource) {
+				 resource = (String)value;
+			}
+			else if (inNotAction) {
+				 notAction = convertActions.toPolicyActions((String)value);
+		    	 if (notAction == PolicyActions.UnknownAction)
+		    		 throw new PermissionDeniedException( "S3 Bucket Policy NotAction of: " + value + " is unknown" );
+			}
+			else if (inId) {
+				 id = (String)value;
+			}
+			else if (null != actions) {
+				 PolicyActions tempAction = convertActions.toPolicyActions((String)value);
+		    	 if (tempAction == PolicyActions.UnknownAction)
+		    		 throw new PermissionDeniedException( "S3 Bucket Policy Action of: " + value + " is unknown" );
+
+				 actions.addAction( tempAction );
+			}
+			else if (null != principals) {
+				 principals.addPrincipal( (String)value );
+			}
+			else if (null != condition) {
+				 // -> a condition key can have one or more values
+				 valueList.add( (String)value );
+			}
 			else if (inVersion) {
 		    	 String version = (String)value;
 		    	 if (!version.equals( "2008-10-17" )) 
@@ -262,6 +301,9 @@ public class PolicyParser {
 			return true;
 		}
 
+		/**
+		 * Note: A statement does not have to have a condition block to be valid.
+		 */
 		public boolean startObjectEntry(String key) throws ParseException 
 		{
 			entryNesting++;
@@ -280,7 +322,7 @@ public class PolicyParser {
 			else if (key.equalsIgnoreCase( "Resource"  )) inResource = true;
 			else if (key.equalsIgnoreCase( "NotAction" )) inNotAction = true;
 			else if (key.equalsIgnoreCase( "Version"   )) inVersion = true;
-			else if (key.equalsIgnoreCase( "Id" )) inId = true;
+			else if (key.equalsIgnoreCase( "Id"        )) inId = true;
 			else if (null != condition) {
 				 condKey = key;
 				 keyNested = entryNesting;
@@ -288,6 +330,9 @@ public class PolicyParser {
 			else if (null != block) {
 				 condition  = condFactory.createCondition( key );
 				 condNested = entryNesting;
+
+		    	 if (null == condition) 
+		    		 throw new PermissionDeniedException( "S3 Bucket Policy Condition type: " + key + " is unknown" );
 			}
 			else logger.debug( "startObjectEntry() no match" );
 			     

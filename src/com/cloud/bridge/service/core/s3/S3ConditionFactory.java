@@ -90,7 +90,8 @@ public class S3ConditionFactory {
 		conditionNames.put("arnnl",                     PolicyConditions.ArnNotLike);
 	}
 	
-	public S3PolicyCondition createCondition(String param) {	
+	public S3PolicyCondition createCondition(String param) 
+	{	
 		PolicyConditions type = toPolicyConditions( param );
 		S3PolicyCondition result = null;
 		
@@ -132,6 +133,7 @@ public class S3ConditionFactory {
 			 result.setCondition( type );
 			 break;
 
+		case UnknownCondition:
 	    default:
 	    	 return null;
 		}

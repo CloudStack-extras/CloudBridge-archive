@@ -23,6 +23,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.IpAddressRange;
 
 public class S3PolicyIPAddressCondition extends S3PolicyCondition {
@@ -108,8 +109,14 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 		return true;
 	}
 	
-	public String toString() {
-		
+	public void verify() throws PermissionDeniedException
+	{
+		if (0 == keys.size())
+   	       throw new PermissionDeniedException( "S3 Bucket Policy IpAddress Condition needs at least one key-value pairs" );
+	}
+
+	public String toString() 
+	{	
 		StringBuffer value = new StringBuffer();
 		Set<ConditionKeys> keySet = getAllKeys();
 		if (null == keySet) return "";
