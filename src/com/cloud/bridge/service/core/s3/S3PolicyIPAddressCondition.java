@@ -15,6 +15,7 @@
  */
 package com.cloud.bridge.service.core.s3;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -55,8 +56,10 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 	/** 
 	 * Convert the key's values into the type depending on the what the condition expects.
 	 * @throws ParseException 
+	 * @throws IOException 
 	 */
-	public void setKey(ConditionKeys key, String[] values) throws ParseException {		
+	public void setKey(ConditionKeys key, String[] values) throws ParseException, Exception 
+	{		
 		IpAddressRange[] addresses = new IpAddressRange[ values.length ];
 	
 		for( int i=0; i < values.length; i++ )
@@ -65,7 +68,7 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 	    keys.put(key, addresses);
 	}
 	
-	public boolean isTrue(S3PolicyContext context) 
+	public boolean isTrue(S3PolicyContext context) throws Exception 
 	{
 		// -> improperly defined condition evaluates to false
 		Set<ConditionKeys> keySet = getAllKeys();

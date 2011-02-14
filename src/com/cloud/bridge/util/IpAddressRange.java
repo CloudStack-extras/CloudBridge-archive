@@ -15,6 +15,8 @@
  */
 package com.cloud.bridge.util;
 
+import java.io.IOException;
+
 /**
  * Represents a network IP address or a range of addresses.
  * A range is useful when representing IP addresses defined in 
@@ -58,7 +60,8 @@ public class IpAddressRange {
 	 * @param left
 	 * @return boolean
 	 */
-	public boolean contains(IpAddressRange left) {	
+	public boolean contains(IpAddressRange left) 
+	{	
 		long leftMin = left.getMinAddress();
 		
 		if ( leftMin < minAddress || leftMin > maxAddress ) 
@@ -66,7 +69,7 @@ public class IpAddressRange {
 		else return true;
 	}
 	
-	public static IpAddressRange parseRange(String ipAddress) 
+	public static IpAddressRange parseRange(String ipAddress) throws Exception 
 	{
 		IpAddressRange range = null;
 		long maskBits = 0;
@@ -96,6 +99,7 @@ public class IpAddressRange {
 			 range.setMaxAddress( address );
 			 range.setMinAddress( address );
 		}
+		else throw new Exception( "Invalid Ip Address: " + ipAddress );
 
 		return range;
 	}
@@ -107,18 +111,23 @@ public class IpAddressRange {
 	 * @param ipAddress
 	 * @return
 	 */
-	private static long ipToInt(String ipAddress) 
+	private static long ipToInt(String ipAddress) throws Exception
 	{	
 		String[] parts = ipAddress.split( "[.]" );
-		if (4 != parts.length) return 0;
+		if (4 != parts.length) 
+			throw new Exception( "Invalid Ip Address: " + ipAddress );
 		
 		long[] address = new long[4];
 		address[0] = Long.parseLong( parts[0] );
 		address[1] = Long.parseLong( parts[1] );
 		address[2] = Long.parseLong( parts[2] );
 		address[3] = Long.parseLong( parts[3] );
-		
-		if (address[0] > 255 || address[1] > 255 || address[2] > 255 || address[3] > 255) return 0;
+
+		if (address[0] < 0 || address[1] < 0 || address[2] < 0 || address[3] < 0)
+			throw new Exception( "Invalid Ip Address: " + ipAddress );
+
+		if (address[0] > 255 || address[1] > 255 || address[2] > 255 || address[3] > 255)
+			throw new Exception( "Invalid Ip Address: " + ipAddress );
 
 		long value = (address[0]<<24) | (address[1]<<16) | (address[2]<<8) | address[3];
 		return value;

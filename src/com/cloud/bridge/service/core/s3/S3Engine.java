@@ -1605,14 +1605,15 @@ public class S3Engine {
 		    	context.setHttp( UserContext.current().getHttp());
 		    	policy = loadPolicy( context ); 
 		    }
+		    
+			if ( null != policy ) 
+				 return policy.eval(context, UserContext.current().getCanonicalUserId());
+			else return PolicyAccess.DEFAULT_DENY;
 		}
 		catch( Exception e ) {
 			logger.error( "verifyAccess - loadPolicy failed: [" + e.toString() + "], bucket: " + context.getBucketName() + " policy ignored");
+			return PolicyAccess.DEFAULT_DENY;
 		}
-
-		if ( null != policy ) 
-			 return policy.eval(context, UserContext.current().getCanonicalUserId());
-		else return PolicyAccess.DEFAULT_DENY;
 	}
 	
 	/**

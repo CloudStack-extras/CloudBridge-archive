@@ -39,6 +39,7 @@ import org.apache.axiom.om.OMAbstractFactory;
 import org.apache.axiom.om.OMFactory;
 import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.log4j.Logger;
+import org.json.simple.parser.ParseException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -188,7 +189,7 @@ public class S3BucketAction implements ServletAction {
 		else throw new IllegalArgumentException("Unsupported method in REST request");
 	}
 		
-	private void executePutBucketPolicy(HttpServletRequest request, HttpServletResponse response) throws IOException 
+	private void executePutBucketPolicy(HttpServletRequest request, HttpServletResponse response) throws IOException
 	{
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String policy = streamToString( request.getInputStream());
@@ -238,6 +239,10 @@ public class S3BucketAction implements ServletAction {
     	catch( PermissionDeniedException e ) {
 			logger.error("Put Bucket Policy failed due to " + e.getMessage(), e);	
 			throw e; 		
+    	}
+    	catch( ParseException e ) {
+			logger.error("Put Bucket Policy failed due to " + e.getMessage(), e);	
+			throw new PermissionDeniedException( e.toString());		   		
     	}
 		catch( Exception e ) {
 			logger.error("Put Bucket Policy failed due to " + e.getMessage(), e);	

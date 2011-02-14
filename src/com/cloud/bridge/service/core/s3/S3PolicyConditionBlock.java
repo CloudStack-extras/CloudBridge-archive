@@ -43,8 +43,9 @@ public class S3PolicyConditionBlock {
 	 * the entire block evaluate to false.  If no conditions are present and the
 	 * condition is relevant to the request, then the default condition is considered
 	 * to be true.
+	 * @throws Exception 
 	 */
-	public boolean isTrue(S3PolicyContext context) 
+	public boolean isTrue(S3PolicyContext context) throws Exception 
 	{	
 		Iterator<S3PolicyCondition> itr = conditionList.iterator();
 		while( itr.hasNext()) {

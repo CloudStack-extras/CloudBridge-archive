@@ -71,8 +71,9 @@ public class S3BucketPolicy {
 	 *                         null if access is just to the bucket.
 	 * @param userAccount - the user performing the access request
 	 * @return PolicyAccess type
+	 * @throws Exception 
 	 */
-	public PolicyAccess eval(S3PolicyContext context, String userAccount) 
+	public PolicyAccess eval(S3PolicyContext context, String userAccount) throws Exception 
 	{
 		PolicyAccess result = PolicyAccess.DEFAULT_DENY;
 		

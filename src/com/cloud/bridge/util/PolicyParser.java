@@ -60,6 +60,7 @@ public class PolicyParser {
 	private String effect = null;
 	private String resource = null;
 	private String condKey = null;   // -> the next key in a condition
+	private String toUser = null;    // -> text to user of a problem
 	private List<String> valueList = new ArrayList<String>();
 	
 	private JSONParser jparser = null;
@@ -148,7 +149,7 @@ public class PolicyParser {
 			     {
 			    	      if (effect.equalsIgnoreCase("Allow")) statement.setEffect( PolicyAccess.ALLOW );
 			    	 else if (effect.equalsIgnoreCase("Deny" )) statement.setEffect( PolicyAccess.DENY  );
-			    	 else throw new PermissionDeniedException( "S3 Bucket Policy Effect of: " + effect + " is unknown" );
+			    	 else badPolicy( "Effect", effect );
 			     }
 			     inEffect = false;
 			}
@@ -195,21 +196,19 @@ public class PolicyParser {
 				     {
 					     String[] values = valueList.toArray(new String[0]);
 					     ConditionKeys tempKey = S3PolicyCondition.toConditionKeys( condKey );
-					     System.out.println( "set conditionkeys: " + condKey + " encoded: " + tempKey );
-					     if (ConditionKeys.UnknownKey == tempKey) {
-					    	 throw new PermissionDeniedException( "S3 Bucket Policy Condition key of: " + condKey + " is unknown" );
-					     }				     
+					     if (ConditionKeys.UnknownKey == tempKey) badPolicy( "Condition Key", condKey ); 
 					     condition.setKey( tempKey, values );					     
 					     valueList.clear();
 					     condKey = null;
 				     }
 				 }
-				 catch( PermissionDeniedException e ) {
+				 catch( ParseException e ) {
 					 logger.error( "Policy Parser condition error: " + e.toString());
                      throw e;			 
 				 }
 				 catch( Exception e) {
 					 logger.error( "Policy Parser condition error: " + e.toString());
+					 badPolicy( "Condition Key (" + condKey + ")", e.toString());
 				 }
 				 
 				 // -> is the condition completely done?
@@ -252,17 +251,14 @@ public class PolicyParser {
 			}
 			else if (inNotAction) {
 				 notAction = convertActions.toPolicyActions((String)value);
-		    	 if (notAction == PolicyActions.UnknownAction)
-		    		 throw new PermissionDeniedException( "S3 Bucket Policy NotAction of: " + value + " is unknown" );
+		    	 if (notAction == PolicyActions.UnknownAction) badPolicy( "NotAction", (String)value );
 			}
 			else if (inId) {
 				 id = (String)value;
 			}
 			else if (null != actions) {
 				 PolicyActions tempAction = convertActions.toPolicyActions((String)value);
-		    	 if (tempAction == PolicyActions.UnknownAction)
-		    		 throw new PermissionDeniedException( "S3 Bucket Policy Action of: " + value + " is unknown" );
-
+		    	 if (tempAction == PolicyActions.UnknownAction) badPolicy( "Action", (String)value );
 				 actions.addAction( tempAction );
 			}
 			else if (null != principals) {
@@ -274,8 +270,7 @@ public class PolicyParser {
 			}
 			else if (inVersion) {
 		    	 String version = (String)value;
-		    	 if (!version.equals( "2008-10-17" )) 
-		    		 throw new PermissionDeniedException( "S3 Bucket Policy has unsupported version: " + version );
+		    	 if (!version.equals( "2008-10-17" )) badPolicy( "Version", (String)value );
 		    }
 
 			return true;
@@ -330,9 +325,7 @@ public class PolicyParser {
 			else if (null != block) {
 				 condition  = condFactory.createCondition( key );
 				 condNested = entryNesting;
-
-		    	 if (null == condition) 
-		    		 throw new PermissionDeniedException( "S3 Bucket Policy Condition type: " + key + " is unknown" );
+		    	 if (null == condition) badPolicy( "Condition type", key );
 			}
 			else logger.debug( "startObjectEntry() no match" );
 			     
@@ -369,5 +362,11 @@ public class PolicyParser {
 		if (!testBucketName.equals( bucketName )) 
 			throw new PermissionDeniedException( "The S3 Bucket Policy must only refer to the single bucket: \"" + bucketName  + 
 					"\", but it referres to the following resource: \"" + resourcePath + "\"" );
+	}
+	
+	public static void badPolicy( String place, String badValue ) throws ParseException
+	{
+   	   String toUser = new String( "S3 Bucket Policy " + place + " of: \"" + badValue + "\" is unknown" );
+	   throw new ParseException( ParseException.ERROR_UNEXPECTED_TOKEN, toUser );
 	}
 }

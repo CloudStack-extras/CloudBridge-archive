@@ -15,7 +15,6 @@
  */
 package com.cloud.bridge.service.core.s3;
 
-import java.text.ParseException;
 import java.util.Set;
 
 import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
@@ -80,10 +79,10 @@ public abstract class S3PolicyCondition {
 		return null;
 	}
 	
-	public void setKey(ConditionKeys key, String[] values) throws ParseException {
+	public void setKey(ConditionKeys key, String[] values) throws Exception {
 	}
 
-	public boolean isTrue(S3PolicyContext params) {
+	public boolean isTrue(S3PolicyContext params) throws Exception {
 		return false;
 	}
 	
