@@ -1091,7 +1091,7 @@ public class EC2RestServlet extends HttpServlet {
         }
         // -> execute the request
         EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-        serializeResponse(response, EC2SoapServiceImpl.toDescribeAddressesResponse( engine.handleRequest( EC2request ), engine));
+        serializeResponse(response, EC2SoapServiceImpl.toDescribeAddressesResponse( engine.describeAddresses( EC2request.getPublicIpsSet() )));
     }
 
     private void allocateAddress( HttpServletRequest request, HttpServletResponse response )

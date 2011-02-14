@@ -20,6 +20,7 @@ import org.apache.log4j.Logger;
 
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.amazon.ec2.*;
@@ -293,7 +294,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         if (null != items) {  // -> can be empty
             for( int i=0; i < items.length; i++ ) request.addPublicIp( items[i].getPublicIp());
         }
-        return toDescribeAddressesResponse( engine.handleRequest( request ), engine);
+        return toDescribeAddressesResponse( engine.describeAddresses( request.getPublicIpsSet() ));
     }
 
     @Override
@@ -859,14 +860,17 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 
-    public static DescribeAddressesResponse toDescribeAddressesResponse(EC2DescribeAddressesResponse engineResponse, EC2Engine engine) {
-        EC2Address[] addresses = engineResponse.getAddressSet();
+    public static DescribeAddressesResponse toDescribeAddressesResponse(Map[] addresses) {
         final DescribeAddressesResponseItemType[] items = new DescribeAddressesResponseItemType[addresses.length];
 
-        for( int i=0; i < addresses.length; i++ ) {
+        for (int i = 0; i < addresses.length; i++) {
+            Map a = addresses[i];
+
             items[i] = new DescribeAddressesResponseItemType();
-            items[i].setPublicIp(addresses[i].getIpAddress());
-            items[i].setInstanceId(addresses[i].getAssociatedInstanceId());
+            items[i].setPublicIp(a.get("ipaddress").toString());
+            if (a.containsKey("virtualmachineid")) {
+                items[i].setInstanceId(a.get("virtualmachineid").toString());
+            }
         }
 
         return new DescribeAddressesResponse() {{

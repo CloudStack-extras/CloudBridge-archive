@@ -58,6 +58,7 @@ import java.security.SignatureException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -744,22 +745,29 @@ public class EC2Engine {
     	}
     }
 
-    public EC2DescribeAddressesResponse handleRequest(EC2DescribeAddresses request)
+    public Map[] describeAddresses(String[] publicIps)
     {
         try {
-            EC2DescribeAddressesResponse response = listPublicIpAddresses( request.getPublicIpsSet() );
+            Map[] addressList = execList("command=listPublicIpAddresses");
 
-            for (EC2Address a: response.getAddressSet()) {
-                if (null != a.getAssociatedInstanceId())
-                    continue;
+            if (null == publicIps || 0 == publicIps.length)
+                return addressList;
 
-                IpForwardingRuleResponse[] rules = listIpForwardingRules(a.getIpAddress());
-                if (1 == rules.length) {
-                    a.setAssociatedInstanceId(rules[0].getVirtualMachineId().toString());
-                }
+            // Otherwise, we filter addressList using publicIps.
+
+            Map<String, Map> ip2address = new HashMap<String, Map>();
+            for (Map a: addressList) {
+                ip2address.put(a.get("ipaddress").toString(), a);
             }
 
-            return response;
+            List<Map> filtered = new ArrayList<Map>();
+            for (String ip: publicIps) {
+                Map a = ip2address.get(ip);
+                if (null != a) {
+                    filtered.add(a);
+                }
+            }
+            return filtered.toArray(new Map[0]);
 
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 DescribeAddresses - " + error.toString());
@@ -774,27 +782,11 @@ public class EC2Engine {
     public String allocateAddress()
     {
         try {
-            String query = "command=associateIpAddress&zoneId="+ toZoneId(null);
-            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "associateIpAddress", true );
-            Node parent = cloudResp.getElementsByTagName("ipaddress").item(0);
+            Map r = execute("command=associateIpAddress&zoneId=%s", toZoneId(null));
+            String ipId = r.get("id").toString();
+            Map[] l = execList("command=listPublicIpAddresses&id=%s", ipId);
+            return l[0].get("ipaddress").toString();
 
-            if (null != parent) {
-                NodeList children = parent.getChildNodes();
-                int length = children.getLength();
-
-                for (int i = 0; i < length; i++) {
-                    Node child  = children.item(i);
-                    String name = child.getNodeName();
-
-                    if (null != child.getFirstChild()) {
-                        String value = child.getFirstChild().getNodeValue();
-
-                        if (name.equalsIgnoreCase("ipaddress"))
-                            return value;
-                    }
-                }
-            }
-            return null;
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 AllocateAddress - " + error.toString());
             throw error;
@@ -809,9 +801,10 @@ public class EC2Engine {
     {
         if (null == publicIp) throw new EC2ServiceException(ServerError.InternalError, "IP address is a required parameter");
         try {
-            String query = "command=disassociateIpAddress&ipAddress="+ safeURLencode(publicIp);
-            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "disassociateIpAddress", true);
-            return true;
+            Map[] l = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
+            String ipId = l[0].get("id").toString();
+            Map r = execute("command=disassociateIpAddress&id=%s", ipId);
+            return r.get("success").toString().equalsIgnoreCase("true");
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 ReleaseAddress - " + error.toString());
             throw error;
@@ -822,24 +815,17 @@ public class EC2Engine {
         }
     }
 
-    public boolean associateAddress(String publicIp, String instanceId)
+    public boolean associateAddress(String publicIp, String vmId)
     {
-        if (null == publicIp || null == instanceId)
+        if (null == publicIp || null == vmId)
             throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both IP address and instance id are required");
-        try {
-            String query = "command=createIpForwardingRule&ipAddress=" + safeURLencode(publicIp)
-                                                    + "&virtualMachineId="  + safeURLencode(instanceId);
-            Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createIpForwardingRule", true);
-            NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-            if ( 0 < match.getLength()) {
-                 Node item = match.item(0);
-                 String jobId = item.getFirstChild().getNodeValue();
-                 if (waitForAsynch( jobId ))
-                     return true;
-            }
-            else throw new InternalErrorException( "InternalError" );
 
-            return false;
+        try {
+            Map[] l = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
+            String ipId = l[0].get("id").toString();
+            Map r = execute("command=enableStaticNat&ipAddressId=%s&virtualMachineId=%s", ipId, vmId);
+            return r.get("success").toString().equalsIgnoreCase("true");
+
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 AssociateAddress - " + error.toString());
             throw error;
@@ -852,27 +838,17 @@ public class EC2Engine {
 
     public boolean disassociateAddress(String publicIp)
     {
-        boolean success = true;
-
         if (null == publicIp)
             throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
 
         try {
-            for (IpForwardingRuleResponse rule: listIpForwardingRules(publicIp)) {
-                String query = "command=deleteIpForwardingRule&id=" + rule.getId().toString();
+            Map[] l     = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
+            String ipId = l[0].get("id").toString();
+            Map async   = execute("command=disableStaticNat&ipAddressId=%s", ipId);
 
-                Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteIpForwardingRule", true);
-                NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-                if (0 < match.getLength()) {
-                    Node item = match.item(0);
-                    String jobId = item.getFirstChild().getNodeValue();
-                    if (!waitForAsynch( jobId )) {
-                        success = false;
-                    }
-                }
-                else throw new InternalErrorException( "InternalError" );
-            }
-            return success;
+            String jobId = async.get("jobid").toString();
+            return waitForAsynch(jobId);
+
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 DisassociateAddress - " + error.toString());
             throw error;
@@ -1989,26 +1965,6 @@ public class EC2Engine {
 	    return instances;
 	}
 
-    /**
-     * Performs the cloud API listPublicIpAddresses one or more times.
-     *
-     * @param publicIps - an array of IP addresses we are interested in getting information on.
-     */
-    private EC2DescribeAddressesResponse listPublicIpAddresses( String[] publicIps )
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException
-    {
-        EC2DescribeAddressesResponse response = new EC2DescribeAddressesResponse();
-
-        if (null == publicIps || 0 == publicIps.length) {
-            return lookupAddresses( null, response );
-        }
-
-        for( int i=0; i <  publicIps.length; i++ ) {
-           response = lookupAddresses( publicIps[i], response );
-        }
-        return response;
-    }
-
     /**  
      * Get one or more templates depending on the volumeId parameter.
      * 
@@ -2300,94 +2256,6 @@ public class EC2Engine {
 	    }
 	    return instances;
     }
-
-    /**
-     * Get information on one or more public IP addresses.
-     *
-     * @param publicIp - if null then return information on all IP addresses, otherwise
-     *                   just return information on the matching address.
-     * @param response - a container object to fill with one or more EC2Address objects
-     *
-     * @return the same object passed in as the "response" parameter modified with one or more
-     *         EC2Address objects loaded.
-     */
-    private EC2DescribeAddressesResponse lookupAddresses( String publicIp, EC2DescribeAddressesResponse response )
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
-    {
-        Node parent = null;
-        StringBuffer params = new StringBuffer();
-        params.append( "command=listPublicIpAddresses" );
-        if (null != publicIp) params.append( "&ipAddress=" + safeURLencode(publicIp) );
-        String query = params.toString();
-
-        Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "listPublicIpAddresses", true );
-        NodeList match     = cloudResp.getElementsByTagName( "publicipaddress" );
-        int      length    = match.getLength();
-
-        for( int i=0; i < length; i++ )
-        {
-            if (null != (parent = match.item(i)))
-            {
-                NodeList children = parent.getChildNodes();
-                int      numChild = children.getLength();
-                EC2Address   addr = new EC2Address();
-
-                for( int j=0; j < numChild; j++ )
-                {
-                    Node   child = children.item(j);
-                    String name  = child.getNodeName();
-
-                    if (null != child.getFirstChild())
-                    {
-                        String value = child.getFirstChild().getNodeValue();
-
-                             if (name.equalsIgnoreCase( "ipaddress" )) addr.setIpAddress( value );
-                        else if (name.equalsIgnoreCase( "associatedInstanceId" )) addr.setAssociatedInstanceId( value );
-                    }
-                }
-                response.addAddress( addr );
-            }
-        }
-        return response;
-    }
-
-    private IpForwardingRuleResponse[] listIpForwardingRules(String publicIp)
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
-    {
-        String   query     = "command=listIpForwardingRules&ipAddress=" + safeURLencode(publicIp);
-        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listIpForwardingRules", true);
-        NodeList match     = cloudResp.getElementsByTagName("ipforwardingrule");
-        int      length    = match.getLength();
-
-        List<IpForwardingRuleResponse> result = new ArrayList<IpForwardingRuleResponse>();
-        for (int i = 0; i < length; i++) {
-            IpForwardingRuleResponse rule = new IpForwardingRuleResponse();
-
-            Node     parent   = match.item(i);
-            NodeList children = parent.getChildNodes();
-            int      numChild = children.getLength();
-
-            for (int j = 0; j < numChild; j++ ) {
-                Node   child = children.item(j);
-                String name  = child.getNodeName();
-
-                if (null != child.getFirstChild()) {
-                    String value = child.getFirstChild().getNodeValue();
-
-                         if (name.equalsIgnoreCase("id"))                 rule.setId(new Long(value));
-                    else if (name.equalsIgnoreCase("protocol"))           rule.setProtocol(value);
-                    else if (name.equalsIgnoreCase("virtualMachineId"))   rule.setVirtualMachineId(new Long(value));
-                    else if (name.equalsIgnoreCase("virtualMachineName")) rule.setVirtualMachineName(value);
-                    else if (name.equalsIgnoreCase("ipaddress"))          rule.setPublicIpAddress(value);
-                    else if (name.equalsIgnoreCase("state"))              rule.setState(value);
-                    else if (name.equalsIgnoreCase("virtualMachineDisplayName")) rule.setVirtualMachineDisplayName(value);
-                }
-            }
-            result.add(rule);
-        }
-        return result.toArray(new IpForwardingRuleResponse[0]);
-    }
-
 
     /**  
      * Get one or more templates depending on the templateId parameter.
@@ -2962,7 +2830,13 @@ public class EC2Engine {
     	     
     	return request;
     }
-    
+
+    Map[] execList(String query, String... args) throws IOException, SignatureException {
+        Map r = execute(query, args);
+        List l = (List) unwrap(r);
+        return (Map[]) l.toArray(new Map[0]);
+    }
+
     Map execute(String query, String... args) throws IOException, SignatureException {
         for (int i = 0; i < args.length; i++) {
             args[i] = safeURLencode(args[i]);
@@ -2975,7 +2849,8 @@ public class EC2Engine {
         String sig = calculateSignature(query);
         String url = getServerURL() + query + "&signature=" + safeURLencode(sig);
         InputStream in = openURL(url, "Unknown", true);
-        return (Map) JSONValue.parse(new InputStreamReader(in));
+        Map jo = (Map) JSONValue.parse(new InputStreamReader(in));
+        return (Map) unwrap(jo);
     }
 
     String calculateSignature(String query) throws SignatureException {
@@ -2986,6 +2861,10 @@ public class EC2Engine {
             b.append("&" + params[i]);
         }
         return calculateRFC2104HMAC(b.toString().toLowerCase(), UserContext.current().getSecretKey());
+    }
+
+    Object unwrap(Map m) {
+        return m.values().iterator().next();
     }
 
     private String genAPIURL( String query, String signature) throws UnsupportedEncodingException 
