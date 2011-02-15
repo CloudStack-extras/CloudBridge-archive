@@ -441,7 +441,7 @@ public class S3Engine {
     	    	return 404;
     	    }
     	    
-    	    // -> the multipart initiator or bucket owner can do this action
+    	    // -> the multipart initiator or bucket owner can do this action by default
     	    if (verifyPermission)
     	    {
     	        String initiator = uploadDao.getInitiator( uploadId );
@@ -464,7 +464,12 @@ public class S3Engine {
 	        uploadDao.deleteUpload( uploadId );
     	    return 204;
 
-		} catch (Exception e) {
+		}
+		catch( PermissionDeniedException e ) {
+			logger.error("freeUploadParts failed due to [" + e.getMessage() + "]", e);	
+            throw e;		
+		}
+		catch (Exception e) {
 			logger.error("freeUploadParts failed due to [" + e.getMessage() + "]", e);	
 			return 500;
 		}     

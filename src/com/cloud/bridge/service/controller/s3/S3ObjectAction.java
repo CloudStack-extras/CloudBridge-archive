@@ -816,14 +816,8 @@ public class S3ObjectAction implements ServletAction {
 		String temp = request.getParameter("uploadId");
     	if (null != temp) uploadId = Integer.parseInt( temp );
     	
-    	try {
-			int result = ServiceProvider.getInstance().getS3Engine().freeUploadParts( bucket, uploadId, true ); 
-            response.setStatus( result );
-	    }
-		catch( Exception e ) {
-		    logger.error("Multipart Upload cleanup failed due to " + e.getMessage(), e);	
-		    response.setStatus(500);
-		}
+    	int result = ServiceProvider.getInstance().getS3Engine().freeUploadParts( bucket, uploadId, true ); 
+        response.setStatus( result );
 	}
 	
 	private void executeListUploadParts( HttpServletRequest request, HttpServletResponse response ) throws IOException 

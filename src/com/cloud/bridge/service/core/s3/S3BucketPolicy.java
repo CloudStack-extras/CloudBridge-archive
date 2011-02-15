@@ -127,14 +127,14 @@ public class S3BucketPolicy {
 		// [A] Is the userAccount one of the principals of the policy statement?
 		S3PolicyPrincipal principals = oneStatement.getPrincipals();
 		if (null == principals || !principals.contains( userAccount )) return false;
-		System.out.println( "Statement: " + oneStatement.getSid() + " principal matches");
+		//System.out.println( "Statement: " + oneStatement.getSid() + " principal matches");
 		
 		
 		// [B] Is the operationRequested included in the policy statement?
 		//  -> if the value in "NotAction:" matches that requested then the statement does not apply
 		//  (i.e., "refers to all actions other" than defined).
 		PolicyActions notActions = oneStatement.getNotAction();
-	    System.out.println( "Statement: NotAction:" + notActions );
+	    //System.out.println( "Statement: NotAction:" + notActions + " op requested: " + operationRequested );
 
     	if ( PolicyActions.UnknownAction != notActions ) {
     		 if (notActions == operationRequested) return false;
@@ -142,7 +142,7 @@ public class S3BucketPolicy {
     	else {
 		     S3PolicyAction actions = oneStatement.getActions();
 		     if (null == actions || !actions.contains( operationRequested )) return false;
-		     System.out.println( "Statement: " + oneStatement.getSid() + " action matches");
+		     //System.out.println( "Statement: " + oneStatement.getSid() + " action matches");
     	}
 		
 		// [C] Does the objectToAccess included in the resource of the policy statement?
@@ -153,7 +153,7 @@ public class S3BucketPolicy {
 		
 	    if (!oneStatement.containsResource( path )) return false;
 		
-	    System.out.println( "Statement: " + oneStatement.getSid() + " is relevant to access request");
+	    //System.out.println( "Statement: " + oneStatement.getSid() + " is relevant to access request");
 		return true;
 	}
 }
