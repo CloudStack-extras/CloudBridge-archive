@@ -355,7 +355,7 @@ public class S3ObjectAction implements ServletAction {
 			
 		DataHandler dataHandler = engineResponse.getData();
 		if (dataHandler != null) {
-			response.addHeader("ETag", engineResponse.getETag());
+			response.addHeader("ETag", "\"" + engineResponse.getETag() + "\"");
 			response.addHeader("Last-Modified", DateHelper.getDateDisplayString(
 				DateHelper.GMT_TIMEZONE, engineResponse.getLastModified().getTime(), "E, d MMM yyyy HH:mm:ss z"));
 
@@ -387,7 +387,7 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setData(dataHandler);
 
 		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);
-		response.setHeader("ETag", engineResponse.getETag());
+		response.setHeader("ETag", "\"" + engineResponse.getETag() + "\"");
 		String version = engineResponse.getVersion();
 		if (null != version) response.addHeader( "x-amz-version-id", version );		
 	}
@@ -464,7 +464,7 @@ public class S3ObjectAction implements ServletAction {
 		
 		DataHandler dataHandler = engineResponse.getData();
 		if (dataHandler != null) {
-			response.addHeader("ETag", engineResponse.getETag());
+			response.addHeader("ETag", "\"" + engineResponse.getETag() + "\"");
 			response.addHeader("Last-Modified", DateHelper.getDateDisplayString(
 				DateHelper.GMT_TIMEZONE, engineResponse.getLastModified().getTime(), "E, d MMM yyyy HH:mm:ss z"));
 
@@ -600,7 +600,7 @@ public class S3ObjectAction implements ServletAction {
 		// [C] Perform the request
         if (0 < countMeta) engineRequest.setMetaEntries( metaSet.toArray(new S3MetaDataEntry[0]));
 		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );
-		response.setHeader("ETag", engineResponse.getETag());
+		response.setHeader("ETag", "\"" + engineResponse.getETag() + "\"");
 		String version = engineResponse.getVersion();
 		if (null != version) response.addHeader( "x-amz-version-id", version );		
 	}
@@ -706,7 +706,7 @@ public class S3ObjectAction implements ServletAction {
 		engineRequest.setData(dataHandler);
 
 		S3PutObjectInlineResponse engineResponse = ServiceProvider.getInstance().getS3Engine().saveUploadPart( engineRequest, uploadId, partNumber ); 
-		if (null != engineResponse.getETag()) response.setHeader("ETag", engineResponse.getETag());
+		if (null != engineResponse.getETag()) response.setHeader("ETag", "\"" + engineResponse.getETag() + "\"");
 		response.setStatus(engineResponse.getResultCode());
 	}
 	
@@ -800,7 +800,7 @@ public class S3ObjectAction implements ServletAction {
              xml.append( "<Location>" ).append( "http://" + bucket + ".s3.amazonaws.com/" + key ).append( "</Location>" );
              xml.append( "<Bucket>" ).append( bucket ).append( "</Bucket>" );
              xml.append( "<Key>" ).append( key ).append( "</Key>" );
-             xml.append( "<ETag>" ).append( engineResponse.getETag()).append( "</<ETag>" );
+             xml.append( "<ETag>\"" ).append( engineResponse.getETag()).append( "\"</<ETag>" );
              xml.append( "</CompleteMultipartUploadResult>" );
              os.write( xml.toString().getBytes());
              os.close();
@@ -922,7 +922,7 @@ public class S3ObjectAction implements ServletAction {
 	        partsList.append( "<Part>" );
 	        partsList.append( "<PartNumber>" ).append( nextMarker ).append( "</PartNumber>" );
 	        partsList.append( "<LastModified>" ).append( DatatypeConverter.printDateTime( onePart.getLastModified())).append( "</LastModified>" );
-	        partsList.append( "<ETag>" ).append( onePart.getETag()).append( "</ETag>" );
+	        partsList.append( "<ETag>\"" ).append( onePart.getETag()).append( "\"</ETag>" );
 	        partsList.append( "<Size>" ).append( onePart.getSize()).append( "</Size>" );
 	        partsList.append( "</Part>" );        	
 	    }  
@@ -1201,12 +1201,14 @@ public class S3ObjectAction implements ServletAction {
 			   if (lastNumber >= partNumber) {
 		           return new Tuple<Integer, String>(400, "InvalidPartOrder"); 
 			   }
-			   if (partNumber != parts[i].getPartNumber() || eTag == null || !eTag.equalsIgnoreCase( parts[i].getETag())) {
+			   if (partNumber != parts[i].getPartNumber() || 
+				   eTag == null || 
+				   !eTag.equalsIgnoreCase( "\"" + parts[i].getETag() + "\"" )) {
 		           return new Tuple<Integer, String>(400, "InvalidPart");
 		       }
 				 
 			   lastNumber = partNumber;
-		    }
+		    } 
 		    return new Tuple<Integer, String>(200, "Success");
     	}
     	catch( Exception e ) {
