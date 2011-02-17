@@ -8,13 +8,14 @@ SET foreign_key_checks = 0;
 DROP TABLE IF EXISTS bucket_policies;
 
 -- Amazon S3 only allows one policy to be defined for a bucket.
--- When a bucket is deleted its associated policy will be deleted with it.
--- The maximum size of a policy is 20 KB
+-- The maximum size of a policy is 20 KB.
+-- A bucket policy has to be able to exist even before the bucket itself (e.g., to
+-- support "CreateBucket" actions).
 --
 CREATE TABLE bucket_policies (
 	ID BIGINT NOT NULL AUTO_INCREMENT,
 	
-	SBucketID BIGINT NOT NULL,
+	BucketName VARCHAR(64) NOT NULL,
 	Policy    VARCHAR(20000) NOT NULL,  -- policies are written in JSON 
 
 	PRIMARY KEY(ID)

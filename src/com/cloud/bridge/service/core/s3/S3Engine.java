@@ -118,7 +118,7 @@ public class S3Engine {
 		String  destinationBucketName = request.getDestinationBucketName();
 		String  destinationKeyName = request.getDestinationKey();
 		SBucket sbucket = bucketDao.getByName( destinationBucketName );
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, destinationBucketName, sbucket.getId());
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, destinationBucketName );
 		context.setKeyName( destinationKeyName );
 		context.setEvalParam( ConditionKeys.MetaData, request.getDirective().toString());
 		context.setEvalParam( ConditionKeys.CopySource, "/" + request.getSourceBucketName() + "/" + request.getSourceKey());
@@ -156,18 +156,18 @@ public class S3Engine {
 		return response;
 	}
 
-	/**
-	 * So how do we allow a bucket policy action of "s3:CreateBucket" when a bucket needs to
-	 * exist first before a policy can be defined for it?   This is unclear from the Amazon
-	 * documentation.
-	 *  
-	 * @param request
-	 * @return
-	 */
     public S3CreateBucketResponse handleRequest(S3CreateBucketRequest request) 
     {
     	S3CreateBucketResponse response = new S3CreateBucketResponse();
-    	response.setBucketName(request.getBucketName());
+		String cannedAccessPolicy = request.getCannedAccess();
+    	String bucketName = request.getBucketName();
+    	response.setBucketName( bucketName );
+    	
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.CreateBucket,  bucketName );
+		context.setEvalParam( ConditionKeys.Acl, cannedAccessPolicy );
+		if (PolicyAccess.DENY == verifyPolicy( context )) 
+            throw new PermissionDeniedException( "Access Denied - bucket policy DENY result" );
+
     	
 		if (PersistContext.acquireNamedLock("bucket.creation", LOCK_ACQUIRING_TIMEOUT_SECONDS)) 
 		{
@@ -177,7 +177,7 @@ public class S3Engine {
 				SBucketDao bucketDao = new SBucketDao();
 				SAclDao    aclDao    = new SAclDao();
 				
-				if(bucketDao.getByName(request.getBucketName()) != null)
+				if (bucketDao.getByName(request.getBucketName()) != null)
 					throw new ObjectAlreadyExistsException("Bucket already exists"); 
 					
 				shostTuple = allocBucketStorageHost(request.getBucketName(), null);
@@ -191,7 +191,6 @@ public class S3Engine {
 				bucketDao.save(sbucket);
 
 				S3AccessControlList acl = request.getAcl();
-				String cannedAccessPolicy = request.getCannedAccess();
 				
 				if ( null != cannedAccessPolicy ) 
 					 setCannedAccessControls( cannedAccessPolicy, "SBucket", sbucket.getId(), sbucket );
@@ -224,11 +223,11 @@ public class S3Engine {
     	S3Response response  = new S3Response();   	
 		SBucketDao bucketDao = new SBucketDao();
 		String bucketName = request.getBucketName();
-		SBucket    sbucket   = bucketDao.getByName( bucketName );
+		SBucket sbucket   = bucketDao.getByName( bucketName );
 		
 		if ( sbucket != null ) 
 		{			 
-			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteBucket, bucketName, sbucket.getId());
+			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteBucket, bucketName );
 			 switch( verifyPolicy( context )) {
 			 case ALLOW:
 				  // -> bucket policy can give users permission to delete a bucket while ACLs cannot
@@ -253,7 +252,7 @@ public class S3Engine {
 			 S3BucketAdapter bucketAdapter = getStorageHostBucketAdapter(tupleBucketHost.getFirst());			
 			 bucketAdapter.deleteContainer(tupleBucketHost.getSecond(), request.getBucketName());
 			
-			 // -> cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl and SMeta objects. We
+			 // -> cascade-deleting can delete related SObject/SObjectItem objects, but not SAcl, SMeta and policy objects. We
 			 //    need to perform deletion of these objects related to bucket manually.
 			 //    Delete SMeta & SAcl objects: (1)Get all the objects in the bucket, (2)then all the items in each object, (3) then all meta & acl data for each item
 			 Set<SObject> objectsInBucket = sbucket.getObjectsInBucket();
@@ -269,7 +268,18 @@ public class S3Engine {
 		    		deleteMetaData( oneItem.getId());
 		    		deleteObjectAcls( "SObjectItem", oneItem.getId());
 				}				
-			 }			 
+			 }
+			 	
+			 // -> delete all the policy state associated with the bucket
+			 try {
+	   	         ServiceProvider.getInstance().deleteBucketPolicy( bucketName );
+		         BucketPolicyDao policyDao = new BucketPolicyDao();
+		         policyDao.deletePolicy( bucketName );
+			 }
+			 catch( Exception e ) {
+				 logger.error( "When deleting a bucket we must try to delete its policy: " + e.toString());
+			 }
+			 
 			 deleteBucketAcls( sbucket.getId());
 			 bucketDao.delete( sbucket );		
 			 response.setResultCode(204);
@@ -300,7 +310,7 @@ public class S3Engine {
 		if (sbucket == null) throw new NoSuchObjectException("Bucket " + bucketName + " does not exist");
 		
 		PolicyActions action = (includeVersions ? PolicyActions.ListBucketVersions : PolicyActions.ListBucket);
-		S3PolicyContext context = new S3PolicyContext( action, bucketName, sbucket.getId());
+		S3PolicyContext context = new S3PolicyContext( action, bucketName );
 		context.setEvalParam( ConditionKeys.MaxKeys, new String( "" + maxKeys ));
 		context.setEvalParam( ConditionKeys.Prefix, prefix );
 		context.setEvalParam( ConditionKeys.Delimiter, delimiter );
@@ -377,7 +387,7 @@ public class S3Engine {
     		return response;
     	}
  
-	    S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketAcl, bucketName, sbucket.getId());
+	    S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketAcl, bucketName );
     	verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE_ACL ); 
 
     	SAclDao aclDao = new SAclDao();
@@ -402,10 +412,10 @@ public class S3Engine {
     	owner.setDisplayName("");
     	policy.setOwner(owner);
     	
-	    S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketAcl, bucketName, sbucket.getId());
+	    S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketAcl, bucketName );
     	verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_READ_ACL ); 
 
-    	SAclDao aclDao = new SAclDao();
+    	SAclDao aclDao = new SAclDao(); 
     	List<SAcl> grants = aclDao.listGrants("SBucket", sbucket.getId());
     	policy.setGrants(S3Grant.toGrants(grants));  	
     	return policy;
@@ -448,7 +458,7 @@ public class S3Engine {
     	        if (null == initiator || !initiator.equals( UserContext.current().getAccessKey())) 
     	        {
     	    	    // -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
-    			    S3PolicyContext context = new S3PolicyContext( PolicyActions.AbortMultipartUpload, bucketName, bucket.getId());
+    			    S3PolicyContext context = new S3PolicyContext( PolicyActions.AbortMultipartUpload, bucketName );
     	    	    context.setKeyName( exists.getSecond());
     			    verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
     	        }
@@ -496,7 +506,7 @@ public class S3Engine {
 			response.setResultCode(404);
 		}
 	    
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName, bucket.getId());
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName );
 		context.setKeyName( nameKey );
 		context.setEvalParam( ConditionKeys.Acl, request.getCannedAccess());
 		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
@@ -538,7 +548,7 @@ public class S3Engine {
 			logger.error( "saveUploadedPart failed since " + bucketName + " does not exist" );
 			response.setResultCode(404);
 		}
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName, bucket.getId());
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucketName );
 		context.setKeyName( request.getKey());
 		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
 		
@@ -805,11 +815,11 @@ public class S3Engine {
     	}
 
 		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) {
-			 context = new S3PolicyContext( PolicyActions.PutObjectAclVersion, bucketName, sbucket.getId());
+			 context = new S3PolicyContext( PolicyActions.PutObjectAclVersion, bucketName );
 			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
 			 response.setVersion( item.getVersion());
 		}
-		else context = new S3PolicyContext( PolicyActions.PutObjectAcl, bucketName, sbucket.getId());		
+		else context = new S3PolicyContext( PolicyActions.PutObjectAcl, bucketName );		
 		context.setKeyName( nameKey );
 		verifyAccess( context, "SObjectItem", item.getId(), SAcl.PERMISSION_WRITE_ACL );		
 
@@ -870,11 +880,11 @@ public class S3Engine {
     	}
 
 		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) {
-			 context = new S3PolicyContext( PolicyActions.GetObjectVersionAcl, bucketName, sbucket.getId());
+			 context = new S3PolicyContext( PolicyActions.GetObjectVersionAcl, bucketName );
 			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
 			 policy.setVersion( item.getVersion());
 		}
-		else context = new S3PolicyContext( PolicyActions.GetObjectAcl, bucketName, sbucket.getId());		
+		else context = new S3PolicyContext( PolicyActions.GetObjectAcl, bucketName );		
 		context.setKeyName( nameKey );
 		verifyAccess( context, "SObjectItem", item.getId(), SAcl.PERMISSION_READ_ACL );		
 
@@ -950,10 +960,10 @@ public class S3Engine {
     	}
 		
 		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) {
-			 context = new S3PolicyContext( PolicyActions.GetObjectVersion, bucketName, sbucket.getId());
+			 context = new S3PolicyContext( PolicyActions.GetObjectVersion, bucketName );
 			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
 		}
-		else context = new S3PolicyContext( PolicyActions.GetObject, bucketName, sbucket.getId());		
+		else context = new S3PolicyContext( PolicyActions.GetObject, bucketName );		
  		context.setKeyName( nameKey );
 		verifyAccess( context, "SObjectItem", item.getId(), SAcl.PERMISSION_READ );		
 		
@@ -1057,7 +1067,7 @@ public class S3Engine {
 		if ( SBucket.VERSIONING_ENABLED == versioningStatus ) 
 	    {
 			 String wantVersion = request.getVersion();
-			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteObjectVersion, bucketName, sbucket.getId());
+			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteObjectVersion, bucketName );
 			 context.setKeyName( nameKey );
 			 context.setEvalParam( ConditionKeys.VersionId, wantVersion );
 			 verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
@@ -1092,7 +1102,7 @@ public class S3Engine {
 	    }
 		else 
 		{	 // -> if versioning is off then we do delete the null object
-			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteObject, bucketName, sbucket.getId());
+			 S3PolicyContext context = new S3PolicyContext( PolicyActions.DeleteObject, bucketName );
 			 context.setKeyName( nameKey );
 			 verifyAccess( context, "SBucket", sbucket.getId(), SAcl.PERMISSION_WRITE );
 
@@ -1407,7 +1417,7 @@ public class S3Engine {
 		Session session = PersistContext.getSession();
 			
 		// [A] To write into a bucket the user must have write permission to that bucket
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucket.getName(), bucket.getId());
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, bucket.getName());
 		context.setKeyName( nameKey );
 		context.setEvalParam( ConditionKeys.Acl, cannedAccessPolicy);
 		verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
@@ -1698,7 +1708,7 @@ public class S3Engine {
 			 if (-1 == result.getSecond().intValue())
 			 {
 			    BucketPolicyDao policyDao = new BucketPolicyDao();
-			    String policyInJson = policyDao.getPolicy( context.getBucketId());
+			    String policyInJson = policyDao.getPolicy( context.getBucketName());
 			    // -> place in cache that no policy exists in the database
 			    if (null == policyInJson) {
 	    	        ServiceProvider.getInstance().setBucketPolicy(context.getBucketName(), null);

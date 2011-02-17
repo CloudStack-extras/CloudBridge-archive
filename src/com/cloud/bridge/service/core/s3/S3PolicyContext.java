@@ -32,14 +32,12 @@ public class S3PolicyContext {
 	private HttpServletRequest request = null;;
 	private String bucketName = null;
 	private String keyName = null;
-	private long bucketId = 0;
 	private PolicyActions requestedAction;
 	private Map<ConditionKeys,String> evalParams = new HashMap<ConditionKeys,String>();
 
-	public S3PolicyContext(PolicyActions requestedAction, String bucketName, long bucketId) {
+	public S3PolicyContext(PolicyActions requestedAction, String bucketName) {
 		this.requestedAction = requestedAction;
 		this.bucketName = bucketName;
-		this.bucketId = bucketId;
 	}
 	
 	public HttpServletRequest getHttp() {
@@ -76,14 +74,6 @@ public class S3PolicyContext {
 	
 	public void setKeyName(String keyName) {
 		this.keyName = keyName;
-	}
-	
-	public long getBucketId() {
-		return bucketId;
-	}
-	
-	public void setBucketId(long bucketId) {
-		this.bucketId = bucketId;
 	}
 	
 	public PolicyActions getRequestedAction() {

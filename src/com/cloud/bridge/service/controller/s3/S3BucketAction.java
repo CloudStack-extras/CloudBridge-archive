@@ -188,7 +188,15 @@ public class S3BucketAction implements ServletAction {
 		} 
 		else throw new IllegalArgumentException("Unsupported method in REST request");
 	}
-		
+	
+	/** 
+	 * In order to support a policy on the "s3:CreateBucket" action we must be able to set and get
+	 * policies before a bucket is actually created.
+	 * 
+	 * @param request
+	 * @param response
+	 * @throws IOException
+	 */
 	private void executePutBucketPolicy(HttpServletRequest request, HttpServletResponse response) throws IOException
 	{
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
@@ -196,22 +204,17 @@ public class S3BucketAction implements ServletAction {
 		
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket bucket = bucketDao.getByName(bucketName);
-		if (bucket == null) {
-			logger.error( "PUT bucket policy failed since " + bucketName + " does not exist" );
-	    	response.setStatus(404);
-	    	return;
-		}
 	
 		// [A] "The bucket owner by default has permissions to attach bucket policies to their buckets using PUT Bucket policy." 
 		//  -> the bucket owner may want to restrict the IP address from where this can be executed
 	    String client = UserContext.current().getCanonicalUserId();
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketPolicy, bucketName, bucket.getId());
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketPolicy, bucketName );
 	    switch( S3Engine.verifyPolicy( context )) {
 	    case ALLOW:
              break;
              
 		case DEFAULT_DENY:
-		     if (!client.equals( bucket.getOwnerCanonicalId())) {
+		     if (null != bucket && !client.equals( bucket.getOwnerCanonicalId())) {
 		    	 response.setStatus(405);
 		    	 return;
 		     }
@@ -230,10 +233,10 @@ public class S3BucketAction implements ServletAction {
     		S3BucketPolicy sbp = parser.parse( policy, bucketName );
 
 	        BucketPolicyDao policyDao = new BucketPolicyDao();
-	        policyDao.deletePolicy( bucket.getId());
-	        if (null != policy && !policy.isEmpty()) policyDao.addPolicy( bucket.getId(), policy );
+	        policyDao.deletePolicy( bucketName );
+	        if (null != policy && !policy.isEmpty()) policyDao.addPolicy( bucketName, policy );
 	                
-    		if (null != sbp) ServiceProvider.getInstance().setBucketPolicy(bucketName, sbp);
+    		if (null != sbp) ServiceProvider.getInstance().setBucketPolicy( bucketName, sbp );
     		response.setStatus(200);  		
     	}
     	catch( PermissionDeniedException e ) {
@@ -254,23 +257,18 @@ public class S3BucketAction implements ServletAction {
 	{
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);		
 		SBucketDao bucketDao = new SBucketDao();
-		SBucket bucket = bucketDao.getByName(bucketName);
-		if (bucket == null) {
-			logger.error( "GET bucket policy failed since " + bucketName + " does not exist" );
-	    	response.setStatus(404);
-	    	return;
-		}
+		SBucket bucket = bucketDao.getByName( bucketName );
 
 		// [A] "The bucket owner by default has permissions to retrieve bucket policies using GET Bucket policy."
 		//  -> the bucket owner may want to restrict the IP address from where this can be executed
 		String client = UserContext.current().getCanonicalUserId();
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketPolicy, bucketName, bucket.getId());
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketPolicy, bucketName );
 		switch( S3Engine.verifyPolicy( context )) {
 		case ALLOW:
              break;
              
 		case DEFAULT_DENY:
-		  	 if (!client.equals( bucket.getOwnerCanonicalId())) {
+		  	 if (null != bucket && !client.equals( bucket.getOwnerCanonicalId())) {
 		   		 response.setStatus(405);
 		   		 return;
 		   	 }
@@ -285,7 +283,7 @@ public class S3BucketAction implements ServletAction {
 	    // [B] Pull the policy from the database if one exists
     	try {
 	        BucketPolicyDao policyDao = new BucketPolicyDao();
-	        String policy = policyDao.getPolicy( bucket.getId());
+	        String policy = policyDao.getPolicy( bucketName );
 	        if ( null == policy ) {
 	    		 response.setStatus(404);
 	        }
@@ -306,28 +304,25 @@ public class S3BucketAction implements ServletAction {
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		
 		SBucketDao bucketDao = new SBucketDao();
-		SBucket bucket = bucketDao.getByName(bucketName);
-		if (bucket == null) {
-			logger.error( "DELETE bucket policy failed since " + bucketName + " does not exist" );
-	    	response.setStatus(404);
-	    	return;
-		}
-
-		String client = UserContext.current().getCanonicalUserId();
-		if (!client.equals( bucket.getOwnerCanonicalId())) {
-		    response.setStatus(405);
-		    return;
+		SBucket bucket = bucketDao.getByName( bucketName );
+		if (bucket != null) 
+		{
+		    String client = UserContext.current().getCanonicalUserId();
+		    if (!client.equals( bucket.getOwnerCanonicalId())) {
+		        response.setStatus(405);
+		        return;
+		    }
 		}
 
     	try {
 	        BucketPolicyDao policyDao = new BucketPolicyDao();
-	        String policy = policyDao.getPolicy( bucket.getId());
+	        String policy = policyDao.getPolicy( bucketName );
 	        if ( null == policy ) {
 	    		 response.setStatus(204);
 	        }
 	        else {
 	   	         ServiceProvider.getInstance().deleteBucketPolicy( bucketName );
-    	         policyDao.deletePolicy( bucket.getId());
+    	         policyDao.deletePolicy( bucketName );
     		     response.setStatus(200);
 	        }
     	}
@@ -447,7 +442,7 @@ public class S3BucketAction implements ServletAction {
 		if (!client.equals( sbucket.getOwnerCanonicalId()))
 		    throw new PermissionDeniedException( "Access Denied - only the owner can read bucket versioning" );
 
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketVersioning, bucketName, sbucket.getId());
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketVersioning, bucketName );
 	    if (PolicyAccess.DENY == S3Engine.verifyPolicy( context )) {
              response.setStatus(403);
              return;
@@ -656,7 +651,7 @@ public class S3BucketAction implements ServletAction {
 			if (!client.equals( sbucket.getOwnerCanonicalId()))
 			    throw new PermissionDeniedException( "Access Denied - only the owner can turn on versioing on a bucket" );
 		
-			S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketVersioning, bucketName, sbucket.getId());
+			S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketVersioning, bucketName );
 		    if (PolicyAccess.DENY == S3Engine.verifyPolicy( context )) {
 	             response.setStatus(403);
 	             return;
@@ -741,7 +736,7 @@ public class S3BucketAction implements ServletAction {
 	    	return;
 		}
 		
-		S3PolicyContext context = new S3PolicyContext( PolicyActions.ListBucketMultipartUploads, bucketName, bucket.getId());
+		S3PolicyContext context = new S3PolicyContext( PolicyActions.ListBucketMultipartUploads, bucketName );
 		context.setEvalParam( ConditionKeys.Prefix, prefix );
 		context.setEvalParam( ConditionKeys.Delimiter, delimiter );
 		S3Engine.verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_READ );

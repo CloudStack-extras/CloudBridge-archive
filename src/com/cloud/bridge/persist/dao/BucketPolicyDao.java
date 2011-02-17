@@ -58,15 +58,15 @@ public class BucketPolicyDao {
 		}
 	}
 
-	public void addPolicy( long sbucketId, String policy ) 
+	public void addPolicy( String bucketName, String policy ) 
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
     {
         PreparedStatement statement = null;
 
         openConnection();	
         try {            
-            statement = conn.prepareStatement ( "INSERT INTO bucket_policies (SBucketID, Policy) VALUES (?,?)" );
-            statement.setLong( 1, sbucketId );
+            statement = conn.prepareStatement ( "INSERT INTO bucket_policies (BucketName, Policy) VALUES (?,?)" );
+            statement.setString( 1, bucketName );
             statement.setString( 2, policy );
             int count = statement.executeUpdate();
             statement.close();	
@@ -76,7 +76,7 @@ public class BucketPolicyDao {
         }
     }
 
-	public String getPolicy( long sbucketId ) 
+	public String getPolicy( String bucketName ) 
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
     {
         PreparedStatement statement = null;
@@ -84,8 +84,8 @@ public class BucketPolicyDao {
 	
         openConnection();	
         try {            
-	        statement = conn.prepareStatement ( "SELECT Policy FROM bucket_policies WHERE SBucketID=?" );
-            statement.setLong( 1, sbucketId );
+	        statement = conn.prepareStatement ( "SELECT Policy FROM bucket_policies WHERE BucketName=?" );
+            statement.setString( 1, bucketName );
             ResultSet rs = statement.executeQuery();
 	        if (rs.next()) policy = rs.getString( "Policy" );
             statement.close();	
@@ -96,15 +96,15 @@ public class BucketPolicyDao {
         }
     }
 
-	public void deletePolicy( long sbucketId )
+	public void deletePolicy( String bucketName )
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
     {
         PreparedStatement statement = null;
 	
         openConnection();	
         try {
-	        statement = conn.prepareStatement ( "DELETE FROM bucket_policies WHERE SBucketID=?" );
-            statement.setLong( 1, sbucketId );
+	        statement = conn.prepareStatement ( "DELETE FROM bucket_policies WHERE BucketName=?" );
+            statement.setString( 1, bucketName );
             int count = statement.executeUpdate();
             statement.close();	
     

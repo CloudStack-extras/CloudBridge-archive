@@ -870,7 +870,7 @@ public class S3ObjectAction implements ServletAction {
     	    {
     	    	try {
     	    	    // -> write permission on a bucket allows a PutObject / DeleteObject action on any object in the bucket
-        			S3PolicyContext context = new S3PolicyContext( PolicyActions.ListMultipartUploadParts, bucketName, bucket.getId());
+        			S3PolicyContext context = new S3PolicyContext( PolicyActions.ListMultipartUploadParts, bucketName );
     	    		context.setKeyName( exists.getSecond());
         			S3Engine.verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_WRITE );
     	    	}
