@@ -692,7 +692,7 @@ public class S3SoapServiceImpl implements AmazonS3SkeletonInterface {
 			 throw new AxisFault( "" + resultCode, (null == description ? "" : description));
 		}
 		
-		result.setETag(engineResponse.getETag());
+		result.setETag( "\"" + engineResponse.getETag() + "\"" );
 		result.setLastModified(engineResponse.getLastModified());		 
 		response.setCopyObjectResult(result);
 		return response;

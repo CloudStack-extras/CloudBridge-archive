@@ -114,10 +114,8 @@ public class S3Engine {
 		else getRequest.setReturnMetadata( false );		
 			
 		//-> before we do anything verify the permissions on a copy basis
-		SBucketDao bucketDao = new SBucketDao();
 		String  destinationBucketName = request.getDestinationBucketName();
 		String  destinationKeyName = request.getDestinationKey();
-		SBucket sbucket = bucketDao.getByName( destinationBucketName );
 		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutObject, destinationBucketName );
 		context.setKeyName( destinationKeyName );
 		context.setEvalParam( ConditionKeys.MetaData, request.getDirective().toString());
