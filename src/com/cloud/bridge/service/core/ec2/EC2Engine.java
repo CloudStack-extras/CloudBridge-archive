@@ -2833,6 +2833,9 @@ public class EC2Engine {
 
     Map[] execList(String query, String... args) throws IOException, SignatureException {
         Map r = execute(query, args);
+        if (r.isEmpty())
+            return new Map[0];
+
         List l = (List) unwrap(r);
         return (Map[]) l.toArray(new Map[0]);
     }
