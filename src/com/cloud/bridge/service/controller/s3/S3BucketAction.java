@@ -201,11 +201,26 @@ public class S3BucketAction implements ServletAction {
 	{
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String policy = streamToString( request.getInputStream());
-		
+		        
+		// [A] Is there an owner of an existing policy or bucket?
+        BucketPolicyDao policyDao = new BucketPolicyDao();
 		SBucketDao bucketDao = new SBucketDao();
-		SBucket bucket = bucketDao.getByName(bucketName);
-	
-		// [A] "The bucket owner by default has permissions to attach bucket policies to their buckets using PUT Bucket policy." 
+		SBucket bucket = bucketDao.getByName( bucketName );
+        String owner = null;
+        
+        if ( null != bucket ) 
+        {
+        	 owner = bucket.getOwnerCanonicalId();
+        }
+        else 
+        {    try {
+        	     owner = policyDao.getPolicyOwner( bucketName );
+             }
+             catch( Exception e ) {}
+        }
+
+        
+		// [B] "The bucket owner by default has permissions to attach bucket policies to their buckets using PUT Bucket policy." 
 		//  -> the bucket owner may want to restrict the IP address from where this can be executed
 	    String client = UserContext.current().getCanonicalUserId();
 		S3PolicyContext context = new S3PolicyContext( PolicyActions.PutBucketPolicy, bucketName );
@@ -214,7 +229,7 @@ public class S3BucketAction implements ServletAction {
              break;
              
 		case DEFAULT_DENY:
-		     if (null != bucket && !client.equals( bucket.getOwnerCanonicalId())) {
+		     if (null != owner && !client.equals( owner )) {
 		    	 response.setStatus(405);
 		    	 return;
 		     }
@@ -232,9 +247,8 @@ public class S3BucketAction implements ServletAction {
        		PolicyParser parser = new PolicyParser();
     		S3BucketPolicy sbp = parser.parse( policy, bucketName );
 
-	        BucketPolicyDao policyDao = new BucketPolicyDao();
 	        policyDao.deletePolicy( bucketName );
-	        if (null != policy && !policy.isEmpty()) policyDao.addPolicy( bucketName, policy );
+	        if (null != policy && !policy.isEmpty()) policyDao.addPolicy( bucketName, client, policy );
 	                
     		if (null != sbp) ServiceProvider.getInstance().setBucketPolicy( bucketName, sbp );
     		response.setStatus(200);  		
@@ -255,11 +269,27 @@ public class S3BucketAction implements ServletAction {
 	
 	private void executeGetBucketPolicy(HttpServletRequest request, HttpServletResponse response) 
 	{
-		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);		
+		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+
+		// [A] Is there an owner of an existing policy or bucket?
+        BucketPolicyDao policyDao = new BucketPolicyDao();
 		SBucketDao bucketDao = new SBucketDao();
 		SBucket bucket = bucketDao.getByName( bucketName );
+        String owner = null;
+        
+        if ( null != bucket ) 
+        {
+        	 owner = bucket.getOwnerCanonicalId();
+        }
+        else 
+        {    try {
+        	     owner = policyDao.getPolicyOwner( bucketName );
+             }
+             catch( Exception e ) {}
+        }
 
-		// [A] "The bucket owner by default has permissions to retrieve bucket policies using GET Bucket policy."
+        
+		// [B] "The bucket owner by default has permissions to retrieve bucket policies using GET Bucket policy."
 		//  -> the bucket owner may want to restrict the IP address from where this can be executed
 		String client = UserContext.current().getCanonicalUserId();
 		S3PolicyContext context = new S3PolicyContext( PolicyActions.GetBucketPolicy, bucketName );
@@ -268,7 +298,7 @@ public class S3BucketAction implements ServletAction {
              break;
              
 		case DEFAULT_DENY:
-		  	 if (null != bucket && !client.equals( bucket.getOwnerCanonicalId())) {
+		  	 if (null != owner && !client.equals( owner )) {
 		   		 response.setStatus(405);
 		   		 return;
 		   	 }
@@ -282,7 +312,6 @@ public class S3BucketAction implements ServletAction {
 	    
 	    // [B] Pull the policy from the database if one exists
     	try {
-	        BucketPolicyDao policyDao = new BucketPolicyDao();
 	        String policy = policyDao.getPolicy( bucketName );
 	        if ( null == policy ) {
 	    		 response.setStatus(404);

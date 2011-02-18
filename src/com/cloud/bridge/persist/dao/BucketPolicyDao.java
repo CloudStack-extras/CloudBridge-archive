@@ -58,18 +58,43 @@ public class BucketPolicyDao {
 		}
 	}
 
-	public void addPolicy( String bucketName, String policy ) 
+	public void addPolicy( String bucketName, String owner, String policy ) 
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
     {
         PreparedStatement statement = null;
 
         openConnection();	
         try {            
-            statement = conn.prepareStatement ( "INSERT INTO bucket_policies (BucketName, Policy) VALUES (?,?)" );
+            statement = conn.prepareStatement ( "INSERT INTO bucket_policies (BucketName, OwnerCanonicalID, Policy) VALUES (?,?,?)" );
             statement.setString( 1, bucketName );
-            statement.setString( 2, policy );
+            statement.setString( 2, owner  );
+            statement.setString( 3, policy );
             int count = statement.executeUpdate();
             statement.close();	
+
+        } finally {
+            closeConnection();
+        }
+    }
+	
+	/**
+	 * Since a bucket policy can exist before its bucket we also need to keep the policy's owner
+	 * so we can restrict who modifies it (because of the "s3:CreateBucket" action).
+	 */
+	public String getPolicyOwner( String bucketName )
+    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+    {
+        PreparedStatement statement = null;
+        String owner = null;
+
+        openConnection();	
+        try {            
+            statement = conn.prepareStatement ( "SELECT OwnerCanonicalID FROM bucket_policies WHERE BucketName=?" );
+            statement.setString( 1, bucketName );
+            ResultSet rs = statement.executeQuery();
+	        if (rs.next()) owner = rs.getString( "OwnerCanonicalID" );
+            statement.close();	
+            return owner;
 
         } finally {
             closeConnection();
