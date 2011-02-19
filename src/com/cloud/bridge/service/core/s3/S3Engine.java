@@ -143,6 +143,7 @@ public class S3Engine {
 		else putRequest.setMetaEntries(request.getMetaEntries());	
 	    putRequest.setAcl(request.getAcl());                    // -> if via a SOAP call
 	    putRequest.setCannedAccess(request.getCannedAccess());  // -> if via a REST call 
+	    putRequest.setContentLength(originalObject.getContentLength());
 	    putRequest.setData(originalObject.getData());
 
 	    S3PutObjectInlineResponse putResp = handleRequest(putRequest);  
