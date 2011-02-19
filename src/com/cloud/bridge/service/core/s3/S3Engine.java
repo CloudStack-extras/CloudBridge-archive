@@ -1013,7 +1013,7 @@ public class S3Engine {
  
     	if(request.isReturnData()) 
     	{
-    		response.setETag( item.getMd5());
+    		response.setETag(item.getMd5());
     		response.setLastModified(DateHelper.toCalendar( item.getLastModifiedTime()));
     		response.setVersion( item.getVersion());
     		if (request.isInlineData()) 
@@ -1261,8 +1261,7 @@ public class S3Engine {
 				}
 			} 
 			else 
-			{
-				// this should be able to be optimized
+			{   // -> if there are multiple versions of an object then just return its last version
 				Iterator<SObjectItem> it = sobject.getItems().iterator();
 				SObjectItem lastestItem = null;
 				int maxVersion = 0;
@@ -1271,13 +1270,20 @@ public class S3Engine {
 				{
 					SObjectItem item = (SObjectItem)it.next();
 					String versionStr = item.getVersion();
-					if (null != versionStr) version = Integer.parseInt(item.getVersion());
+					
+					if ( null != versionStr ) 
+						 version = Integer.parseInt(item.getVersion());
+					else lastestItem = item;
+					
+					// -> if the bucket has versions turned on
 					if (version > maxVersion) {
 						maxVersion = version;
 						lastestItem = item;
 					}
 				}
-				if (lastestItem != null) entries.add( toListEntry( sobject, lastestItem, null ));
+				if (lastestItem != null) {
+					entries.add( toListEntry( sobject, lastestItem, null ));
+				}
 			}
 			
 			count++;
@@ -1294,7 +1300,7 @@ public class S3Engine {
 		S3ListBucketObjectEntry entry = new S3ListBucketObjectEntry();
 		entry.setKey(sobject.getNameKey());
 		entry.setVersion( item.getVersion());
-		entry.setETag(item.getMd5());
+		entry.setETag( "\"" + item.getMd5() + "\"" );
 		entry.setSize(item.getStoredSize());
 		entry.setStorageClass( "STANDARD" );
 		entry.setLastModified(DateHelper.toCalendar(item.getLastModifiedTime()));
