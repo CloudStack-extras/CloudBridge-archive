@@ -50,6 +50,7 @@ import com.cloud.bridge.service.core.s3.S3Grant;
 import com.cloud.bridge.service.core.s3.S3MetaDataEntry;
 import com.cloud.bridge.service.core.s3.S3PutObjectRequest;
 import com.cloud.bridge.service.core.s3.S3PutObjectResponse;
+import com.cloud.bridge.service.exception.InvalidBucketName;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
 import com.cloud.bridge.util.AuthenticationUtils;
@@ -139,12 +140,18 @@ public class S3RestServlet extends HttpServlet {
         	
 			PersistContext.commitTransaction();
 			
-        } catch(PermissionDeniedException e) {
+        } 
+        catch( InvalidBucketName e) {
+    		logger.error("Unexpected exception " + e.getMessage(), e);
+    		response.setStatus(400);
+        	endResponse(response, "Invalid Bucket Name - " + e.toString());    	
+        } 
+        catch(PermissionDeniedException e) {
     		logger.error("Unexpected exception " + e.getMessage(), e);
     		response.setStatus(403);
         	endResponse(response, "Access denied - " + e.toString());
-        	
-        } catch(Throwable e) {
+        } 
+        catch(Throwable e) {
     		logger.error("Unexpected exception " + e.getMessage(), e);
     		response.setStatus(500);
         	endResponse(response, "Internal server error");
@@ -272,7 +279,8 @@ public class S3RestServlet extends HttpServlet {
     		AWSAccessKey = temp.substring( 0, offset );
     		signature    = temp.substring( offset+1 );
     	}
-    	    	
+ 
+    	
     	// [C] Calculate the signature from the request's headers
     	auth.setDateHeader( request.getHeader( "Date" ));
     	auth.setContentTypeHeader( request.getHeader( "Content-Type" ));
@@ -299,6 +307,7 @@ public class S3RestServlet extends HttpServlet {
 				UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), AWSAccessKey, info.getDescription(), request);
 				return;
 			}
+			
 			// -> turn off auth - just for testing
 			//UserContext.current().initContext("Mark", "123", "Mark", "testing", request);
             //return;
@@ -312,9 +321,13 @@ public class S3RestServlet extends HttpServlet {
 		throw new PermissionDeniedException("Invalid signature");
     }
     
-    private ServletAction routeRequest(HttpServletRequest request) {
+    
+    private ServletAction routeRequest(HttpServletRequest request) 
+    {
     	// Simple URL routing for S3 REST calls.
     	String pathInfo = request.getPathInfo();
+    	String bucketName = null;
+    	String key = null;
     	
     	if (ServiceProvider.getInstance().getUseSubDomain()) 
     	{
@@ -327,15 +340,21 @@ public class S3RestServlet extends HttpServlet {
     			return new S3BucketAction();
     		}
     		
-    		int endPos = host.indexOf('.');
-    		if(endPos > 0)
-    			request.setAttribute(S3Constants.BUCKET_ATTR_KEY, host.substring(0, endPos));
-    		else
-    			request.setAttribute(S3Constants.BUCKET_ATTR_KEY, "");
+    		// -> verify the format of the bucket name
+    		int endPos = host.indexOf( ServiceProvider.getInstance().getMasterDomain());
+    		if ( endPos > 0 ) 
+    		{
+    			 bucketName = host.substring(0, endPos);
+    			 S3Engine.verifyBucketName( bucketName, false );
+    			 request.setAttribute(S3Constants.BUCKET_ATTR_KEY, bucketName);
+    		}
+    		else request.setAttribute(S3Constants.BUCKET_ATTR_KEY, "");
     		
-    		if(pathInfo == null || pathInfo.equalsIgnoreCase("/")) {
+    		if (pathInfo == null || pathInfo.equalsIgnoreCase("/")) 
+    		{
     			return new S3BucketAction();
-    		} else {
+    		} 
+    		else {
     			String objectKey = pathInfo.substring(1);
     			request.setAttribute(S3Constants.OBJECT_ATTR_KEY, objectKey);
     			return new S3ObjectAction();
@@ -349,22 +368,27 @@ public class S3RestServlet extends HttpServlet {
     		}
     		
     		int endPos = pathInfo.indexOf('/', 1);
-    		if(endPos > 0) {
-    			String bucket = pathInfo.substring(1, endPos);
-    			String key = pathInfo.substring(endPos + 1);
-    			
-    			if(!key.isEmpty()) {
-	    			request.setAttribute(S3Constants.BUCKET_ATTR_KEY, bucket);
-	    			request.setAttribute(S3Constants.OBJECT_ATTR_KEY, pathInfo.substring(endPos + 1));
-	    			return new S3ObjectAction();
-    			} else {
-        			request.setAttribute(S3Constants.BUCKET_ATTR_KEY, bucket);
-        			return new S3BucketAction();
-    			}
-    		} else {
-    			String bucket = pathInfo.substring(1);
-    			request.setAttribute(S3Constants.BUCKET_ATTR_KEY, bucket);
-    			return new S3BucketAction();
+    		if ( endPos > 0 ) 
+    		{
+    			 bucketName = pathInfo.substring(1, endPos);
+    		     key        = pathInfo.substring(endPos + 1);			
+   			     S3Engine.verifyBucketName( bucketName, false );
+   			
+    			 if (!key.isEmpty()) 
+    			 {
+	    		 	  request.setAttribute(S3Constants.BUCKET_ATTR_KEY, bucketName);
+	    			  request.setAttribute(S3Constants.OBJECT_ATTR_KEY, pathInfo.substring(endPos + 1));
+	    			  return new S3ObjectAction();
+    			 } 
+    			 else {
+        			  request.setAttribute(S3Constants.BUCKET_ATTR_KEY, bucketName);
+        			  return new S3BucketAction();
+    			 }
+    		} 
+    		else {
+    			 String bucket = pathInfo.substring(1);
+    			 request.setAttribute(S3Constants.BUCKET_ATTR_KEY, bucket);
+    			 return new S3BucketAction();
     		}
     	}
     }
@@ -659,8 +683,7 @@ public class S3RestServlet extends HttpServlet {
 		}
 		return request;
 	}
-
-
+	
 	/**
 	 * Looking for the value of a specific child of the given parent node.
 	 * 

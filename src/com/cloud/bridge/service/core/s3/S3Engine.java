@@ -68,6 +68,7 @@ import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 import com.cloud.bridge.service.core.s3.S3PolicyCondition.ConditionKeys;
 import com.cloud.bridge.service.exception.HostNotMountedException;
 import com.cloud.bridge.service.exception.InternalErrorException;
+import com.cloud.bridge.service.exception.InvalidBucketName;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.service.exception.ObjectAlreadyExistsException;
 import com.cloud.bridge.service.exception.OutOfServiceException;
@@ -162,12 +163,13 @@ public class S3Engine {
     	String bucketName = request.getBucketName();
     	response.setBucketName( bucketName );
     	
+		verifyBucketName( bucketName, false );
+ 	
 		S3PolicyContext context = new S3PolicyContext( PolicyActions.CreateBucket,  bucketName );
 		context.setEvalParam( ConditionKeys.Acl, cannedAccessPolicy );
 		if (PolicyAccess.DENY == verifyPolicy( context )) 
             throw new PermissionDeniedException( "Access Denied - bucket policy DENY result" );
-
-    	
+   	
 		if (PersistContext.acquireNamedLock("bucket.creation", LOCK_ACQUIRING_TIMEOUT_SECONDS)) 
 		{
 			Tuple<SHost, String> shostTuple = null;
@@ -1727,6 +1729,74 @@ public class S3Engine {
 			 }
 		}
 		return policy;
+	}
+	
+	public static void verifyBucketName( String bucketName, boolean useDNSGuidelines ) throws InvalidBucketName
+	{
+		 // [A] To comply with Amazon S3 basic requirements, bucket names must meet the following conditions
+		 // -> must be between 3 and 255 characters long
+		 int size = bucketName.length();		 
+		 if (3 > size || size > 255) 
+			 throw new InvalidBucketName( bucketName + " is not between 3 and 255 characters long" );
+		 
+		 // -> must start with a number or letter
+		 if (!Character.isLetterOrDigit( bucketName.charAt( 0 ))) 
+			 throw new InvalidBucketName( bucketName + " does not start with a number or letter" );
+		 
+		 // -> can contain lowercase letters, numbers, periods (.), underscores (_), and dashes (-)
+		 // -> the bucket name can also contain uppercase letters but it is not recommended
+		 for( int i=0; i < bucketName.length(); i++ ) 
+		 {
+			 char next = bucketName.charAt(i);
+			      if (Character.isLetter( next )) continue;
+			 else if (Character.isDigit( next ))  continue;
+			 else if ('.' == next)                continue;
+			 else if ('_' == next)                continue;
+			 else if ('-' == next)                continue;
+			 else throw new InvalidBucketName( bucketName + " contains the invalid character: " + next );
+		 }
+		 
+		 // -> must not be formatted as an IP address (e.g., 192.168.5.4)
+		 String[] parts = bucketName.split( "\\." );
+		 if (4 == parts.length)
+		 {
+			 try {
+				 int first  = Integer.parseInt( parts[0] );
+				 int second = Integer.parseInt( parts[1] );
+				 int third  = Integer.parseInt( parts[2] );
+				 int fourth = Integer.parseInt( parts[3] );
+				 throw new InvalidBucketName( bucketName + " is formatted as an IP address" );
+			 }
+			 catch( NumberFormatException e ) {}
+		 }
+	
+		 
+		 // [B] To conform with DNS requirements, Amazon recommends following these additional guidelines when creating buckets
+		 // -> bucket names should be between 3 and 63 characters long
+		 if (useDNSGuidelines)
+		 {
+			 // -> bucket names should be between 3 and 63 characters long
+			 if (3 > size || size > 63) 
+				 throw new InvalidBucketName( "DNS requiremens, bucket name: " + bucketName + " is not between 3 and 63 characters long" );
+
+			 // -> bucket names should not contain underscores (_)
+			 int pos = bucketName.indexOf( '_' );
+			 if (-1 != pos) 
+				 throw new InvalidBucketName( "DNS requiremens, bucket name: " + bucketName + " should not contain underscores" );
+			 
+             // -> bucket names should not end with a dash
+			 if (bucketName.endsWith( "-" )) 
+				 throw new InvalidBucketName( "DNS requiremens, bucket name: " + bucketName + " should not end with a dash" );
+			 
+			 // -> bucket names cannot contain two, adjacent periods
+			 pos = bucketName.indexOf( ".." );
+			 if (-1 != pos) 
+				 throw new InvalidBucketName( "DNS requiremens, bucket name: " + bucketName + " should not contain \"..\"" );
+			 
+			 // -> bucket names cannot contain dashes next to periods (e.g., "my-.bucket.com" and "my.-bucket" are invalid)
+			 if (-1 != bucketName.indexOf( "-." ) || -1 != bucketName.indexOf( ".-" ))
+			     throw new InvalidBucketName( "DNS requiremens, bucket name: " + bucketName + " should not contain \".-\" or \"-.\"" );
+		 }
 	}
 	
 	private static boolean hasPermission( List<SAcl> priviledges, int requestedPermission ) 

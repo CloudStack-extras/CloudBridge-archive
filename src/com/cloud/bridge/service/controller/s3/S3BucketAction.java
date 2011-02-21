@@ -481,9 +481,9 @@ public class S3BucketAction implements ServletAction {
 	    // [C]
 		switch( sbucket.getVersioningStatus()) {
 		default:
-		case 0: versioningStatus = "";
-		case 1: versioningStatus = "Enabled";   
-		case 2: versioningStatus = "Suspended"; 
+		case 0: versioningStatus = "";           break;
+		case 1: versioningStatus = "Enabled";    break;
+		case 2: versioningStatus = "Suspended";  break;
 		}
 
 		StringBuffer xml = new StringBuffer();

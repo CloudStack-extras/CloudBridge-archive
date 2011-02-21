@@ -74,6 +74,7 @@ public class ServiceProvider {
     private boolean useSubDomain = false;		 // use DNS sub domain for bucket name
     private String serviceEndpoint = null;
     private String multipartDir = null;          // illegal bucket name used as a folder for storing multiparts
+    private String masterDomain = ".s3.amazonaws.com";
     private S3Engine engine;
     private EC2Engine EC2_engine = null;
     
@@ -152,6 +153,10 @@ public class ServiceProvider {
     	return EC2_engine;
     }
 
+    public String getMasterDomain() {
+    	return masterDomain;
+    }
+    
     public boolean getUseSubDomain() {
     	return useSubDomain;
     }
@@ -216,7 +221,10 @@ public class ServiceProvider {
     		((String)properties.get("bucket.dns")).equalsIgnoreCase("true")) {
     		useSubDomain = true;
     	}
-    	
+
+    	if (properties.get("masterDomain") != null) 
+            masterDomain = new String( "." + (String)properties.getProperty("masterDomain"));
+
     	serviceEndpoint = (String)properties.get("serviceEndpoint");
  
     	
