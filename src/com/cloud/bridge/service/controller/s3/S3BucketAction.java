@@ -152,7 +152,7 @@ public class S3BucketAction implements ServletAction {
 					  executeGetBucketVersioning(request, response);
 					  return;
 				 } 
-				 else if (queryString.startsWith("versions")) {
+				 else if (queryString.contains("versions")) {
 					  executeGetBucketObjectVersions(request, response);
 					  return;
 				 } 
@@ -677,6 +677,7 @@ public class S3BucketAction implements ServletAction {
 			return; 
 		}
 		
+		// -> is the XML as defined?
 		try {
 		    DocumentBuilder db = dbf.newDocumentBuilder();
 		    Document restXML = db.parse( request.getInputStream());
@@ -691,7 +692,14 @@ public class S3BucketAction implements ServletAction {
 				 response.setStatus( 400 ); 
 				 return; 
 	        }
-	      
+		}
+		catch( Exception e ) {
+			logger.error( "executePutBucketVersioning - failed to parse XML due to " + e.getMessage(), e);
+			response.setStatus(400);
+			return;
+		}
+	     
+	    try {
 			// -> does not matter what the ACLs say only the owner can turn on versioning on a bucket
 	        // -> the bucket owner may want to restrict the IP address from which this can occur
 			SBucketDao bucketDao = new SBucketDao();
