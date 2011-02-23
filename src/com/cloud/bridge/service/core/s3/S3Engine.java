@@ -950,7 +950,7 @@ public class S3Engine {
 		SObjectItem item = null;
         int versioningStatus = sbucket.getVersioningStatus();
 		String wantVersion = request.getVersion();
-		if ( SBucket.VERSIONING_ENABLED == versioningStatus && null != wantVersion)
+		if ( SBucket.VERSIONING_ENABLED == versioningStatus && null != wantVersion) 			
 			 item = sobject.getVersion( wantVersion );
 		else item = sobject.getLatestVersion(( SBucket.VERSIONING_ENABLED != versioningStatus ));    
     	
@@ -1417,7 +1417,6 @@ public class S3Engine {
 		SMetaDao       metaDao       = new SMetaDao();
 		SAclDao        aclDao        = new SAclDao();
 		SObjectItem    item          = null;
-		boolean        newVersion    = false;
 		int            versionSeq    = 1;
 		int      versioningStatus    = bucket.getVersioningStatus();
 		
@@ -1450,7 +1449,6 @@ public class S3Engine {
 			      item.setLastAccessTime(ts);
 			      item.setLastModifiedTime(ts);
 			      session.save(item);
-			      newVersion = true;   
 			 }
 			 else
 			 {    // -> find an object item with a null version, can be null
@@ -1508,7 +1506,7 @@ public class S3Engine {
 		{
 			 setCannedAccessControls( cannedAccessPolicy, "SObjectItem", item.getId(), bucket ); 
 		}
-		else if ((null == acl || 0 == acl.size()) && !newVersion ) 
+		else if (null == acl || 0 == acl.size()) 
 		{
 			 // -> this is termed the "private" or default ACL, "Owner gets FULL_CONTROL"
 			 setSingleAcl( "SObjectItem", item.getId(), SAcl.PERMISSION_FULL ); 

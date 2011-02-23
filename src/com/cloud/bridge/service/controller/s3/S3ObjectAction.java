@@ -115,6 +115,7 @@ public class S3ObjectAction implements ServletAction {
 			 {
 				       if (queryString.startsWith("acl"))      executeGetObjectAcl(request, response);
 				  else if (queryString.startsWith("uploadId")) executeListUploadParts(request, response);
+				  else executeGetObject(request, response);
 			 } 
 			 else executeGetObject(request, response);
 		}
@@ -124,6 +125,7 @@ public class S3ObjectAction implements ServletAction {
 			 {
 				       if (queryString.startsWith("acl"))        executePutObjectAcl(request, response);
 				  else if (queryString.startsWith("partNumber")) executeUploadPart(request, response);
+				  else executePutObject(request, response);
 			 } 
 			 else if ( null != (copy = request.getHeader( "x-amz-copy-source" ))) 
 			 {
@@ -135,7 +137,8 @@ public class S3ObjectAction implements ServletAction {
 		{
 			 if ( queryString != null && queryString.length() > 0 ) 
 			 {
-			      if (queryString.startsWith("uploadId")) executeAbortMultipartUpload(request, response);			     
+			           if (queryString.startsWith("uploadId")) executeAbortMultipartUpload(request, response);
+			      else executeDeleteObject(request, response);
 			 } 
 			 else executeDeleteObject(request, response);
 		}
@@ -148,7 +151,7 @@ public class S3ObjectAction implements ServletAction {
 			 if ( queryString != null && queryString.length() > 0 ) 
 			 {
 			           if (queryString.startsWith("uploads"))  executeInitiateMultipartUpload(request, response);	
-			      else if (queryString.startsWith("uploadId")) executeCompleteMultipartUpload(request, response);			     
+			      else if (queryString.startsWith("uploadId")) executeCompleteMultipartUpload(request, response);
 			 } 
 			 else executePostObject(request, response);
 		}

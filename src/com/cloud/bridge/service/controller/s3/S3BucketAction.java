@@ -125,12 +125,16 @@ public class S3BucketAction implements ServletAction {
 					   executePutBucketVersioning(request, response);
 					   return;
 				  } 
+				  else if (queryString.startsWith("policy")) {
+					   executePutBucketPolicy(request, response);
+					   return;
+				  }
 				  else if (queryString.startsWith("logging")) {
 					   executePutBucketLogging(request, response);
 					   return;
 				  }
-				  else if (queryString.startsWith("policy")) {
-					   executePutBucketPolicy(request, response);
+				  else if (queryString.startsWith("website")) {
+					   executePutBucketWebsite(request, response);
 					   return;
 				  }
 			 }
@@ -152,10 +156,6 @@ public class S3BucketAction implements ServletAction {
 					  executeGetBucketObjectVersions(request, response);
 					  return;
 				 } 
-				 else if (queryString.startsWith("logging")) {
-					  executeGetBucketLogging(request, response);
-					  return;
-				 } 
 				 else if (queryString.startsWith("location")) {
 					  executeGetBucketLocation(request, response);
 					  return;
@@ -168,6 +168,14 @@ public class S3BucketAction implements ServletAction {
 					  executeGetBucketPolicy(request, response);
 					  return;
 				 }
+				 else if (queryString.startsWith("logging")) {
+					  executeGetBucketLogging(request, response);
+					  return;
+				 } 
+				 else if (queryString.startsWith("website")) {
+					  executeGetBucketWebsite(request, response);
+					  return;
+				 } 
 			 }
 			
 			 String bucketAtr = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
@@ -179,10 +187,15 @@ public class S3BucketAction implements ServletAction {
 		{
 			 if (queryString != null && queryString.length() > 0) 
 			 {
-				 if (queryString.startsWith("policy")) {
-					 executeDeleteBucketPolicy(request, response);
-					 return;
+				 if ( queryString.startsWith("policy")) {
+					  executeDeleteBucketPolicy(request, response);
+					  return;
 				 }
+				 else if (queryString.startsWith("website")) {
+					  executeDeleteBucketWebsite(request, response);
+					  return;
+				 }
+
 			 }
 			 executeDeleteBucket(request, response);
 		} 
@@ -583,7 +596,15 @@ public class S3BucketAction implements ServletAction {
 	public void executeGetBucketLocation(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		response.setStatus(501);
 	}
-	
+
+	public void executeGetBucketWebsite(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		response.setStatus(501);
+	}
+
+	public void executeDeleteBucketWebsite(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		response.setStatus(501);
+	}
+
 	public void executePutBucket(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
 		int contentLength = request.getContentLength();
@@ -713,6 +734,10 @@ public class S3BucketAction implements ServletAction {
 		response.setStatus(501);
 	}
 	
+	public void executePutBucketWebsite(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		response.setStatus(501);
+	}
+
 	public void executeDeleteBucket(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
 		S3DeleteBucketRequest engineRequest = new S3DeleteBucketRequest();
