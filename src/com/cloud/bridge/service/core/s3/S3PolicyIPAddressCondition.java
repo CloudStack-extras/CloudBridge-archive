@@ -68,7 +68,7 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 	    keys.put(key, addresses);
 	}
 	
-	public boolean isTrue(S3PolicyContext context) throws Exception 
+	public boolean isTrue(S3PolicyContext context, String SID) throws Exception 
 	{
 		// -> improperly defined condition evaluates to false
 		Set<ConditionKeys> keySet = getAllKeys();
@@ -102,7 +102,7 @@ public class S3PolicyIPAddressCondition extends S3PolicyCondition {
 		        default: 
 			         return false;
             	}
-    			logger.info( "S3PolicyIPAddressCondition eval: " + condition + ", key: " + keyName + ", valuePassedIn: " + toCompareWith.toString() + ", valueInRule: " + valueList[i].toString() + ", result: " + keyResult );
+    			logger.info( "S3PolicyIPAddressCondition eval - SID: " + SID + ", " + condition + ", key: " + keyName + ", valuePassedIn: " + toCompareWith.toString() + ", valueInRule: " + valueList[i].toString() + ", result: " + keyResult );
             }
             
             // -> if all key values are false, false then that key is false and then the entire condition is then false

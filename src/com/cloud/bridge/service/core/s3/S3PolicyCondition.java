@@ -37,7 +37,7 @@ public abstract class S3PolicyCondition {
 	public S3PolicyCondition() {
 	}
 	
-	public PolicyConditions getConition() {
+	public PolicyConditions getCondition() {
 		return condition;
 	}
 	
@@ -82,7 +82,7 @@ public abstract class S3PolicyCondition {
 	public void setKey(ConditionKeys key, String[] values) throws Exception {
 	}
 
-	public boolean isTrue(S3PolicyContext params) throws Exception {
+	public boolean isTrue(S3PolicyContext params, String SID) throws Exception {
 		return false;
 	}
 	

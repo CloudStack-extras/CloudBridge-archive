@@ -67,7 +67,7 @@ public class S3PolicyStringCondition extends S3PolicyCondition {
 	    keys.put(key, values);
 	}
 	
-	public boolean isTrue(S3PolicyContext context) 
+	public boolean isTrue(S3PolicyContext context, String SID) 
 	{	
 		String toCompareWith = null;
 
@@ -112,7 +112,7 @@ public class S3PolicyStringCondition extends S3PolicyCondition {
 		        default: 
 			         return false;
             	}
-    			logger.info( "S3PolicyStringCondition eval: " + condition + ", key: " + keyName + ", valuePassedIn: " + toCompareWith + ", valueInRule: " + valueList[i] + ", result: " + keyResult );
+    			logger.info( "S3PolicyStringCondition eval - SID: " + SID + ", " + condition + ", key: " + keyName + ", valuePassedIn: " + toCompareWith + ", valueInRule: " + valueList[i] + ", result: " + keyResult );
             }
             
             // -> if all key values are false, false then that key is false and then the entire condition is then false

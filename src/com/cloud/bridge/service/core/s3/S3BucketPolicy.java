@@ -85,7 +85,7 @@ public class S3BucketPolicy {
 			{
 				// -> a missing condition block means the statement is true 
 				S3PolicyConditionBlock block = oneStatement.getConditionBlock();				
-			    if (null == block || block.isTrue( context )) 
+			    if (null == block || block.isTrue( context, oneStatement.getSid())) 
 				{
 					result = oneStatement.getEffect();
 					if (PolicyAccess.DENY == result) return result;

@@ -63,7 +63,7 @@ public class S3PolicyBoolCondition extends S3PolicyCondition {
 	    keys.put(key, values);
 	}
 	
-	public boolean isTrue(S3PolicyContext context) 
+	public boolean isTrue(S3PolicyContext context, String SID) 
 	{
 		// -> improperly defined condition evaluates to false
 		Set<ConditionKeys> keySet = getAllKeys();
@@ -81,7 +81,7 @@ public class S3PolicyBoolCondition extends S3PolicyCondition {
         	if (ConditionKeys.SecureTransport == keyName && PolicyConditions.Bool == condition)
         	{
         		if (context.getIsHTTPSecure()) keyResult = true;
-    			logger.info( "S3PolicyBoolCondition eval: " + condition + ", key: " + keyName + ", result: " + keyResult );
+    			logger.info( "S3PolicyBoolCondition eval - SID: " + SID + ", " + condition + ", key: " + keyName + ", result: " + keyResult );
         	}
 			
             // -> if all key values are false, false then that key is false and then the entire condition is then false

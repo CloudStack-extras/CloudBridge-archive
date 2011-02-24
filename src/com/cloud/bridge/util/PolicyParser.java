@@ -311,7 +311,8 @@ public class PolicyParser {
 			else if (key.equalsIgnoreCase( "Action"    )) actions = new S3PolicyAction();
 			else if (key.equalsIgnoreCase( "Principal" )) principals = new S3PolicyPrincipal();
 			else if (key.equalsIgnoreCase( "Condition" )) block = new S3PolicyConditionBlock();
-			else if (key.equalsIgnoreCase( "AWS" ) && null != principals) inAWS = true;
+			else if (key.equalsIgnoreCase( "AWS"           ) && null != principals) inAWS = true;
+			else if (key.equalsIgnoreCase( "CanonicalUser" ) && null != principals) inAWS = true;
 			else if (key.equalsIgnoreCase( "Sid"       )) inSid = true;
 			else if (key.equalsIgnoreCase( "Effect"    )) inEffect = true;
 			else if (key.equalsIgnoreCase( "Resource"  )) inResource = true;

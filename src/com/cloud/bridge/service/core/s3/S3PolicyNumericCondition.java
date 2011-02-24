@@ -63,7 +63,7 @@ public class S3PolicyNumericCondition extends S3PolicyCondition {
 	    keys.put(key, numbers);
 	}
 	
-	public boolean isTrue(S3PolicyContext context) 
+	public boolean isTrue(S3PolicyContext context, String SID) 
 	{		
 		Float toCompareWith;
 		String temp = null;
@@ -116,7 +116,7 @@ public class S3PolicyNumericCondition extends S3PolicyCondition {
 		        default: 
 			         return false;
             	}
-    			logger.info( "S3PolicyNumericCondition eval: " + condition + ", key: " + keyName + ", valuePassedIn: " + toCompareWith + ", valueInRule: " + valueList[i] + ", result: " + keyResult );
+    			logger.info( "S3PolicyNumericCondition eval - SID: " + SID + ", " + condition + ", key: " + keyName + ", valuePassedIn: " + toCompareWith + ", valueInRule: " + valueList[i] + ", result: " + keyResult );
             }
             
             // -> if all key values are, false then that key is false and then the entire condition is then false

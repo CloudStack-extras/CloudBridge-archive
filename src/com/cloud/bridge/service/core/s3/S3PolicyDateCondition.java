@@ -86,7 +86,7 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 	 * 
 	 * Each condition has one or more keys, and each keys have one or more values to test.
 	 */
-	public boolean isTrue(S3PolicyContext context) 
+	public boolean isTrue(S3PolicyContext context, String SID) 
 	{	
 		// -> improperly defined condition evaluates to false
 		Set<ConditionKeys> keySet = getAllKeys();
@@ -130,7 +130,7 @@ public class S3PolicyDateCondition extends S3PolicyCondition {
 		        default: 
 			         return false;
             	}
-    			logger.info( "S3PolicyDateCondition eval: " + condition + ", key: " + keyName + ", valuePassedIn: " + DatatypeConverter.printDateTime(tod) + ", valueInRule: " + DatatypeConverter.printDateTime(valueList[i]) + ", result: " + keyResult );
+    			logger.info( "S3PolicyDateCondition eval - SID: " + SID + ", " + condition + ", key: " + keyName + ", valuePassedIn: " + DatatypeConverter.printDateTime(tod) + ", valueInRule: " + DatatypeConverter.printDateTime(valueList[i]) + ", result: " + keyResult );
             }
             
             // -> if all key values are, false then that key is false and then the entire condition is then false

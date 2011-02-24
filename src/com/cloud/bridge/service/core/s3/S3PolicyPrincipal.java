@@ -36,8 +36,11 @@ public class S3PolicyPrincipal {
 	
 	public boolean contains(String findPrincipal) {
 		Iterator<String> itr = principalList.iterator();
-	    while( itr.hasNext()) {
+	    while( itr.hasNext()) 
+	    {
+	    	// -> "You can specify multiple principals, or a wildcard (*) to indicate all possible users."
 	    	String onePrincipal = itr.next();
+	    	if (onePrincipal.equals("*")) return true;
 	    	if (onePrincipal.equals( findPrincipal )) return true;
 	    }
 	    return false;

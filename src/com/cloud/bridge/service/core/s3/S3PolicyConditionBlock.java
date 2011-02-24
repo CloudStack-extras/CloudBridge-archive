@@ -45,12 +45,12 @@ public class S3PolicyConditionBlock {
 	 * to be true.
 	 * @throws Exception 
 	 */
-	public boolean isTrue(S3PolicyContext context) throws Exception 
+	public boolean isTrue(S3PolicyContext context, String SID ) throws Exception 
 	{	
 		Iterator<S3PolicyCondition> itr = conditionList.iterator();
 		while( itr.hasNext()) {
 			S3PolicyCondition oneCondition = itr.next();
-			if (!oneCondition.isTrue( context )) return false;
+			if (!oneCondition.isTrue( context, SID )) return false;
 		}
 		
 		// -> if no conditions exist in the block it defaults to true
