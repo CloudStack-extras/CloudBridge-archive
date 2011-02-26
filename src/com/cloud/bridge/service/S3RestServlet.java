@@ -280,7 +280,6 @@ public class S3RestServlet extends HttpServlet {
     		signature    = temp.substring( offset+1 );
     	}
  
-    	
     	// [C] Calculate the signature from the request's headers
     	auth.setDateHeader( request.getHeader( "Date" ));
     	auth.setContentTypeHeader( request.getHeader( "Content-Type" ));
@@ -311,7 +310,6 @@ public class S3RestServlet extends HttpServlet {
 			// -> turn off auth - just for testing
 			//UserContext.current().initContext("Mark", "123", "Mark", "testing", request);
             //return;
-          
 		} catch (SignatureException e) {
 			throw new PermissionDeniedException(e);
 			
@@ -542,19 +540,19 @@ public class S3RestServlet extends HttpServlet {
 		S3PutObjectRequest request = new S3PutObjectRequest();
 
 		// [A] Pull out the simple nodes first
-		NodeList part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "Bucket" );
+		NodeList part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "Bucket" );
 		if (null != part)
 		{
 		    if (null != (contents = part.item( 0 )))
 		    	request.setBucketName( contents.getFirstChild().getNodeValue());
-		}
-		part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "Key" );
+		}	
+		part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "Key" );
 		if (null != part)
 		{
 		    if (null != (contents = part.item( 0 )))
 		    	request.setKey( contents.getFirstChild().getNodeValue());
-		}
-		part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "ContentLength" );
+		}		
+		part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "ContentLength" );
 		if (null != part)
 		{
 		    if (null != (contents = part.item( 0 )))
@@ -562,40 +560,41 @@ public class S3RestServlet extends HttpServlet {
 		    	String length = contents.getFirstChild().getNodeValue();
 		    	if (null != length) request.setContentLength( Long.decode( length ));
 		    }
-		}
-		part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "AWSAccessKeyId" );
+		}		
+		part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "AWSAccessKeyId" );
 		if (null != part)
 		{
 		    if (null != (contents = part.item( 0 )))
 		    	request.setAccessKey( contents.getFirstChild().getNodeValue());
-		}
-		part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "Signature" );
+		}		
+		part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "Signature" );
 		if (null != part)
 		{
 		    if (null != (contents = part.item( 0 )))
 		    	request.setSignature( contents.getFirstChild().getNodeValue());
-		}
-		part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "Timestamp" );
+		}		
+		part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "Timestamp" );
 		if (null != part)
 		{
 		    if (null != (contents = part.item( 0 )))
 		    	request.setRawTimestamp( contents.getFirstChild().getNodeValue());
-		}
-		part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "StorageClass" );
+		}	
+		part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "StorageClass" );
 		if (null != part)
 		{
 		    if (null != (contents = part.item( 0 )))
 		    	request.setStorageClass( contents.getFirstChild().getNodeValue());
-		}
-		part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "Credential" );
+		}		
+		part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "Credential" );
 		if (null != part)
 		{
 		    if (null != (contents = part.item( 0 )))
 		    	request.setCredential( contents.getFirstChild().getNodeValue());
 		}
 		
+		
 		// [B] Get a list of all 'Metadata' elements
-		part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "Metadata" );
+		part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "Metadata" );
 		if (null != part)
 		{
 			count = part.getLength();
@@ -631,7 +630,7 @@ public class S3RestServlet extends HttpServlet {
 		}
 
 		// [C] Get a list of all Grant elements in an AccessControlList
-		part = doc.getElementsByTagNameNS( "http://s3.amazonaws.com/doc/2006-03-01/", "Grant" );
+		part = getElement( doc, "http://s3.amazonaws.com/doc/2006-03-01/", "Grant" );
 		if (null != part)
 		{
 			S3AccessControlList engineAcl = new S3AccessControlList();
@@ -655,14 +654,17 @@ public class S3RestServlet extends HttpServlet {
 		                     NamedNodeMap attbs = contents.getAttributes();
 		                     if (null != attbs)
 		                     {
-		                    	 Node type = attbs.item( 0 );
-								 temp = type.getFirstChild().getNodeValue().trim();
-								 if ( null != temp && temp.endsWith( "CanonicalUser" ))
+		                    	 Node type = attbs.getNamedItemNS( "http://www.w3.org/2001/XMLSchema-instance", "type" );
+		                    	 if ( null != type ) 
+		                    		  temp = type.getFirstChild().getNodeValue().trim();
+		                    	 else temp = null;
+		                    	 
+								 if ( null != temp && temp.equalsIgnoreCase( "CanonicalUser" ))
 								 {
 								      engineGrant.setGrantee(SAcl.GRANTEE_USER);
 									  engineGrant.setCanonicalUserID( getChildNodeValue( contents, "ID" ));
 								 } 
-								 else throw new UnsupportedOperationException("Unsupported grantee type: " + temp ); 
+								 else throw new UnsupportedOperationException( "Missing http://www.w3.org/2001/XMLSchema-instance:type value" ); 
 		                     }
 						}
 						else if (element.endsWith( "Permission" ))
@@ -683,7 +685,18 @@ public class S3RestServlet extends HttpServlet {
 		}
 		return request;
 	}
-	
+		
+	/**
+	 * Have to deal with XML with and without namespaces.
+	 */
+	private static NodeList getElement( Document doc, String namespace, String tagName ) 
+	{
+	    NodeList part = doc.getElementsByTagNameNS( namespace, tagName );
+	    if (null == part || 0 == part.getLength()) part = doc.getElementsByTagName( tagName );
+	   
+	    return part;
+	}
+
 	/**
 	 * Looking for the value of a specific child of the given parent node.
 	 * 
