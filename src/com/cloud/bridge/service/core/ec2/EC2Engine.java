@@ -749,6 +749,18 @@ public class EC2Engine {
     {
         try {
             Map[] addressList = execList("command=listPublicIpAddresses");
+            Map[] vmList      = execList("command=listVirtualMachines");
+
+            Map<String, String> id2name = new HashMap<String, String>();
+            for (Map vm: vmList) {
+                id2name.put(vm.get("id").toString(), vm.get("name").toString());
+            }
+            for (Map a: addressList) {
+                if (a.containsKey("virtualmachineid")) {
+                    String vmId = a.get("virtualmachineid").toString();
+                    a.put("virtualmachinename", id2name.get(vmId));
+                }
+            }
 
             if (null == publicIps || 0 == publicIps.length)
                 return addressList;
@@ -815,14 +827,22 @@ public class EC2Engine {
         }
     }
 
-    public boolean associateAddress(String publicIp, String vmId)
+    public boolean associateAddress(String publicIp, String vmName)
     {
-        if (null == publicIp || null == vmId)
+        if (null == publicIp || null == vmName)
             throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both IP address and instance id are required");
 
         try {
-            Map[] l = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
-            String ipId = l[0].get("id").toString();
+            Map[] addressList = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
+            Map[] vmList      = execList("command=listVirtualMachines&name=%s", vmName);
+
+            if (0 == addressList.length)
+                throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
+            if (0 == vmList.length)
+                throw new EC2ServiceException(ClientError.InvalidParameterValue, "Instance not found.");
+
+            String ipId = addressList[0].get("id").toString();
+            String vmId = vmList[0].get("id").toString();
             Map r = execute("command=enableStaticNat&ipAddressId=%s&virtualMachineId=%s", ipId, vmId);
             return r.get("success").toString().equalsIgnoreCase("true");
 

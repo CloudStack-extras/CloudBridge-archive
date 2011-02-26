@@ -868,8 +868,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 
             items[i] = new DescribeAddressesResponseItemType();
             items[i].setPublicIp(a.get("ipaddress").toString());
-            if (a.containsKey("virtualmachineid")) {
-                items[i].setInstanceId(a.get("virtualmachineid").toString());
+            if (a.containsKey("virtualmachinename")) {
+                items[i].setInstanceId(a.get("virtualmachinename").toString());
             }
         }
 
