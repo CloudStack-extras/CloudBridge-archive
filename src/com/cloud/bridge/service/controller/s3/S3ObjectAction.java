@@ -232,8 +232,6 @@ public class S3ObjectAction implements ServletAction {
 
 	private void executeGetObjectAcl(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
-		String[] paramList = null;
-
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String key        = (String)request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 
@@ -243,10 +241,7 @@ public class S3ObjectAction implements ServletAction {
 		
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
 		String queryString = request.getQueryString();
-		if (null != queryString) {
-			paramList = queryString.split( "[&=]" );
-		    if (null != paramList) engineRequest.setVersion( returnParameter( paramList, "versionId" ));
-		}
+		if (null != queryString) engineRequest.setVersion( returnParameter( queryString, "versionId=" ));
 
 		S3AccessControlPolicy engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);
 	    int resultCode = engineResponse.getResultCode();
@@ -282,7 +277,6 @@ public class S3ObjectAction implements ServletAction {
 	private void executePutObjectAcl(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
 		S3PutObjectRequest putRequest = null;
-		String[] paramList = null;
 		
 		// -> reuse the Access Control List parsing code that was added to support DIME
 		String bucketName = (String)request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
@@ -302,10 +296,7 @@ public class S3ObjectAction implements ServletAction {
 
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
 		String queryString = request.getQueryString();
-		if (null != queryString) {
-			paramList = queryString.split( "[&=]" );
-		    if (null != paramList) engineRequest.setVersion( returnParameter( paramList, "versionId" ));
-		}
+		if (null != queryString) engineRequest.setVersion( returnParameter( queryString, "versionId=" ));
 
 	    S3Response engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest(engineRequest);	
 	    String version = engineResponse.getVersion();
@@ -317,7 +308,6 @@ public class S3ObjectAction implements ServletAction {
 	{
 		String   bucket    = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String   key       = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
-		String[] paramList = null;
 	
 		S3GetObjectRequest engineRequest = new S3GetObjectRequest();
 		engineRequest.setBucketName(bucket);
@@ -329,10 +319,7 @@ public class S3ObjectAction implements ServletAction {
 
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
 		String queryString = request.getQueryString();
-		if (null != queryString) {
-			paramList = queryString.split( "[&=]" );
-		    if (null != paramList) engineRequest.setVersion( returnParameter( paramList, "versionId" ));
-		}
+		if (null != queryString) engineRequest.setVersion( returnParameter( queryString, "versionId=" ));
 
 		S3GetObjectResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );			
 		response.setStatus( engineResponse.getResultCode());
@@ -403,7 +390,6 @@ public class S3ObjectAction implements ServletAction {
 	{
 		String   bucket    = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
 		String   key       = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
-		String[] paramList = null;
 			
 		S3DeleteObjectRequest engineRequest = new S3DeleteObjectRequest();
 		engineRequest.setBucketName(bucket);
@@ -411,10 +397,7 @@ public class S3ObjectAction implements ServletAction {
 
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
 		String queryString = request.getQueryString();
-		if (null != queryString) {
-			paramList = queryString.split( "[&=]" );
-		    if (null != paramList) engineRequest.setVersion( returnParameter( paramList, "versionId" ));
-		}
+		if (null != queryString) engineRequest.setVersion( returnParameter( queryString, "versionId=" ));
 		
 		S3Response engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );
 		
@@ -425,9 +408,8 @@ public class S3ObjectAction implements ServletAction {
 
 	private void executeHeadObject(HttpServletRequest request, HttpServletResponse response) throws IOException 
 	{
-		String   bucket    = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
-		String   key       = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
-		String[] paramList = null;
+		String bucket = (String) request.getAttribute(S3Constants.BUCKET_ATTR_KEY);
+		String key    = (String) request.getAttribute(S3Constants.OBJECT_ATTR_KEY);
 			
 		S3GetObjectRequest engineRequest = new S3GetObjectRequest();
 		engineRequest.setBucketName(bucket);
@@ -439,10 +421,7 @@ public class S3ObjectAction implements ServletAction {
 		
 		// -> is this a request for a specific version of the object?  look for "versionId=" in the query string
 		String queryString = request.getQueryString();
-		if (null != queryString) {
-			paramList = queryString.split( "[&=]" );
-		    if (null != paramList) engineRequest.setVersion( returnParameter( paramList, "versionId" ));
-		}
+		if (null != queryString) engineRequest.setVersion( returnParameter( queryString, "versionId=" ));
 
 		S3GetObjectResponse engineResponse = ServiceProvider.getInstance().getS3Engine().handleRequest( engineRequest );		
 		response.setStatus( engineResponse.getResultCode());
@@ -1092,20 +1071,23 @@ public class S3ObjectAction implements ServletAction {
 	}
 	
 	/**
-	 * @param paramList - name - value pairs with name at odd indexes
-	 * @param find      - name string to return first found
+	 * Parameters on the query string may or may not be name-value pairs. 
+	 * For example:  "?acl&versionId=2", notice that "acl" has no value other
+	 * than it is present.
+	 * 
+	 * @param queryString - from a URL to locate the 'find' parameter
+	 * @param find        - name string to return first found
 	 * @return the value matching the found name 
 	 */
-	private String returnParameter( String[] paramList, String find ) 
+	private String returnParameter( String queryString, String find ) 
 	{
-		int i=0;
-		
-		if (paramList == null) return null;
-		
-		while( i+2 <= paramList.length ) {
-           if (paramList[i].equalsIgnoreCase( find )) return paramList[ i+1 ];
-           i += 2;
-        }
+		int offset = queryString.indexOf( find );
+		if (-1 != offset) 
+		{
+			String temp = queryString.substring( offset );
+			String[] paramList = temp.split( "[&=]" );
+            if (null != paramList && 2 <= paramList.length) return paramList[1];
+		}
 		return null;
 	}
 	
