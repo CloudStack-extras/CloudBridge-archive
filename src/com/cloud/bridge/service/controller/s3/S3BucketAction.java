@@ -681,7 +681,7 @@ public class S3BucketAction implements ServletAction {
 		try {
 		    DocumentBuilder db = dbf.newDocumentBuilder();
 		    Document restXML = db.parse( request.getInputStream());
-		    NodeList match   = restXML.getElementsByTagName( "Status" ); 
+		    NodeList match = S3RestServlet.getElement( restXML, "http://s3.amazonaws.com/doc/2006-03-01/", "Status" ); 
 	        if ( 0 < match.getLength()) 
 	        {
 	    	     item = match.item(0);

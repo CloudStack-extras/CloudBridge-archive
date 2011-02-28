@@ -1208,7 +1208,7 @@ public class S3Engine {
 	 * object has versions 1,2,3,4,5 and the versionIdMarker is '3', then 3,4,5 will be returned
 	 * by this function.   If the versionIdMarker is null then all versions are returned.
 	 * 
-	 * ToDo - how does the versionIdMarker work when there is a deletion marker in the object?
+	 * TODO - how does the versionIdMarker work when there is a deletion marker in the object?
 	 */
 	private S3ListBucketObjectEntry[] composeListBucketContentEntries(List<SObject> l, String prefix, String delimiter, int maxKeys, boolean enableVersion, String versionIdMarker) 
 	{
@@ -1233,7 +1233,7 @@ public class S3Engine {
 				String deletionMarker = sobject.getDeletionMark();
                 if ( null != deletionMarker ) 
                 {
-                	 // -> ToDo we don't save the timestamp when something is deleted
+                	 // -> TODO we don't save the timestamp when something is deleted
                 	 S3ListBucketObjectEntry entry = new S3ListBucketObjectEntry();
             		 entry.setKey(sobject.getNameKey());
             		 entry.setVersion( deletionMarker );
@@ -1500,7 +1500,7 @@ public class S3Engine {
 		metaDao.save("SObjectItem", item.getId(), meta);
 		
 		
-		// [C] Are we setting an ACL along with the object
+		// [D] Are we setting an ACL along with the object
 		//  -> the ACL is ALWAYS set on a particular instance of the object (i.e., a version)
 		if ( null != cannedAccessPolicy )
 		{

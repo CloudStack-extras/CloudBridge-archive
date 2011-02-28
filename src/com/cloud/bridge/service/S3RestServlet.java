@@ -279,7 +279,7 @@ public class S3RestServlet extends HttpServlet {
     		AWSAccessKey = temp.substring( 0, offset );
     		signature    = temp.substring( offset+1 );
     	}
- 
+    
     	// [C] Calculate the signature from the request's headers
     	auth.setDateHeader( request.getHeader( "Date" ));
     	auth.setContentTypeHeader( request.getHeader( "Content-Type" ));
@@ -306,10 +306,11 @@ public class S3RestServlet extends HttpServlet {
 				UserContext.current().initContext(AWSAccessKey, info.getSecretKey(), AWSAccessKey, info.getDescription(), request);
 				return;
 			}
-			
+		
 			// -> turn off auth - just for testing
 			//UserContext.current().initContext("Mark", "123", "Mark", "testing", request);
             //return;
+       
 		} catch (SignatureException e) {
 			throw new PermissionDeniedException(e);
 			
@@ -689,7 +690,7 @@ public class S3RestServlet extends HttpServlet {
 	/**
 	 * Have to deal with XML with and without namespaces.
 	 */
-	private static NodeList getElement( Document doc, String namespace, String tagName ) 
+	public static NodeList getElement( Document doc, String namespace, String tagName ) 
 	{
 	    NodeList part = doc.getElementsByTagNameNS( namespace, tagName );
 	    if (null == part || 0 == part.getLength()) part = doc.getElementsByTagName( tagName );
