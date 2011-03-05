@@ -28,6 +28,7 @@ public class SAcl implements Serializable {
 	public static final int GRANTEE_ALLUSERS = 1;
 	public static final int GRANTEE_AUTHENTICATED = 2;
 
+	public static final int PERMISSION_PASS = -1;   // -> no ACL test required
 	public static final int PERMISSION_NONE = 0;
 	public static final int PERMISSION_READ = 1;
 	public static final int PERMISSION_WRITE = 2;

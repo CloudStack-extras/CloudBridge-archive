@@ -343,9 +343,8 @@ public class S3Engine {
     }
     
     /**
-     * It is unclear how any access control can be place on this function.   There is no one
-     * object to set an ACL or bucket policy on.   So do we test each and every bucket before
-     * we include it in the list?   This is not clearly defined in the Amazon documentation.
+     * To check on bucket policies defined we have to (look for and) evaluate the policy on each
+     * bucket the user owns.
      * 
      * @param request
      * @return
@@ -355,6 +354,7 @@ public class S3Engine {
     	S3ListAllMyBucketsResponse response = new S3ListAllMyBucketsResponse();   	
     	SBucketDao bucketDao = new SBucketDao();
     	
+    	// -> "...you can only list buckets for which you are the owner."
     	List<SBucket> buckets = bucketDao.listBuckets(UserContext.current().getCanonicalUserId());
     	S3CanonicalUser owner = new S3CanonicalUser();
     	owner.setID(UserContext.current().getCanonicalUserId());
@@ -365,9 +365,14 @@ public class S3Engine {
     	{
     		S3ListAllMyBucketsEntry[] entries = new S3ListAllMyBucketsEntry[buckets.size()];
     		int i = 0;
-    		for(SBucket bucket : buckets) {
+    		for(SBucket bucket : buckets) 
+    		{	
+    			String bucketName = bucket.getName();
+    			S3PolicyContext context = new S3PolicyContext( PolicyActions.ListAllMyBuckets, bucketName );
+    			verifyAccess( context, "SBucket", bucket.getId(), SAcl.PERMISSION_PASS ); 
+ 			
     			entries[i] = new S3ListAllMyBucketsEntry();
-    			entries[i].setName(bucket.getName());
+    			entries[i].setName(bucketName);
     			entries[i].setCreationDate(DateHelper.toCalendar(bucket.getCreateTime()));
     			i++;
     		}   		
@@ -1665,7 +1670,7 @@ public class S3Engine {
 	
 	/**
 	 * This function verifies that the accessing client has the requested
-	 * premission on the object/bucket/Acl represented by the tuble: <target, targetId>
+	 * permission on the object/bucket/Acl represented by the tuble: <target, targetId>
 	 * 
 	 * For cases where an ACL is meant for any authenticated user we place a "*" for the
 	 * Canonical User Id ("*" is not a legal Cloud Stack Access key).   
@@ -1675,6 +1680,8 @@ public class S3Engine {
 	 */
 	public static void accessAllowed( String target, long targetId, int requestedPermission ) 
 	{
+		if (SAcl.PERMISSION_PASS == requestedPermission) return;
+			
 		SAclDao aclDao = new SAclDao();
 		
 		// -> if an annoymous request, then canonicalUserId is an empty string

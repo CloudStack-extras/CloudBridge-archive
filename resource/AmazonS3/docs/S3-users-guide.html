@@ -4,14 +4,13 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's S3 API User's Guide</H1>
-2/16/2011                   
+3/4/2011                   
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#part1">Part 1. Cloud.com's Specific Implementation Details</A></LI>
    <UL>
      <LI><A href="#registration">User Registration</A></LI>
      <LI><A href="#endpoints">Endpoints</LI>
-     <LI><A href="#differences">Unsupported S3 Features</A><P></LI>
    </UL>
 <LI><A href="#part2">Part 2. Generic S3 Details</A></LI>
    <UL>
@@ -44,13 +43,6 @@ For REST access the endpoint is:
 <pre>http://&lt;fqdn-or-ip>:&lt;port>/bridge/rest/AmazonS3</pre>
 <P>
 
-<H3 id="differences">Unsupported S3 Features</H3>
-<font size=+1><I>Bucket Policies</I></font>
-<P>
-The following S3 Bucket Policy "actions related to buckets" that are not yet implemented:
-s3:ListAllMyBuckets.
-<P>
-<P></br>
 <H2 id="part2">Part 2. Generic S3 Details</H2>
 <H3 id="functions">List of S3 Functions Implemented</H3>
 Refer to the Amazon S3 documentation <A href="#ref2">[2]</A> for a description of each function.   

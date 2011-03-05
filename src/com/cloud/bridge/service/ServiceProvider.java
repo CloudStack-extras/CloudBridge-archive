@@ -222,12 +222,9 @@ public class ServiceProvider {
     		useSubDomain = true;
     	}
 
-    	if (properties.get("masterDomain") != null) 
-            masterDomain = new String( "." + (String)properties.getProperty("masterDomain"));
-
     	serviceEndpoint = (String)properties.get("serviceEndpoint");
- 
-    	
+        masterDomain = new String( "." + serviceEndpoint );
+ 	
     	setupHost(hostKey, host);
     	
     	// we will commit and start a new transaction to allow host info be flushed to DB
