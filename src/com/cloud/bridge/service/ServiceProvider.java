@@ -81,7 +81,7 @@ public class ServiceProvider {
     // -> cache Bucket Policies here so we don't have to load from db on every access
     private Map<String,S3BucketPolicy> policyMap = new HashMap<String,S3BucketPolicy>();
     
-    protected ServiceProvider() {
+    protected ServiceProvider() throws IOException {
     	// register service implementation object
     	engine = new S3Engine();
     	EC2_engine = new EC2Engine();
@@ -90,9 +90,10 @@ public class ServiceProvider {
     }
     
     public synchronized static ServiceProvider getInstance() {
-    	if(instance == null) {
-    		instance = new ServiceProvider();
+    	if(instance == null) 
+    	{
     		try {
+    		    instance = new ServiceProvider();
     			instance.initialize();
     			PersistContext.commitTransaction();
     		} catch(Throwable e) {

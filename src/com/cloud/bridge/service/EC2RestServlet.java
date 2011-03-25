@@ -88,6 +88,7 @@ import com.amazon.ec2.StartInstancesResponse;
 import com.amazon.ec2.StopInstancesResponse;
 import com.amazon.ec2.TerminateInstancesResponse;
 import com.cloud.bridge.model.UserCredentials;
+import com.cloud.bridge.persist.dao.OfferingDao;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
@@ -109,6 +110,7 @@ import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
+import com.cloud.bridge.service.core.ec2.OfferingBundle;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
@@ -238,6 +240,8 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "TerminateInstances"        )) terminateInstances(request, response); 
     	    else if (action.equalsIgnoreCase( "SetCertificate"            )) setCertificate(request, response);
        	    else if (action.equalsIgnoreCase( "DeleteCertificate"         )) deleteCertificate(request, response);
+       	    else if (action.equalsIgnoreCase( "SetOfferMapping"           )) setOfferMapping(request, response);
+       	    else if (action.equalsIgnoreCase( "DeleteOfferMapping"        )) deleteOfferMapping(request, response);      	    
        	    else if (action.equalsIgnoreCase( "CreateKeyPair"             )) createKeyPair(request, response);
        	    else if (action.equalsIgnoreCase( "ImportKeyPair"             )) importKeyPair(request, response);
        	    else if (action.equalsIgnoreCase( "DeleteKeyPair"             )) deleteKeyPair(request, response);
@@ -283,7 +287,7 @@ public class EC2RestServlet extends HttpServlet {
      */
     private void cloudEC2Version( HttpServletRequest request, HttpServletResponse response ) {
         String version = new String( "<?xml version=\"1.0\" encoding=\"utf-8\"?><CloudEC2Version>1.03</CloudEC2Version>" );       		
-		response.setStatus(200);
+        response.setStatus(200);
         endResponse(response, version);
     }
     
@@ -459,6 +463,81 @@ public class EC2RestServlet extends HttpServlet {
 		    logger.error("DeleteCertificate exception " + e.getMessage(), e);
 		    response.sendError(500, "DeleteCertificate exception " + e.getMessage());
         }
+    }
+   
+    /**
+     * Allow the caller to define the mapping between the Amazon instance type strings
+     * (e.g., m1.small, cc1.4xlarge) and the cloudstack service offering ids.  Setting
+     * an existing mapping just over writes the prevous values.
+     */
+    private void setOfferMapping( HttpServletRequest request, HttpServletResponse response ) {
+    	String amazonOffer = null;
+    	String cloudOffer = null;
+    	
+    	try {
+		    // -> all these parameters are required
+            amazonOffer = request.getParameter( "amazonoffer" );
+		    if ( null == amazonOffer ) { 
+		         response.sendError(530, "Missing amazonoffer parameter" ); 
+		         return; 
+		    }
+
+            cloudOffer = request.getParameter( "cloudoffer" );
+            if ( null == cloudOffer ) {
+                 response.sendError(530, "Missing cloudoffer parameter" ); 
+                 return; 
+            }
+        } catch( Exception e ) {
+		    logger.error("SetOfferMapping exception " + e.getMessage(), e);
+    		response.setStatus(500);
+        	endResponse(response, "SetOfferMapping exception " + e.getMessage());
+		    return;
+        }
+
+        try {
+    	    OfferingDao ofDao = new OfferingDao();
+    	    ofDao.setOfferMapping( amazonOffer, cloudOffer ); 
+    	    
+        } catch( Exception e ) {
+   		    logger.error("SetOfferMapping " + e.getMessage(), e);
+    		response.setStatus(401);
+        	endResponse(response, e.toString());
+        	return;
+        }
+    	response.setStatus(200);	
+        endResponse(response, "offering mapping set successfully");
+    }
+
+    private void deleteOfferMapping( HttpServletRequest request, HttpServletResponse response ) {
+    	String amazonOffer = null;
+    	
+    	try {
+		    // -> all these parameters are required
+            amazonOffer = request.getParameter( "amazonoffer" );
+		    if ( null == amazonOffer ) { 
+		         response.sendError(530, "Missing amazonoffer parameter" ); 
+		         return; 
+		    }
+
+        } catch( Exception e ) {
+		    logger.error("DeleteOfferMapping exception " + e.getMessage(), e);
+    		response.setStatus(500);
+        	endResponse(response, "DeleteOfferMapping exception " + e.getMessage());
+		    return;
+        }
+
+        try {
+    	    OfferingDao ofDao = new OfferingDao();
+    	    ofDao.deleteOfferMapping( amazonOffer ); 
+    	    
+        } catch( Exception e ) {
+   		    logger.error("DeleteOfferMapping " + e.getMessage(), e);
+    		response.setStatus(401);
+        	endResponse(response, e.toString());
+        	return;
+        }
+    	response.setStatus(200);	
+        endResponse(response, "offering mapping deleted successfully");
     }
 
     /**
@@ -1306,6 +1385,10 @@ public class EC2RestServlet extends HttpServlet {
     	String cloudAccessKey = null;
     	String signature      = null;
     	String sigMethod      = null;           
+
+    	// -> for testing
+	    //UserContext.current().initContext( "Mark", "12345", "Mark", "REST request", null );
+        //return true;
 
     	// [A] Basic parameters required for an authenticated rest request
     	//  -> note that the Servlet engine will un-URL encode all parameters we extract via "getParameterValues()" calls

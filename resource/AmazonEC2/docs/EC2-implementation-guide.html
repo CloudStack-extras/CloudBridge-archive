@@ -4,7 +4,7 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's EC2 API Implementation Guide</H1>
-8/30/2010
+3/24/2011
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#conf">1. Configuration Parameters</A></LI>
@@ -23,15 +23,6 @@ cloudAPIPort=8080
 WSDLVersion=2010-08-31
 keystore=xes.keystore
 keystorePass=apache
-m1.small.serviceId=1
-m1.large.serviceId=3
-m1.xlarge.serviceId=3
-c1.medium.serviceId=2
-c1.xlarge.serviceId=3
-m2.xlarge.serviceId=3
-m2.2xlarge.serviceId=3
-m2.4xlarge.serviceId=3
-cc1.4xlarge.serviceId=3
 dbName=cloudsbridge
 dbUser=root
 dbPassword=
@@ -67,11 +58,28 @@ API calls:  deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVo
 <I>pollInterval6</I> - Time in milliseconds between asynchronous job completion polling for the following Cloud.com
 API calls: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine.  Default value is 100.</BR>
 <P>
-All the remaining fields provide a mapping betweeen Amazon's instance type values of:  
-{ "m1.small", "m1.large", "m1.xlarge", "c1.medium", "c1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge" },</BR>
-and service offering IDs found from the following Cloud.com API calls': listServiceOfferings.
-For example, the parameter "m1.large.serviceId=3" (listed
-above) states that the Amazon "m1.large" instance type also maps to the Cloud.com's service offerint ID 3.
+<BR>
+The following REST calls are used to configure a mapping between Amazon's instance types and CloudStack service offerings:
+<P>
+http://&lt;fqdn-or-ip&gt;:&lt;port&gt;/bridge/rest/AmazonEC2?Action=SetOfferMapping&amazonoffer=m1.large&cloudoffer=1<BR>
+<P>
+The 'amazonoffer' parameter defines the standard Amazon instance types while the 'cloudoffer' parameter defines its associated
+CloudStack service offering identifer.  The result of this REST call is to save the defined relationship.  A second call with the
+same value for amazonoffer but with a different cloudoffer value will overwrite a previously saved setting.
+<BR>
+SetOfferMapping is an authenticated REST call using the same authentication scheme as all other EC2 REST calls. This means that the following standard EC2 REST paramters must also be part of the request: Signature, SignatureMethod, Version, SignatureVersion, and Expires.
+A HTTP 200 result code is returned on success and a 404 on failure.
+<P>
+http://&lt;fqdn-or-ip&gt;:&lt;port&gt;/bridge/rest/AmazonEC2?Action=DeleteOfferMapping&amazonoffer=m1.large<BR>
+<P>
+The result of this REST call is to delete any relationship previously defined by a call to the SetOfferMapping call for the
+value passed in the 'amazonoffer' parameter.<BR>
+DeleteOfferMapping is an authenticated REST call using the same authentication scheme as all other EC2 REST calls. This means that the following standard EC2 REST paramters must also be part of the request: Signature, SignatureMethod, Version, SignatureVersion, and Expires.
+A HTTP 200 result code is returned on success and a 404 on failure.
+<P>
+Examples of other Amazon instance types are:  
+{ "m1.small", "m1.large", "m1.xlarge", "c1.medium", "c1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge" }.</BR>
+Service offering IDs can be obtained from the following Cloud.com API calls: listServiceOfferings.
 Cloud.com's service offerings are configurable and thus can be different per installation, and they
 can also be viewed from the Cloud.com's Admin UI.
 <P>

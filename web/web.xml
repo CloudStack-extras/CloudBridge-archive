@@ -84,7 +84,7 @@
     <!-- EC2 examples are using that last '/' --> 
     <servlet-mapping>
         <servlet-name>CloudBridgeEC2Servlet</servlet-name>
-        <url-pattern>/rest/AmazonEC2/</url-pattern>
+        <url-pattern>/rest/AmazonEC2/*</url-pattern>
     </servlet-mapping>
     
     <!-- handle the common error of leaving off the last '/' -->

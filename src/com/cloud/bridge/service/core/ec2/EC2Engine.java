@@ -26,6 +26,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import org.json.simple.JSONValue;
 
+import com.cloud.bridge.persist.dao.OfferingDao;
 import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImagesResponse;
@@ -55,6 +56,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.security.SignatureException;
+import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,15 +78,6 @@ public class EC2Engine {
     private DocumentBuilderFactory dbf = null;
     private String managementServer    = null;
     private String cloudAPIPort        = null;
-    private OfferingBundle M1Small     = null;
-    private OfferingBundle M1Large     = null;
-    private OfferingBundle M1Xlarge    = null;
-    private OfferingBundle C1Medium    = null;
-    private OfferingBundle C1Xlarge    = null;
-    private OfferingBundle M2Xlarge    = null; 
-    private OfferingBundle M22Xlarge   = null;
-    private OfferingBundle M24Xlarge   = null;
-    private OfferingBundle CC14xlarge  = null;
     
     // -> in milliseconds, time interval to wait before asynch check on a jobId's status
     private int pollInterval1 = 100;   // for: createTemplate
@@ -99,12 +92,11 @@ public class EC2Engine {
     private int cloudStackVersion;
    
     
-    public EC2Engine() {
+    public EC2Engine() throws IOException {
 		dbf = DocumentBuilderFactory.newInstance();
 		dbf.setNamespaceAware( true );
 		
-		try { loadConfigValues(); }
-		catch( Exception e ) {}
+		loadConfigValues();
     }
     
     /**
@@ -128,7 +120,7 @@ public class EC2Engine {
     		}
    	        managementServer = EC2Prop.getProperty( "managementServer" );
 		    cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
-   	        
+  	        
    	        try {
    	            pollInterval1  = Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
    	            pollInterval2  = Integer.parseInt( EC2Prop.getProperty( "pollInterval2", "100"  ));
@@ -140,25 +132,6 @@ public class EC2Engine {
     			logger.warn("Invalid polling interval: " + e.toString() + " using default values");
    	        }
    	        
-   	        M1Small = new OfferingBundle();
-            M1Small.setServiceOfferingId( EC2Prop.getProperty( "m1.small.serviceId", null ));
-            M1Large = new OfferingBundle();
-            M1Large.setServiceOfferingId( EC2Prop.getProperty( "m1.large.serviceId", null ));
-            M1Xlarge = new OfferingBundle();
-            M1Xlarge.setServiceOfferingId( EC2Prop.getProperty( "m1.xlarge.serviceId", null ));
-            C1Medium = new OfferingBundle();
-            C1Medium.setServiceOfferingId( EC2Prop.getProperty( "c1.medium.serviceId", null ));
-            C1Xlarge = new OfferingBundle();
-            C1Xlarge.setServiceOfferingId( EC2Prop.getProperty( "c1.xlarge.serviceId", null ));
-            M2Xlarge = new OfferingBundle();
-            M2Xlarge.setServiceOfferingId( EC2Prop.getProperty( "m2.xlarge.serviceId", null ));
-            M22Xlarge = new OfferingBundle();
-            M22Xlarge.setServiceOfferingId( EC2Prop.getProperty( "m2.2xlarge.serviceId", null ));
-            M24Xlarge = new OfferingBundle();
-            M24Xlarge.setServiceOfferingId( EC2Prop.getProperty( "m2.4xlarge.serviceId", null ));
-            CC14xlarge = new OfferingBundle();
-            CC14xlarge.setServiceOfferingId( EC2Prop.getProperty( "cc1.4xlarge.serviceId", null ));
-            
             cloudStackVersion = getCloudStackVersion(EC2Prop);
     	} 
        	else logger.error( "ec2-service.properties not found" );
@@ -1555,7 +1528,8 @@ public class EC2Engine {
      *         the user can create.
      */
     private int calculateAllowedInstances() 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, 
+               SAXException, ParserConfigurationException, ParseException, InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
     {    
     	if ( cloudStackVersion >= CLOUD_STACK_VERSION_2_1 )
     	{
@@ -1971,7 +1945,8 @@ public class EC2Engine {
      * @param virtualMachineIds - an array of instances we are interested in getting information on
      */
     private EC2DescribeInstancesResponse listVirtualMachines( String[] virtualMachineIds ) 
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, 
+               SignatureException, InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
     {
 	    EC2DescribeInstancesResponse instances = new EC2DescribeInstancesResponse();
  	 
@@ -2070,27 +2045,25 @@ public class EC2Engine {
  	 * @param instanceType - if null we return the M1Small instance type
  	 * 
  	 * @return an OfferingBundle
+ 	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
  	 */
  	private OfferingBundle instanceTypeToOfferBundle( String instanceType ) 
+ 	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
  	{
- 	    OfferingBundle found = null;
-        
- 	         if (null == instanceType)                          found = M1Small;
- 	    else if (instanceType.equalsIgnoreCase( "m1.small"   )) found = M1Small;
- 		else if (instanceType.equalsIgnoreCase( "m1.large"   )) found = M1Large;
- 		else if (instanceType.equalsIgnoreCase( "m1.xlarge"  )) found = M1Xlarge;
- 		else if (instanceType.equalsIgnoreCase( "c1.medium"  )) found = C1Medium;
- 		else if (instanceType.equalsIgnoreCase( "c1.xlarge"  )) found = C1Xlarge;
- 		else if (instanceType.equalsIgnoreCase( "m2.xlarge"  )) found = M2Xlarge;
- 		else if (instanceType.equalsIgnoreCase( "m2.2xlarge" )) found = M22Xlarge;
- 		else if (instanceType.equalsIgnoreCase( "m2.4xlarge" )) found = M24Xlarge;
- 		else if (instanceType.equalsIgnoreCase( "cc1.4xlarge")) found = CC14xlarge;
- 		else throw new EC2ServiceException(ClientError.Unsupported, "Unknown: " + instanceType);
- 		     
-// 		if ( null == found.getDiskOfferingId() || null == found.getServiceOfferingId())
- 	 	if (found.getServiceOfferingId() == null)
- 			 throw new EC2ServiceException(ClientError.Unsupported, "Not configured properly: " + instanceType);
- 		else return found;
+ 		OfferingBundle found = null;
+ 	    OfferingDao ofDao = new OfferingDao();
+ 
+        if (null == instanceType) instanceType = "m1.small";                      
+        String cloudOffering = ofDao.getCloudOffering( instanceType );
+
+        if ( null != cloudOffering )
+        {
+ 		     found = new OfferingBundle();
+ 		     found.setServiceOfferingId( cloudOffering );
+        }
+ 		else throw new EC2ServiceException( ClientError.Unsupported, "Unknown: " + instanceType );   
+ 			
+ 		return found;
  	}
  	
  	/**
@@ -2099,24 +2072,20 @@ public class EC2Engine {
  	 * 
  	 * @param serviceOfferingId
  	 * @return A valid value for the Amazon defined instanceType
+ 	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
  	 */
  	private String serviceOfferingIdToInstanceType( String serviceOfferingId ) 
+ 	    throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
  	{	
- 		serviceOfferingId = serviceOfferingId.trim();
- 		
- 		     if (M1Small.getServiceOfferingId().equals( serviceOfferingId)) return "m1.small";
- 		else if (M1Large.getServiceOfferingId().equals( serviceOfferingId)) return "m1.large";
- 		else if (M1Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "m1.xlarge";
- 		else if (C1Medium.getServiceOfferingId().equals( serviceOfferingId)) return "c1.medium";
- 		else if (C1Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "c1.xlarge";
- 		else if (M2Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "m2.xlarge";
- 		else if (M22Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "m2.2xlarge";
- 		else if (M24Xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "m2.4xlarge";
- 		else if (CC14xlarge.getServiceOfferingId().equals( serviceOfferingId)) return "cc1.4xlarge";
- 		else {
+ 	    OfferingDao ofDao = new OfferingDao();
+        String amazonOffering = ofDao.getAmazonOffering( serviceOfferingId.trim());
+
+ 		if ( null == amazonOffering ) 
+ 		{
  			 logger.warn( "No instanceType match for serverOfferingId: [" + serviceOfferingId + "]" );
  			 return "m1.small";
  		}
+ 		else return amazonOffering;
  	}
  	 	
  	/**
@@ -2227,7 +2196,8 @@ public class EC2Engine {
      *         EC2Instance objects loaded.
      */
     private EC2DescribeInstancesResponse lookupInstances( String instanceId, EC2DescribeInstancesResponse instances ) 
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException, 
+               InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
     {
        	Node parent = null;
 	    StringBuffer params = new StringBuffer();
