@@ -4,7 +4,7 @@
   <groupId>com.cloud</groupId>
   <artifactId>bridge</artifactId>
   <packaging>war</packaging>
-  <version>1.5b1</version>
+  <version>1.0-SNAPSHOT</version>
   <name>CloudBridge Webapp</name>
   <url>http://maven.apache.org</url>
   
