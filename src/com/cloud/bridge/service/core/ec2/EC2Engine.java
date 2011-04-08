@@ -964,26 +964,45 @@ public class EC2Engine {
     	}   	    
     }
    
-    public EC2Volume handleRequest(EC2CreateVolume request) 
-    { 	
-    	try {
-    		
-    		// -> no volume name is given in the Amazon request but is required in the cloud API
-    		String volName = safeURLencode( UUID.randomUUID().toString());
-    		
-	        StringBuffer params = new StringBuffer();
-   	        params.append( "command=createVolume" );
-   	        params.append( "&name=" + volName );
+    
+    public EC2Volume handleRequest( EC2CreateVolume request ) 
+    { 
+        StringBuffer params = new StringBuffer();
+    	boolean foundDisk = false;
+    	
+    	try 
+    	{   params.append( "command=createVolume" );
    	        
-    		//Either snapshotId or size has to be passed in
+    		// -> put either snapshotid or diskofferingid on the request
     		String snapshotId = request.getSnapshotId();
-    		Integer size = request.getSize();
-   	        if (null != snapshotId) params.append( "&snapshotId=" + snapshotId );
-   	        if (null != size) params.append( "&size=" + size.toString());
-   	        
-   	        params.append( "&zoneId=" + toZoneId( request.getZoneName()));
-   	        String query = params.toString();
+    		Integer size      = request.getSize();
 
+   	        if (null == snapshotId)
+   	        {
+   	   	        DiskOfferings findDisk = listDiskOfferings(); 
+   	   		    DiskOffer[] offerSet   = findDisk.getOfferSet();
+   	   		    for( int i=0; i < offerSet.length; i++ ) 
+   	   		    {
+   	   		         if (offerSet[i].getIsCustomized()) {
+   	   		    	     params.append( "&diskofferingid=" + offerSet[i].getId());
+   	   		    	     foundDisk = true;
+   	   		    	     break;
+   	   		         } 	   		    		  
+   	   		    }
+   	 	        if (!foundDisk) throw new EC2ServiceException(ServerError.InternalError, "No Customize Disk Offering Found");
+   	        }
+   	      
+   	        // -> no volume name is given in the Amazon request but is required in the cloud API
+    		String volName = safeURLencode( UUID.randomUUID().toString());
+   	        params.append( "&name=" + volName );
+ 
+   	        if (null != size      ) params.append( "&size=" + size.toString());        
+   	        if (null != snapshotId) params.append( "&snapshotId=" + snapshotId );  	        
+   	        params.append( "&zoneId=" + toZoneId( request.getZoneName()));     
+   	        String query = params.toString();   	        
+   	        
+
+            // ->
   		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createVolume", true );
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
  	        if ( 0 < match.getLength()) {
@@ -993,16 +1012,20 @@ public class EC2Engine {
             }
  	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
    	        
-       	} catch( EC2ServiceException error ) {
+       	} 
+    	catch( EC2ServiceException error ) 
+    	{
     		logger.error( "EC2 CreateVolume - " + error.toString());
-    		throw error;
-    		
-    	} catch( Exception e ) {
+    		throw error;	
+    	} 
+    	catch( Exception e ) 
+    	{
     		logger.error( "EC2 CreateVolume - " + e.toString());
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}   	    
     }
 
+    
     public EC2Volume deleteVolume(EC2Volume request) 
     {
     	try {
@@ -2335,10 +2358,11 @@ public class EC2Engine {
     			    {
     			        String value = child.getFirstChild().getNodeValue();
       			
-			                 if (name.equalsIgnoreCase( "id"       )) df.setId( value );
-			            else if (name.equalsIgnoreCase( "name"     )) df.setName( value );
-			            else if (name.equalsIgnoreCase( "disksize" )) df.setSize( value );
-			            else if (name.equalsIgnoreCase( "created"  )) df.setCreated( value );
+			                 if (name.equalsIgnoreCase( "id"           )) df.setId( value );
+			            else if (name.equalsIgnoreCase( "name"         )) df.setName( value );
+			            else if (name.equalsIgnoreCase( "disksize"     )) df.setSize( value );
+			            else if (name.equalsIgnoreCase( "created"      )) df.setCreated( value );
+			            else if (name.equalsIgnoreCase( "iscustomized" )) df.setIsCustomized( value.equalsIgnoreCase( "true" ));
     			    }
     	        }
 			    offerings.addOffer( df );

@@ -31,7 +31,7 @@ public class AuthenticationUtils {
 
 	/**
 	 * The combination of the Issuer and the serial number of a X509 certificate
-	 * must be globally unique.  The Issuer can be descrived by its Distinquished Name (DN).  
+	 * must be globally unique.  The Issuer can be described by its Distinguished Name (DN).  
 	 * The uniqueId is constructed by appending a ", serial=" onto the end of the Issuer's 
 	 * DN (thus keeping the DN format).
 	 * 

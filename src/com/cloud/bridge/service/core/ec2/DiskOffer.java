@@ -23,14 +23,16 @@ public class DiskOffer {
 
 	private String   id;
 	private String   name;
-	private int      diskSize;   // <- in gigs
+	private int      diskSize;       // <- in gigs
     private Calendar created;
+    private boolean  isCustomized;   // <- true if disk offering uses custom size
     
 	public DiskOffer() {
-		id       = null;
-		name     = null;
-		diskSize = 0;
-		created  = null;
+		id           = null;
+		name         = null;
+		diskSize     = 0;
+		created      = null;
+		isCustomized = false;
 	}
 	
 	public void setId( String id ) {
@@ -68,5 +70,13 @@ public class DiskOffer {
 	
 	public Calendar getCreated() {
 		return this.created;
+	}
+	
+	public boolean getIsCustomized(){
+		return this.isCustomized;
+	}
+	
+	public void setIsCustomized( boolean isCustomized ) {
+		this.isCustomized = isCustomized;
 	}
 }
