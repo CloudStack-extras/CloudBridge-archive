@@ -867,37 +867,45 @@ public class EC2Engine {
     	}
     }
     
-    public EC2DescribeVolumesResponse handleRequest(EC2DescribeVolumes request) 
+    
+    public EC2DescribeVolumesResponse handleRequest( EC2DescribeVolumes request ) 
     {
     	EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
+    	EC2VolumeFilterSet vfs = request.getFilterSet();
 
-    	try {
-    		String[] volumeIds = request.getVolumeSet();
-    	
-   	        if ( 0 == volumeIds.length ) {
-    	         return listVolumes( null, null, volumes );
+    	try 
+    	{   String[] volumeIds = request.getVolumeSet();
+   	        if ( 0 == volumeIds.length ) 
+   	        {
+    	         volumes = listVolumes( null, null, volumes );
+   	        }
+   	        else
+   	        {    for( int i=0; i < volumeIds.length; i++ ) 
+                    volumes = listVolumes( volumeIds[i], null, volumes );
    	        }
    	        
-   	        for( int i=0; i < volumeIds.length; i++ ) {
-               volumes = listVolumes( volumeIds[i], null, volumes );
-   	        }
-   	        return volumes;
-   	        
-       	} catch( EC2ServiceException error ) {
+   	        if ( null == vfs )
+   	   	         return volumes;
+   	        else return vfs.evaluate( volumes );     
+       	} 
+    	catch( EC2ServiceException error ) 
+    	{
     		logger.error( "EC2 DescribeVolumes - " + error.toString());
-    		throw error;
-    		
-    	} catch( Exception e ) {
+    		throw error;		
+    	} 
+    	catch( Exception e ) 
+    	{
     		logger.error( "EC2 DescribeVolumes - " + e.toString());
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
+   
     
     public EC2Volume attachVolume(EC2Volume request) 
     {
     	try {
-    		request = mapDeviceToCloudDeviceId( request );
-    		
+    		request.setDeviceId( mapDeviceToCloudDeviceId( request.getDevice()));
+
 	        StringBuffer params = new StringBuffer();
    	        params.append( "command=attachVolume" );
    	        params.append( "&deviceId=" + request.getDeviceId());
@@ -2021,13 +2029,17 @@ public class EC2Engine {
 	    			    String value = child.getFirstChild().getNodeValue();
 	    			
 		                     if (name.equalsIgnoreCase( "id"              )) vol.setId( value );
-	   			        else if (name.equalsIgnoreCase( "size"            )) vol.setSize( value );
-	   			        else if (name.equalsIgnoreCase( "zonename"        )) vol.setZoneName( value );
-	   			        else if (name.equalsIgnoreCase( "virtualmachineid")) vol.setInstanceId( value );
+   			            else if (name.equalsIgnoreCase( "attached"        )) vol.setAttached( value );
 	   			        else if (name.equalsIgnoreCase( "created"         )) vol.setCreated( value );
-	   			        else if (name.equalsIgnoreCase( "type"            )) vol.setType( value );
-	   			        else if (name.equalsIgnoreCase( "vmstate"         )) vol.setVMState( value );
+	   			        else if (name.equalsIgnoreCase( "deviceid"        )) vol.setDeviceId( Integer.parseInt( value ));
+	   			        else if (name.equalsIgnoreCase( "snapshotid"      )) vol.setSnapShotId( value );		                     
 	   			        else if (name.equalsIgnoreCase( "state"           )) vol.setStatus( value );
+	   			        else if (name.equalsIgnoreCase( "status"          )) vol.setState( value );
+	   			        else if (name.equalsIgnoreCase( "size"            )) vol.setSize( value );
+	   			        else if (name.equalsIgnoreCase( "type"            )) vol.setType( value );
+	   			        else if (name.equalsIgnoreCase( "virtualmachineid")) vol.setInstanceId( value );
+	   			        else if (name.equalsIgnoreCase( "vmstate"         )) vol.setVMState( value );
+	   			        else if (name.equalsIgnoreCase( "zonename"        )) vol.setZoneName( value );
 	    			}
 	    	    }
 	 		    volumes.addVolume( vol );
@@ -2817,32 +2829,28 @@ public class EC2Engine {
      * Translate the device name string into a Cloud Stack deviceId.   
      * deviceId 3 is reserved for CDROM and 0 for the ROOT disk
      * 
-     * @param request
-     * @return a modified EC2Volume object
+     * @param device string
+     * @return deviceId value
      */
-    private EC2Volume mapDeviceToCloudDeviceId( EC2Volume request ) 
+    private int mapDeviceToCloudDeviceId( String device ) 
     {	
-    	String device = request.getDevice();
-    	
-	         if (device.equalsIgnoreCase( "/dev/sdb"  )) request.setDeviceId( 1 );
-    	else if (device.equalsIgnoreCase( "/dev/sdc"  )) request.setDeviceId( 2 ); 
-    	else if (device.equalsIgnoreCase( "/dev/sde"  )) request.setDeviceId( 4 ); 
-    	else if (device.equalsIgnoreCase( "/dev/sdf"  )) request.setDeviceId( 5 ); 
-    	else if (device.equalsIgnoreCase( "/dev/sdg"  )) request.setDeviceId( 6 ); 
-    	else if (device.equalsIgnoreCase( "/dev/sdh"  )) request.setDeviceId( 7 ); 
-    	else if (device.equalsIgnoreCase( "/dev/sdi"  )) request.setDeviceId( 8 ); 
-    	else if (device.equalsIgnoreCase( "/dev/sdj"  )) request.setDeviceId( 9 ); 
-    	else if (device.equalsIgnoreCase( "/dev/xvdb" )) request.setDeviceId( 1 );  
-    	else if (device.equalsIgnoreCase( "/dev/xvdc" )) request.setDeviceId( 2 );  
-    	else if (device.equalsIgnoreCase( "/dev/xvde" )) request.setDeviceId( 4 );  
-    	else if (device.equalsIgnoreCase( "/dev/xvdf" )) request.setDeviceId( 5 );  
-    	else if (device.equalsIgnoreCase( "/dev/xvdg" )) request.setDeviceId( 6 );  
-    	else if (device.equalsIgnoreCase( "/dev/xvdh" )) request.setDeviceId( 7 );  
-    	else if (device.equalsIgnoreCase( "/dev/xvdi" )) request.setDeviceId( 8 );  
-    	else if (device.equalsIgnoreCase( "/dev/xvdj" )) request.setDeviceId( 9 );  
+	         if (device.equalsIgnoreCase( "/dev/sdb"  )) return 1;
+    	else if (device.equalsIgnoreCase( "/dev/sdc"  )) return 2; 
+    	else if (device.equalsIgnoreCase( "/dev/sde"  )) return 4; 
+    	else if (device.equalsIgnoreCase( "/dev/sdf"  )) return 5; 
+    	else if (device.equalsIgnoreCase( "/dev/sdg"  )) return 6; 
+    	else if (device.equalsIgnoreCase( "/dev/sdh"  )) return 7; 
+    	else if (device.equalsIgnoreCase( "/dev/sdi"  )) return 8; 
+    	else if (device.equalsIgnoreCase( "/dev/sdj"  )) return 9; 
+    	else if (device.equalsIgnoreCase( "/dev/xvdb" )) return 1;  
+    	else if (device.equalsIgnoreCase( "/dev/xvdc" )) return 2;  
+    	else if (device.equalsIgnoreCase( "/dev/xvde" )) return 4;  
+    	else if (device.equalsIgnoreCase( "/dev/xvdf" )) return 5;  
+    	else if (device.equalsIgnoreCase( "/dev/xvdg" )) return 6;  
+    	else if (device.equalsIgnoreCase( "/dev/xvdh" )) return 7;  
+    	else if (device.equalsIgnoreCase( "/dev/xvdi" )) return 8;  
+    	else if (device.equalsIgnoreCase( "/dev/xvdj" )) return 9;  
     	else throw new EC2ServiceException(ClientError.Unsupported, device + " is not supported" );
-    	     
-    	return request;
     }
 
     Map[] execList(String query, String... args) throws IOException, SignatureException {

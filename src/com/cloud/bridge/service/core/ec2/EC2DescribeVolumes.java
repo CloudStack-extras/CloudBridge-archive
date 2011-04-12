@@ -21,6 +21,7 @@ import java.util.List;
 public class EC2DescribeVolumes {
 
 	private List<String> volumeSet = new ArrayList<String>();    // a list of strings identifying volume ids
+	private EC2VolumeFilterSet vfs = null;
 
 	public EC2DescribeVolumes() {
 	}
@@ -31,5 +32,13 @@ public class EC2DescribeVolumes {
 	
 	public String[] getVolumeSet() {
 		return volumeSet.toArray(new String[0]);
+	}
+	
+	public EC2VolumeFilterSet getFilterSet() {
+		return vfs;
+	}
+	
+	public void setFilterSet( EC2VolumeFilterSet param ) {
+		vfs = param;
 	}
 }

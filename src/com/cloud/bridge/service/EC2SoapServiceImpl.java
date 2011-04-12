@@ -41,6 +41,7 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshotsResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumesResponse;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
+import com.cloud.bridge.service.core.ec2.EC2Filter;
 import com.cloud.bridge.service.core.ec2.EC2Image;
 import com.cloud.bridge.service.core.ec2.EC2Instance;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
@@ -60,6 +61,7 @@ import com.cloud.bridge.service.core.ec2.EC2Volume;
 import com.cloud.bridge.service.core.ec2.EC2Address;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddressesResponse;
+import com.cloud.bridge.service.core.ec2.EC2VolumeFilterSet;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 
@@ -348,20 +350,29 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDescribeSnapshotsResponse(engine.handleRequest(request));
 	}
 
-	public DescribeVolumesResponse describeVolumes(DescribeVolumes describeVolumes) {
+	public DescribeVolumesResponse describeVolumes(DescribeVolumes describeVolumes) 
+	{
 		EC2DescribeVolumes request = new EC2DescribeVolumes();
 		DescribeVolumesType dvt = describeVolumes.getDescribeVolumes();
-		DescribeVolumesSetType dvst = dvt.getVolumeSet();
 		
-		if (null != dvst) {
+		DescribeVolumesSetType dvst = dvt.getVolumeSet();
+		FilterSetType fst = dvt.getFilterSet();
+		
+		if (null != dvst) 
+		{
 		    DescribeVolumesSetItemType[] items = dvst.getItem();
 		    if (null != items) {
 		    	for( int i=0; i < items.length; i++ ) request.addVolumeId( items[i].getVolumeId());
 		    }
 		}	
+		
+		if (null != fst) {
+			request.setFilterSet( toVolumeFilterSet( fst ));
+		}
+		
 		return toDescribeVolumesResponse( engine.handleRequest( request ));
 	}
-
+	
 	public DetachVolumeResponse detachVolume(DetachVolume detachVolume) {
 		EC2Volume request = new EC2Volume();
 		DetachVolumeType avt = detachVolume.getDetachVolume();
@@ -692,6 +703,30 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		param1.setRequestId( UUID.randomUUID().toString());
         response.setDeregisterImageResponse( param1 );
 		return response;
+	}
+
+	private EC2VolumeFilterSet toVolumeFilterSet( FilterSetType fst )
+	{
+		EC2VolumeFilterSet vfs = new EC2VolumeFilterSet();
+		FilterType[] items = fst.getItem();
+		if (null != items) 
+		{
+			// -> each filter can have one or more values associated with it
+			for( int j=0; j < items.length; j++ )
+			{
+				EC2Filter oneFilter = new EC2Filter();
+				oneFilter.setName( items[j].getName());
+				
+				ValueSetType vst = items[j].getValueSet();
+				ValueType[] valueItems = vst.getItem();
+				for( int k=0; k < valueItems.length; k++ ) 
+				{
+					oneFilter.addValue( valueItems[k].getValue());
+				}
+				vfs.addFilter( oneFilter );
+			}
+		}		
+		return vfs;
 	}
 
 	public static DescribeVolumesResponse toDescribeVolumesResponse(EC2DescribeVolumesResponse engineResponse) {

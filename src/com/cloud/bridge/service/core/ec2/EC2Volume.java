@@ -25,23 +25,29 @@ public class EC2Volume {
 	private int      size;   // <- in gigs
 	private String   zoneName;
 	private String   instanceId;
+	private String   snapshotId;
 	private String   device;
 	private int      deviceId;
 	private String   status;
+	private String   state;
 	private String   type;
 	private String   vmstate;
     private Calendar created;
+	private Calendar attached;
     
 	public EC2Volume() {
 		id         = null;
 		zoneName   = null;
 		instanceId = null;
+		snapshotId = null;
 		device     = null;
 		deviceId   = 0;
 		status     = null;
+		state      = null;
 		type       = null;
 		vmstate    = null;
 		created    = null;
+		attached   = null;
 	}
 	
 	public void setId( String id ) {
@@ -80,6 +86,14 @@ public class EC2Volume {
 	public String getInstanceId() {
 		return this.instanceId;
 	}
+
+	public void setSnapShotId( String id ) {
+		snapshotId = id;
+	}
+	
+	public String getSnapShotId() {
+		return snapshotId;
+	}
 	
 	public void setDevice( String device ) {
 		this.device = device;
@@ -102,7 +116,15 @@ public class EC2Volume {
 	}
 	
 	public String getStatus() {
-		return this.status;
+		return status;
+	}
+
+	public void setState( String state ) {
+		this.state = state;
+	}
+	
+	public String getState() {
+		return state;
 	}
 
 	public void setType( String type ) {
@@ -127,5 +149,13 @@ public class EC2Volume {
 	
 	public Calendar getCreated() {
 		return this.created;
+	}
+
+	public void setAttached( String attached ) {
+		this.attached = EC2RestAuth.parseDateString( attached );
+	}
+	
+	public Calendar getAttached() {
+		return this.attached;
 	}
 }
