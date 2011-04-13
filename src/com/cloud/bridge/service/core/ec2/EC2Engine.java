@@ -2263,16 +2263,20 @@ public class EC2Engine {
 	    			    String value = child.getFirstChild().getNodeValue();
 	    			    //System.out.println( "vm: " + name + " = " + value );
 	    			
-   			                 if (name.equalsIgnoreCase( "id"        )) vm.setId( value );
-   			            else if (name.equalsIgnoreCase( "name"      )) vm.setName( value );
-   			            else if (name.equalsIgnoreCase( "zonename"  )) vm.setZoneName( value );
-   			            else if (name.equalsIgnoreCase( "templateid")) vm.setTemplateId( value );
-   			            else if (name.equalsIgnoreCase( "group"     )) vm.setGroup( value );
-   			            else if (name.equalsIgnoreCase( "state"     )) vm.setState( value );
-   			            else if (name.equalsIgnoreCase( "created"   )) vm.setCreated( value );
-   			            else if (name.equalsIgnoreCase( "ipaddress" )) vm.setIpAddress( value );
-   			            else if (name.equalsIgnoreCase( "account" 	)) vm.setAccountName(value);
-   			            else if (name.equalsIgnoreCase( "domainid" 	)) vm.setDomainId(value);
+   			                 if (name.equalsIgnoreCase( "id"                )) vm.setId( value );
+   			            else if (name.equalsIgnoreCase( "name"              )) vm.setName( value );
+   			            else if (name.equalsIgnoreCase( "zonename"          )) vm.setZoneName( value );
+   			            else if (name.equalsIgnoreCase( "templateid"        )) vm.setTemplateId( value );
+   			            else if (name.equalsIgnoreCase( "group"             )) vm.setGroup( value );
+   			            else if (name.equalsIgnoreCase( "state"             )) vm.setState( value );
+   			            else if (name.equalsIgnoreCase( "created"           )) vm.setCreated( value );
+   			            else if (name.equalsIgnoreCase( "ipaddress"         )) vm.setIpAddress( value );
+   			            else if (name.equalsIgnoreCase( "account" 	        )) vm.setAccountName(value);
+   			            else if (name.equalsIgnoreCase( "domainid" 	        )) vm.setDomainId(value);
+   			            else if (name.equalsIgnoreCase( "hypervisor"        )) vm.setHypervisor(value);
+   			            else if (name.equalsIgnoreCase( "account" 	        )) vm.setOwner(value);
+   			            else if (name.equalsIgnoreCase( "rootdevicetype"    )) vm.setRootDeviceType(value);
+   			            else if (name.equalsIgnoreCase( "rootdeviceid"      )) vm.setRootDeviceId( Integer.parseInt( value ));  			                 
    			            else if (name.equalsIgnoreCase( "serviceofferingid" )) vm.setServiceOffering( serviceOfferingIdToInstanceType( value ));
 	    			}
 	    	    }

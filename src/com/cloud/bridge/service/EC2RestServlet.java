@@ -29,9 +29,11 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -101,6 +103,7 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeSecurityGroups;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshots;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
+import com.cloud.bridge.service.core.ec2.EC2Filter;
 import com.cloud.bridge.service.core.ec2.EC2Image;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
@@ -110,6 +113,7 @@ import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
+import com.cloud.bridge.service.core.ec2.EC2VolumeFilterSet;
 import com.cloud.bridge.service.core.ec2.OfferingBundle;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
@@ -1291,23 +1295,94 @@ public class EC2RestServlet extends HttpServlet {
     }
 
     private void describeVolumes( HttpServletRequest request, HttpServletResponse response ) 
-        throws ADBException, XMLStreamException, IOException {
+        throws ADBException, XMLStreamException, IOException 
+    {
         EC2DescribeVolumes EC2request = new EC2DescribeVolumes();
 
         // -> load in all the "VolumeId.n" parameters if any
         Enumeration names = request.getParameterNames();
-        while( names.hasMoreElements()) {
+        while( names.hasMoreElements()) 
+        {
 	        String key = (String)names.nextElement();
-	        if (key.startsWith("VolumeId")) {
+	        if (key.startsWith("VolumeId")) 
+	        {
 	            String[] value = request.getParameterValues( key );
 	            if (null != value && 0 < value.length) EC2request.addVolumeId( value[0] );
 	        }
         }		
+        
+        // -> are there any filters with this request?
+        EC2Filter[] filterSet = extractFilters( request );
+        if (null != filterSet)
+        {
+        	EC2VolumeFilterSet vfs = new EC2VolumeFilterSet();
+        	for( int i=0; i < filterSet.length; i++ ) vfs.addFilter( filterSet[i] );
+        	EC2request.setFilterSet( vfs );
+        }
+        
         // -> execute the request
         DescribeVolumesResponse EC2response = EC2SoapServiceImpl.toDescribeVolumesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
         serializeResponse(response, EC2response);
     }
+   
+    
+    /**
+     * Example of how the filters are defined in a REST request:
+     * https://<server>/?Action=DescribeVolumes
+     * &Filter.1.Name=attachment.instance-id
+     * &Filter.1.Value.1=i-1a2b3c4d
+     * &Filter.2.Name=attachment.delete-on-termination
+     * &Filter.2.Value.1=true
+     * 
+     * @param request
+     * @return List<EC2Filter>
+     */
+    private EC2Filter[] extractFilters( HttpServletRequest request )
+    {
+    	String filterName    = null;
+    	String value         = null;
+    	EC2Filter nextFilter = null;
+    	boolean timeFilter   = false;
+    	int filterCount      = 1;
+    	int valueCount       = 1;
+    	
+    	List<EC2Filter> filterSet = new ArrayList<EC2Filter>();   
+    	
+    	do 
+    	{   filterName = request.getParameter( "Filter." + filterCount + ".Name" );
+    		if (null != filterName)
+    		{
+    			nextFilter = new EC2Filter();
+    			nextFilter.setName( filterName );
+				timeFilter = (filterName.equalsIgnoreCase( "attachment.attach-time" ) || filterName.equalsIgnoreCase( "create-time" ));
+    			valueCount = 1;
+				do
+    			{
+    				value = request.getParameter( "Filter." + filterCount + ".Value." + valueCount );
+    				if (null != value) 
+    				{
+    					// -> time values are not encoded as regexes
+    					if ( timeFilter )
+    					     nextFilter.addValue( value );
+    					else nextFilter.addValueEncoded( value );
+    					
+    					valueCount++;
+    				}
+    			}
+    			while( null != value );
+				
+				filterSet.add( nextFilter );
+				filterCount++;
+    		}
+    	}
+    	while( null != filterName );
+    	
+    	if ( 1 == filterCount )
+    		 return null;
+    	else return filterSet.toArray(new EC2Filter[0]);
+    }
 
+    
     private void describeKeyPairs(HttpServletRequest request, HttpServletResponse response) 
 			throws ADBException, XMLStreamException, IOException {
 		// TODO: Handle filters for key-name and finger print
@@ -1380,15 +1455,12 @@ public class EC2RestServlet extends HttpServlet {
      * parameter to see if the signature has expired and if so the request fails.
      */
     private boolean authenticateRequest( HttpServletRequest request, HttpServletResponse response ) 
-        throws SignatureException, IOException, InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException, ParseException {
+        throws SignatureException, IOException, InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException, ParseException 
+    {
      	String cloudSecretKey = null;    
     	String cloudAccessKey = null;
     	String signature      = null;
     	String sigMethod      = null;           
-
-    	// -> for testing
-	    //UserContext.current().initContext( "Mark", "12345", "Mark", "REST request", null );
-        //return true;
 
     	// [A] Basic parameters required for an authenticated rest request
     	//  -> note that the Servlet engine will un-URL encode all parameters we extract via "getParameterValues()" calls
@@ -1403,7 +1475,8 @@ public class EC2RestServlet extends HttpServlet {
 		else { response.sendError(530, "Missing Signature parameter" ); return false; }
 
         String[] method = request.getParameterValues( "SignatureMethod" );
-		if ( null != method && 0 < method.length ) {
+		if ( null != method && 0 < method.length ) 
+		{
 			 sigMethod = method[0];
 			 if (!sigMethod.equals( "HmacSHA256" ) && !sigMethod.equals( "HmacSHA1" )) {
 			     response.sendError(531, "Unsupported SignatureMethod value: " + sigMethod + " expecting: HmacSHA256 or HmacSHA1" ); 
@@ -1413,7 +1486,8 @@ public class EC2RestServlet extends HttpServlet {
 		else { response.sendError(530, "Missing SignatureMethod parameter" ); return false; }
 
         String[] version = request.getParameterValues( "Version" );
-		if ( null != version && 0 < version.length ) {
+		if ( null != version && 0 < version.length ) 
+		{
 			 if (!version[0].equals( wsdlVersion )) {
 			 	 response.sendError(531, "Unsupported Version value: " + version[0] + " expecting: " + wsdlVersion ); 
 			 	 return false;
@@ -1422,7 +1496,8 @@ public class EC2RestServlet extends HttpServlet {
 		else { response.sendError(530, "Missing Version parameter" ); return false; }
 
         String[] sigVersion = request.getParameterValues( "SignatureVersion" );
-		if ( null != sigVersion && 0 < sigVersion.length ) {
+		if ( null != sigVersion && 0 < sigVersion.length ) 
+		{
 			 if (!sigVersion[0].equals( "2" )) {
 				 response.sendError(531, "Unsupported SignatureVersion value: " + sigVersion[0] + " expecting: 2" ); 
 				 return false;
@@ -1432,27 +1507,28 @@ public class EC2RestServlet extends HttpServlet {
 
 		// -> can have only one but not both { Expires | Timestamp } headers
         String[] expires = request.getParameterValues( "Expires" );
-		if ( null != expires && 0 < expires.length ) {
+		if ( null != expires && 0 < expires.length ) 
+		{
 			 // -> contains the date and time at which the signature included in the request EXPIRES
 		     if (hasSignatureExpired( expires[0] )) {
 				 response.sendError(531, "Expires parameter indicates signature has expired: " + expires[0] ); 
 				 return false;
 			 }
 		}
-		else { 
-			 // -> contains the date and time at which the request is SIGNED
+		else 
+		{    // -> contains the date and time at which the request is SIGNED
              String[] time = request.getParameterValues( "Timestamp" );
 		     if ( null == time || 0 == time.length ) {
                   response.sendError(530, "Missing Timestamp and Expires parameter, one is required" ); 
                   return false; 
              }
 		} 
-
 		
 		// [B] Use the cloudAccessKey to get the users secret key in the db
 	    UserCredentialsDao credentialDao = new UserCredentialsDao();
 	    UserCredentials cloudKeys = credentialDao.getByAccessKey( cloudAccessKey ); 
-	    if ( null == cloudKeys ) {
+	    if ( null == cloudKeys ) 
+	    {
 	    	 logger.debug( cloudAccessKey + " is not defined in the EC2 service - call SetUserKeys" );
 	         response.sendError(404, cloudAccessKey + " is not defined in the EC2 service - call SetUserKeys" ); 
 	         return false; 
@@ -1465,6 +1541,7 @@ public class EC2RestServlet extends HttpServlet {
 	   	EC2RestAuth restAuth = new EC2RestAuth();
     	restAuth.setHostHeader( request.getHeader( "Host" ));
     	String requestUri = request.getRequestURI();
+    	
     	//If forwarded from another basepath:
     	String forwardedPath = (String) request.getAttribute("javax.servlet.forward.request_uri");
     	if(forwardedPath!=null){

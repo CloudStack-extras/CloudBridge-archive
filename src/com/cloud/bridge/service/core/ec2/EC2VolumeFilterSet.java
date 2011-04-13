@@ -35,7 +35,7 @@ public class EC2VolumeFilterSet {
 		filterTypes.put( "tag-value",                        "null"         );
 		filterTypes.put( "snapshot-id",                      "string"       );
 		filterTypes.put( "volume-id",                        "string"       );	
-//		filterTypes.put( "tag:*", "string" );
+//		filterTypes.put( "tag:*",                            "null" );
 	}
 	
 	
@@ -131,15 +131,18 @@ public class EC2VolumeFilterSet {
 	    {
 	         return containsTime( vol.getAttached(), valueSet );	
 	    }
-	    else if (filterName.equalsIgnoreCase( "attachment.instance-id" )) 
-	    {
-	    	 return containsString( vol.getInstanceId(), valueSet );		
-	    }
 	    else if (filterName.equalsIgnoreCase( "attachment.device" )) 
 	    {
 	         return containsDevice( vol.getDeviceId(), valueSet );	
 	    }
-	    // TODO add the other supported filter types
+	    else if (filterName.equalsIgnoreCase( "attachment.instance-id" )) 
+	    {
+	    	 return containsString( vol.getInstanceId(), valueSet );		
+	    }
+	    else if (filterName.equalsIgnoreCase( "attachment.status" )) 
+	    {
+	    	 return containsString( vol.getStatus(), valueSet );		
+	    }
 	    else return false;
 	}
 	
@@ -150,7 +153,7 @@ public class EC2VolumeFilterSet {
 		
 	    for( int i=0; i < set.length; i++ )
 	    {
-	    	System.out.println( "contsinsString: " + lookingFor + " " + set[i] );
+	    	//System.out.println( "contsinsString: " + lookingFor + " " + set[i] );
 	    	if (lookingFor.matches( set[i] )) return true;
 	    }
 	    return false;
@@ -161,7 +164,7 @@ public class EC2VolumeFilterSet {
 	{
         for( int i=0; i < set.length; i++ )
         {
-	    	System.out.println( "contsinsInteger: " + lookingFor + " " + set[i] );
+	    	//System.out.println( "contsinsInteger: " + lookingFor + " " + set[i] );
         	int temp = Integer.parseInt( set[i] );
         	if (lookingFor == temp) return true;
         }
@@ -173,7 +176,7 @@ public class EC2VolumeFilterSet {
 	{
         for( int i=0; i < set.length; i++ )
         {
-	    	System.out.println( "contsinsCalendar: " + lookingFor + " " + set[i] );
+	    	//System.out.println( "contsinsCalendar: " + lookingFor + " " + set[i] );
         	Calendar toMatch = Calendar.getInstance();
         	toMatch.setTime( DateHelper.parseISO8601DateString( set[i] ));
         	if (0 == lookingFor.compareTo( toMatch )) return true;
@@ -186,7 +189,7 @@ public class EC2VolumeFilterSet {
 	{
         for( int i=0; i < set.length; i++ )
         {
-	    	System.out.println( "contsinsDevice: " + deviceId + " " + set[i] );
+	    	//System.out.println( "contsinsDevice: " + deviceId + " " + set[i] );
         	switch( deviceId ) {
         	case 1:
        		     if (( "/dev/sdb" ).matches( set[i] )) return true;

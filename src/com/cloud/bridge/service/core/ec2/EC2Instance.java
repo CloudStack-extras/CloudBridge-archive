@@ -33,20 +33,28 @@ public class EC2Instance {
     private Calendar	created;
     private String		accountName;
     private String		domainId;
+    private String      hypervisor;
+    private String      owner;
+    private String      rootDeviceType;
+    private int         rootDeviceId;
     
 	public EC2Instance() {
-		id            = null;
-		name          = null;
-		zoneName      = null;
-		templateId    = null;
-		group         = null;
-		state         = null;
-		previousState = null;
-		ipAddress     = null;
-		created       = null;
-		instanceType  = null;
-		accountName   = null;
-		domainId	  = null;
+		id             = null;
+		name           = null;
+		zoneName       = null;
+		templateId     = null;
+		group          = null;
+		state          = null;
+		previousState  = null;
+		ipAddress      = null;
+		created        = null;
+		instanceType   = null;
+		accountName    = null;
+		domainId	   = null;
+		hypervisor     = null;
+		owner          = null;
+		rootDeviceType = null;
+		rootDeviceId   = 0;
 	}
 	
 	public void setId( String id ) {
@@ -144,6 +152,36 @@ public class EC2Instance {
 	public void setDomainId(String domainId) {
 		this.domainId = domainId;
 	}
+
+	public String getHypervisor() {
+	    return hypervisor;	
+	}
 	
+	public void setHypervisor(String param) {
+		hypervisor = param;
+	}
+
+	public String getOnwer() {
+	    return owner;	
+	}
 	
+	public void setOwner(String param) {
+		owner = param;	
+	}
+
+	public String getRootDeviceType() {
+	    return rootDeviceType;	
+	}
+	
+	public void setRootDeviceType(String param) {
+		rootDeviceType = param;		
+	}
+
+	public int getRootDeviceId() {
+	    return rootDeviceId;	
+	}
+	
+	public void setRootDeviceId(int param) {
+		rootDeviceId = param;		
+	}
 }
