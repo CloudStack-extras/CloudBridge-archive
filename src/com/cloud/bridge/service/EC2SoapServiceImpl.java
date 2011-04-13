@@ -708,6 +708,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	private EC2VolumeFilterSet toVolumeFilterSet( FilterSetType fst )
 	{
 		EC2VolumeFilterSet vfs = new EC2VolumeFilterSet();
+		boolean timeFilter = false;
+		
 		FilterType[] items = fst.getItem();
 		if (null != items) 
 		{
@@ -715,13 +717,18 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			for( int j=0; j < items.length; j++ )
 			{
 				EC2Filter oneFilter = new EC2Filter();
-				oneFilter.setName( items[j].getName());
+				String filterName = items[j].getName();
+				oneFilter.setName( filterName );
+				timeFilter = (filterName.equalsIgnoreCase( "attachment.attach-time" ) || filterName.equalsIgnoreCase( "create-time" ));
 				
 				ValueSetType vst = items[j].getValueSet();
 				ValueType[] valueItems = vst.getItem();
 				for( int k=0; k < valueItems.length; k++ ) 
 				{
-					oneFilter.addValue( valueItems[k].getValue());
+					// -> time values are not encoded as regexes
+					if ( timeFilter )
+					     oneFilter.addValue( valueItems[k].getValue());
+					else oneFilter.addValueEncoded( valueItems[k].getValue());
 				}
 				vfs.addFilter( oneFilter );
 			}

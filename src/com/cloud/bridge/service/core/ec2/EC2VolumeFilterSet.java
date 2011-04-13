@@ -1,11 +1,14 @@
 package com.cloud.bridge.service.core.ec2;
 
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.cloud.bridge.service.exception.EC2ServiceException;
+import com.cloud.bridge.util.DateHelper;
 
 
 public class EC2VolumeFilterSet {
@@ -31,8 +34,7 @@ public class EC2VolumeFilterSet {
 		filterTypes.put( "tag-key",                          "null"         );
 		filterTypes.put( "tag-value",                        "null"         );
 		filterTypes.put( "snapshot-id",                      "string"       );
-		filterTypes.put( "volume-id",                        "string"       );
-	
+		filterTypes.put( "volume-id",                        "string"       );	
 //		filterTypes.put( "tag:*", "string" );
 	}
 	
@@ -69,8 +71,9 @@ public class EC2VolumeFilterSet {
 	 * 
 	 * @param sampleList - list of volumes to test against the defined filters
 	 * @return EC2DescribeVolumeResponse
+	 * @throws ParseException 
 	 */
-	public EC2DescribeVolumesResponse evaluate( EC2DescribeVolumesResponse sampleList ) 
+	public EC2DescribeVolumesResponse evaluate( EC2DescribeVolumesResponse sampleList ) throws ParseException 
 	{
     	EC2DescribeVolumesResponse resultList = new EC2DescribeVolumesResponse();
     	boolean matched;
@@ -95,7 +98,7 @@ public class EC2VolumeFilterSet {
 	}
 	
 	
-	private boolean filterMatched( EC2Volume vol, EC2Filter filter )
+	private boolean filterMatched( EC2Volume vol, EC2Filter filter ) throws ParseException
 	{
 		String filterName = filter.getName();
 		String[] valueSet = filter.getValueSet();
@@ -103,6 +106,10 @@ public class EC2VolumeFilterSet {
 	    if ( filterName.equalsIgnoreCase( "availability-zone" )) 
 	    {
 	    	 return containsString( vol.getZoneName(), valueSet );	
+	    }
+	    else if (filterName.equalsIgnoreCase( "create-time" ))
+	    {
+	         return containsTime( vol.getCreated(), valueSet );	
 	    }
 	    else if (filterName.equalsIgnoreCase( "size" )) 
 	    {
@@ -119,6 +126,10 @@ public class EC2VolumeFilterSet {
 	    else if (filterName.equalsIgnoreCase( "volume-id" )) 
 	    {	
 	    	 return containsString( vol.getId(), valueSet );	
+	    }
+	    else if (filterName.equalsIgnoreCase( "attachment.attach-time" ))
+	    {
+	         return containsTime( vol.getAttached(), valueSet );	
 	    }
 	    else if (filterName.equalsIgnoreCase( "attachment.instance-id" )) 
 	    {
@@ -140,7 +151,7 @@ public class EC2VolumeFilterSet {
 	    for( int i=0; i < set.length; i++ )
 	    {
 	    	System.out.println( "contsinsString: " + lookingFor + " " + set[i] );
-	    	if (lookingFor.equalsIgnoreCase( set[i] )) return true;
+	    	if (lookingFor.matches( set[i] )) return true;
 	    }
 	    return false;
 	}
@@ -156,7 +167,20 @@ public class EC2VolumeFilterSet {
         }
 		return false;
 	}
+
 	
+	private boolean containsTime( Calendar lookingFor, String[] set ) throws ParseException
+	{
+        for( int i=0; i < set.length; i++ )
+        {
+	    	System.out.println( "contsinsCalendar: " + lookingFor + " " + set[i] );
+        	Calendar toMatch = Calendar.getInstance();
+        	toMatch.setTime( DateHelper.parseISO8601DateString( set[i] ));
+        	if (0 == lookingFor.compareTo( toMatch )) return true;
+        }
+		return false;
+	}
+
 	
 	private boolean containsDevice( int deviceId, String[] set )
 	{
@@ -165,43 +189,43 @@ public class EC2VolumeFilterSet {
 	    	System.out.println( "contsinsDevice: " + deviceId + " " + set[i] );
         	switch( deviceId ) {
         	case 1:
-        		 if (set[i].equalsIgnoreCase( "/dev/sdb"  )) return true;
-        		 if (set[i].equalsIgnoreCase( "/dev/xvdb" )) return true;
+       		     if (( "/dev/sdb" ).matches( set[i] )) return true;
+    		     if (( "/dev/xvdb").matches( set[i] )) return true;
         		 break;
         		 
         	case 2:
-       		     if (set[i].equalsIgnoreCase( "/dev/sdc"  )) return true;
-    		     if (set[i].equalsIgnoreCase( "/dev/xvdc" )) return true;
+       		     if (( "/dev/sdc"  ).matches( set[i] )) return true;
+    		     if (( "/dev/xvdc" ).matches( set[i] )) return true;
         		 break;
         		 
         	case 4:
-       		     if (set[i].equalsIgnoreCase( "/dev/sde"  )) return true;
-    		     if (set[i].equalsIgnoreCase( "/dev/xvde" )) return true;
+       		     if (( "/dev/sde"  ).matches( set[i] )) return true;
+    		     if (( "/dev/xvde" ).matches( set[i] )) return true;
         		 break;
         		 
         	case 5:
-      		     if (set[i].equalsIgnoreCase( "/dev/sdf"  )) return true;
-   		         if (set[i].equalsIgnoreCase( "/dev/xvdf" )) return true;
+      		     if (( "/dev/sdf"  ).matches( set[i] )) return true;
+   		         if (( "/dev/xvdf" ).matches( set[i] )) return true;
        		     break;
 
         	case 6:
-     		     if (set[i].equalsIgnoreCase( "/dev/sdg"  )) return true;
-  		         if (set[i].equalsIgnoreCase( "/dev/xvdg" )) return true;
+     		     if (( "/dev/sdg"  ).matches( set[i] )) return true;
+  		         if (( "/dev/xvdg" ).matches( set[i] )) return true;
       		     break;
 
         	case 7:
-    		     if (set[i].equalsIgnoreCase( "/dev/sdh"  )) return true;
- 		         if (set[i].equalsIgnoreCase( "/dev/xvdh" )) return true;
+    		     if (( "/dev/sdh"  ).matches( set[i] )) return true;
+ 		         if (( "/dev/xvdh" ).matches( set[i] )) return true;
      		     break;
 
         	case 8:
-    		     if (set[i].equalsIgnoreCase( "/dev/sdi"  )) return true;
- 		         if (set[i].equalsIgnoreCase( "/dev/xvdi" )) return true;
+    		     if (( "/dev/sdi"  ).matches( set[i] )) return true;
+ 		         if (( "/dev/xvdi" ).matches( set[i] )) return true;
      		     break;
 
         	case 9:
-    		     if (set[i].equalsIgnoreCase( "/dev/sdj"  )) return true;
- 		         if (set[i].equalsIgnoreCase( "/dev/xvdj" )) return true;
+    		     if (( "/dev/sdj"  ).matches( set[i] )) return true;
+ 		         if (( "/dev/xvdj" ).matches( set[i] )) return true;
      		     break;
         	}
         }

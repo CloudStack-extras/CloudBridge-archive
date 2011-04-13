@@ -58,4 +58,37 @@ public class StringHelper {
 	    }
 	    return sb.toString();
 	}
+	
+	/**
+	 * Convert the string into a regex to allow easy matching.  In both S3 and EC2 regex strings
+	 * are used for matching.  We must remember to quote all special regex characters that appear 
+	 * in the string.
+	 */
+	public static String toRegex(String param) 
+	{
+		StringBuffer regex = new StringBuffer();
+		for( int i=0; i < param.length(); i++ ) 
+		{
+			char next = param.charAt( i );
+			     if ('*'  == next) regex.append( ".+"   );   // -> multi-character match wild card
+			else if ('?'  == next) regex.append( "."    );   // -> single-character match wild card
+			else if ('.'  == next) regex.append( "\\."  );   // all of these are special regex characters we are quoting
+			else if ('+'  == next) regex.append( "\\+"  );   
+			else if ('$'  == next) regex.append( "\\$"  );   
+			else if ('\\' == next) regex.append( "\\\\" );  
+			else if ('['  == next) regex.append( "\\["  );   
+			else if (']'  == next) regex.append( "\\]"  );   
+			else if ('{'  == next) regex.append( "\\{"  );   
+			else if ('}'  == next) regex.append( "\\}"  );   
+			else if ('('  == next) regex.append( "\\("  );   
+			else if (')'  == next) regex.append( "\\)"  );   
+			else if ('&'  == next) regex.append( "\\&"  );   
+			else if ('^'  == next) regex.append( "\\^"  );   
+			else if ('-'  == next) regex.append( "\\-"  );   
+			else if ('|'  == next) regex.append( "\\|"  );   
+			else regex.append( next );
+		}
+		
+		return regex.toString();
+	}
 }

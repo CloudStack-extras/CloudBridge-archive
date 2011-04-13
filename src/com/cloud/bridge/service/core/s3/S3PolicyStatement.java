@@ -18,6 +18,7 @@ package com.cloud.bridge.service.core.s3;
 import com.cloud.bridge.service.core.s3.S3BucketPolicy.PolicyAccess;
 import com.cloud.bridge.service.core.s3.S3PolicyAction.PolicyActions;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
+import com.cloud.bridge.util.StringHelper;
 
 public class S3PolicyStatement {
 	private String sid;
@@ -71,7 +72,7 @@ public class S3PolicyStatement {
 	
 	public void setResource(String param) {
 		resource = param;
-		regexResource = toRegex( param );
+		regexResource = StringHelper.toRegex( param );
 	}
 	
 	/**
@@ -135,37 +136,5 @@ public class S3PolicyStatement {
 		if (null != regexResource) value.append( "Regex Resource: " + regexResource + "\n" );
 		if (null != block     ) value.append( block.toString());
 		return value.toString();
-	}
-
-	/**
-	 * Convert the resource string into a regex to allow easy matching.
-	 * We must remember to quote all special regex characters that appear in the string.
-	 */
-	public static String toRegex(String param) 
-	{
-		StringBuffer regex = new StringBuffer();
-		for( int i=0; i < param.length(); i++ ) 
-		{
-			char next = param.charAt( i );
-			     if ('*'  == next) regex.append( ".+"   );   // -> multi-character match wild card
-			else if ('?'  == next) regex.append( "."    );   // -> single-character match wild card
-			else if ('.'  == next) regex.append( "\\."  );   // all of these are special regex characters we are quoting
-			else if ('+'  == next) regex.append( "\\+"  );   
-			else if ('$'  == next) regex.append( "\\$"  );   
-			else if ('\\' == next) regex.append( "\\\\" );  
-			else if ('['  == next) regex.append( "\\["  );   
-			else if (']'  == next) regex.append( "\\]"  );   
-			else if ('{'  == next) regex.append( "\\{"  );   
-			else if ('}'  == next) regex.append( "\\}"  );   
-			else if ('('  == next) regex.append( "\\("  );   
-			else if (')'  == next) regex.append( "\\)"  );   
-			else if ('&'  == next) regex.append( "\\&"  );   
-			else if ('^'  == next) regex.append( "\\^"  );   
-			else if ('-'  == next) regex.append( "\\-"  );   
-			else if ('|'  == next) regex.append( "\\|"  );   
-			else regex.append( next );
-		}
-		
-		return regex.toString();
 	}
 }

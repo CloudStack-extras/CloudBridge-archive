@@ -25,6 +25,7 @@ import org.apache.log4j.Logger;
 
 import com.cloud.bridge.service.core.s3.S3ConditionFactory.PolicyConditions;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
+import com.cloud.bridge.util.StringHelper;
 
 public class S3PolicyStringCondition extends S3PolicyCondition {
     protected final static Logger logger = Logger.getLogger(S3PolicyStringCondition.class);
@@ -62,7 +63,7 @@ public class S3PolicyStringCondition extends S3PolicyCondition {
 		
 		if (PolicyConditions.StringLike == condition || PolicyConditions.StringNotLike == condition) 
 		{
-			for( int i=0; i < values.length; i++ ) values[i] = S3PolicyStatement.toRegex( values[i] );
+			for( int i=0; i < values.length; i++ ) values[i] = StringHelper.toRegex( values[i] );
 		}
 	    keys.put(key, values);
 	}

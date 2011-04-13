@@ -53,12 +53,16 @@ public class DateHelper {
              dateString = dateString.substring( 0, dateString.length() - 1) + "GMT-00:00";
         } 
         else 
-        {    int inset = 6;       
+        {    // -> -0700 is valid but we need to change it to -07:00 for SimpleDateFormat
+        	 dateString = dateString.replaceFirst( "-(\\d\\d)(\\d\\d)", "-$1:$2" );
+        	 
+        	 int inset = 6;       
              String s0 = dateString.substring( 0, dateString.length() - inset );
              String s1 = dateString.substring( dateString.length() - inset, dateString.length() );
              dateString = s0 + "GMT" + s1;
         }
         
+        //System.out.println( "parseDate: [" + dateString + "]" );
         return df.parse( dateString );
 	}
 
