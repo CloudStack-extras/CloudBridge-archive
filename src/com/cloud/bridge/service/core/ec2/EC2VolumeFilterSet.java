@@ -25,7 +25,7 @@ public class EC2VolumeFilterSet {
 		filterTypes.put( "attachment.delete-on-termination", "null"         );
 		filterTypes.put( "attachment.device",                "string"       );
 		filterTypes.put( "attachment.instance-id",           "string"       );
-		filterTypes.put( "attachment.status",                "set:attaching|attached|detaching|detached" );
+		filterTypes.put( "attachment.status",                "null"         );
 		filterTypes.put( "availability-zone",                "string"       );
 		filterTypes.put( "create-time",                      "xsd:dateTime" );
 		filterTypes.put( "size",                             "integer"      );
@@ -33,7 +33,6 @@ public class EC2VolumeFilterSet {
 		filterTypes.put( "status",                           "set:creating|available|in-use|deleting|deleted|error" );
 		filterTypes.put( "tag-key",                          "null"         );
 		filterTypes.put( "tag-value",                        "null"         );
-		filterTypes.put( "snapshot-id",                      "string"       );
 		filterTypes.put( "volume-id",                        "string"       );	
 //		filterTypes.put( "tag:*",                            "null" );
 	}
@@ -50,6 +49,7 @@ public class EC2VolumeFilterSet {
 		if (null != value && value.equalsIgnoreCase( "null" ))
 			throw new EC2ServiceException( "Unsupported filter [" + filterName + "] - 2", 501 );
 
+		// ToDo we could add checks to make sure the type of a filters value is correct (e.g., an integer)
 		filterSet.add( param );
 	}
 	
@@ -138,10 +138,6 @@ public class EC2VolumeFilterSet {
 	    else if (filterName.equalsIgnoreCase( "attachment.instance-id" )) 
 	    {
 	    	 return containsString( vol.getInstanceId(), valueSet );		
-	    }
-	    else if (filterName.equalsIgnoreCase( "attachment.status" )) 
-	    {
-	    	 return containsString( vol.getStatus(), valueSet );		
 	    }
 	    else return false;
 	}

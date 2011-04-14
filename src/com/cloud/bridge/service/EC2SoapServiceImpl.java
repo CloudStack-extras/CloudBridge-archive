@@ -58,9 +58,7 @@ import com.cloud.bridge.service.core.ec2.EC2StartInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
-import com.cloud.bridge.service.core.ec2.EC2Address;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
-import com.cloud.bridge.service.core.ec2.EC2DescribeAddressesResponse;
 import com.cloud.bridge.service.core.ec2.EC2VolumeFilterSet;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
@@ -736,36 +734,42 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return vfs;
 	}
 
-	public static DescribeVolumesResponse toDescribeVolumesResponse(EC2DescribeVolumesResponse engineResponse) {
-	    DescribeVolumesResponse response = new DescribeVolumesResponse();
-	    DescribeVolumesResponseType param1 = new DescribeVolumesResponseType();
+	
+	public static DescribeVolumesResponse toDescribeVolumesResponse( EC2DescribeVolumesResponse engineResponse ) 
+	{
+	    DescribeVolumesResponse      response = new DescribeVolumesResponse();
+	    DescribeVolumesResponseType    param1 = new DescribeVolumesResponseType();
 	    DescribeVolumesSetResponseType param2 = new DescribeVolumesSetResponseType();
         
 		EC2Volume[] volumes = engineResponse.getVolumeSet();
-		for( int i=0; i < volumes.length; i++ ) {
+		for( int i=0; i < volumes.length; i++ ) 
+		{
 			DescribeVolumesSetItemResponseType param3 = new DescribeVolumesSetItemResponseType();
 	        param3.setVolumeId( volumes[i].getId());
 	        
 	        Integer volSize = new Integer( volumes[i].getSize());
 	        param3.setSize( volSize.toString());  
-	        param3.setSnapshotId( "" );
+	        String snapId = volumes[i].getSnapShotId();
+	        param3.setSnapshotId((null == snapId ? "" : snapId));
 	        param3.setAvailabilityZone( volumes[i].getZoneName());
-	        param3.setStatus( "available" );
+	        param3.setStatus( volumes[i].getState());
 	        
         	// -> CloudStack seems to have issues with timestamp formats so just in case
 	        Calendar cal = volumes[i].getCreated();
-	        if ( null == cal ) {
+	        if ( null == cal ) 
+	        {
 	        	 cal = Calendar.getInstance();
 	        	 cal.set( 1970, 1, 1 );
 	        }
 	        param3.setCreateTime( cal );
 	        
 	        AttachmentSetResponseType param4 = new AttachmentSetResponseType();
-	        if (null != volumes[i].getInstanceId()) {
+	        if (null != volumes[i].getInstanceId()) 
+	        {
 	        	AttachmentSetItemResponseType param5 = new AttachmentSetItemResponseType();
 	        	param5.setVolumeId( volumes[i].getId());
 	        	param5.setInstanceId( volumes[i].getInstanceId());
-	        	param5.setDevice( "" );
+	        	param5.setDevice( "" + volumes[i].getDeviceId());
 	        	param5.setStatus( "attached" );
 	        	param5.setAttachTime( cal );  
 	        	param5.setDeleteOnTermination( false );
@@ -780,6 +784,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    response.setDescribeVolumesResponse( param1 );
 	    return response;
 	}
+	
 	
 	public static DescribeInstanceAttributeResponse toDescribeInstanceAttributeResponse(EC2DescribeInstancesResponse engineResponse) {
       	DescribeInstanceAttributeResponse response = new DescribeInstanceAttributeResponse();
@@ -1227,8 +1232,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		param1.setVolumeId( engineResponse.getId());
 		param1.setInstanceId( engineResponse.getInstanceId());
 		param1.setDevice( engineResponse.getDevice());
-		if ( null != engineResponse.getStatus())
-		     param1.setStatus( engineResponse.getStatus());
+		if ( null != engineResponse.getState())
+		     param1.setStatus( engineResponse.getState());
 		else param1.setStatus( "" );  // ToDo - throw an Soap Fault 
 		
 		param1.setAttachTime( cal );
@@ -1247,8 +1252,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		param1.setVolumeId( engineResponse.getId());
 		param1.setInstanceId( (null == engineResponse.getInstanceId() ? "" : engineResponse.getInstanceId()));
 		param1.setDevice( (null == engineResponse.getDevice() ? "" : engineResponse.getDevice()));
-		if ( null != engineResponse.getStatus())
-		     param1.setStatus( engineResponse.getStatus());
+		if ( null != engineResponse.getState())
+		     param1.setStatus( engineResponse.getState());
 		else param1.setStatus( "" );  // ToDo - throw an Soap Fault 
 		
 		param1.setAttachTime( cal );
@@ -1267,8 +1272,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         param1.setSize( volSize.toString());  
         param1.setSnapshotId( "" );
         param1.setAvailabilityZone( engineResponse.getZoneName());
-		if ( null != engineResponse.getStatus())
-		     param1.setStatus( engineResponse.getStatus());
+		if ( null != engineResponse.getState())
+		     param1.setStatus( engineResponse.getState());
 		else param1.setStatus( "" );  // ToDo - throw an Soap Fault 
 		
        	// -> CloudStack seems to have issues with timestamp formats so just in case
@@ -1288,7 +1293,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		DeleteVolumeResponse response = new DeleteVolumeResponse();
 		DeleteVolumeResponseType param1 = new DeleteVolumeResponseType();
 		
-		if ( null != engineResponse.getStatus())
+		if ( null != engineResponse.getState())
 			 param1.set_return( true  );
 		else param1.set_return( false );  // ToDo - throw an Soap Fault 
 	

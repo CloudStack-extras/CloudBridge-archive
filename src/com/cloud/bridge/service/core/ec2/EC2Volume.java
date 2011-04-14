@@ -28,7 +28,6 @@ public class EC2Volume {
 	private String   snapshotId;
 	private String   device;
 	private int      deviceId;
-	private String   status;
 	private String   state;
 	private String   type;
 	private String   vmstate;
@@ -42,7 +41,6 @@ public class EC2Volume {
 		snapshotId = null;
 		device     = null;
 		deviceId   = 0;
-		status     = null;
 		state      = null;
 		type       = null;
 		vmstate    = null;
@@ -109,14 +107,6 @@ public class EC2Volume {
 	
 	public int getDeviceId() {
 		return this.deviceId;
-	}
-
-	public void setStatus( String status ) {
-		this.status = status;
-	}
-	
-	public String getStatus() {
-		return status;
 	}
 
 	public void setState( String state ) {

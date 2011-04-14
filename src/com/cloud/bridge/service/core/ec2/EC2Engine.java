@@ -918,7 +918,7 @@ public class EC2Engine {
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     if (waitForAsynch( jobId )) request.setStatus( "attached" );
+	    	     if (waitForAsynch( jobId )) request.setState( "attached" );
             }
  	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
  	        
@@ -956,7 +956,7 @@ public class EC2Engine {
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     if (waitForAsynch( jobId )) request.setStatus( "detached" );
+	    	     if (waitForAsynch( jobId )) request.setState( "detached" );
             }
  	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
  	        
@@ -1047,7 +1047,7 @@ public class EC2Engine {
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     if (waitForAsynch( jobId )) request.setStatus( "deleted" );
+	    	     if (waitForAsynch( jobId )) request.setState( "deleted" );
             }
  	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 
@@ -1822,7 +1822,7 @@ public class EC2Engine {
    	               item = match.item(0);
    	               vol.setCreated( item.getFirstChild().getNodeValue());
     	       }
-    	       vol.setStatus( "available" );
+    	       vol.setState( "available" );
     	       return vol;
 	      }
        }
@@ -2033,8 +2033,7 @@ public class EC2Engine {
 	   			        else if (name.equalsIgnoreCase( "created"         )) vol.setCreated( value );
 	   			        else if (name.equalsIgnoreCase( "deviceid"        )) vol.setDeviceId( Integer.parseInt( value ));
 	   			        else if (name.equalsIgnoreCase( "snapshotid"      )) vol.setSnapShotId( value );		                     
-	   			        else if (name.equalsIgnoreCase( "state"           )) vol.setStatus( value );
-	   			        else if (name.equalsIgnoreCase( "status"          )) vol.setState( value );
+	   			        else if (name.equalsIgnoreCase( "state"           )) vol.setState( mapToAmazonVolState(value));
 	   			        else if (name.equalsIgnoreCase( "size"            )) vol.setSize( value );
 	   			        else if (name.equalsIgnoreCase( "type"            )) vol.setType( value );
 	   			        else if (name.equalsIgnoreCase( "virtualmachineid")) vol.setInstanceId( value );
@@ -2856,7 +2855,20 @@ public class EC2Engine {
     	else if (device.equalsIgnoreCase( "/dev/xvdj" )) return 9;  
     	else throw new EC2ServiceException(ClientError.Unsupported, device + " is not supported" );
     }
+    
+    
+    private String mapToAmazonVolState( String state ) 
+    {
+    	if (state.equalsIgnoreCase( "Allocated" ) ||
+    		state.equalsIgnoreCase( "Creating"  ) ||
+    		state.equalsIgnoreCase( "Ready"     )) return "available";
+    	
+    	if (state.equalsIgnoreCase( "Destroy" )) return "deleting";
+    	
+    	return "error"; 
+    }
 
+    
     Map[] execList(String query, String... args) throws IOException, SignatureException {
         Map r = execute(query, args);
         if (r.isEmpty())
