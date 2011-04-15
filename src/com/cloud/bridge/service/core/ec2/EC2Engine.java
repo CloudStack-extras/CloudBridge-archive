@@ -703,21 +703,27 @@ public class EC2Engine {
     	}
     }
     
-    public EC2DescribeInstancesResponse handleRequest(EC2DescribeInstances request) 
+    
+    public EC2DescribeInstancesResponse handleRequest( EC2DescribeInstances request ) 
     {
     	try {
-   	        return listVirtualMachines( request.getInstancesSet()); 
+   	        return listVirtualMachines( request.getInstancesSet(), request.getFilterSet()); 
    	        
-       	} catch( EC2ServiceException error ) {
+       	} 
+    	catch( EC2ServiceException error ) 
+    	{
      		logger.error( "EC2 DescribeInstances - " + error.toString());
     		throw error;
     		
-    	} catch( Exception e ) {
+    	} 
+    	catch( Exception e ) 
+    	{
     		logger.error( "EC2 DescribeInstances - " + e.toString());
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
 
+    
     public Map[] describeAddresses(String[] publicIps)
     {
         try {
@@ -1073,7 +1079,7 @@ public class EC2Engine {
 
     	// -> reboot is not allowed on destroyed (i.e., terminated) instances
     	try {
-    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet());
+    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet(), null );
      	    vms = previousState.getInstanceSet();
     	    
      	    // -> send reboot requests for each item 
@@ -1218,7 +1224,7 @@ public class EC2Engine {
     	
     	// -> first determine the current state of each VM (becomes it previous state)
     	try {
-    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet());
+    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet(), null );
      	    vms = previousState.getInstanceSet();
         	String[] jobIds = new String[ vms.length ];
 
@@ -1270,7 +1276,7 @@ public class EC2Engine {
     
     	// -> first determine the current state of each VM (becomes it previous state)
     	try {
-    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet());
+    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet(), null );
      	    vms = previousState.getInstanceSet();
         	String[] jobIds = new String[ vms.length ];
     
@@ -1580,7 +1586,7 @@ public class EC2Engine {
 	    	      if (-1 == maxAllowed) return -1;   // no limit
 		        
 		          // -> how many instances has the user already created?
-	    	      EC2DescribeInstancesResponse existingVMS = listVirtualMachines( null );
+	    	      EC2DescribeInstancesResponse existingVMS = listVirtualMachines( null, null );
 	    	      EC2Instance[] vmsList = existingVMS.getInstanceSet();
 	    	      return (maxAllowed - vmsList.length);
 		     }
@@ -1970,27 +1976,35 @@ public class EC2Engine {
 	   return vms;
     }
     
+    
     /**
      * Performs the cloud API listVirtualMachines one or more times.
      * 
      * @param virtualMachineIds - an array of instances we are interested in getting information on
+     * @param ifs - filter out unwanted instances
      */
-    private EC2DescribeInstancesResponse listVirtualMachines( String[] virtualMachineIds ) 
+    private EC2DescribeInstancesResponse listVirtualMachines( String[] virtualMachineIds, EC2InstanceFilterSet ifs ) 
         throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, 
                SignatureException, InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
     {
 	    EC2DescribeInstancesResponse instances = new EC2DescribeInstancesResponse();
  	 
-        if (null == virtualMachineIds || 0 == virtualMachineIds.length) {
-	        return lookupInstances( null, instances );
+        if (null == virtualMachineIds || 0 == virtualMachineIds.length) 
+        {
+	        instances = lookupInstances( null, instances );
 	    }
  	    
-	    for( int i=0; i <  virtualMachineIds.length; i++ ) {
+	    for( int i=0; i <  virtualMachineIds.length; i++ ) 
+	    {
 	       instances = lookupInstances( virtualMachineIds[i], instances );
 	    }
-	    return instances;
+	    
+	    if ( null == ifs )
+  	   	     return instances;
+  	    else return ifs.evaluate( instances );     
 	}
 
+    
     /**  
      * Get one or more templates depending on the volumeId parameter.
      * 
@@ -2273,7 +2287,6 @@ public class EC2Engine {
    			            else if (name.equalsIgnoreCase( "account" 	        )) vm.setAccountName(value);
    			            else if (name.equalsIgnoreCase( "domainid" 	        )) vm.setDomainId(value);
    			            else if (name.equalsIgnoreCase( "hypervisor"        )) vm.setHypervisor(value);
-   			            else if (name.equalsIgnoreCase( "account" 	        )) vm.setOwner(value);
    			            else if (name.equalsIgnoreCase( "rootdevicetype"    )) vm.setRootDeviceType(value);
    			            else if (name.equalsIgnoreCase( "rootdeviceid"      )) vm.setRootDeviceId( Integer.parseInt( value ));  			                 
    			            else if (name.equalsIgnoreCase( "serviceofferingid" )) vm.setServiceOffering( serviceOfferingIdToInstanceType( value ));

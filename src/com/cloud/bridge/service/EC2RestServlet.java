@@ -34,7 +34,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -105,6 +104,7 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Filter;
 import com.cloud.bridge.service.core.ec2.EC2Image;
+import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
@@ -114,7 +114,6 @@ import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
 import com.cloud.bridge.service.core.ec2.EC2VolumeFilterSet;
-import com.cloud.bridge.service.core.ec2.OfferingBundle;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.NoSuchObjectException;
 import com.cloud.bridge.service.exception.PermissionDeniedException;
@@ -1140,25 +1139,39 @@ public class EC2RestServlet extends HttpServlet {
 		serializeResponse(response, EC2response);
     }
 
+    
     private void describeInstances( HttpServletRequest request, HttpServletResponse response ) 
-        throws ADBException, XMLStreamException, IOException {
+        throws ADBException, XMLStreamException, IOException 
+    {
 		EC2DescribeInstances EC2request = new EC2DescribeInstances();
 		
 		// -> load in all the "InstanceId.n" parameters if any
 		Enumeration names = request.getParameterNames();
-		while( names.hasMoreElements()) {
+		while( names.hasMoreElements()) 
+		{
 			String key = (String)names.nextElement();
 			if (key.startsWith("InstanceId")) {
 			    String[] value = request.getParameterValues( key );
 			    if (null != value && 0 < value.length) EC2request.addInstanceId( value[0] );
 			}
 		}		
+		
+        // -> are there any filters with this request?
+        EC2Filter[] filterSet = extractFilters( request );
+        if (null != filterSet)
+        {
+        	EC2InstanceFilterSet ifs = new EC2InstanceFilterSet();
+        	for( int i=0; i < filterSet.length; i++ ) ifs.addFilter( filterSet[i] );
+        	EC2request.setFilterSet( ifs );
+        }
+
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 		DescribeInstancesResponse EC2response = EC2SoapServiceImpl.toDescribeInstancesResponse( engine.handleRequest( EC2request ), engine);
 		serializeResponse(response, EC2response);
     }
 
+    
     private void describeAddresses( HttpServletRequest request, HttpServletResponse response )
         throws ADBException, XMLStreamException, IOException {
         EC2DescribeAddresses EC2request = new EC2DescribeAddresses();

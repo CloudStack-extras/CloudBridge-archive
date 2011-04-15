@@ -34,7 +34,6 @@ public class EC2Instance {
     private String		accountName;
     private String		domainId;
     private String      hypervisor;
-    private String      owner;
     private String      rootDeviceType;
     private int         rootDeviceId;
     
@@ -52,7 +51,6 @@ public class EC2Instance {
 		accountName    = null;
 		domainId	   = null;
 		hypervisor     = null;
-		owner          = null;
 		rootDeviceType = null;
 		rootDeviceId   = 0;
 	}
@@ -159,14 +157,6 @@ public class EC2Instance {
 	
 	public void setHypervisor(String param) {
 		hypervisor = param;
-	}
-
-	public String getOnwer() {
-	    return owner;	
-	}
-	
-	public void setOwner(String param) {
-		owner = param;	
 	}
 
 	public String getRootDeviceType() {

@@ -2,39 +2,34 @@ package com.cloud.bridge.service.core.ec2;
 
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cloud.bridge.service.EC2SoapServiceImpl;
 import com.cloud.bridge.service.exception.EC2ServiceException;
-import com.cloud.bridge.util.DateHelper;
 
 
-public class EC2VolumeFilterSet {
+public class EC2InstanceFilterSet {
 
 	protected List<EC2Filter> filterSet = new ArrayList<EC2Filter>();    
 	
 	private Map<String,String> filterTypes = new HashMap<String,String>();
 
 
-	public EC2VolumeFilterSet() 
+	public EC2InstanceFilterSet() 
 	{
 		// -> use these values to check that the proper filter is passed to this type of filter set
-		filterTypes.put( "attachment.attach-time",           "xsd:dateTime" );
-		filterTypes.put( "attachment.delete-on-termination", "null"         );
-		filterTypes.put( "attachment.device",                "string"       );
-		filterTypes.put( "attachment.instance-id",           "string"       );
-		filterTypes.put( "attachment.status",                "null"         );
-		filterTypes.put( "availability-zone",                "string"       );
-		filterTypes.put( "create-time",                      "xsd:dateTime" );
-		filterTypes.put( "size",                             "integer"      );
-		filterTypes.put( "snapshot-id",                      "string"       );
-		filterTypes.put( "status",                           "set:creating|available|in-use|deleting|deleted|error" );
-		filterTypes.put( "tag-key",                          "null"         );
-		filterTypes.put( "tag-value",                        "null"         );
-		filterTypes.put( "volume-id",                        "string"       );	
-//		filterTypes.put( "tag:*",                            "null" );
+		filterTypes.put( "availability-zone",    "string"  );
+		filterTypes.put( "hypervisor",           "string"  );
+		filterTypes.put( "image-id",             "string"  );
+		filterTypes.put( "instance-id",          "string"  );
+		filterTypes.put( "instance-type",        "string"  );
+		filterTypes.put( "instance-state-code",  "integer" );
+		filterTypes.put( "instance-state-name",  "string"  );
+		filterTypes.put( "ip-address",           "string"  );	
+		filterTypes.put( "owner-id",             "string"  );	
+		filterTypes.put( "root-device-name",     "string"  );	
 	}
 	
 	
@@ -60,78 +55,84 @@ public class EC2VolumeFilterSet {
 	
 	
 	/**
-	 * For a filter to match a volume just one of its values has to match the volume.
-	 * For a volume to be included in the volume response it must pass all the defined filters.
+	 * For a filter to match an instance just one of its values has to match the volume.
+	 * For an instance to be included in the instance response it must pass all the defined filters.
 	 * 
-	 * @param sampleList - list of volumes to test against the defined filters
-	 * @return EC2DescribeVolumeResponse
+	 * @param sampleList - list of instances to test against the defined filters
+	 * @return EC2DescribeInstancesResponse
 	 * @throws ParseException 
 	 */
-	public EC2DescribeVolumesResponse evaluate( EC2DescribeVolumesResponse sampleList ) throws ParseException 
+	public EC2DescribeInstancesResponse evaluate( EC2DescribeInstancesResponse sampleList ) throws ParseException 
 	{
-    	EC2DescribeVolumesResponse resultList = new EC2DescribeVolumesResponse();
+		EC2DescribeInstancesResponse resultList = new EC2DescribeInstancesResponse();
     	boolean matched;
     	
-    	EC2Volume[] volumeSet = sampleList.getVolumeSet();
-    	EC2Filter[] filterSet = getFilterSet();
-    	for( int i=0; i < volumeSet.length; i++ )
+    	EC2Instance[] instanceSet = sampleList.getInstanceSet();
+    	EC2Filter[]   filterSet   = getFilterSet();
+    	for( int i=0; i < instanceSet.length; i++ )
     	{
     		matched = true;
     		for( int j=0; j < filterSet.length; j++ )
     		{
-    			if (!filterMatched( volumeSet[i], filterSet[j] )) {
+    			if (!filterMatched( instanceSet[i], filterSet[j] )) {
     				matched = false;
     				break;
     			}
     		}
     		
-    		if (matched) resultList.addVolume( volumeSet[i] );
+    		if (matched) resultList.addInstance( instanceSet[i] );
     	}
 
 		return resultList;
 	}
 	
 	
-	private boolean filterMatched( EC2Volume vol, EC2Filter filter ) throws ParseException
+	private boolean filterMatched( EC2Instance vm, EC2Filter filter ) throws ParseException
 	{
 		String filterName = filter.getName();
 		String[] valueSet = filter.getValueSet();
 		
+		// TODO: add test of security group the instance is in
 	    if ( filterName.equalsIgnoreCase( "availability-zone" )) 
 	    {
-	    	 return containsString( vol.getZoneName(), valueSet );	
+	    	 return containsString( vm.getZoneName(), valueSet );	
 	    }
-	    else if (filterName.equalsIgnoreCase( "create-time" ))
+	    else if (filterName.equalsIgnoreCase( "hypervisor" ))
 	    {
-	         return containsTime( vol.getCreated(), valueSet );	
+	         return containsString( vm.getHypervisor(), valueSet );	
 	    }
-	    else if (filterName.equalsIgnoreCase( "size" )) 
-	    {
-	         return containsInteger( vol.getSize(), valueSet );	
-	    }
-	    else if (filterName.equalsIgnoreCase( "snapshot-id" )) 
+	    else if (filterName.equalsIgnoreCase( "image-id" )) 
 	    {	
-	    	 return containsString( vol.getSnapShotId(), valueSet );	
+	    	 return containsString( vm.getTemplateId(), valueSet );	
 	    }
-	    else if (filterName.equalsIgnoreCase( "status" )) 
+	    else if (filterName.equalsIgnoreCase( "instance-id" )) 
 	    {	
-	    	 return containsString( vol.getState(), valueSet );	
+	    	 return containsString( vm.getId(), valueSet );	
 	    }
-	    else if (filterName.equalsIgnoreCase( "volume-id" )) 
+	    else if (filterName.equalsIgnoreCase( "instance-type" ))
+	    {
+	         return containsString( vm.getServiceOffering(), valueSet );	
+	    }
+	    else if (filterName.equalsIgnoreCase( "instance-state-code" )) 
+	    {
+	    	 return containsInteger( EC2SoapServiceImpl.toAmazonCode( vm.getState()), valueSet );		
+	    }
+	    else if (filterName.equalsIgnoreCase( "instance-state-name" )) 
+	    {
+	    	 return containsString( EC2SoapServiceImpl.toAmazonStateName( vm.getState()), valueSet );		
+	    }
+	    else if (filterName.equalsIgnoreCase( "ip-address" )) 
+	    {
+	         return containsString( vm.getIpAddress(), valueSet );	
+	    }
+	    else if (filterName.equalsIgnoreCase( "owner-id" )) 
 	    {	
-	    	 return containsString( vol.getId(), valueSet );	
+	    	 String owner = new String( vm.getDomainId() + ":" + vm.getAccountName()); 
+	    	 return containsString( owner, valueSet );	
 	    }
-	    else if (filterName.equalsIgnoreCase( "attachment.attach-time" ))
+	    else if (filterName.equalsIgnoreCase( "root-device-name" )) 
 	    {
-	         return containsTime( vol.getAttached(), valueSet );	
-	    }
-	    else if (filterName.equalsIgnoreCase( "attachment.device" )) 
-	    {
-	         return containsDevice( vol.getDeviceId(), valueSet );	
-	    }
-	    else if (filterName.equalsIgnoreCase( "attachment.instance-id" )) 
-	    {
-	    	 return containsString( vol.getInstanceId(), valueSet );		
+	         return containsDevice( vm.getRootDeviceId(), valueSet );	
 	    }
 	    else return false;
 	}
@@ -157,19 +158,6 @@ public class EC2VolumeFilterSet {
 	    	//System.out.println( "contsinsInteger: " + lookingFor + " " + set[i] );
         	int temp = Integer.parseInt( set[i] );
         	if (lookingFor == temp) return true;
-        }
-		return false;
-	}
-
-	
-	private boolean containsTime( Calendar lookingFor, String[] set ) throws ParseException
-	{
-        for( int i=0; i < set.length; i++ )
-        {
-	    	//System.out.println( "contsinsCalendar: " + lookingFor + " " + set[i] );
-        	Calendar toMatch = Calendar.getInstance();
-        	toMatch.setTime( DateHelper.parseISO8601DateString( set[i] ));
-        	if (0 == lookingFor.compareTo( toMatch )) return true;
         }
 		return false;
 	}
@@ -223,5 +211,5 @@ public class EC2VolumeFilterSet {
         	}
         }
 		return false;
-	}
+	}	
 }

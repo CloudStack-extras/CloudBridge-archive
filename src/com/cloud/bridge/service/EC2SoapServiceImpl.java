@@ -44,6 +44,7 @@ import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Filter;
 import com.cloud.bridge.service.core.ec2.EC2Image;
 import com.cloud.bridge.service.core.ec2.EC2Instance;
+import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2PasswordData;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
@@ -271,19 +272,28 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    throw new EC2ServiceException( "Unsupported - only instanceType supported", 501 );
 	}
 
-	public DescribeInstancesResponse describeInstances(DescribeInstances describeInstances) {
+	
+	public DescribeInstancesResponse describeInstances( DescribeInstances describeInstances ) 
+	{
 		EC2DescribeInstances  request = new EC2DescribeInstances();
 		DescribeInstancesType dit     = describeInstances.getDescribeInstances();
-		
+		FilterSetType fst = dit.getFilterSet();
+
 		// -> toEC2DescribeInstances
 		DescribeInstancesInfoType   diit  = dit.getInstancesSet();
 		DescribeInstancesItemType[] items = diit.getItem();
 		if (null != items) {  // -> can be empty
 			for( int i=0; i < items.length; i++ ) request.addInstanceId( items[i].getInstanceId());
 		}
-		return toDescribeInstancesResponse( engine.handleRequest( request ), engine);
+		
+		if (null != fst) {
+			request.setFilterSet( toInstanceFilterSet( fst ));
+		}
+		
+		return toDescribeInstancesResponse( engine.handleRequest( request ), engine );
 	}
 
+	
     @Override
     public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
         EC2DescribeAddresses request = new EC2DescribeAddresses();
@@ -703,6 +713,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 
+	
 	private EC2VolumeFilterSet toVolumeFilterSet( FilterSetType fst )
 	{
 		EC2VolumeFilterSet vfs = new EC2VolumeFilterSet();
@@ -732,6 +743,33 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			}
 		}		
 		return vfs;
+	}
+
+	
+	private EC2InstanceFilterSet toInstanceFilterSet( FilterSetType fst )
+	{
+		EC2InstanceFilterSet ifs = new EC2InstanceFilterSet();
+		
+		FilterType[] items = fst.getItem();
+		if (null != items) 
+		{
+			// -> each filter can have one or more values associated with it
+			for( int j=0; j < items.length; j++ )
+			{
+				EC2Filter oneFilter = new EC2Filter();
+				String filterName = items[j].getName();
+				oneFilter.setName( filterName );
+				
+				ValueSetType vst = items[j].getValueSet();
+				ValueType[] valueItems = vst.getItem();
+				for( int k=0; k < valueItems.length; k++ ) 
+				{
+					oneFilter.addValueEncoded( valueItems[k].getValue());
+				}
+				ifs.addFilter( oneFilter );
+			}
+		}		
+		return ifs;
 	}
 
 	
@@ -803,14 +841,17 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         response.setDescribeInstanceAttributeResponse( param1 );
 		return response;
 	}
+
 	
-	public static DescribeInstancesResponse toDescribeInstancesResponse(EC2DescribeInstancesResponse engineResponse, EC2Engine engine) {
+	public static DescribeInstancesResponse toDescribeInstancesResponse(EC2DescribeInstancesResponse engineResponse, EC2Engine engine) 
+	{
 	    DescribeInstancesResponse response = new DescribeInstancesResponse();
 	    DescribeInstancesResponseType param1 = new DescribeInstancesResponseType();
 	    ReservationSetType param2 = new ReservationSetType();
 
 		EC2Instance[] instances = engineResponse.getInstanceSet();
-		for( int i=0; i < instances.length; i++ ) {
+		for( int i=0; i < instances.length; i++ ) 
+		{
 			String accountName = instances[i].getAccountName();
 			String domainId = instances[i].getDomainId();
 			String ownerId = domainId + ":" + accountName;
@@ -878,7 +919,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setStateReason( param13 );
             param7.setArchitecture( "" );
             param7.setRootDeviceType( "" );
-            param7.setRootDeviceName( "" );
+            param7.setRootDeviceName( "" + instances[i].getRootDeviceId());
             
             InstanceBlockDeviceMappingResponseType param14 = new InstanceBlockDeviceMappingResponseType();
             InstanceBlockDeviceMappingResponseItemType param15 = new InstanceBlockDeviceMappingResponseItemType();
@@ -907,6 +948,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 
+	
     public static DescribeAddressesResponse toDescribeAddressesResponse(Map[] addresses) {
         final DescribeAddressesResponseItemType[] items = new DescribeAddressesResponseItemType[addresses.length];
 
@@ -977,7 +1019,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	 * @param cloudState
 	 * @return 
 	 */
-	private static int toAmazonCode( String cloudState )
+	public static int toAmazonCode( String cloudState )
 	{
 		if (null == cloudState) return 48;
 		
@@ -986,10 +1028,11 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		else if (cloudState.equalsIgnoreCase( "Running"   )) return 16;
 		else if (cloudState.equalsIgnoreCase( "Starting"  )) return 0;
 		else if (cloudState.equalsIgnoreCase( "Stopping"  )) return 64;
+		else if (cloudState.equalsIgnoreCase( "Error"     )) return 1;
 		else return 16;
 	}
 	
-	private static String toAmazonStateName( String cloudState )
+	public static String toAmazonStateName( String cloudState )
 	{
 		if (null == cloudState) return new String( "terminated" );
 		
@@ -998,6 +1041,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		else if (cloudState.equalsIgnoreCase( "Running"   )) return new String( "running" );
 		else if (cloudState.equalsIgnoreCase( "Starting"  )) return new String( "pending" );
 		else if (cloudState.equalsIgnoreCase( "Stopping"  )) return new String( "stopping" );
+		else if (cloudState.equalsIgnoreCase( "Error"     )) return new String( "error" );
 		else return new String( "running" );
 	}
 	
