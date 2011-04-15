@@ -4,7 +4,7 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's EC2 API User's Guide</H1>
-8/30/2010
+4/15/2010
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#part1">Part 1. Cloud.com's Specific Implementation Details</A></LI>
@@ -128,6 +128,37 @@ imageLocation - a full path to your AMI manifest in Amazon S3 storage.
 As defined for Cloud.com's EC2 implementation:
 <pre>
 imageLocation - is a URL of where the template is hosted. Possible URL include http:// and https://
+</pre>
+<P>
+<font size=+1><I>EC2's DescribeInstances Function</I></font>
+<P>
+Only the following list of filters are currently supported:
+<pre>
+availability-zone
+hypervisor
+image-id
+instance-id
+instance-type
+instance-state-code
+instance-state-name
+ip-address	
+owner-id
+root-device-name	
+</pre>
+<P>
+<font size=+1><I>EC2's DescribeVolumes Function</I></font>
+<P>
+Only the following list of filters are currently supported:
+<pre>
+attachment.attach-time
+attachment.device
+attachment.instance-id
+availability-zone
+create-time
+size
+snapshot-id
+status
+volume-id	
 </pre>
 <P>
 <H3 id="misc">4. Miscellaneous</H3>
