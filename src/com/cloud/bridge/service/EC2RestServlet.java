@@ -110,6 +110,7 @@ import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
 import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
+import com.cloud.bridge.service.core.ec2.EC2SnapshotFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2Volume;
@@ -1288,25 +1289,39 @@ public class EC2RestServlet extends HttpServlet {
 	    serializeResponse(response, EC2response);
     }
 
+    
     private void describeSnapshots( HttpServletRequest request, HttpServletResponse response ) 
-        throws ADBException, XMLStreamException, IOException {
+        throws ADBException, XMLStreamException, IOException 
+    {
 	    EC2DescribeSnapshots EC2request = new EC2DescribeSnapshots();
 	
 	    // -> load in all the "SnapshotId.n" parameters if any, and ignore any other parameters
 	    Enumeration names = request.getParameterNames();
-	    while( names.hasMoreElements()) {
+	    while( names.hasMoreElements()) 
+	    {
 		    String key = (String)names.nextElement();
 		    if (key.startsWith("SnapshotId")) {
 		        String[] value = request.getParameterValues( key );
 		        if (null != value && 0 < value.length) EC2request.addSnapshotId( value[0] );
 		    }
-	    }		
+	    }
+	            
+        // -> are there any filters with this request?
+        EC2Filter[] filterSet = extractFilters( request );
+        if (null != filterSet)
+        {
+        	EC2SnapshotFilterSet sfs = new EC2SnapshotFilterSet();
+        	for( int i=0; i < filterSet.length; i++ ) sfs.addFilter( filterSet[i] );
+        	EC2request.setFilterSet( sfs );
+        }
+
 	    // -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 	    DescribeSnapshotsResponse EC2response = EC2SoapServiceImpl.toDescribeSnapshotsResponse( engine.handleRequest( EC2request ));
 	    serializeResponse(response, EC2response);
     }
 
+    
     private void describeVolumes( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException 
     {

@@ -54,6 +54,7 @@ import com.cloud.bridge.service.core.ec2.EC2RunInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2SSHKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2Snapshot;
+import com.cloud.bridge.service.core.ec2.EC2SnapshotFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StartInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
@@ -344,20 +345,34 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDescribeSecurityGroupsResponse( engine.handleRequest( request ));
 	}
 
-	public DescribeSnapshotsResponse describeSnapshots(DescribeSnapshots describeSnapshots) {
+	
+	public DescribeSnapshotsResponse describeSnapshots(DescribeSnapshots describeSnapshots) 
+	{
 		EC2DescribeSnapshots request = new EC2DescribeSnapshots();
 		DescribeSnapshotsType dst = describeSnapshots.getDescribeSnapshots();
-		
+	
 		DescribeSnapshotsSetType dsst = dst.getSnapshotSet();
-		if (null != dsst) {
+		FilterSetType fst = dst.getFilterSet();
+
+		if (null != dsst) 
+		{
 			DescribeSnapshotsSetItemType[] items = dsst.getItem();
             if (null != items) {
 			    for( int i=0; i < items.length; i++ ) request.addSnapshotId( items[i].getSnapshotId());
             }
 		}
+		
+		if (null != fst) 
+		{
+			String[] timeFilters = new String[1];
+			timeFilters[0] = new String( "start-time" );
+			request.setFilterSet( toSnapshotFilterSet( fst, timeFilters ));
+		}
+
 		return toDescribeSnapshotsResponse(engine.handleRequest(request));
 	}
 
+	
 	public DescribeVolumesResponse describeVolumes(DescribeVolumes describeVolumes) 
 	{
 		EC2DescribeVolumes request = new EC2DescribeVolumes();
@@ -374,8 +389,12 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		    }
 		}	
 		
-		if (null != fst) {
-			request.setFilterSet( toVolumeFilterSet( fst ));
+		if (null != fst) 
+		{
+			String[] timeFilters = new String[2];
+			timeFilters[0] = new String( "attachment.attach-time" );
+			timeFilters[1] = new String( "create-time"            );
+			request.setFilterSet( toVolumeFilterSet( fst, timeFilters ));
 		}
 		
 		return toDescribeVolumesResponse( engine.handleRequest( request ));
@@ -714,7 +733,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	
-	private EC2VolumeFilterSet toVolumeFilterSet( FilterSetType fst )
+	private EC2VolumeFilterSet toVolumeFilterSet( FilterSetType fst, String[] timeStrs )
 	{
 		EC2VolumeFilterSet vfs = new EC2VolumeFilterSet();
 		boolean timeFilter = false;
@@ -728,7 +747,53 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 				EC2Filter oneFilter = new EC2Filter();
 				String filterName = items[j].getName();
 				oneFilter.setName( filterName );
-				timeFilter = (filterName.equalsIgnoreCase( "attachment.attach-time" ) || filterName.equalsIgnoreCase( "create-time" ));
+				
+				// -> is the filter one of the xsd:dateTime filters?
+				timeFilter = false;
+				for( int m=0; m < timeStrs.length; m++ )
+				{
+					 timeFilter = filterName.equalsIgnoreCase( timeStrs[m] );
+					 if (timeFilter) break;
+				}
+				
+				ValueSetType vst = items[j].getValueSet();
+				ValueType[] valueItems = vst.getItem();
+				for( int k=0; k < valueItems.length; k++ ) 
+				{
+					// -> time values are not encoded as regexes
+					if ( timeFilter )
+					     oneFilter.addValue( valueItems[k].getValue());
+					else oneFilter.addValueEncoded( valueItems[k].getValue());
+				}
+				vfs.addFilter( oneFilter );
+			}
+		}		
+		return vfs;
+	}
+
+	
+	private EC2SnapshotFilterSet toSnapshotFilterSet( FilterSetType fst, String[] timeStrs )
+	{
+		EC2SnapshotFilterSet vfs = new EC2SnapshotFilterSet();
+		boolean timeFilter = false;
+		
+		FilterType[] items = fst.getItem();
+		if (null != items) 
+		{
+			// -> each filter can have one or more values associated with it
+			for( int j=0; j < items.length; j++ )
+			{
+				EC2Filter oneFilter = new EC2Filter();
+				String filterName = items[j].getName();
+				oneFilter.setName( filterName );
+				
+				// -> is the filter one of the xsd:dateTime filters?
+				timeFilter = false;
+				for( int m=0; m < timeStrs.length; m++ )
+				{
+					 timeFilter = filterName.equalsIgnoreCase( timeStrs[m] );
+					 if (timeFilter) break;
+				}
 				
 				ValueSetType vst = items[j].getValueSet();
 				ValueType[] valueItems = vst.getItem();

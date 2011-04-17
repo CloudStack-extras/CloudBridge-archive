@@ -4,7 +4,7 @@
 </HEAD>
 <BODY>
 <H1>Cloud.com's EC2 API User's Guide</H1>
-4/15/2010
+4/17/2010
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#part1">Part 1. Cloud.com's Specific Implementation Details</A></LI>
@@ -159,6 +159,19 @@ size
 snapshot-id
 status
 volume-id	
+</pre>
+<P>
+<font size=+1><I>EC2's DescribeSnapshots Function</I></font>
+<P>
+Only the following list of filters are currently supported:
+<pre>
+owner-alias
+owner-id (here its the CloudStack API key)
+snapshot-id
+start-time
+status
+volume-id
+volume-size
 </pre>
 <P>
 <H3 id="misc">4. Miscellaneous</H3>

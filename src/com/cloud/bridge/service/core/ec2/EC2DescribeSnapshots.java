@@ -21,6 +21,7 @@ import java.util.List;
 public class EC2DescribeSnapshots {
 
 	private List<String> snapshotSet = new ArrayList<String>();    // a list of strings identifying snapshots
+	private EC2SnapshotFilterSet sfs = null;
 
 	public EC2DescribeSnapshots() {
 	}
@@ -31,5 +32,13 @@ public class EC2DescribeSnapshots {
 	
 	public String[] getSnapshotSet() {
 		return snapshotSet.toArray(new String[0]);
+	}
+	
+	public EC2SnapshotFilterSet getFilterSet() {
+		return sfs;
+	}
+	
+	public void setFilterSet( EC2SnapshotFilterSet param ) {
+		sfs = param;
 	}
 }

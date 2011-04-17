@@ -409,31 +409,39 @@ public class EC2Engine {
     	return userList.toString();
     }
     
-    public EC2DescribeSnapshotsResponse handleRequest(EC2DescribeSnapshots request) 
+    
+    public EC2DescribeSnapshotsResponse handleRequest( EC2DescribeSnapshots request ) 
     {
 		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
+    	EC2SnapshotFilterSet sfs = request.getFilterSet();
 		
-    	try {
-    		// -> query to get the volume size for each snapshot
+    	try 
+    	{   // -> query to get the volume size for each snapshot
     		EC2DescribeSnapshotsResponse response = listSnapshots( request.getSnapshotSet());
     		EC2Snapshot[] snapshots = response.getSnapshotSet();
-    		for( int i=0; i < snapshots.length; i++ ) {
+    		for( int i=0; i < snapshots.length; i++ ) 
+    		{
     			volumes = listVolumes( snapshots[i].getVolumeId(), null, volumes );
                 EC2Volume[] volSet = volumes.getVolumeSet();
                 if (0 < volSet.length) snapshots[i].setVolumeSize( volSet[0].getSize());
                 volumes.reset();
     		}
-    		return response;
-   	        
-       	} catch( EC2ServiceException error ) {
+    		
+    	    if ( null == sfs )
+     	   	     return response;
+     	    else return sfs.evaluate( response );     
+       	} 
+    	catch( EC2ServiceException error ) {
     		logger.error( "EC2 DescribeSnapshots - " + error.toString());
     		throw error;
     		
-    	} catch( Exception e ) {
+    	} 
+    	catch( Exception e ) {
     		logger.error( "EC2 DescribeSnapshots - " + e.toString());
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
+    
     
     public EC2Snapshot createSnapshot( String volumeId ) 
     {
@@ -2274,7 +2282,7 @@ public class EC2Engine {
 	    			if (null != child.getFirstChild()) 
 	    			{
 	    			    String value = child.getFirstChild().getNodeValue();
-	    			    //System.out.println( "vm: " + name + " = " + value );
+	    			    //System.out.println( "\n*** vm: " + name + " = " + value );
 	    			
    			                 if (name.equalsIgnoreCase( "id"                )) vm.setId( value );
    			            else if (name.equalsIgnoreCase( "name"              )) vm.setName( value );
@@ -2346,7 +2354,7 @@ public class EC2Engine {
 	    			    else if (name.equalsIgnoreCase( "ostypeid"   )) template.setOsTypeId( value );
 	    			    else if (name.equalsIgnoreCase( "ispublic"   )) template.setIsPublic( value.equalsIgnoreCase( "true" ));
 	    			    else if (name.equalsIgnoreCase( "isready"    )) template.setIsReady( value.equalsIgnoreCase( "true" ));
-	    			    else if (name.equalsIgnoreCase( "account"   )) template.setAccountName( value );
+	    			    else if (name.equalsIgnoreCase( "account"    )) template.setAccountName( value );
 	    			    else if (name.equalsIgnoreCase( "domainid"   )) template.setDomainId(value);
 	    			}
 	    	    }
@@ -2607,7 +2615,7 @@ public class EC2Engine {
 	    			     else if (name.equalsIgnoreCase( "snapshottype" )) shot.setType( value );
 	    			     else if (name.equalsIgnoreCase( "created"      )) shot.setCreated( value );
 	    			     else if (name.equalsIgnoreCase( "account"      )) shot.setAccountName(value);
-	    			     else if (name.equalsIgnoreCase( "domainId"      )) shot.setDomainId(value);
+	    			     else if (name.equalsIgnoreCase( "domainId"     )) shot.setDomainId(value);
 	    			 } 
 	    	    }
 	 		    // -> are we asking about specific snapshots?
