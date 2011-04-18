@@ -5,6 +5,7 @@ import java.util.List;
 
 public class EC2SecurityGroup {
 
+	private String id;
 	private String name;
 	private String description;
 	private String accountName;
@@ -12,12 +13,21 @@ public class EC2SecurityGroup {
 	private List<EC2IpPermission> permissionSet = new ArrayList<EC2IpPermission>();    
 
 	public EC2SecurityGroup() {
+		id          = null;
 		name        = null;
 		description = null;
-		accountName     = null;
-		domainId		= null;
+		accountName = null;
+		domainId	= null;
+	}
+
+	public void setId( String id ) {
+		this.id = id;
 	}
 	
+	public String getId() {
+		return this.id;
+	}
+
 	public void setName( String name ) {
 		this.name = name;
 	}

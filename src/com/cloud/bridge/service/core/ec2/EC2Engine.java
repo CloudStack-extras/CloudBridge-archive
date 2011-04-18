@@ -276,21 +276,27 @@ public class EC2Engine {
    	    }
     }
     
-    public EC2DescribeSecurityGroupsResponse handleRequest(EC2DescribeSecurityGroups request) 
+    public EC2DescribeSecurityGroupsResponse handleRequest( EC2DescribeSecurityGroups request ) 
     {
-    	try {
-    		return listSecurityGroups( request.getGroupSet());
-   	        
-       	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 DescribeSecurityGroups - " + error.toString());
-    		throw error;
+    	try 
+    	{   EC2DescribeSecurityGroupsResponse response = listSecurityGroups( request.getGroupSet());
+        	EC2GroupFilterSet gfs = request.getFilterSet();
     		
-    	} catch( Exception e ) {
+	        if ( null == gfs )
+	   	         return response;
+	        else return gfs.evaluate( response );     
+       	} 
+    	catch( EC2ServiceException error ) {
+    		logger.error( "EC2 DescribeSecurityGroups - " + error.toString());
+    		throw error;   		
+    	} 
+    	catch( Exception e ) {
     		logger.error( "EC2 DescribeSecurityGroups - " + e.toString());
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
    
+    
     /**
      * The Cload Stack API only handles one item out of the EC2 request at a time.
      * Place authorizw and revoke into one function since it appears that they are practically identical.
@@ -2478,9 +2484,11 @@ public class EC2Engine {
 	    			     String value = child.getFirstChild().getNodeValue();
 	    			     //System.out.println( "listSecurityGroups " + name + "=" + value );
 	    			     
-	    			          if (name.equalsIgnoreCase( "name"        )) group.setName( value );
+   			                  if (name.equalsIgnoreCase( "id"          )) group.setId( value );
+   			             else if (name.equalsIgnoreCase( "name"        )) group.setName( value );
 	    			     else if (name.equalsIgnoreCase( "description" )) group.setDescription( value );
 	    			     else if (name.equalsIgnoreCase( "account"     )) group.setAccount( value );
+	    			     else if (name.equalsIgnoreCase( "domainid"    )) group.setDomainId( value );  			                  
 	    			     else if (name.equalsIgnoreCase( "ingressrule" )) group.addIpPermission( toPermission( child.getChildNodes()));
 	    			 } 
 	    	    }
@@ -2557,12 +2565,15 @@ public class EC2Engine {
     		     String value = child.getFirstChild().getNodeValue();
     		     //System.out.println( "ingress rule: " + name + "=" + value );
     		     
-		              if (name.equalsIgnoreCase( "protocol"         )) perm.setProtocol( value ); 
-		         else if (name.equalsIgnoreCase( "startport"        )) perm.setFromPort( Integer.parseInt( value ));
-		         else if (name.equalsIgnoreCase( "endport"          )) perm.setToPort( Integer.parseInt( value ));
-		         else if (name.equalsIgnoreCase( "cidr"             )) perm.addIpRange( value );
-		         else if (name.equalsIgnoreCase( "account"          )) account = value;
+		              if (name.equalsIgnoreCase( "protocol"          )) perm.setProtocol( value ); 
+		         else if (name.equalsIgnoreCase( "startport"         )) perm.setFromPort( Integer.parseInt( value ));
+		         else if (name.equalsIgnoreCase( "endport"           )) perm.setToPort( Integer.parseInt( value ));
+		         else if (name.equalsIgnoreCase( "account"           )) account = value;
 		         else if (name.equalsIgnoreCase( "securitygroupname" )) groupName = value ;
+		         else if (name.equalsIgnoreCase( "cidr"              )) {
+		        	 perm.addIpRange( value );
+		        	 perm.setCIDR( value );
+		         }
 		              
 		         if (null != account && null != groupName) 
 		         {

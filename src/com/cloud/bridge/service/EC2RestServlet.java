@@ -103,6 +103,7 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshots;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Filter;
+import com.cloud.bridge.service.core.ec2.EC2GroupFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2Image;
 import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
@@ -1238,13 +1239,16 @@ public class EC2RestServlet extends HttpServlet {
         serializeResponse(response, EC2SoapServiceImpl.toDisassociateAddressResponse( engine.disassociateAddress(publicIp) ));
     }
 
+    
     private void describeSecurityGroups( HttpServletRequest request, HttpServletResponse response ) 
-        throws ADBException, XMLStreamException, IOException {
+        throws ADBException, XMLStreamException, IOException 
+    {
 	    EC2DescribeSecurityGroups EC2request = new EC2DescribeSecurityGroups();
 	
 	    // -> load in all the "GroupName.n" parameters if any
 	    Enumeration names = request.getParameterNames();
-	    while( names.hasMoreElements()) {
+	    while( names.hasMoreElements()) 
+	    {
 		   String key = (String)names.nextElement();
 		   if (key.startsWith("GroupName")) {
 		       String[] value = request.getParameterValues( key );
@@ -1252,11 +1256,21 @@ public class EC2RestServlet extends HttpServlet {
 		   }
 	    }	
 	    
+        // -> are there any filters with this request?
+        EC2Filter[] filterSet = extractFilters( request );
+        if (null != filterSet)
+        {
+        	EC2GroupFilterSet gfs = new EC2GroupFilterSet();
+        	for( int i=0; i < filterSet.length; i++ ) gfs.addFilter( filterSet[i] );
+        	EC2request.setFilterSet( gfs );
+        }
+	    
 	    // -> execute the request
 	    EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 	    DescribeSecurityGroupsResponse EC2response = EC2SoapServiceImpl.toDescribeSecurityGroupsResponse( engine.handleRequest( EC2request ));
 	    serializeResponse(response, EC2response);
     }
+    
     
     private void describeInstanceAttribute( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {

@@ -42,6 +42,7 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumesResponse;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Filter;
+import com.cloud.bridge.service.core.ec2.EC2GroupFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2Image;
 import com.cloud.bridge.service.core.ec2.EC2Instance;
 import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
@@ -332,9 +333,12 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         return toDisassociateAddressResponse( engine.disassociateAddress(publicIp) );
     }
 
-	public DescribeSecurityGroupsResponse describeSecurityGroups(DescribeSecurityGroups describeSecurityGroups) {
+    
+	public DescribeSecurityGroupsResponse describeSecurityGroups(DescribeSecurityGroups describeSecurityGroups) 
+	{
 	    EC2DescribeSecurityGroups request = new EC2DescribeSecurityGroups();
         DescribeSecurityGroupsType sgt = describeSecurityGroups.getDescribeSecurityGroups();
+		FilterSetType fst = sgt.getFilterSet();
 
 		// -> toEC2DescribeSecurityGroups
         DescribeSecurityGroupsSetType sgst = sgt.getSecurityGroupSet();
@@ -342,6 +346,11 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		if (null != items) {  // -> can be empty
 			for( int i=0; i < items.length; i++ ) request.addGroupName( items[i].getGroupName());
 		}
+		
+		if (null != fst) {
+			request.setFilterSet( toGroupFilterSet( fst ));
+		}
+
 		return toDescribeSecurityGroupsResponse( engine.handleRequest( request ));
 	}
 
@@ -808,6 +817,34 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			}
 		}		
 		return vfs;
+	}
+
+	
+	// TODO make these filter set functions use generics 
+	private EC2GroupFilterSet toGroupFilterSet( FilterSetType fst )
+	{
+		EC2GroupFilterSet gfs = new EC2GroupFilterSet();
+		
+		FilterType[] items = fst.getItem();
+		if (null != items) 
+		{
+			// -> each filter can have one or more values associated with it
+			for( int j=0; j < items.length; j++ )
+			{
+				EC2Filter oneFilter = new EC2Filter();
+				String filterName = items[j].getName();
+				oneFilter.setName( filterName );
+				
+				ValueSetType vst = items[j].getValueSet();
+				ValueType[] valueItems = vst.getItem();
+				for( int k=0; k < valueItems.length; k++ ) 
+				{
+					oneFilter.addValueEncoded( valueItems[k].getValue());
+				}
+				gfs.addFilter( oneFilter );
+			}
+		}		
+		return gfs;
 	}
 
 	
