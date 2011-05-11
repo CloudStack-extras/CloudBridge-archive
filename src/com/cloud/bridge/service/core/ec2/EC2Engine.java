@@ -39,7 +39,6 @@ import com.cloud.bridge.service.core.ec2.EC2StartInstances;
 import com.cloud.bridge.service.core.ec2.EC2StartInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2StopInstances;
 import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
-import com.cloud.bridge.service.core.ec2.IpForwardingRuleResponse;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
@@ -921,10 +920,10 @@ public class EC2Engine {
     }
    
     
-    public EC2Volume attachVolume(EC2Volume request) 
+    public EC2Volume attachVolume( EC2Volume request ) 
     {
-    	try {
-    		request.setDeviceId( mapDeviceToCloudDeviceId( request.getDevice()));
+    	try 
+    	{   request.setDeviceId( mapDeviceToCloudDeviceId( request.getDevice()));
 
 	        StringBuffer params = new StringBuffer();
    	        params.append( "command=attachVolume" );
@@ -935,25 +934,29 @@ public class EC2Engine {
 
   		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "attachVolume", true );
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) {
+ 	        if ( 0 < match.getLength()) 
+ 	        {
 	    	     Node item = match.item(0);
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
 	    	     if (waitForAsynch( jobId )) request.setState( "attached" );
             }
- 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+ 	        else throw new EC2ServiceException( ServerError.InternalError, "An unexpected error occurred." );
  	        
-    	    return request;
-   	        
-       	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 AttachVolume - " + error.toString());
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "EC2 AttachVolume - " + e.toString());
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    	    return request;  	        
+       	} 
+    	catch( EC2ServiceException error ) 
+    	{
+    		logger.error( "EC2 AttachVolume 1 - " + error.toString());
+    		throw error;    		
+    	} 
+    	catch( Exception e ) 
+    	{
+    		logger.error( "EC2 AttachVolume 2 - " + e.toString());
+    		throw new EC2ServiceException( ServerError.InternalError, e.toString());
     	}   	    
     }
 
+    
     public EC2Volume detachVolume(EC2Volume request) 
     {
     	try {
@@ -1930,21 +1933,24 @@ public class EC2Engine {
     {    
 	    while( true ) 
 	    {
-		  String result = checkAsyncResult( jobId );
-		  //System.out.println( "waitForAsynch: " + result );
+		   String result = checkAsyncResult( jobId );
+		   //System.out.println( "waitForAsynch: " + result );
 		  
-		  if ( -1 != result.indexOf( "s:1" )) {
-		      // -> requested action has finished
-		    	  return true;
-		  }
-		  else if (-1 != result.indexOf( "s:2" )) {
-		       // -> requested action has failed
-		  	   return false;
-		  }
-		  // -> slow down the hits from this polling a little
-  	      try { Thread.sleep( pollInterval5 ); }
-	      catch( Exception e ) {}
-	   }
+		   if ( -1 != result.indexOf( "s:1" )) 
+		   {
+		       // -> requested action has finished
+		       return true;
+		   }
+		   else if (-1 != result.indexOf( "s:2" ) || -1 != result.indexOf( "s:-1" )) 
+		   {
+		        // -> requested action has failed
+		  	    return false;
+		   }
+		  
+		   // -> slow down the hits from this polling a little
+  	       try { Thread.sleep( pollInterval5 ); }
+	       catch( Exception e ) {}
+	    }
     }
 
     /**
@@ -1979,6 +1985,13 @@ public class EC2Engine {
 			       waitCount--;
 			       jobIds[j] = null;
 		      }
+		      else if (-1 != result.indexOf( "s:-1" ))
+		      {
+		    	   // -> somehow the request has failed on the CloudStack
+		    	   waitCount--;
+		    	   jobIds[j] = null;
+		      }
+		      
 			  // -> slow down the hits from this polling a little
 	  	      try { Thread.sleep( pollInterval6 ); }
 		      catch( Exception e ) {}
@@ -2821,6 +2834,7 @@ public class EC2Engine {
      * 
      * @param jobId
      * @return A string with one or two values, "s:status r:result" if both present.
+     *         "s:-1" means no result returned from CloudStack so request has failed.
      */
     private String checkAsyncResult( String jobId ) throws EC2ServiceException, InternalErrorException, SignatureException 
     {
@@ -2830,10 +2844,11 @@ public class EC2Engine {
     	String   status = null;
     	String   result = null;
     	
-    	try {
-  		    String query = "command=queryAsyncJobResult&jobId=" + jobId;
+    	try 
+    	{   String query = "command=queryAsyncJobResult&jobId=" + jobId;
   		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
-		    
+            if (null == cloudResp) return new String("s:-1");
+  		    
 		    match = cloudResp.getElementsByTagName( "jobstatus" ); 
 	        if (0 < match.getLength()) {
 	    	    item = match.item(0);
@@ -2848,13 +2863,16 @@ public class EC2Engine {
 	        checkResult.append( " " );
 	        if (null != status) checkResult.append( "s:" ).append( status );
 	        if (null != result) checkResult.append( " r:" ).append( result );
-	        return checkResult.toString();
-	        
-    	} catch( EC2ServiceException error ) {
+	        return checkResult.toString();	        
+    	} 
+    	catch( EC2ServiceException error ) 
+    	{
      		logger.error( "EC2 checkAsyncResult - " + error.toString());
     		throw error;
     		
-    	} catch( Exception e ) {
+    	} 
+    	catch( Exception e ) 
+    	{
     		logger.error( "EC2 checkAsyncResult - " + e.toString());
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
@@ -2877,6 +2895,7 @@ public class EC2Engine {
     	else if (device.equalsIgnoreCase( "/dev/sdh"  )) return 7; 
     	else if (device.equalsIgnoreCase( "/dev/sdi"  )) return 8; 
     	else if (device.equalsIgnoreCase( "/dev/sdj"  )) return 9; 
+	         
     	else if (device.equalsIgnoreCase( "/dev/xvdb" )) return 1;  
     	else if (device.equalsIgnoreCase( "/dev/xvdc" )) return 2;  
     	else if (device.equalsIgnoreCase( "/dev/xvde" )) return 4;  
@@ -2885,7 +2904,17 @@ public class EC2Engine {
     	else if (device.equalsIgnoreCase( "/dev/xvdh" )) return 7;  
     	else if (device.equalsIgnoreCase( "/dev/xvdi" )) return 8;  
     	else if (device.equalsIgnoreCase( "/dev/xvdj" )) return 9;  
-    	else throw new EC2ServiceException(ClientError.Unsupported, device + " is not supported" );
+	         
+    	else if (device.equalsIgnoreCase( "xvdb"      )) return 1;  
+    	else if (device.equalsIgnoreCase( "xvdc"      )) return 2;  
+    	else if (device.equalsIgnoreCase( "xvde"      )) return 4;  
+    	else if (device.equalsIgnoreCase( "xvdf"      )) return 5;  
+    	else if (device.equalsIgnoreCase( "xvdg"      )) return 6;  
+    	else if (device.equalsIgnoreCase( "xvdh"      )) return 7;  
+    	else if (device.equalsIgnoreCase( "xvdi"      )) return 8;  
+    	else if (device.equalsIgnoreCase( "xvdj"      )) return 9;  
+
+    	else throw new EC2ServiceException( ClientError.Unsupported, device + " is not supported" );
     }
     
     
