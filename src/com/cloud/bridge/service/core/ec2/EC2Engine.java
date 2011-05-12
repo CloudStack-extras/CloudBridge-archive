@@ -1057,35 +1057,44 @@ public class EC2Engine {
     }
 
     
-    public EC2Volume deleteVolume(EC2Volume request) 
+    /**
+     * The cloudstack documentation shows this to be an "(A)" (i.e., asynch) operation but it is not.
+     * @param request
+     * @return
+     */
+    public EC2Volume deleteVolume( EC2Volume request ) 
     {
-    	try {
-	        StringBuffer params = new StringBuffer();
+    	try 
+    	{   StringBuffer params = new StringBuffer();
    	        params.append( "command=deleteVolume" );
    	        params.append( "&id=" + request.getId());
    	        String query = params.toString();
 
   		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteVolume", true );
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) {
+	        NodeList match = cloudResp.getElementsByTagName( "success" );
+ 	        if ( 0 < match.getLength()) 
+ 	        {
 	    	     Node item = match.item(0);
-	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     if (waitForAsynch( jobId )) request.setState( "deleted" );
+	    	     String value = new String( item.getFirstChild().getNodeValue());
+	    	     if (value.equalsIgnoreCase( "true" )) request.setState( "deleted" );
             }
  	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 
-    	    return request;
-   	        
-       	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 DeleteVolume - " + error.toString());
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "EC2 DeleteVolume - " + e.toString());
+    	    return request;   	        
+       	} 
+    	catch( EC2ServiceException error ) 
+    	{
+    		logger.error( "EC2 DeleteVolume 1 - " + error.toString());
+    		throw error;  		
+    	} 
+    	catch( Exception e ) 
+    	{
+    		logger.error( "EC2 DeleteVolume 2 - " + e.toString());
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}   	    
     }
 
+    
     /**
      * Note that more than one VM can be requested rebooted at once. 
      * The Amazon API does not wait around for the result of the operation.
