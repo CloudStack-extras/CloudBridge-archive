@@ -2082,6 +2082,7 @@ public class EC2Engine {
    			            else if (name.equalsIgnoreCase( "attached"        )) vol.setAttached( value );
 	   			        else if (name.equalsIgnoreCase( "created"         )) vol.setCreated( value );
 	   			        else if (name.equalsIgnoreCase( "deviceid"        )) vol.setDeviceId( Integer.parseInt( value ));
+	   			        else if (name.equalsIgnoreCase( "hypervisor"      )) vol.setHypervisor( value );
 	   			        else if (name.equalsIgnoreCase( "snapshotid"      )) vol.setSnapShotId( value );		                     
 	   			        else if (name.equalsIgnoreCase( "state"           )) vol.setState( mapToAmazonVolState(value));
 	   			        else if (name.equalsIgnoreCase( "size"            )) vol.setSize( value );
@@ -2876,16 +2877,58 @@ public class EC2Engine {
     	} 
     	catch( EC2ServiceException error ) 
     	{
-     		logger.error( "EC2 checkAsyncResult - " + error.toString());
-    		throw error;
-    		
+     		logger.error( "EC2 checkAsyncResult 1 - " + error.toString());
+    		throw error;  		
     	} 
     	catch( Exception e ) 
     	{
-    		logger.error( "EC2 checkAsyncResult - " + e.toString());
+    		logger.error( "EC2 checkAsyncResult 2 - " + e.toString());
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
+    
+    
+    /**
+     * Windows has its own device strings.
+     * 
+     * @param hypervisor
+     * @param deviceId
+     * @return
+     */
+    public String cloudDeviceIdToDevicePath( String hypervisor, int deviceId )
+    {
+        if ( null != hypervisor && hypervisor.toLowerCase().contains( "windows" ))	
+        {
+        	 switch( deviceId ) {
+        	 case 1:  return "xvdb";
+        	 case 2:  return "xvdc";
+        	 case 3:  return "xvdd";
+        	 case 4:  return "xvde";
+        	 case 5:  return "xvdf";
+        	 case 6:  return "xvdg";
+        	 case 7:  return "xvdh";
+        	 case 8:  return "xvdi";
+        	 case 9:  return "xvdj";
+        	 default: return new String( "" + deviceId );
+        	 }
+        }
+        else
+        {    // -> assume its unix
+       	     switch( deviceId ) {
+    	     case 1:  return "/dev/sdb";
+    	     case 2:  return "/dev/sdc";
+    	     case 3:  return "/dev/sdd";
+    	     case 4:  return "/dev/sde";
+    	     case 5:  return "/dev/sdf";
+    	     case 6:  return "/dev/sdg";
+    	     case 7:  return "/dev/sdh";
+    	     case 8:  return "/dev/sdi";
+    	     case 9:  return "/dev/sdj";
+    	     default: return new String( "" + deviceId );
+    	     }
+        }
+    }
+    
     
     /**
      * Translate the device name string into a Cloud Stack deviceId.   
@@ -2933,7 +2976,7 @@ public class EC2Engine {
     		state.equalsIgnoreCase( "Creating"  ) ||
     		state.equalsIgnoreCase( "Ready"     )) return "available";
     	
-    	if (state.equalsIgnoreCase( "Destroy" )) return "deleting";
+    	if (state.equalsIgnoreCase( "Destroy"   )) return "deleting";
     	
     	return "error"; 
     }

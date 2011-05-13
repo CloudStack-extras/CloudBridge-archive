@@ -31,6 +31,7 @@ public class EC2Volume {
 	private String   state;
 	private String   type;
 	private String   vmstate;
+	private String   hypervisor;
     private Calendar created;
 	private Calendar attached;
     
@@ -44,6 +45,7 @@ public class EC2Volume {
 		state      = null;
 		type       = null;
 		vmstate    = null;
+		hypervisor = null;
 		created    = null;
 		attached   = null;
 	}
@@ -131,6 +133,14 @@ public class EC2Volume {
 	
 	public String getVMState() {
 		return this.vmstate;
+	}
+
+	public void setHypervisor( String hypervisor ) {
+		this.hypervisor = hypervisor;
+	}
+	
+	public String getHypervisor() {
+		return this.hypervisor;
 	}
 
 	public void setCreated( String created ) {

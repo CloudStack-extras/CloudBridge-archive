@@ -70,7 +70,7 @@ import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     protected final static Logger logger = Logger.getLogger(EC2SoapServiceImpl.class);
 
-    private EC2Engine engine;
+    private static EC2Engine engine;
     
     public EC2SoapServiceImpl(EC2Engine engine) {
     	this.engine = engine;
@@ -909,7 +909,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        	AttachmentSetItemResponseType param5 = new AttachmentSetItemResponseType();
 	        	param5.setVolumeId( volumes[i].getId());
 	        	param5.setInstanceId( volumes[i].getInstanceId());
-	        	param5.setDevice( "" + volumes[i].getDeviceId());
+	        	String devicePath = engine.cloudDeviceIdToDevicePath( volumes[i].getHypervisor(), volumes[i].getDeviceId());
+	        	param5.setDevice( devicePath );
 	        	param5.setStatus( "attached" );
 	        	param5.setAttachTime( cal );  
 	        	param5.setDeleteOnTermination( false );
@@ -1021,7 +1022,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setStateReason( param13 );
             param7.setArchitecture( "" );
             param7.setRootDeviceType( "" );
-            param7.setRootDeviceName( "" + instances[i].getRootDeviceId());
+        	String devicePath = engine.cloudDeviceIdToDevicePath( instances[i].getHypervisor(), instances[i].getRootDeviceId());
+            param7.setRootDeviceName( devicePath );
             
             InstanceBlockDeviceMappingResponseType param14 = new InstanceBlockDeviceMappingResponseType();
             InstanceBlockDeviceMappingResponseItemType param15 = new InstanceBlockDeviceMappingResponseItemType();
@@ -1441,7 +1443,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		
 		if ( null != engineResponse.getState())
 			 param1.set_return( true  );
-		else param1.set_return( false );  // ToDo - throw an Soap Fault 
+		else param1.set_return( false );  // ToDo - supposed to return an error
 	
 		param1.setRequestId( UUID.randomUUID().toString());
         response.setDeleteVolumeResponse( param1 );
