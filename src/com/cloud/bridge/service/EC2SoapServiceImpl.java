@@ -911,7 +911,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        	param5.setInstanceId( volumes[i].getInstanceId());
 	        	String devicePath = engine.cloudDeviceIdToDevicePath( volumes[i].getHypervisor(), volumes[i].getDeviceId());
 	        	param5.setDevice( devicePath );
-	        	param5.setStatus( "attached" );
+	        	param5.setStatus( toVolumeAttachmentState( volumes[i].getInstanceId(), volumes[i].getVMState()));
 	        	param5.setAttachTime( cal );  
 	        	param5.setDeleteOnTermination( false );
                 param4.addItem( param5 );
@@ -1147,6 +1147,26 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		else if (cloudState.equalsIgnoreCase( "Stopping"  )) return new String( "stopping" );
 		else if (cloudState.equalsIgnoreCase( "Error"     )) return new String( "error" );
 		else return new String( "running" );
+	}
+	
+	/**
+	 * We assume a state for the volume based on what its associated VM is doing.
+	 * 
+	 * @param vmId
+	 * @param vmState
+	 * @return
+	 */
+	public static String toVolumeAttachmentState( String instanceId, String vmState )
+	{
+		if (null == instanceId || null == vmState) return "detached";
+		
+		     if (vmState.equalsIgnoreCase( "Destroyed" )) return "detached";
+		else if (vmState.equalsIgnoreCase( "Stopped"   )) return "attached";
+		else if (vmState.equalsIgnoreCase( "Running"   )) return "attached";
+		else if (vmState.equalsIgnoreCase( "Starting"  )) return "attaching";
+		else if (vmState.equalsIgnoreCase( "Stopping"  )) return "attached";
+		else if (vmState.equalsIgnoreCase( "Error"     )) return "detached";
+		else return "detached";
 	}
 	
 	public static StopInstancesResponse toStopInstancesResponse(EC2StopInstancesResponse engineResponse) {
