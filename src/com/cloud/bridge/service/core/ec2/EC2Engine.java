@@ -2741,7 +2741,7 @@ public class EC2Engine {
     		NodeList children = parent.item(0).getChildNodes();
     		for (int i = 0; i < children.getLength(); i++) {
     			if (children.item(0).getNodeName().equals("id")) {
-    				return children.item(0).getNodeValue();
+    				return children.item(0).getTextContent();
     			}
     		}
     	}
