@@ -1,7 +1,7 @@
 %define __os_install_post %{nil}
 %global debug_package %{nil}
 
-%define _ver 1.0.0
+%define _ver 1.0.1
 %define _rel 1
 
 Name:      cloud-bridge
@@ -21,6 +21,7 @@ Group:     System Environment/Libraries
 Requires: java >= 1.6.0
 Requires: tomcat6
 Obsoletes: cloud-bridge < %{version}-%{release}
+BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
 This is the Cloud.com Bridge
@@ -37,7 +38,7 @@ This is the Cloud.com Bridge
 
 %install
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
-ant deploy-rpm-install
+ant deploy-rpm-install -Dversion=%{version}
 mv ../cloud-bridge-%{_ver}-1 ${RPM_BUILD_ROOT}
 mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/logs
 mkdir $RPM_BUILD_ROOT/usr/share/cloud/bridge/work

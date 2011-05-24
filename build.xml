@@ -31,7 +31,7 @@
         
       		<depend srcdir="@{top.dir}/src" destdir="${classes.dir}/@{jar.name}" cache="${dep.cache.dir}" />
         
-      		<javac srcdir="@{top.dir}/src" debug="${debug}" debuglevel="${debuglevel}" deprecation="${deprecation}" destdir="${classes.dir}/@{jar.name}" source="${source.compat.version}" target="${target.compat.version}" includeantruntime="false" compiler="javac1.6">
+      		<javac srcdir="@{top.dir}/src" debug="${debug}" debuglevel="${debuglevel}" deprecation="${deprecation}" destdir="${classes.dir}/@{jar.name}" source="${source.compat.version}" target="${target.compat.version}" includeantruntime="false">
         		<!-- compilerarg line="-processor com.vmops.annotation.LocalProcessor -processorpath ${base.dir}/tools/src -Xlint:all"/ -->
         		<!-- compilerarg line="-processor com.vmops.utils.LocalProcessor -processorpath ${base.dir}/utils/src -Xlint:all"/ -->
         		<compilerarg line="-Xlint:all"/>
