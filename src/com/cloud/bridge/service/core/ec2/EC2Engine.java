@@ -2028,11 +2028,11 @@ public class EC2Engine {
         if (null == virtualMachineIds || 0 == virtualMachineIds.length) 
         {
 	        instances = lookupInstances( null, instances );
-	    }
- 	    
-	    for( int i=0; i <  virtualMachineIds.length; i++ ) 
-	    {
-	       instances = lookupInstances( virtualMachineIds[i], instances );
+	    } else {
+	    	for( int i=0; i <  virtualMachineIds.length; i++ ) 
+		    {
+		       instances = lookupInstances( virtualMachineIds[i], instances );
+		    }
 	    }
 	    
 	    if ( null == ifs )
@@ -2769,7 +2769,7 @@ public class EC2Engine {
     		NodeList children = parent.item(0).getChildNodes();
     		for (int i = 0; i < children.getLength(); i++) {
     			if (children.item(0).getNodeName().equals("id")) {
-    				return children.item(0).getNodeValue();
+    				return children.item(0).getTextContent();
     			}
     		}
     	}
