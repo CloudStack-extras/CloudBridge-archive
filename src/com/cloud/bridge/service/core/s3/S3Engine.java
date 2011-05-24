@@ -278,7 +278,7 @@ public class S3Engine {
 		         policyDao.deletePolicy( bucketName );
 			 }
 			 catch( Exception e ) {
-				 logger.error( "When deleting a bucket we must try to delete its policy: " + e.toString());
+                logger.error("When deleting a bucket we must try to delete its policy: ", e);
 			 }
 			 
 			 deleteBucketAcls( sbucket.getId());
@@ -526,7 +526,7 @@ public class S3Engine {
     	    response.setResultCode(200);
     	    
         } catch( Exception e ) {
-			logger.error( "initiateMultipartUpload exception: " + e.toString());
+            logger.error("initiateMultipartUpload exception: ", e);
         	response.setResultCode(500);
         }
 
@@ -1636,7 +1636,7 @@ public class S3Engine {
 			else return PolicyAccess.DEFAULT_DENY;
 		}
 		catch( Exception e ) {
-			logger.error( "verifyAccess - loadPolicy failed: [" + e.toString() + "], bucket: " + context.getBucketName() + " policy ignored");
+            logger.error("verifyAccess - loadPolicy failed, bucket: " + context.getBucketName() + " policy ignored", e);
 			return PolicyAccess.DEFAULT_DENY;
 		}
 	}

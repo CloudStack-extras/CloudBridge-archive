@@ -203,12 +203,12 @@ public class PolicyParser {
 				     }
 				 }
 				 catch( ParseException e ) {
-					 logger.error( "Policy Parser condition error: " + e.toString());
-                     throw e;			 
+                    logger.error("Policy Parser condition error: ", e);
+                    throw e;
 				 }
 				 catch( Exception e) {
-					 logger.error( "Policy Parser condition error: " + e.toString());
-					 badPolicy( "Condition Key (" + condKey + ")", e.toString());
+                    logger.error("Policy Parser condition error: ", e);
+                    badPolicy("Condition Key (" + condKey + ")", e.toString());
 				 }
 				 
 				 // -> is the condition completely done?

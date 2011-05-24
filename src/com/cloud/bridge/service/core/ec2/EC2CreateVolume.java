@@ -43,7 +43,7 @@ public class EC2CreateVolume {
 		    this.size = Integer.parseInt(size);
 		}
 		catch(NumberFormatException e) {
-			logger.error( "Bad volume Size parameter: " + e.toString());
+            logger.error("Bad volume Size parameter: ", e);
 			throw new EC2ServiceException( "Bad volume size parameter: " + size + ", expecting [1..1024]", 400 );
 		}
 		

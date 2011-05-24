@@ -124,7 +124,7 @@ public class AuthenticationHandler implements Handler {
     		throw e;
     	} 
     	catch( Exception e ) {
-    	    logger.error( "EC2 Authentication Handler: " + e.toString());
+            logger.error("EC2 Authentication Handler: ", e);
     		throw new AxisFault( "An unknown error occurred.", "Server.InternalError" );
     	}    	
         return InvocationResponse.CONTINUE;

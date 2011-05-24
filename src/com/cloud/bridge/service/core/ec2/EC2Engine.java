@@ -117,7 +117,7 @@ public class EC2Engine {
    	            pollInterval5  = Integer.parseInt( EC2Prop.getProperty( "pollInterval5", "100"  ));
    	            pollInterval6  = Integer.parseInt( EC2Prop.getProperty( "pollInterval6", "100"  ));
    	        } catch( Exception e ) {
-    			logger.warn("Invalid polling interval: " + e.toString() + " using default values");
+    			logger.warn("Invalid polling interval, using default values", e);
    	        }
    	        
             cloudStackVersion = getCloudStackVersion(EC2Prop);
@@ -207,11 +207,11 @@ public class EC2Engine {
             return true;
             
        	} catch( EC2ServiceException error ) {
-     		logger.error( "validateAccount - " + error.toString());
+     		logger.error( "validateAccount - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "validateAccount - " + e.toString());
+    		logger.error( "validateAccount - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -236,11 +236,11 @@ public class EC2Engine {
       		return true;
      		
        	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 CreateSecurityGroup - " + error.toString());
+    		logger.error( "EC2 CreateSecurityGroup - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 CreateSecurityGroup - " + e.toString());
+    		logger.error( "EC2 CreateSecurityGroup - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -255,11 +255,11 @@ public class EC2Engine {
      		return true;
     		
       	} catch( EC2ServiceException error ) {
-   		    logger.error( "EC2 DeleteSecurityGroup - " + error.toString());
+   		    logger.error( "EC2 DeleteSecurityGroup - ", error);
    		    throw error;
    		
    	    } catch( Exception e ) {
-   		    logger.error( "EC2 DeleteSecurityGroup - " + e.toString());
+   		    logger.error( "EC2 DeleteSecurityGroup - ", e);
    		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
    	    }
     }
@@ -275,11 +275,11 @@ public class EC2Engine {
 	        else return gfs.evaluate( response );     
        	} 
     	catch( EC2ServiceException error ) {
-    		logger.error( "EC2 DescribeSecurityGroups - " + error.toString());
+    		logger.error( "EC2 DescribeSecurityGroups - ", error);
     		throw error;   		
     	} 
     	catch( Exception e ) {
-    		logger.error( "EC2 DescribeSecurityGroups - " + e.toString());
+    		logger.error( "EC2 DescribeSecurityGroups - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -358,11 +358,11 @@ public class EC2Engine {
      		return true;
     		
       	} catch( EC2ServiceException error ) {
-   		    logger.error( "EC2 " + command + "- " + error.toString());
+   		    logger.error( "EC2 " + command + "- ", error);
    		    throw error;
    		
    	    } catch( Exception e ) {
-   		    logger.error( "EC2 " + command + " - " + e.toString());
+   		    logger.error( "EC2 " + command + " - ", e);
    		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
    	    } 	
     }
@@ -426,12 +426,12 @@ public class EC2Engine {
      	    else return sfs.evaluate( response );     
        	} 
     	catch( EC2ServiceException error ) {
-    		logger.error( "EC2 DescribeSnapshots - " + error.toString());
+    		logger.error( "EC2 DescribeSnapshots - ", error);
     		throw error;
     		
     	} 
     	catch( Exception e ) {
-    		logger.error( "EC2 DescribeSnapshots - " + e.toString());
+    		logger.error( "EC2 DescribeSnapshots - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -459,11 +459,11 @@ public class EC2Engine {
  	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
    	        
        	} catch( EC2ServiceException error ) {
-     		logger.error( "EC2 CreateSnapshot - " + error.toString());
+     		logger.error( "EC2 CreateSnapshot - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 CreateSnapshot - " + e.toString());
+    		logger.error( "EC2 CreateSnapshot - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -484,11 +484,11 @@ public class EC2Engine {
     	    return false;
    	        
        	} catch( EC2ServiceException error ) {
-     		logger.error( "EC2 DeleteSnapshot - " + error.toString());
+     		logger.error( "EC2 DeleteSnapshot - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 DeleteSnapshot - " + e.toString());
+    		logger.error( "EC2 DeleteSnapshot - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -510,11 +510,11 @@ public class EC2Engine {
             return true;
 	        
    	    } catch( EC2ServiceException error ) {
- 		    logger.error( "EC2 ModifyImage - " + error.toString());
+ 		    logger.error( "EC2 ModifyImage - ", error);
 		    throw error;
 		
 	    } catch( Exception e ) {
-		    logger.error( "EC2 ModifyImage - " + e.toString());
+		    logger.error( "EC2 ModifyImage - ", e);
 		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 	    }
     }
@@ -540,11 +540,11 @@ public class EC2Engine {
    	        return images;
    	        
        	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 DescribeImages - " + error.toString());
+    		logger.error( "EC2 DescribeImages - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 DescribeImages - " + e.toString());
+    		logger.error( "EC2 DescribeImages - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -627,11 +627,11 @@ public class EC2Engine {
  	        return response;
     	    
     	} catch( EC2ServiceException error ) {
- 		    logger.error( "EC2 CreateImage - " + error.toString());
+ 		    logger.error( "EC2 CreateImage - ", error);
 		    throw error;
 		
 	    } catch( Exception e ) {
-		    logger.error( "EC2 CreateImage - " + e.toString());
+		    logger.error( "EC2 CreateImage - ", e);
 		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 	    }
     }
@@ -667,11 +667,11 @@ public class EC2Engine {
 	        return image;
 	    
 	    } catch( EC2ServiceException error ) {
-		    logger.error( "EC2 RegisterImage - " + error.toString());
+		    logger.error( "EC2 RegisterImage - ", error);
 	        throw error;
 	
         } catch( Exception e ) {
-	        logger.error( "EC2 RegisterImage - " + e.toString());
+	        logger.error( "EC2 RegisterImage - ", e);
 	        throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
@@ -696,11 +696,11 @@ public class EC2Engine {
     	    return false;
    	        
        	} catch( EC2ServiceException error ) {
-     		logger.error( "EC2 DeregisterImage - " + error.toString());
+     		logger.error( "EC2 DeregisterImage - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 DeregisterImage - " + e.toString());
+    		logger.error( "EC2 DeregisterImage - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -714,13 +714,13 @@ public class EC2Engine {
        	} 
     	catch( EC2ServiceException error ) 
     	{
-     		logger.error( "EC2 DescribeInstances - " + error.toString());
+     		logger.error( "EC2 DescribeInstances - ", error);
     		throw error;
     		
     	} 
     	catch( Exception e ) 
     	{
-    		logger.error( "EC2 DescribeInstances - " + e.toString());
+    		logger.error( "EC2 DescribeInstances - " ,e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -763,11 +763,11 @@ public class EC2Engine {
             return filtered.toArray(new Map[0]);
 
         } catch( EC2ServiceException error ) {
-            logger.error( "EC2 DescribeAddresses - " + error.toString());
+            logger.error( "EC2 DescribeAddresses - ", error);
             throw error;
 
         } catch( Exception e ) {
-            logger.error( "EC2 DescribeAddresses - " + e.toString());
+            logger.error( "EC2 DescribeAddresses - ", e);
             throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
@@ -781,11 +781,11 @@ public class EC2Engine {
             return l[0].get("ipaddress").toString();
 
         } catch( EC2ServiceException error ) {
-            logger.error( "EC2 AllocateAddress - " + error.toString());
+            logger.error( "EC2 AllocateAddress - ", error);
             throw error;
 
         } catch( Exception e ) {
-            logger.error( "EC2 AllocateAddress - " + e.toString());
+            logger.error( "EC2 AllocateAddress - ", e);
             throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
@@ -852,11 +852,11 @@ public class EC2Engine {
             return r.get("success").toString().equalsIgnoreCase("true");
 
         } catch( EC2ServiceException error ) {
-            logger.error( "EC2 AssociateAddress - " + error.toString());
+            logger.error( "EC2 AssociateAddress - ", error);
             throw error;
 
         } catch( Exception e ) {
-            logger.error( "EC2 AssociateAddress - " + e.toString());
+            logger.error( "EC2 AssociateAddress - ", e);
             throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
@@ -875,11 +875,11 @@ public class EC2Engine {
             return waitForAsynch(jobId);
 
         } catch( EC2ServiceException error ) {
-            logger.error( "EC2 DisassociateAddress - " + error.toString());
+            logger.error( "EC2 DisassociateAddress - ", error);
             throw error;
 
         } catch( Exception e ) {
-            logger.error( "EC2 DisassociateAddress - " + e.toString());
+            logger.error( "EC2 DisassociateAddress - ", e);
             throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
@@ -890,11 +890,11 @@ public class EC2Engine {
     		return listZones( request.getZoneSet());
     		
        	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 DescribeAvailabilityZones - " + error.toString());
+    		logger.error( "EC2 DescribeAvailabilityZones - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 DescribeAvailabilityZones - " + e.toString());
+    		logger.error( "EC2 DescribeAvailabilityZones - " ,e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -922,12 +922,12 @@ public class EC2Engine {
        	} 
     	catch( EC2ServiceException error ) 
     	{
-    		logger.error( "EC2 DescribeVolumes - " + error.toString());
+    		logger.error( "EC2 DescribeVolumes - ", error);
     		throw error;		
     	} 
     	catch( Exception e ) 
     	{
-    		logger.error( "EC2 DescribeVolumes - " + e.toString());
+    		logger.error( "EC2 DescribeVolumes - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -959,12 +959,12 @@ public class EC2Engine {
        	} 
     	catch( EC2ServiceException error ) 
     	{
-    		logger.error( "EC2 AttachVolume 1 - " + error.toString());
+    		logger.error( "EC2 AttachVolume 1 - ", error);
     		throw error;    		
     	} 
     	catch( Exception e ) 
     	{
-    		logger.error( "EC2 AttachVolume 2 - " + e.toString());
+    		logger.error( "EC2 AttachVolume 2 - ", e);
     		throw new EC2ServiceException( ServerError.InternalError, e.toString());
     	}   	    
     }
@@ -999,11 +999,11 @@ public class EC2Engine {
             return request;
    	        
        	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 DetachVolume - " + error.toString());
+    		logger.error( "EC2 DetachVolume - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 DetachVolume - " + e.toString());
+    		logger.error( "EC2 DetachVolume - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}   	    
     }
@@ -1059,12 +1059,12 @@ public class EC2Engine {
        	} 
     	catch( EC2ServiceException error ) 
     	{
-    		logger.error( "EC2 CreateVolume - " + error.toString());
+    		logger.error( "EC2 CreateVolume - ", error);
     		throw error;	
     	} 
     	catch( Exception e ) 
     	{
-    		logger.error( "EC2 CreateVolume - " + e.toString());
+    		logger.error( "EC2 CreateVolume - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}   	    
     }
@@ -1097,12 +1097,12 @@ public class EC2Engine {
        	} 
     	catch( EC2ServiceException error ) 
     	{
-    		logger.error( "EC2 DeleteVolume 1 - " + error.toString());
+    		logger.error( "EC2 DeleteVolume 1 - ", error);
     		throw error;  		
     	} 
     	catch( Exception e ) 
     	{
-    		logger.error( "EC2 DeleteVolume 2 - " + e.toString());
+    		logger.error( "EC2 DeleteVolume 2 - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}   	    
     }
@@ -1132,11 +1132,11 @@ public class EC2Engine {
      		return true;
      		
        	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 RebootInstances - " + error.toString());
+    		logger.error( "EC2 RebootInstances - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 RebootInstances - " + e.toString());
+    		logger.error( "EC2 RebootInstances - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -1243,7 +1243,7 @@ public class EC2Engine {
     	} catch( EC2ServiceException error ) {
     		throw error;
      	} catch( Exception e ) {
-    		logger.error( "EC2 RunInstances - deploy 2 " + e.toString());
+    		logger.error( "EC2 RunInstances - deploy 2 ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
      	}
      	
@@ -1291,11 +1291,11 @@ public class EC2Engine {
         	return instances;
 
     	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 StartInstances - " + error.toString());
+    		logger.error( "EC2 StartInstances - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 StartInstances - " + e.toString());
+    		logger.error( "EC2 StartInstances - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -1350,11 +1350,11 @@ public class EC2Engine {
         	return instances;
 
     	} catch( EC2ServiceException error ) {
-     		logger.error( "EC2 StopInstances - " + error.toString());
+     		logger.error( "EC2 StopInstances - ", error);
     		throw error;
     		
     	} catch( Exception e ) {
-    		logger.error( "EC2 StopInstances - " + e.toString());
+    		logger.error( "EC2 StopInstances - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
@@ -1369,10 +1369,10 @@ public class EC2Engine {
     	try {
 			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listSSHKeyPairs", true);
 		} catch (EC2ServiceException e) {
-			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			logger.error( "EC2 Describe KeyPairs - ", e);
 			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
 		} catch (Exception e) {
-			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			logger.error( "EC2 Describe KeyPairs - ", e);
 			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
 		}
 		
@@ -1417,7 +1417,7 @@ public class EC2Engine {
         	query += "&publickey=".concat(safeURLencode(publicKey));
         	response = resolveURL(genAPIURL(query, genQuerySignature(query)), "registerSSHKeyPair", true);
 		} catch (EC2ServiceException e) {
-			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			logger.error( "EC2 Describe KeyPairs - ", e);
 
 			if (e.getMessage().startsWith("431")) // Needs improvement
 				throw new EC2ServiceException(ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
@@ -1425,7 +1425,7 @@ public class EC2Engine {
 				throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
 			
 		} catch (Exception e) {
-			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			logger.error( "EC2 Describe KeyPairs - ", e);
 			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
 		}
 
@@ -1457,7 +1457,7 @@ public class EC2Engine {
         	query += "&name=".concat(URLEncoder.encode(keyName, "utf8"));
 			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "createSSHKeyPair", true);
 		} catch (EC2ServiceException e) {
-			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			logger.error( "EC2 Describe KeyPairs - ", e);
 
 			if (e.getMessage().startsWith("431")) // Needs improvement
 				throw new EC2ServiceException(ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
@@ -1465,7 +1465,7 @@ public class EC2Engine {
 				throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
 			
 		} catch (Exception e) {
-			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			logger.error( "EC2 Describe KeyPairs - ", e);
 			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
 		}
 		
@@ -1499,10 +1499,10 @@ public class EC2Engine {
         	query += "&name=".concat(URLEncoder.encode(keyName, "utf8"));
 			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteSSHKeyPair", true);
 		} catch (EC2ServiceException e) {
-			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			logger.error( "EC2 Describe KeyPairs - ", e);
 			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());	
 		} catch (Exception e) {
-			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+			logger.error( "EC2 Describe KeyPairs - ", e);
 			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
 		}
 		
@@ -1530,13 +1530,13 @@ public class EC2Engine {
 
     	} catch (EC2ServiceException e) {
     		if (!e.getMessage().startsWith("431 No password for VM with id")) { 
-    			logger.error( "EC2 Describe KeyPairs - " + e.toString());
+    			logger.error( "EC2 Describe KeyPairs - ", e);
     			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
     		} else {
     			passwdData.setEncryptedPassword("");
     		}
     	} catch (Exception e) {
-    		logger.error( "EC2 Describe KeyPairs - " + e.toString());
+    		logger.error( "EC2 Describe KeyPairs - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
     	}
 
@@ -2718,7 +2718,7 @@ public class EC2Engine {
     	try {
     		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listAccounts", true);
 		} catch (Exception e) {
-			logger.error( "List Accounts - " + e.toString());
+			logger.error( "List Accounts - ", e);
 			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
 		}
 
@@ -2772,7 +2772,7 @@ public class EC2Engine {
     	try {
     		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listNetworks", true);
     	} catch (Exception e) {
-    		logger.error( "List Networks - " + e.toString());
+    		logger.error( "List Networks - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
     	}
     	
@@ -2806,7 +2806,7 @@ public class EC2Engine {
 		
     		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "createNetwork", true);
     	} catch (Exception e) {
-    		logger.error("Create Network - " + e.toString());
+    		logger.error("Create Network - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
     	}
 		
@@ -2828,7 +2828,7 @@ public class EC2Engine {
     	try {
     		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listNetworkOfferings", true);
     	} catch (Exception e) {
-    		logger.error("List Network Offerings - " + e.toString());
+    		logger.error("List Network Offerings - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
     	}
     	
@@ -2857,7 +2857,7 @@ public class EC2Engine {
       	try {
     		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listZones", true);
     	} catch (Exception e) {
-    		logger.error("List Zones - " + e.toString());
+    		logger.error("List Zones - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
     	}
     	
