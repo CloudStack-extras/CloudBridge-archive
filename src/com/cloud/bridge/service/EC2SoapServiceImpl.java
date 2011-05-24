@@ -1002,6 +1002,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        
 	        PlacementResponseType param11 = new PlacementResponseType();
 	        param11.setAvailabilityZone( instances[i].getZoneName());
+	        param11.setGroupName( "" );
 	        param7.setPlacement( param11 );
 	        param7.setKernelId( "" );
 	        param7.setRamdiskId( "" );
@@ -1358,6 +1359,15 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             
             param7.setInstanceLifecycle( "" );
             param7.setSpotInstanceRequestId( "" );
+            param7.setVirtualizationType( "" );
+            param7.setClientToken( "" );
+            
+            // this is being ignored and not generating any output
+            //ResourceTagSetType param18 = new ResourceTagSetType();
+            //param7.setTagSet( param18 );
+            
+            String hypervisor = instances[i].getHypervisor();
+            param7.setHypervisor((null != hypervisor ? hypervisor : ""));
 	        param6.addItem( param7 );
 		}
 		param1.setInstancesSet( param6 );
