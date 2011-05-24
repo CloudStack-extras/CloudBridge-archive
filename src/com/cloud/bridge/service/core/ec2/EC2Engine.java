@@ -2327,6 +2327,7 @@ public class EC2Engine {
    			            else if (name.equalsIgnoreCase( "rootdevicetype"    )) vm.setRootDeviceType(value);
    			            else if (name.equalsIgnoreCase( "rootdeviceid"      )) vm.setRootDeviceId( Integer.parseInt( value ));  			                 
    			            else if (name.equalsIgnoreCase( "serviceofferingid" )) vm.setServiceOffering( serviceOfferingIdToInstanceType( value ));
+   			            else if (name.equalsIgnoreCase( "nic"               )) vm = getPrivateAddress( vm, child.getChildNodes());
 	    			}
 	    	    }
     			instances.addInstance( vm );
@@ -2568,6 +2569,33 @@ public class EC2Engine {
         return null;
     }
 
+    
+    /**
+     * 'nic' is a subobject of the listVirtualMachines
+     * 
+     * @param nic
+     */
+    private EC2Instance getPrivateAddress( EC2Instance vm, NodeList nic )
+    {
+    	int numChild = nic.getLength();
+
+    	for( int i=0; i < numChild; i++ ) 
+    	{
+    		 Node   child = nic.item(i);
+    		 String name  = child.getNodeName();
+    			
+    		 if (null != child.getFirstChild()) 
+    		 {
+    		     String value = child.getFirstChild().getNodeValue();
+    		     //System.out.println( "nic: " + name + "=" + value );
+    		     
+		         if (name.equalsIgnoreCase( "ipaddress" )) vm.setPrivateIpAddress( value ); 
+    	     }
+    	}
+		return vm;  	
+    }
+    
+    
     /**
      * Ingress Rules are one more level down the XML tree.
      */

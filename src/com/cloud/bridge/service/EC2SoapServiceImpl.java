@@ -1012,7 +1012,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setMonitoring( param12 );
             param7.setSubnetId( "" );
             param7.setVpcId( "" );
-            String ipAddr = instances[i].getIpAddress();
+            String ipAddr = instances[i].getPrivateIpAddress();
             param7.setPrivateIpAddress((null != ipAddr ? ipAddr : ""));
 	        param7.setIpAddress( instances[i].getIpAddress());
 	        

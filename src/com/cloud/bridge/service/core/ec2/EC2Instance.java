@@ -29,6 +29,7 @@ public class EC2Instance {
     private String		state;
     private String		previousState;
     private String		ipAddress;
+    private String      privateIpAddress;
     private String		instanceType;
     private Calendar	created;
     private String		accountName;
@@ -38,21 +39,22 @@ public class EC2Instance {
     private int         rootDeviceId;
     
 	public EC2Instance() {
-		id             = null;
-		name           = null;
-		zoneName       = null;
-		templateId     = null;
-		group          = null;
-		state          = null;
-		previousState  = null;
-		ipAddress      = null;
-		created        = null;
-		instanceType   = null;
-		accountName    = null;
-		domainId	   = null;
-		hypervisor     = null;
-		rootDeviceType = null;
-		rootDeviceId   = 0;
+		id               = null;
+		name             = null;
+		zoneName         = null;
+		templateId       = null;
+		group            = null;
+		state            = null;
+		previousState    = null;
+		ipAddress        = null;
+		privateIpAddress = null;
+		created          = null;
+		instanceType     = null;
+		accountName      = null;
+		domainId	     = null;
+		hypervisor       = null;
+		rootDeviceType   = null;
+		rootDeviceId     = 0;
 	}
 	
 	public void setId( String id ) {
@@ -126,7 +128,15 @@ public class EC2Instance {
 	public String getIpAddress() {
 		return this.ipAddress;
 	}
+
+	public void setPrivateIpAddress( String ipAddress ) {
+		this.privateIpAddress = ipAddress;
+	}
 	
+	public String getPrivateIpAddress() {
+		return this.privateIpAddress;
+	}
+
 	public void setServiceOffering( String instanceType ) {
 		this.instanceType = instanceType;
 	}
