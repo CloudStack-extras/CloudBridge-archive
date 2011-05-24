@@ -140,6 +140,10 @@ public class EC2InstanceFilterSet {
 	    {
 	         return containsString( vm.getIpAddress(), valueSet );	
 	    }
+	    else if (filterName.equalsIgnoreCase( "private-ip-address" )) 
+	    {
+	         return containsString( vm.getPrivateIpAddress(), valueSet );	
+	    }
 	    else if (filterName.equalsIgnoreCase( "owner-id" )) 
 	    {	
 	    	 String owner = new String( vm.getDomainId() + ":" + vm.getAccountName()); 
