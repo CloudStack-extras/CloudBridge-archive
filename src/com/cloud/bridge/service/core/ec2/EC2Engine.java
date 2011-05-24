@@ -15,37 +15,6 @@
  */
 package com.cloud.bridge.service.core.ec2;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.Logger;
-
-import org.w3c.dom.DOMException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
-import org.xml.sax.SAXException;
-import org.json.simple.JSONValue;
-
-import com.cloud.bridge.persist.dao.OfferingDao;
-import com.cloud.bridge.service.UserContext;
-import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
-import com.cloud.bridge.service.core.ec2.EC2DescribeImagesResponse;
-import com.cloud.bridge.service.core.ec2.EC2DescribeInstances;
-import com.cloud.bridge.service.core.ec2.EC2DescribeInstancesResponse;
-import com.cloud.bridge.service.core.ec2.EC2Image;
-import com.cloud.bridge.service.core.ec2.EC2Instance;
-import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
-import com.cloud.bridge.service.core.ec2.EC2StartInstances;
-import com.cloud.bridge.service.core.ec2.EC2StartInstancesResponse;
-import com.cloud.bridge.service.core.ec2.EC2StopInstances;
-import com.cloud.bridge.service.core.ec2.EC2StopInstancesResponse;
-import com.cloud.bridge.service.exception.EC2ServiceException;
-import com.cloud.bridge.service.exception.InternalErrorException;
-import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
-import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
-import com.cloud.bridge.util.ConfigurationHelper;
-import com.cloud.bridge.util.Tuple;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -53,7 +22,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.net.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.security.SignatureException;
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -71,6 +42,24 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.apache.commons.codec.binary.Base64;
+import org.apache.log4j.Logger;
+import org.json.simple.JSONValue;
+import org.w3c.dom.DOMException;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+
+import com.cloud.bridge.persist.dao.OfferingDao;
+import com.cloud.bridge.service.UserContext;
+import com.cloud.bridge.service.exception.EC2ServiceException;
+import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
+import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
+import com.cloud.bridge.service.exception.InternalErrorException;
+import com.cloud.bridge.util.ConfigurationHelper;
+import com.cloud.bridge.util.Tuple;
+
 
 public class EC2Engine {
     protected final static Logger logger = Logger.getLogger(EC2Engine.class);
@@ -83,7 +72,7 @@ public class EC2Engine {
     private int pollInterval2 = 100;   // for: deployVirtualMachine
     private int pollInterval3 = 100;   // for: createVolume
     private int pollInterval4 = 1000;  // for: createSnapshot
-    private int pollInterval5 = 100;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume 
+    private int pollInterval5 = 100;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume, disassociateIpAddress
     private int pollInterval6 = 100;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
     private int CLOUD_STACK_VERSION_2_0 = 200;
     private int CLOUD_STACK_VERSION_2_1 = 210;
@@ -801,23 +790,47 @@ public class EC2Engine {
         }
     }
 
-    public boolean releaseAddress(String publicIp)
-    {
-        if (null == publicIp) throw new EC2ServiceException(ServerError.InternalError, "IP address is a required parameter");
-        try {
-            Map[] l = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
-            String ipId = l[0].get("id").toString();
-            Map r = execute("command=disassociateIpAddress&id=%s", ipId);
-            return r.get("success").toString().equalsIgnoreCase("true");
-        } catch( EC2ServiceException error ) {
-            logger.error( "EC2 ReleaseAddress - " + error.toString());
-            throw error;
+	public boolean releaseAddress(String publicIp) {
+		if (null == publicIp)
+			throw new EC2ServiceException(ServerError.InternalError,
+					"IP address is a required parameter");
+		try {
+			Map[] l = execList("command=listPublicIpAddresses&ipAddress=%s",
+					publicIp);
+			
+			if (l == null || l.length == 0) {
+				logger.error("Unable to find ip address " + publicIp);
+				return false;
+			}
+			String ipId = l[0].get("id").toString();
+			
+			String query = new String("command=disassociateIpAddress&id=" + ipId);
+			Document cloudResp = resolveURL(
+					genAPIURL(query, genQuerySignature(query)),
+					"disassociateIpAddress", true);
+			
+			NodeList match = cloudResp.getElementsByTagName("jobid");
+			if (0 < match.getLength()) {
+				Node item = match.item(0);
+				String jobId = new String(item.getFirstChild().getNodeValue());
+				if (waitForAsynch(jobId))
+					return true;
+			} else
+				throw new EC2ServiceException(ServerError.InternalError,
+						"An unexpected error occurred during ip address release.");
 
-        } catch( Exception e ) {
-            logger.error( "EC2 ReleaseAddress - " + e.toString());
-            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-        }
-    }
+			return false;
+			
+		} catch (EC2ServiceException error) {
+			logger.error("EC2 ReleaseAddress: ", error);
+			throw error;
+
+		} catch (Exception e) {
+			logger.error("EC2 ReleaseAddress: ", e);
+			throw new EC2ServiceException(ServerError.InternalError,
+					"An unexpected error occurred.");
+		}
+	}
 
     public boolean associateAddress(String publicIp, String vmName)
     {
@@ -2874,46 +2887,48 @@ public class EC2Engine {
      * @return A string with one or two values, "s:status r:result" if both present.
      *         "s:-1" means no result returned from CloudStack so request has failed.
      */
-    private String checkAsyncResult( String jobId ) throws EC2ServiceException, InternalErrorException, SignatureException 
-    {
-    	StringBuffer checkResult = new StringBuffer();
-    	NodeList match  = null;
-    	Node     item   = null;
-    	String   status = null;
-    	String   result = null;
-    	
-    	try 
-    	{   String query = "command=queryAsyncJobResult&jobId=" + jobId;
-  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
-            if (null == cloudResp) return new String("s:-1");
-  		    
-		    match = cloudResp.getElementsByTagName( "jobstatus" ); 
-	        if (0 < match.getLength()) {
-	    	    item = match.item(0);
-	    	    status = new String( item.getFirstChild().getNodeValue());
-            }
-	        match = cloudResp.getElementsByTagName( "jobresult" ); 
-	        if (0 < match.getLength()) {
-	    	    item = match.item(0);
-	    	    result = new String( item.getFirstChild().getNodeValue());
-            }
-	    
-	        checkResult.append( " " );
-	        if (null != status) checkResult.append( "s:" ).append( status );
-	        if (null != result) checkResult.append( " r:" ).append( result );
-	        return checkResult.toString();	        
-    	} 
-    	catch( EC2ServiceException error ) 
-    	{
-     		logger.error( "EC2 checkAsyncResult 1 - " + error.toString());
-    		throw error;  		
-    	} 
-    	catch( Exception e ) 
-    	{
-    		logger.error( "EC2 checkAsyncResult 2 - " + e.toString());
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-    	}
-    }
+	private String checkAsyncResult(String jobId) throws EC2ServiceException,
+		InternalErrorException, SignatureException {
+		StringBuffer checkResult = new StringBuffer();
+		NodeList match = null;
+		Node item = null;
+		String status = null;
+		String result = null;
+		
+		try {
+			String query = "command=queryAsyncJobResult&jobId=" + jobId;
+			Document cloudResp = resolveURL(
+					genAPIURL(query, genQuerySignature(query)),
+					"queryAsyncJobResult", true);
+			if (null == cloudResp)
+				return new String("s:-1");
+		
+			match = cloudResp.getElementsByTagName("jobstatus");
+			if (0 < match.getLength()) {
+				item = match.item(0);
+				status = new String(item.getFirstChild().getNodeValue());
+			}
+			match = cloudResp.getElementsByTagName("jobresult");
+			if (0 < match.getLength()) {
+				item = match.item(0).getLastChild();
+				result = new String(item.getFirstChild().getNodeValue());
+			}
+		
+			checkResult.append(" ");
+			if (null != status)
+				checkResult.append("s:").append(status);
+			if (null != result)
+				checkResult.append(" r:").append(result);
+			return checkResult.toString();
+		} catch (EC2ServiceException error) {
+			logger.error("EC2 checkAsyncResult 1 - ", error);
+			throw error;
+		} catch (Exception e) {
+			logger.error("EC2 checkAsyncResult 2 - ", e);
+			throw new EC2ServiceException(ServerError.InternalError,
+					"An unexpected error occurred.");
+		}
+	}
     
     
     /**
