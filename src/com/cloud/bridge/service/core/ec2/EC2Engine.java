@@ -2028,11 +2028,11 @@ public class EC2Engine {
         if (null == virtualMachineIds || 0 == virtualMachineIds.length) 
         {
 	        instances = lookupInstances( null, instances );
-	    }
- 	    
-	    for( int i=0; i <  virtualMachineIds.length; i++ ) 
-	    {
-	       instances = lookupInstances( virtualMachineIds[i], instances );
+	    } else {
+	    	for( int i=0; i <  virtualMachineIds.length; i++ ) 
+		    {
+		       instances = lookupInstances( virtualMachineIds[i], instances );
+		    }
 	    }
 	    
 	    if ( null == ifs )
