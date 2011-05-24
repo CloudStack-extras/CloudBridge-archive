@@ -26,9 +26,9 @@ public class EC2DescribeAvailabilityZonesResponse {
 	public EC2DescribeAvailabilityZonesResponse() {
 	}
 	
-	public void addZone( String id, String name ) {
-		zoneIds.add( id );
-		zoneNames.add( name );
+    public void addZone(String id, String name) {
+        zoneIds.add(id);
+        zoneNames.add(name);
 	}
 	
 	/**
@@ -40,7 +40,10 @@ public class EC2DescribeAvailabilityZonesResponse {
 		return zoneNames.toArray(new String[0]);
 	}
 	
-	public String getZoneIdAt( int index ) {
-		return zoneIds.get( index );
+    public String getZoneIdAt(int index) {
+        if (zoneIds.isEmpty() || index >= zoneIds.size()) {
+            return null;
+        }
+        return zoneIds.get(index);
 	}
 }
