@@ -921,6 +921,13 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             }
 	        
             param3.setAttachmentSet( param4 );
+            
+            // -> try to generate an empty tag does not seem to work
+            ResourceTagSetType param6 = new ResourceTagSetType();
+            ResourceTagSetItemType param7 = new ResourceTagSetItemType();
+            param6.addItem( param7 );
+            
+            param3.setTagSet( param6 );          
             param2.addItem( param3 );
         }
 	    param1.setVolumeSet( param2 );
