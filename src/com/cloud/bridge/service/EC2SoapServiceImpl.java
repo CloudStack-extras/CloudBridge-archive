@@ -94,14 +94,17 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toAuthorizeSecurityGroupIngressResponse( engine.securityGroupRequest( request, "authorizeSecurityGroupIngress" ));
 	}
 
-	public RevokeSecurityGroupIngressResponse revokeSecurityGroupIngress(RevokeSecurityGroupIngress revokeSecurityGroupIngress) {
+	
+	public RevokeSecurityGroupIngressResponse revokeSecurityGroupIngress( RevokeSecurityGroupIngress revokeSecurityGroupIngress ) 
+	{
         RevokeSecurityGroupIngressType sgit = revokeSecurityGroupIngress.getRevokeSecurityGroupIngress();        
         IpPermissionSetType ipPerms = sgit.getIpPermissions();
         
         EC2AuthorizeRevokeSecurityGroup request = toSecurityGroup( sgit.getGroupName(), ipPerms.getItem());
-		return toRevokeSecurityGroupIngressResponse( engine.securityGroupRequest( request, "revokeSecurityGroupIngress" ));
+		return toRevokeSecurityGroupIngressResponse( engine.revokeSecurityGroup( request ));
 	}
 
+	
 	/**
 	 * Authorize and Revoke Security Group Ingress have the same parameters.
 	 */

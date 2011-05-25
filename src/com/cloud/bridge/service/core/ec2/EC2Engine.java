@@ -261,7 +261,7 @@ public class EC2Engine {
 	if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
 
    	try {
-	        String query = new String( "command=deleteSecurityGroup&name=" + safeURLencode( request.getName()));        
+	        String query = new String( "command=deleteSecurityGroup&id=" + safeURLencode( request.getName()));        
             resolveURL( genAPIURL( query, genQuerySignature(query)), "deleteSecurityGroup", true );
      		return true;
     		
@@ -294,12 +294,41 @@ public class EC2Engine {
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
-   
+
+    
+    public boolean revokeSecurityGroup( EC2AuthorizeRevokeSecurityGroup request ) 
+    {
+		if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
+
+   	    try 
+   	    {   String query = new String( "command=revokeSecurityGroupIngress&id=" + safeURLencode( request.getName()));        
+	        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "revokeSecurityGroup", true );
+
+	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+		    if ( 0 < match.getLength()) 
+		    {
+		     	 Node item = match.item(0);
+		    	 String jobId = new String( item.getFirstChild().getNodeValue());
+		    	 if (!waitForAsynch( jobId )) 
+		    		 throw new EC2ServiceException(ServerError.InternalError, "revokeSecurityGroup failed" );
+	 	    } 
+	 	    else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+		    
+		    return true;		
+      	} 
+   	    catch( EC2ServiceException error ) {
+   		    logger.error( "EC2 revokeSecurityGroup" + " - " + error.toString());
+   		    throw error; 		
+   	    } 
+   	    catch( Exception e ) {
+   		    logger.error( "EC2 revokeSecurityGroup" + " - " + e.toString());
+   		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+   	    } 	
+    }
+
     
     /**
      * The Cload Stack API only handles one item out of the EC2 request at a time.
-     * Place authorizw and revoke into one function since it appears that they are practically identical.
-     * Both authorizeSecurityGroupIngress and revokeSecurityGroupIngress are asynchonrous
      * 
      * @param request - ip permission parameters
      * @param command - { authorizeSecurityGroupIngress | revokeSecurityGroupIngress }

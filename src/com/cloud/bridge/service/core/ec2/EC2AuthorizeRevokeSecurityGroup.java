@@ -19,7 +19,7 @@ public class EC2AuthorizeRevokeSecurityGroup {
 	public String getName() {
 		return this.name;
 	}
-	
+
 	public void addIpPermission( EC2IpPermission param ) {
 		permissionSet.add( param );
 	}
