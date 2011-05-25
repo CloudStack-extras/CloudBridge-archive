@@ -23,7 +23,7 @@
 
 		<!-- directories for build and distribution -->
 		<property name="catalina.dir" value="${base.dir}/tomcat" />
-		
+
 		<property name="build.dir" location="${base.dir}/" />
 		<property name="buildnumber.dir" location="${build.dir}/" />
 		<property name="target.dir" location="${base.dir}/target" />
@@ -488,5 +488,49 @@
 			overwrite="true"
 		/>
 	</target>
+		
+  <target name="run" depends="start-tomcat"/>
+  <target name="stop" depends="stop-tomcat"/>
+  <target name="debug" depends="debug-tomcat"/>
+
+  <target name="debug-suspend">
+    <java jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
+      <jvmarg value="-Dcatalina.home=${tomcat.home}"/>
+	  <jvmarg value="-Xdebug"/>
+      <jvmarg value="-Xrunjdwp:transport=dt_socket,address=8787,server=y,suspend=y"/>
+      <jvmarg value="-ea"/>
+      <jvmarg value="-Xms256m"/>
+      <jvmarg value="-Xmx384m"/>
+    </java>
+  </target>
+
+  <target name="stop-tomcat">
+    <java dir="${tomcat.home}/bin/" jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
+      <arg value="stop"/>
+    </java>
+  </target>
+
+  <target name="start-tomcat" depends="stop-tomcat">
+    <echo message="Start Tomcat" />
+    <java dir="${tomcat.home}/bin/" jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
+      <jvmarg value="${assertion}"/>
+      <jvmarg value="-Xms256m"/>
+      <jvmarg value="-Xmx384m"/>
+      <jvmarg value="-ea"/>
+      <arg value="start"/>
+    </java>
+  </target>
+
+  <target name="debug-tomcat">
+    <java jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
+      <jvmarg value="-Dcatalina.home=${tomcat.home}"/>
+	  <jvmarg value="-Xdebug"/>
+      <jvmarg value="${debug.jvmarg}"/>
+      <jvmarg value="-ea"/>
+      <jvmarg value="-Xms256m"/>
+      <jvmarg value="-Xmx384m"/>
+    </java>
+  </target>
+		
 </project>
 

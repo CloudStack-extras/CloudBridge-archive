@@ -39,15 +39,21 @@ if [ $? -ne 0 ]; then
   exit 11
 fi
 
-
+mysql --user=cloud --password=cloud < cloudbridge_multipart.sql
 if [ $? -ne 0 ]
 then
-	exit 1
+    exit 1
 fi
-  
+
 echo "Creating Indice and Foreign Keys"
 mysql --user=cloud --password=cloud < cloudbridge_index.sql
 if [ $? -ne 0 ]; then
   printf "Error: Cannot execute cloudbridge_index.sql\n"
   exit 13
 fi
+
+mysql --user=cloud --password=cloud < cloudbridge_multipart_alter.sql
+mysql --user=cloud --password=cloud < cloudbridge_bucketpolicy.sql
+mysql --user=cloud --password=cloud < cloudbridge_policy_alter.sql
+mysql --user=cloud --password=cloud < cloudbridge_offering.sql
+mysql --user=cloud --password=cloud < cloudbridge_offering_alter.sql

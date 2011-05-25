@@ -211,7 +211,7 @@ def rpm(context):
 	outputdir = basedir + "/tmp"
 	sourcedir = _join(outputdir,"SOURCES")
 	specfile = basedir + "/cloudbridge.spec"
-	tarball = Scripting.dist()
+	tarball = Scripting.dist('', '1.0.1')
 
 	if _exists(outputdir): shutil.rmtree(outputdir)
 	for a in ["RPMS/noarch","SRPMS","BUILD","SPECS","SOURCES"]: mkdir_p(_join(outputdir,a))

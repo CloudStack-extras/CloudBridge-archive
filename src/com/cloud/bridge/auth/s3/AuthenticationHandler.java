@@ -147,7 +147,7 @@ public class AuthenticationHandler implements Handler {
     	}
     	catch( Exception e )
     	{
-    	    logger.error( "Signature calculation failed due to: " + e.toString());
+            logger.error("Signature calculation failed due to: ", e);
     		throw new AxisFault( e.toString(), "Server.InternalError" );
     	}
     	
