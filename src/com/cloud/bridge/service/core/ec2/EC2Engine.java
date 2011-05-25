@@ -992,9 +992,14 @@ public class EC2Engine {
  	        if ( 0 < match.getLength()) {
 	    	     Node item = match.item(0);
 	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     if (waitForAsynch( jobId )) request.setState( "detached" );
+                if (waitForAsynch(jobId)) {
+                    request.setState("detached");
+                } else {
+                    throw new EC2ServiceException(ServerError.InternalError, "Unable to detach volume");
+                }
+            } else {
+                throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
             }
- 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
  	        
             return request;
    	        
