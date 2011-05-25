@@ -79,7 +79,6 @@ public class EC2Engine {
     private int CLOUD_STACK_VERSION_2_2 = 220;
     private int cloudStackVersion;
    
-    
     public EC2Engine() throws IOException {
 		dbf = DocumentBuilderFactory.newInstance();
 		dbf.setNamespaceAware( true );
@@ -121,6 +120,58 @@ public class EC2Engine {
    	        }
    	        
             cloudStackVersion = getCloudStackVersion(EC2Prop);
+            
+     	    OfferingDao ofDao = new OfferingDao();
+     	    try {
+    	 	    if(ofDao.getOfferingCount() == 0) {
+    	 	    	String strValue = EC2Prop.getProperty("m1.small.serviceId");
+    	 	    	if(strValue != null) {
+    	 	    		ofDao.setOfferMapping("m1.small", strValue);
+    	 	    	}
+    	 	    	
+    	 	    	strValue = EC2Prop.getProperty("m1.large.serviceId");
+    	 	    	if(strValue != null) {
+    	 	    		ofDao.setOfferMapping("m1.large", strValue);
+    	 	    	}
+    	 	    	
+    	 	    	strValue = EC2Prop.getProperty("m1.xlarge.serviceId");
+    	 	    	if(strValue != null) {
+    	 	    		ofDao.setOfferMapping("m1.xlarge", strValue);
+    	 	    	}
+
+    	 	    	strValue = EC2Prop.getProperty("c1.medium.serviceId");
+    	 	    	if(strValue != null) {
+    	 	    		ofDao.setOfferMapping("c1.medium", strValue);
+    	 	    	}
+
+    	 	    	strValue = EC2Prop.getProperty("c1.xlarge.serviceId");
+    	 	    	if(strValue != null) {
+    	 	    		ofDao.setOfferMapping("c1.xlarge", strValue);
+    	 	    	}
+
+    	 	    	strValue = EC2Prop.getProperty("m2.xlarge.serviceId");
+    	 	    	if(strValue != null) {
+    	 	    		ofDao.setOfferMapping("m2.xlarge", strValue);
+    	 	    	}
+
+    	 	    	strValue = EC2Prop.getProperty("m2.2xlarge.serviceId");
+    	 	    	if(strValue != null) {
+    	 	    		ofDao.setOfferMapping("m2.2xlarge", strValue);
+    	 	    	}
+
+    	 	    	strValue = EC2Prop.getProperty("m2.4xlarge.serviceId");
+    	 	    	if(strValue != null) {
+    	 	    		ofDao.setOfferMapping("m2.4xlarge", strValue);
+    	 	    	}
+    	 	    	
+    	 	    	strValue = EC2Prop.getProperty("cc1.4xlarge.serviceId");
+    	 	    	if(strValue != null) {
+    	 	    		ofDao.setOfferMapping("cc1.4xlarge", strValue);
+    	 	    	}
+    	 	    }
+     	    } catch(Exception e) {
+     	    	logger.error("Unexpected exception ", e);
+     	    }
     	} 
        	else logger.error( "ec2-service.properties not found" );
 	}

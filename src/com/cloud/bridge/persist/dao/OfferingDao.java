@@ -58,6 +58,24 @@ public class OfferingDao {
 		}
 	}
 	
+	public int getOfferingCount()
+		throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
+	{
+        PreparedStatement statement = null;
+        int result = 0;
+	
+        openConnection();	
+        try {            
+	        statement = conn.prepareStatement ( "SELECT count(*) FROM offering_bundle" );
+            ResultSet rs = statement.executeQuery();
+	        if (rs.next()) result = rs.getInt(1);
+            statement.close();	
+            return result;
+        } finally {
+            closeConnection();
+        }
+	}
+	
 	public String getCloudOffering( String amazonEC2Offering )
         throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException
 	{
