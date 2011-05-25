@@ -1958,26 +1958,25 @@ public class EC2Engine {
      */
     private boolean waitForAsynch( String jobId ) throws SignatureException 
     {    
-	    while( true ) 
-	    {
-		   String result = checkAsyncResult( jobId );
-		   //System.out.println( "waitForAsynch: " + result );
-		  
-		   if ( -1 != result.indexOf( "s:1" )) 
-		   {
-		       // -> requested action has finished
-		       return true;
-		   }
-		   else if (-1 != result.indexOf( "s:2" ) || -1 != result.indexOf( "s:-1" )) 
-		   {
-		        // -> requested action has failed
-		  	    return false;
-		   }
-		  
-		   // -> slow down the hits from this polling a little
-  	       try { Thread.sleep( pollInterval5 ); }
-	       catch( Exception e ) {}
-	    }
+        while (true) {
+            String result = checkAsyncResult(jobId);
+            // System.out.println( "waitForAsynch: " + result );
+
+            if (-1 != result.indexOf("s:1")) {
+                // -> requested action has finished
+                return true;
+            } else if (-1 != result.indexOf("s:2") || -1 != result.indexOf("s:-1")) {
+                // -> requested action has failed
+                logger.error(result);
+                return false;
+            }
+
+            // -> slow down the hits from this polling a little
+            try {
+                Thread.sleep(pollInterval5);
+            } catch (Exception e) {
+            }
+        }
     }
 
     /**
