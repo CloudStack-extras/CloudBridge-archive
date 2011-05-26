@@ -1,7 +1,6 @@
 %define __os_install_post %{nil}
 %global debug_package %{nil}
 
-%define _ver 1.0.1
 %define _rel 1
 
 Name:      cloud-bridge
@@ -34,7 +33,7 @@ This is the Cloud.com Bridge
 
 %define _localstatedir /var
 %define _sharedstatedir /usr/share
-./waf configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir} --javadir=%{_javadir} --sharedstatedir=%{_sharedstatedir} --localstatedir=%{_localstatedir} --sysconfdir=%{_sysconfdir} --mandir=%{_mandir} --docdir=%{_docdir}/%{name}-%{version} --fast
+./waf configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir} --javadir=%{_javadir} --sharedstatedir=%{_sharedstatedir} --localstatedir=%{_localstatedir} --sysconfdir=%{_sysconfdir} --mandir=%{_mandir} --docdir=%{_docdir}/%{name}-%{version} --fast --package-version=%{_ver}
 
 %install
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}

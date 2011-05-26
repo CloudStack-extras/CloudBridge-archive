@@ -96,6 +96,10 @@ def set_options(opt):
 		help = 'does ---no-dep-check',
 		default = False,
 		dest = 'NODEPCHECK')
+	inst_dir.add_option('--package-version',
+		help = 'package version',
+		default = '',
+		dest = 'VERNUM')
 
 def showconfig(conf):
 	"""prints out the current configure environment configuration"""
@@ -211,14 +215,19 @@ def rpm(context):
 	outputdir = basedir + "/tmp"
 	sourcedir = _join(outputdir,"SOURCES")
 	specfile = basedir + "/cloudbridge.spec"
-	tarball = Scripting.dist('', '1.0.1')
+	if Options.options.VERNUM:
+		ver = Options.options.VERNUM
+	else: ver = "1.0.1"
+
+	tarball = Scripting.dist('', ver)
 
 	if _exists(outputdir): shutil.rmtree(outputdir)
 	for a in ["RPMS/noarch","SRPMS","BUILD","SPECS","SOURCES"]: mkdir_p(_join(outputdir,a))
 	shutil.copy(tarball,_join(sourcedir,tarball))
 
-	checkdeps = lambda: c(["rpmbuild", "--define", "_topdir %s"%outputdir, "--nobuild", specfile])
-	dorpm = lambda: c(["rpmbuild", "--define", "_topdir %s"%outputdir, "-bb", specfile])
+	packagever = ["--define", "_ver %s" % ver]
+	checkdeps = lambda: c(["rpmbuild", "--define", "_topdir %s"%outputdir, "--nobuild", specfile]+packagever)
+	dorpm = lambda: c(["rpmbuild", "--define", "_topdir %s"%outputdir, "-bb", specfile]+packagever)
 	try: checkdeps()
 	except (CalledProcessError,OSError),e:
 		Utils.pprint("YELLOW","Dependencies might be missing.")

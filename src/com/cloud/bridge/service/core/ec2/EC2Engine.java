@@ -123,8 +123,7 @@ public class EC2Engine {
             
      	    OfferingDao ofDao = new OfferingDao();
      	    try {
-    	 	    if(ofDao.getOfferingCount() == 0) 
-     	    	{
+    	 	    if(ofDao.getOfferingCount() == 0) {
     	 	    	String strValue = EC2Prop.getProperty("m1.small.serviceId");
     	 	    	if(strValue != null) {
     	 	    		ofDao.setOfferMapping("m1.small", strValue);
@@ -302,7 +301,7 @@ public class EC2Engine {
 	if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
 
    	try {
-	        String query = new String( "command=deleteSecurityGroup&name=" + safeURLencode( request.getName()));        
+	        String query = new String( "command=deleteSecurityGroup&id=" + safeURLencode( request.getName()));        
             resolveURL( genAPIURL( query, genQuerySignature(query)), "deleteSecurityGroup", true );
      		return true;
     		
@@ -337,40 +336,12 @@ public class EC2Engine {
     }
 
     
-    /**
-     * CloudStack supports revoke only by using the ruleid of the ingress rule.   
-     * We list all security groups and find the matching group and use the first ruleId we find.
-     * 
-     * @param request
-     * @return
-     */
     public boolean revokeSecurityGroup( EC2AuthorizeRevokeSecurityGroup request ) 
     {
 		if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
-        String[] groupSet = new String[1];
-        groupSet[0] = request.getName();
-        String ruleId = null;
-        
-		EC2IpPermission[] items = request.getIpPermissionSet();
-        		
-   	    try 
-  	    {   EC2DescribeSecurityGroupsResponse response = listSecurityGroups( groupSet );
-  	        EC2SecurityGroup[] groupInfo = response.getGroupSet();
-   	    	
-  	        for( int i=0; i < groupInfo.length && null == ruleId; i++ )
-  	        {
-  	        	EC2IpPermission[] perms = groupInfo[i].getIpPermissionSet();
-  	        	for( int j=0; j < perms.length && null == ruleId; j++ )
-  	        	{
-  	        		ruleId = doesRuleMatch( items[0], perms[j] );
-  	        	}
-  	        }
-  	        
-  	        if (null == ruleId)
-  	    		throw new EC2ServiceException(ClientError.InvalidGroup_NotFound, "Cannot find matching ruleid.");
 
-   	    	
-   	    	String query = new String( "command=revokeSecurityGroupIngress&ruleid=" + ruleId );        
+   	    try 
+   	    {   String query = new String( "command=revokeSecurityGroupIngress&id=" + safeURLencode( request.getName()));        
 	        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "revokeSecurityGroup", true );
 
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
@@ -476,68 +447,6 @@ public class EC2Engine {
    	    } 	
     }
 
-    
-    /**
-     * Does the permission from the request (left) match the permission from the cloudStack query (right).
-     * If the cloudStack rule matches then we return its ruleId.
-     * 
-     * @param permLeft
-     * @param permRight
-     * @return ruleId of the cloudstack rule
-     */
-	private String doesRuleMatch( EC2IpPermission permLeft, EC2IpPermission permRight )
-	{
-		int matches = 0;
-		
-		if (null != permLeft.getIcmpType() && null != permLeft.getIcmpCode())
-		{
-			if (null == permRight.getIcmpType() || null == permRight.getIcmpCode()) return null;
-			    
-			if (!permLeft.getIcmpType().equalsIgnoreCase( permRight.getIcmpType())) return null;
-			if (!permLeft.getIcmpCode().equalsIgnoreCase( permRight.getIcmpCode())) return null;
-			matches++;
-		}
-		
-		// -> "Valid Values for EC2 security groups: tcp | udp | icmp or the corresponding protocol number (6 | 17 | 1)."
-		if (null != permLeft.getProtocol())
-		{
-			if (null == permRight.getProtocol()) return null;
-			
-			String protocol = permLeft.getProtocol();
-			     if (protocol.equals( "6"  )) protocol = "tcp";
-			else if (protocol.equals( "17" )) protocol = "udp";
-			else if (protocol.equals( "1"  )) protocol = "icmp";
-			
-			if (!protocol.equalsIgnoreCase( permRight.getProtocol())) return null;
-			matches++;
-		}
-		
-		
-		if (null != permLeft.getCIDR())
-		{
-			if (null == permRight.getCIDR()) return null;
-			
-			if (!permLeft.getCIDR().equalsIgnoreCase( permRight.getCIDR())) return null;
-			matches++;
-		}
-
-		// -> is the port(s) from the request (left) a match of the rule's port(s) 
-		if (0 != permLeft.getFromPort())
-		{
-			// -> -1 means all ports match
-			if (-1 != permLeft.getFromPort()) {
-			   if (!(permLeft.getFromPort() == permRight.getFromPort() && permLeft.getToPort() == permRight.getToPort())) return null;
-			}
-			matches++;
-		}
-		
-		// -> was permLeft set up properly with at least one property to match?
-		if ( 0 == matches ) 
-			 return null;
-		else return permRight.getRuleId();
-	}
-
-	
     /**
      * Cloud Stack API takes a comma separated list of IP ranges as one parameter.
      * 
@@ -2700,7 +2609,7 @@ public class EC2Engine {
    			             else if (name.equalsIgnoreCase( "name"        )) group.setName( value );
 	    			     else if (name.equalsIgnoreCase( "description" )) group.setDescription( value );
 	    			     else if (name.equalsIgnoreCase( "account"     )) group.setAccount( value );
-	    			     else if (name.equalsIgnoreCase( "domainid"    )) group.setDomainId( value ); 
+	    			     else if (name.equalsIgnoreCase( "domainid"    )) group.setDomainId( value );  			                  
 	    			     else if (name.equalsIgnoreCase( "ingressrule" )) group.addIpPermission( toPermission( child.getChildNodes()));
 	    			 } 
 	    	    }
@@ -2807,9 +2716,6 @@ public class EC2Engine {
 		              if (name.equalsIgnoreCase( "protocol"          )) perm.setProtocol( value ); 
 		         else if (name.equalsIgnoreCase( "startport"         )) perm.setFromPort( Integer.parseInt( value ));
 		         else if (name.equalsIgnoreCase( "endport"           )) perm.setToPort( Integer.parseInt( value ));
-		         else if (name.equalsIgnoreCase( "ruleid"            )) perm.setRuleId( value );		                  
-			     else if (name.equalsIgnoreCase( "icmpcode"          )) perm.setIcmpCode( value );
-			     else if (name.equalsIgnoreCase( "icmptype"          )) perm.setIcmpType( value );  			                  
 		         else if (name.equalsIgnoreCase( "account"           )) account = value;
 		         else if (name.equalsIgnoreCase( "securitygroupname" )) groupName = value ;
 		         else if (name.equalsIgnoreCase( "cidr"              )) {
