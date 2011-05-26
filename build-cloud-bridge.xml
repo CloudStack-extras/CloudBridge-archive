@@ -22,8 +22,11 @@
 		/>
 
 		<!-- directories for build and distribution -->
+		
+<!--		
+		<property name="catalina.dir" value="${env.CATALINA_HOME}" />
+-->
 		<property name="catalina.dir" value="${base.dir}/tomcat" />
-
 		<property name="build.dir" location="${base.dir}/" />
 		<property name="buildnumber.dir" location="${build.dir}/" />
 		<property name="target.dir" location="${base.dir}/target" />
@@ -136,10 +139,12 @@
 		
 		<target name="build-cloud-bridge-s3" depends="-init, compile-cloud-bridge" description="Builds cloud-bridge S3 AAR file.">
 			<jar jarfile="${dist.dir}/cloud-s3.aar" basedir="${target.dir}/classes/cloud-bridge.jar" excludes="**/*">
+<!--				
 		    <metainf dir="${base.dir}/resource/AmazonS3">
 			<include name="services.xml" />
 			<include name="AmazonS3.wsdl" />
 		    </metainf>
+-->		    
 			</jar>
 		</target>
 		
