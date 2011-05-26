@@ -22,6 +22,9 @@ public class EC2IpPermission {
 	
 	private String protocol;
 	private String cidr;
+	private String ruleId;
+	private String icmpCode;
+	private String icmpType;
 	private int    fromPort;
 	private int    toPort;
 	private List<EC2SecurityGroup> userSet  = new ArrayList<EC2SecurityGroup>();    // a list of groups identifying users 
@@ -30,6 +33,9 @@ public class EC2IpPermission {
 	public EC2IpPermission() {
 		protocol = null;
 		cidr     = null;
+		ruleId   = null;
+		icmpCode = null;
+		icmpType = null;
 		fromPort = 0;
 		toPort   = 0;
 	}
@@ -48,6 +54,30 @@ public class EC2IpPermission {
 	
 	public String getCIDR() {
 		return this.cidr;
+	}
+
+	public void setRuleId( String ruleId ) {
+		this.ruleId = ruleId;
+	}
+	
+	public String getRuleId() {
+		return this.ruleId;
+	}
+
+	public void setIcmpCode( String code ) {
+		this.icmpCode = code;
+	}
+	
+	public String getIcmpCode() {
+		return this.icmpCode;
+	}
+
+	public void setIcmpType( String type ) {
+		this.icmpType = type;
+	}
+	
+	public String getIcmpType() {
+		return this.icmpType;
 	}
 
 	public void setFromPort( int fromPort ) {
