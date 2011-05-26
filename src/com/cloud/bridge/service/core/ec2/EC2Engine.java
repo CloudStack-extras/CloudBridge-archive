@@ -301,7 +301,7 @@ public class EC2Engine {
 	if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
 
    	try {
-	        String query = new String( "command=deleteSecurityGroup&id=" + safeURLencode( request.getName()));        
+            String query = new String("command=deleteSecurityGroup&name=" + safeURLencode(request.getName()));
             resolveURL( genAPIURL( query, genQuerySignature(query)), "deleteSecurityGroup", true );
      		return true;
     		
