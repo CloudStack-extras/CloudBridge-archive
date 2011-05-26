@@ -3088,8 +3088,13 @@ public class EC2Engine {
 			}
 			match = cloudResp.getElementsByTagName("jobresult");
 			if (0 < match.getLength()) {
+
+				result = "TODO";
+				/*
+				 * 
 				item = match.item(0).getLastChild();
 				result = new String(item.getFirstChild().getNodeValue());
+				*/
 			}
 		
 			checkResult.append(" ");
