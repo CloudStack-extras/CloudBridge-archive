@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 	<project name="CloudBridge" default="help" basedir=".">
 		<target name="help">
 			<echo level="info" message="Ant Build File for CloudBridge" />
@@ -22,11 +21,9 @@
 		/>
 
 		<!-- directories for build and distribution -->
-		
-<!--		
+		<property name="env.CATALINA_HOME" value="${base.dir}/tomcat" />
 		<property name="catalina.dir" value="${env.CATALINA_HOME}" />
--->
-		<property name="catalina.dir" value="${base.dir}/tomcat" />
+		
 		<property name="build.dir" location="${base.dir}/" />
 		<property name="buildnumber.dir" location="${build.dir}/" />
 		<property name="target.dir" location="${base.dir}/target" />
@@ -43,7 +40,7 @@
 		<property name="tomcat.home" location="${catalina.dir}" />
 		<property name="deploy.dir" location="${tomcat.home}" />
 
-                <property name="rpm.install.dir" location="${base.dir}/../../../../../../packages/config/rpm/tmp/BUILD/cloud-bridge-${version}-1" />
+        <property name="rpm.install.dir" location="${base.dir}/../../../../../../packages/config/rpm/tmp/BUILD/cloud-bridge-${version}-1" />
 		<property name="rpm.tomcat.dir" location="${rpm.install.dir}/usr/share/cloud/bridge" />
 		<property name="debian.install.dir" location="${base.dir}/packages/config/debian/tmp" />
 		<property name="debian.tomcat.dir" location="${debian.install.dir}/usr/share/cloud/bridge" />
@@ -112,11 +109,10 @@
 		      <delete dir="${tomcat.home}/webapps/bridge"/>
 		</target>
 
-		
 		<path id="cloud-bridge.classpath">
-		<path refid="thirdparty.classpath" />
-		<path refid="rampart.classpath" />
-		<path refid="dist.classpath" />
+    		<path refid="thirdparty.classpath" />
+    		<path refid="rampart.classpath" />
+    		<path refid="dist.classpath" />
 		</path>
 		<target name="compile-cloud-bridge" depends="-init" description="Compile Cloud.com Simple Storage Service">
 		    <compile-java jar.name="cloud-bridge.jar" top.dir="${base.dir}" classpath="cloud-bridge.classpath">
@@ -135,7 +131,6 @@
 				</fileset>
 			</jar>
 		</target>
-
 		
 		<target name="build-cloud-bridge-s3" depends="-init, compile-cloud-bridge" description="Builds cloud-bridge S3 AAR file.">
 			<jar jarfile="${dist.dir}/cloud-s3.aar" basedir="${target.dir}/classes/cloud-bridge.jar" excludes="**/*">
@@ -217,31 +212,38 @@
 			</fileset>
 		</copy>
 			
-		<copy todir="${deploy.dir}/lib">
+		<copy todir="${deploy.dir}/webapps/bridge/WEB-INF/lib">
 			<fileset dir="${base.dir}/lib">
 				<include name="*.jar"/>
+			    <exclude name="mysql-connector-java-5.1.7-bin.jar" />
 			</fileset>
 		</copy>
-			
-		    <copy overwrite="true" todir="${deploy.dir}/conf">
-			<fileset dir="${base.dir}/conf/">
-				<include name="**/*"/>
-			</fileset>
-		    </copy>
+
+        <copy todir="${deploy.dir}/lib">
+            <fileset dir="${base.dir}/lib">
+                <include name="mysql-connector-java-5.1.7-bin.jar" />
+            </fileset>
+        </copy>
+	    
+	    <copy overwrite="true" todir="${deploy.dir}/conf">
+		<fileset dir="${base.dir}/conf/">
+			<include name="**/*"/>
+		</fileset>
+	    </copy>
+	    
+	    <copy overwrite="true" todir="${deploy.dir}/webapps/bridge/WEB-INF/conf">
+		<fileset dir="${base.dir}/resource/Axis2/">
+			<include name="axis2.xml"/>
+		</fileset>
+	    </copy>
+		
+	    <copy overwrite="true" todir="${deploy.dir}/webapps/bridge/WEB-INF">
+		<fileset dir="${base.dir}/web/">
+			<include name="web.xml"/>
+		</fileset>
+	    </copy>
 		    
-		    <copy overwrite="true" todir="${deploy.dir}/webapps/bridge/WEB-INF/conf">
-			<fileset dir="${base.dir}/resource/Axis2/">
-				<include name="axis2.xml"/>
-			</fileset>
-		    </copy>
-			
-		    <copy overwrite="true" todir="${deploy.dir}/webapps/bridge/WEB-INF">
-			<fileset dir="${base.dir}/web/">
-				<include name="web.xml"/>
-			</fileset>
-		    </copy>
-		    
-		    <!-- rampart lib goes where the axis lib files go -->
+	    <!-- rampart lib goes where the axis lib files go -->
 		<copy todir="${deploy.dir}/webapps/bridge/WEB-INF/lib">
 			<fileset dir="${base.dir}/rampart-lib">
 				<include name="*.jar"/>
@@ -258,185 +260,175 @@
 		<!-- WS-Security requires this keystore -->
 		<copy todir="${deploy.dir}/webapps/bridge/WEB-INF/classes">
 			<fileset dir="${base.dir}/resource/AmazonEC2">
-				<include name="crypto.properties"/>
+			    <include name="crypto.properties"/>
 				<include name="xes.keystore"/>
 			</fileset>
 		</copy>
-			
-			<delete file="${deploy.dir}/webapps/bridge/WEB-INF/lib/dom4j-1.6.1.jar" />
-		</target>
-
-		
+	</target>
 
 	<target name="deploy-debian-install" depends="build-cloud-bridge-jar, build-cloud-bridge">
+    	<copy todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF/services">
+        	<fileset dir="${dist.dir}">
+            	<include name="cloud-s3.aar"/>
+            	<include name="cloud-ec2.aar"/>
+        	</fileset>
+    	</copy>
+        <copy todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF/modules">
+	        <fileset dir="${dist.dir}">
+            	<include name="cloud-auth-s3.mar"/>
+            	<include name="cloud-auth-ec2.mar"/>
+        	</fileset>
+            <fileset dir="${base.dir}/modules">
+                <include name="*.mar"/>
+            </fileset>
+    	</copy>
+        <copy todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF/lib">
+            <fileset dir="${base.dir}/rampart-lib">
+                    <include name="*.jar"/>
+            </fileset>
+            <fileset dir="${jar.dir}">
+                    <include name="cloud-bridge.jar"/>
+            </fileset>
+        </copy>
 
-        	<copy todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF/services">
-                	<fileset dir="${dist.dir}">
-                        	<include name="cloud-s3.aar"/>
-                        	<include name="cloud-ec2.aar"/>
-                	</fileset>
-        	</copy>
-	        <copy todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF/modules">
-        	        <fileset dir="${dist.dir}">
-                        	<include name="cloud-auth-s3.mar"/>
-                        	<include name="cloud-auth-ec2.mar"/>
-                	</fileset>
-                        <fileset dir="${base.dir}/modules">
-                                <include name="*.mar"/>
-                        </fileset>
-        	</copy>
-
-                <copy todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF/lib">
-                        <fileset dir="${base.dir}/rampart-lib">
-                                <include name="*.jar"/>
-                        </fileset>
-                        <fileset dir="${jar.dir}">
-                                <include name="cloud-bridge.jar"/>
-                        </fileset>
-                </copy>
-
-                <copy todir="${debian.tomcat.dir}/lib">
-                        <fileset dir="${base.dir}/lib">
-                                <include name="*.jar"/>
-                        </fileset>
-                </copy>
+        <copy todir="${debian.tomcat.dir}/lib">
+            <fileset dir="${base.dir}/lib">
+                <include name="*.jar"/>
+            </fileset>
+        </copy>
 
 		<copy todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF/classes">
-                        <fileset dir="${base.dir}/resource/AmazonEC2">
-                                <include name="crypto.properties"/>
-                                <include name="xes.keystore"/>
-                        </fileset>
-                </copy>
+            <fileset dir="${base.dir}/resource/AmazonEC2">
+                <include name="crypto.properties"/>
+                <include name="xes.keystore"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${debian.tomcat.dir}/conf">
-                	<fileset dir="${base.dir}/conf/">
-                                <include name="**/*"/>
-                        </fileset>
-                	<fileset dir="${base.dir}/dist/tomcat">
-                                <include name="**/*"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${debian.tomcat.dir}/conf">
+        	<fileset dir="${base.dir}/conf/">
+                <include name="**/*"/>
+            </fileset>
+        	<fileset dir="${base.dir}/dist/tomcat">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF/conf">
-                        <fileset dir="${base.dir}/resource/Axis2/">
-                                <include name="axis2.xml"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF/conf">
+            <fileset dir="${base.dir}/resource/Axis2/">
+                <include name="axis2.xml"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF">
-                        <fileset dir="${base.dir}/web/">
-                                <include name="web.xml"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${debian.tomcat.dir}/webapps/bridge/WEB-INF">
+            <fileset dir="${base.dir}/web/">
+                <include name="web.xml"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${debian.install.dir}/usr/share/cloud/setup/bridge/db">
-                        <fileset dir="${base.dir}/db/mysql">
-                                <include name="*.sql"/>
-                                <include name="*.sh"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${debian.install.dir}/usr/share/cloud/setup/bridge/db">
+            <fileset dir="${base.dir}/db/mysql">
+                <include name="*.sql"/>
+                <include name="*.sh"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${debian.install.dir}/etc/init.d">
-                        <fileset dir="${base.dir}/dist/init/debian/">
-                                <include name="cloud-bridge"/>
-                        </fileset>
-                </copy>
-                <copy overwrite="true" todir="${debian.install.dir}/usr/bin">
-                        <fileset dir="${base.dir}/dist/setup">
-                                <include name="*"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${debian.install.dir}/etc/init.d">
+            <fileset dir="${base.dir}/dist/init/debian/">
+                <include name="cloud-bridge"/>
+            </fileset>
+        </copy>
+        <copy overwrite="true" todir="${debian.install.dir}/usr/bin">
+            <fileset dir="${base.dir}/dist/setup">
+                <include name="*"/>
+            </fileset>
+        </copy>
 	</target>
 
 	<target name="deploy-rpm-install" depends="build-cloud-bridge-jar, build-cloud-bridge">
+    	<copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/services">
+        	<fileset dir="${dist.dir}">
+            	<include name="cloud-s3.aar"/>
+            	<include name="cloud-ec2.aar"/>
+        	</fileset>
+    	</copy>
+        <copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/modules">
+	        <fileset dir="${dist.dir}">
+            	<include name="cloud-auth-s3.mar"/>
+            	<include name="cloud-auth-ec2.mar"/>
+        	</fileset>
+            <fileset dir="${base.dir}/modules">
+                <include name="*.mar"/>
+            </fileset>
+    	</copy>
 
-        	<copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/services">
-                	<fileset dir="${dist.dir}">
-                        	<include name="cloud-s3.aar"/>
-                        	<include name="cloud-ec2.aar"/>
-                	</fileset>
-        	</copy>
-	        <copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/modules">
-        	        <fileset dir="${dist.dir}">
-                        	<include name="cloud-auth-s3.mar"/>
-                        	<include name="cloud-auth-ec2.mar"/>
-                	</fileset>
-                        <fileset dir="${base.dir}/modules">
-                                <include name="*.mar"/>
-                        </fileset>
-        	</copy>
+        <copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/lib">
+            <fileset dir="${base.dir}/rampart-lib">
+                <include name="*.jar"/>
+            </fileset>
+            <fileset dir="${jar.dir}">
+                <include name="cloud-bridge.jar"/>
+            </fileset>
+        </copy>
 
-                <copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/lib">
-                        <fileset dir="${base.dir}/rampart-lib">
-                                <include name="*.jar"/>
-                        </fileset>
-                        <fileset dir="${jar.dir}">
-                                <include name="cloud-bridge.jar"/>
-                        </fileset>
-                </copy>
-
-                <copy todir="${rpm.tomcat.dir}/lib">
-                        <fileset dir="${base.dir}/lib">
-                                <include name="*.jar"/>
-                        </fileset>
-                </copy>
+        <copy todir="${rpm.tomcat.dir}/lib">
+            <fileset dir="${base.dir}/lib">
+                <include name="*.jar"/>
+            </fileset>
+        </copy>
 
 		<copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/classes">
-                        <fileset dir="${base.dir}/resource/AmazonEC2">
-                                <include name="crypto.properties"/>
-                                <include name="xes.keystore"/>
-                        </fileset>
-                </copy>
+            <fileset dir="${base.dir}/resource/AmazonEC2">
+                <include name="crypto.properties"/>
+                <include name="xes.keystore"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${rpm.tomcat.dir}/conf">
-                	<fileset dir="${base.dir}/conf/">
-                                <include name="**/*"/>
-                        </fileset>
-                	<fileset dir="${base.dir}/dist/tomcat">
-                                <include name="**/*"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${rpm.tomcat.dir}/conf">
+        	<fileset dir="${base.dir}/conf/">
+                <include name="**/*"/>
+            </fileset>
+        	<fileset dir="${base.dir}/dist/tomcat">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/conf">
-                        <fileset dir="${base.dir}/resource/Axis2/">
-                                <include name="axis2.xml"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/conf">
+            <fileset dir="${base.dir}/resource/Axis2/">
+                <include name="axis2.xml"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF">
-                        <fileset dir="${base.dir}/web/">
-                                <include name="web.xml"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF">
+            <fileset dir="${base.dir}/web/">
+                <include name="web.xml"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${rpm.install.dir}/usr/share/cloud/setup/bridge/db">
-                        <fileset dir="${base.dir}/db/mysql">
-                                <include name="*.sql"/>
-                                <include name="*.sh"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${rpm.install.dir}/usr/share/cloud/setup/bridge/db">
+            <fileset dir="${base.dir}/db/mysql">
+                <include name="*.sql"/>
+                <include name="*.sh"/>
+            </fileset>
+        </copy>
 
-                <copy overwrite="true" todir="${rpm.install.dir}/etc/init.d">
-                        <fileset dir="${base.dir}/dist/init/rpm/">
-                                <include name="cloud-bridge"/>
-                        </fileset>
-                </copy>
-                <copy overwrite="true" todir="${rpm.install.dir}/usr/bin">
-                        <fileset dir="${base.dir}/dist/setup">
-                                <include name="*"/>
-                        </fileset>
-                </copy>
+        <copy overwrite="true" todir="${rpm.install.dir}/etc/init.d">
+            <fileset dir="${base.dir}/dist/init/rpm/">
+                <include name="cloud-bridge"/>
+            </fileset>
+        </copy>
+        <copy overwrite="true" todir="${rpm.install.dir}/usr/bin">
+            <fileset dir="${base.dir}/dist/setup">
+                <include name="*"/>
+            </fileset>
+        </copy>
 	</target>
-
-
   	
 	<target name="deploydb"> 
 	<echo message="deploydb" />
 		<exec dir="${db.dir}" executable="bash">
-	    		<arg value="deploy-db-bridge.sh" />
-	    	</exec>
+    		<arg value="deploy-db-bridge.sh" />
+    	</exec>
 	</target>
-  	
 	
 	<target name="codegen-server-s3">
 		<wsdl2code
@@ -480,62 +472,61 @@
 		/>
 	</target>
 	
-	<target name="codegen-client-ec2">
-		<wsdl2code
-			wsdlfilename="${base.dir}/wsdl/AmazonEC2.wsdl"
-			serverside="false"
-			generateservicexml="false"
-			skipbuildxml="true"
-			serversideinterface="false"
-			namespacetopackages="http://ec2.amazonaws.com/doc/2010-11-15/=com.amazon.ec2.client"
-			targetsourcefolderlocation="src"
-			targetresourcesfolderlocation="resource/AmazonEC2"
-			overwrite="true"
-		/>
-	</target>
+    <target name="codegen-client-ec2">
+    	<wsdl2code
+    		wsdlfilename="${base.dir}/wsdl/AmazonEC2.wsdl"
+    		serverside="false"
+    		generateservicexml="false"
+    		skipbuildxml="true"
+    		serversideinterface="false"
+    		namespacetopackages="http://ec2.amazonaws.com/doc/2010-11-15/=com.amazon.ec2.client"
+    		targetsourcefolderlocation="src"
+    		targetresourcesfolderlocation="resource/AmazonEC2"
+    		overwrite="true"
+    	/>
+    </target>
 		
-  <target name="run" depends="start-tomcat"/>
-  <target name="stop" depends="stop-tomcat"/>
-  <target name="debug" depends="debug-tomcat"/>
+    <target name="run" depends="start-tomcat"/>
+    <target name="stop" depends="stop-tomcat"/>
+    <target name="debug" depends="debug-tomcat"/>
 
-  <target name="debug-suspend">
-    <java jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
-      <jvmarg value="-Dcatalina.home=${tomcat.home}"/>
-	  <jvmarg value="-Xdebug"/>
-      <jvmarg value="-Xrunjdwp:transport=dt_socket,address=8787,server=y,suspend=y"/>
-      <jvmarg value="-ea"/>
-      <jvmarg value="-Xms256m"/>
-      <jvmarg value="-Xmx384m"/>
-    </java>
-  </target>
+    <target name="debug-suspend">
+        <java jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
+            <jvmarg value="-Dcatalina.home=${tomcat.home}"/>
+            <jvmarg value="-Xdebug"/>
+            <jvmarg value="-Xrunjdwp:transport=dt_socket,address=8787,server=y,suspend=y"/>
+            <jvmarg value="-ea"/>
+            <jvmarg value="-Xms256m"/>
+            <jvmarg value="-Xmx384m"/>
+        </java>
+    </target>
 
-  <target name="stop-tomcat">
-    <java dir="${tomcat.home}/bin/" jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
-      <arg value="stop"/>
-    </java>
-  </target>
+    <target name="stop-tomcat">
+        <java dir="${tomcat.home}/bin/" jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
+            <arg value="stop"/>
+        </java>
+    </target>
 
-  <target name="start-tomcat" depends="stop-tomcat">
-    <echo message="Start Tomcat" />
-    <java dir="${tomcat.home}/bin/" jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
-      <jvmarg value="${assertion}"/>
-      <jvmarg value="-Xms256m"/>
-      <jvmarg value="-Xmx384m"/>
-      <jvmarg value="-ea"/>
-      <arg value="start"/>
-    </java>
-  </target>
+    <target name="start-tomcat" depends="stop-tomcat">
+        <echo message="Start Tomcat" />
+        <java dir="${tomcat.home}/bin/" jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
+            <jvmarg value="${assertion}"/>
+            <jvmarg value="-Xms256m"/>
+            <jvmarg value="-Xmx384m"/>
+            <jvmarg value="-ea"/>
+            <arg value="start"/>
+        </java>
+    </target>
 
-  <target name="debug-tomcat">
-    <java jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
-      <jvmarg value="-Dcatalina.home=${tomcat.home}"/>
-	  <jvmarg value="-Xdebug"/>
-      <jvmarg value="${debug.jvmarg}"/>
-      <jvmarg value="-ea"/>
-      <jvmarg value="-Xms256m"/>
-      <jvmarg value="-Xmx384m"/>
-    </java>
-  </target>
-		
+    <target name="debug-tomcat">
+        <java jar="${tomcat.home}/bin/bootstrap.jar" fork="true">
+            <jvmarg value="-Dcatalina.home=${tomcat.home}"/>
+            <jvmarg value="-Xdebug"/>
+            <jvmarg value="${debug.jvmarg}"/>
+            <jvmarg value="-ea"/>
+            <jvmarg value="-Xms256m"/>
+            <jvmarg value="-Xmx384m"/>
+        </java>
+    </target>
 </project>
 
