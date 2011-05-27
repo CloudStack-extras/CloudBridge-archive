@@ -370,7 +370,7 @@ public class EC2Engine {
   	    		throw new EC2ServiceException(ClientError.InvalidGroup_NotFound, "Cannot find matching ruleid.");
 
    	    	
-   	    	String query = new String( "command=revokeSecurityGroupIngress&ruleid=" + ruleId );        
+   	    	String query = new String( "command=revokeSecurityGroupIngress&id=" + ruleId );        
 	        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "revokeSecurityGroup", true );
 
 	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
