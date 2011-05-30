@@ -1967,6 +1967,11 @@ public class EC2Engine {
                        item = match.item(0);
                        vms[j].setDomainId( item.getFirstChild().getNodeValue());
                    }
+	    	       match = cloudResp.getElementsByTagName("hypervisor");
+                   if (0 < match.getLength()) {
+                       item = match.item(0);
+                       vms[j].setHypervisor( item.getFirstChild().getNodeValue());
+                   }
 	    	       
 	               waitCount--;
 			       jobIds[j] = null;

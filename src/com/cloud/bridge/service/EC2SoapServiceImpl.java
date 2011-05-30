@@ -1373,9 +1373,12 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setVirtualizationType( "" );
             param7.setClientToken( "" );
             
-            // this is being ignored and not generating any output
-            //ResourceTagSetType param18 = new ResourceTagSetType();
-            //param7.setTagSet( param18 );
+            ResourceTagSetType param18 = new ResourceTagSetType();
+            ResourceTagSetItemType param19 = new ResourceTagSetItemType();
+            param19.setKey("");
+            param19.setValue("");
+            param18.addItem( param19 );
+            param7.setTagSet( param18 );          
             
             String hypervisor = instances[i].getHypervisor();
             param7.setHypervisor((null != hypervisor ? hypervisor : ""));
