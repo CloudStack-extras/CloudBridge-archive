@@ -26,6 +26,7 @@ public class EC2Snapshot {
 	private String   volumeId;
 	private int      volumeSize;   // in gigs
     private String   type;
+    private String   state;
     private Calendar created;
     private String 	 accountName;
     private String 	 domainId;
@@ -36,6 +37,7 @@ public class EC2Snapshot {
 		volumeId   	= null;
 		volumeSize 	= 0;
 		type       	= null;
+		state       = null;
 		created    	= null;
 		accountName = null;
 		domainId	= null;
@@ -105,6 +107,12 @@ public class EC2Snapshot {
 	public void setDomainId(String domainId) {
 		this.domainId = domainId;
 	}
+
+	public String getState() {
+		return state;
+	}
 	
-	
+	public void setState(String state) {
+		this.state = state;
+	}
 }

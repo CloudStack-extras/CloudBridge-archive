@@ -2871,6 +2871,7 @@ public class EC2Engine {
 	    			     else if (name.equalsIgnoreCase( "name"         )) shot.setName( value );
 	    			     else if (name.equalsIgnoreCase( "volumeid"     )) shot.setVolumeId( value );
 	    			     else if (name.equalsIgnoreCase( "snapshottype" )) shot.setType( value );
+	    			     else if (name.equalsIgnoreCase( "state"        )) shot.setState( value );
 	    			     else if (name.equalsIgnoreCase( "created"      )) shot.setCreated( value );
 	    			     else if (name.equalsIgnoreCase( "account"      )) shot.setAccountName(value);
 	    			     else if (name.equalsIgnoreCase( "domainId"     )) shot.setDomainId(value);

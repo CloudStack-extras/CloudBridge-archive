@@ -1504,7 +1504,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	         DescribeSnapshotsSetItemResponseType param3 = new DescribeSnapshotsSetItemResponseType();
 	         param3.setSnapshotId( snapshots[i].getId());
 	         param3.setVolumeId( snapshots[i].getVolumeId());
-	         param3.setStatus( snapshots[i].getType());
+	         param3.setStatus( snapshots[i].getState());
 	         
 	         String accountName = snapshots[i].getAccountName();
 	         String domainId = snapshots[i].getDomainId();
@@ -1518,12 +1518,19 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		     }
 	         param3.setStartTime( cal );
 	         
-	         param3.setProgress( "0" );
+	         param3.setProgress( "" );
 	         param3.setOwnerId(ownerId);
 	         Integer volSize = new Integer( snapshots[i].getVolumeSize());
 	         param3.setVolumeSize( volSize.toString());
 	         param3.setDescription( snapshots[i].getName());
 	         param3.setOwnerAlias( "" );
+	         
+	         ResourceTagSetType param18 = new ResourceTagSetType();
+	         ResourceTagSetItemType param19 = new ResourceTagSetItemType();
+	         param19.setKey("");
+	         param19.setValue("");
+	         param18.addItem( param19 );
+	         param3.setTagSet( param18 );          
              param2.addItem( param3 );
 	    }
 	    
