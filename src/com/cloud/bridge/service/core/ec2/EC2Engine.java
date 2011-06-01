@@ -72,7 +72,7 @@ public class EC2Engine {
     private int pollInterval2 = 100;   // for: deployVirtualMachine
     private int pollInterval3 = 100;   // for: createVolume
     private int pollInterval4 = 1000;  // for: createSnapshot
-    private int pollInterval5 = 100;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume, disassociateIpAddress
+    private int pollInterval5 = 100;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume, disassociateIpAddress, enableStaticNat, disableStaticNat
     private int pollInterval6 = 100;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
     private int CLOUD_STACK_VERSION_2_0 = 200;
     private int CLOUD_STACK_VERSION_2_1 = 210;
@@ -1010,7 +1010,7 @@ public class EC2Engine {
 
         try {
             Map[] addressList = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
-            Map[] vmList      = execList("command=listVirtualMachines&name=%s", vmName);
+            Map[] vmList = execList("command=listVirtualMachines&name=%s", vmName);
 
             if (0 == addressList.length)
                 throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
@@ -1019,8 +1019,11 @@ public class EC2Engine {
 
             String ipId = addressList[0].get("id").toString();
             String vmId = vmList[0].get("id").toString();
-            Map r = execute("command=enableStaticNat&ipAddressId=%s&virtualMachineId=%s", ipId, vmId);
-            return r.get("success").toString().equalsIgnoreCase("true");
+            
+            Map async = execute("command=enableStaticNat&ipAddressId=%s&virtualMachineId=%s", ipId, vmId);
+
+            String jobId = async.get("jobid").toString();
+            return waitForAsynch(jobId);
 
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 AssociateAddress - ", error);
