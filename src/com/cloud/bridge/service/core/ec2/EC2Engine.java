@@ -62,6 +62,8 @@ import com.cloud.bridge.util.JsonAccessor;
 import com.cloud.bridge.util.Tuple;
 import com.cloud.stack.CloudStackClient;
 import com.cloud.stack.CloudStackCommand;
+import com.cloud.stack.CloudStackSnapshot;
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 
 
@@ -2070,71 +2072,41 @@ public class EC2Engine {
         throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
     {
         EC2Snapshot shot   = new EC2Snapshot();
-	    NodeList    match  = null;
-        Node        item   = null;
-        int         status = 0;
-    
         while( true ) 
         {
-  		   String query = "command=queryAsyncJobResult&jobId=" + jobId;
- 		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
-
-	       match = cloudResp.getElementsByTagName( "jobstatus" ); 
-           if ( 0 < match.getLength()) {
-    	        item = match.item(0);
-    	        status = Integer.parseInt( new String( item.getFirstChild().getNodeValue()));
-           }
-           else status = 2;
-
-           switch( status ) {
-           case 0:  // in progress, seems to take a long time
-        	    try { Thread.sleep( pollInterval4 ); }
-        	    catch( Exception e ) {}
-    	        break;
-    	   
-           case 2:  
-           default:
-    	        match = cloudResp.getElementsByTagName( "jobresult" ); 
-                if ( 0 < match.getLength()) {
-        	         item = match.item(0);
-        	         if (null != item && null != item.getFirstChild())
-        	         	 throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed: " + item.getFirstChild().getNodeValue());
-                }
-                throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed");
-    	   
-	       case 1:  // Successfully completed
-  	            match = cloudResp.getElementsByTagName( "id" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setId( item.getFirstChild().getNodeValue());
-	            }
- 	            match = cloudResp.getElementsByTagName( "name" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setName( item.getFirstChild().getNodeValue());
-	            }
- 	            match = cloudResp.getElementsByTagName( "snapshottype" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setType( item.getFirstChild().getNodeValue());
-	            }
- 	            match = cloudResp.getElementsByTagName( "account" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setAccountName( item.getFirstChild().getNodeValue());
-	            }
-	            match = cloudResp.getElementsByTagName( "domainid" ); 
-	            if (0 < match.getLength()) {
-                    item = match.item(0);
-                    shot.setDomainId(item.getFirstChild().getNodeValue());
-                }
- 	            match = cloudResp.getElementsByTagName( "created" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setCreated( item.getFirstChild().getNodeValue());
-	            }
-	            return shot;
-           }
+        	CloudStackCommand cmd = new CloudStackCommand("queryAsyncJobResult");
+        	cmd.setParam("jobId", jobId);
+        	JsonAccessor json = executeCommand(cmd);
+        	
+    		if(json.tryEval("queryasyncjobresultresponse") != null) {
+    			int jobStatus = json.getAsInt("queryasyncjobresultresponse.jobstatus");
+    			switch(jobStatus) {
+    			case 2:
+    	    		throw new EC2ServiceException(ServerError.InternalError, 
+    	    			json.getAsString("queryasyncjobresultresponse.jobresult.errorcode") + " " + 
+    	    			json.getAsString("queryasyncjobresultresponse.jobresult.errortext"));
+    	    		
+    			case 0 :
+            	    try { Thread.sleep( pollInterval4 ); } catch( Exception e ) {}
+            	    break;
+            	    
+    			case 1 :
+    				CloudStackSnapshot cloudSnapshot = new Gson().fromJson(json.eval("queryasyncjobresultresponse.jobresult.snapshot"), CloudStackSnapshot.class);
+	                shot.setId(String.valueOf(cloudSnapshot.getId()));
+	                shot.setName(cloudSnapshot.getName());
+	                shot.setType(cloudSnapshot.getSnapshotType());
+	                shot.setAccountName(cloudSnapshot.getAccountName());
+                    shot.setDomainId(String.valueOf(cloudSnapshot.getDomainId()));
+	                shot.setCreated(cloudSnapshot.getCreated());
+    				return shot;
+    				
+    			default :
+    				assert(false);
+                    throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed - invalid JSON response");
+    			}
+    		} else {
+                throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed - invalid JSON response");
+    		}
         }
     }
 
