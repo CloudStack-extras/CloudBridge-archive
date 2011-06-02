@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.SignatureException;
@@ -56,9 +57,12 @@ import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
-import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.util.ConfigurationHelper;
+import com.cloud.bridge.util.JsonAccessor;
 import com.cloud.bridge.util.Tuple;
+import com.cloud.stack.CloudStackClient;
+import com.cloud.stack.CloudStackCommand;
+import com.google.gson.JsonElement;
 
 
 public class EC2Engine {
@@ -68,16 +72,18 @@ public class EC2Engine {
     private String cloudAPIPort        = null;
     
     // -> in milliseconds, time interval to wait before asynch check on a jobId's status
-    private int pollInterval1 = 100;   // for: createTemplate
-    private int pollInterval2 = 100;   // for: deployVirtualMachine
-    private int pollInterval3 = 100;   // for: createVolume
+    private int pollInterval1 = 1000;   // for: createTemplate
+    private int pollInterval2 = 1000;   // for: deployVirtualMachine
+    private int pollInterval3 = 1000;   // for: createVolume
     private int pollInterval4 = 1000;  // for: createSnapshot
-    private int pollInterval5 = 100;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume, disassociateIpAddress, enableStaticNat, disableStaticNat
-    private int pollInterval6 = 100;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
+    private int pollInterval5 = 1000;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume, disassociateIpAddress, enableStaticNat, disableStaticNat
+    private int pollInterval6 = 1000;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
     private int CLOUD_STACK_VERSION_2_0 = 200;
     private int CLOUD_STACK_VERSION_2_1 = 210;
     private int CLOUD_STACK_VERSION_2_2 = 220;
     private int cloudStackVersion;
+    
+    private CloudStackClient _client;
    
     public EC2Engine() throws IOException {
 		dbf = DocumentBuilderFactory.newInstance();
@@ -107,6 +113,9 @@ public class EC2Engine {
     		}
    	        managementServer = EC2Prop.getProperty( "managementServer" );
 		    cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
+		    
+		    _client = new CloudStackClient(managementServer, 
+		    	cloudAPIPort != null ? Integer.parseInt(cloudAPIPort) : 80, false);
   	        
    	        try {
    	            pollInterval1  = Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
@@ -3074,54 +3083,32 @@ public class EC2Engine {
      * @return A string with one or two values, "s:status r:result" if both present.
      *         "s:-1" means no result returned from CloudStack so request has failed.
      */
-	private String checkAsyncResult(String jobId) throws EC2ServiceException,
-		InternalErrorException, SignatureException {
-		StringBuffer checkResult = new StringBuffer();
-		NodeList match = null;
-		Node item = null;
-		String status = null;
-		String result = null;
-		
+	// checkAsyncResult return is so ugly, need to redo it later, for now just use the new JSON
+	// to fix NPE bugs
+	private String checkAsyncResult(String jobId) {
 		try {
-			String query = "command=queryAsyncJobResult&jobId=" + jobId;
-			Document cloudResp = resolveURL(
-					genAPIURL(query, genQuerySignature(query)),
-					"queryAsyncJobResult", true);
-			if (null == cloudResp)
-				return new String("s:-1");
-		
-			match = cloudResp.getElementsByTagName("jobstatus");
-			if (0 < match.getLength()) {
-				item = match.item(0);
-				status = new String(item.getFirstChild().getNodeValue());
+			CloudStackCommand cmd = new CloudStackCommand("queryAsyncJobResult");
+			cmd.setParam("jobid", jobId);
+			JsonAccessor json = executeCommand(cmd);
+			if(json.eval("queryasyncjobresultresponse") != null) {
+				StringBuffer checkResult = new StringBuffer();
+				checkResult.append("s:").append(json.getAsString("queryasyncjobresultresponse.jobstatus"));
+	
+				JsonElement jsonResult = json.tryEval("queryasyncjobresultresponse.jobresult");
+				if(jsonResult != null)
+					checkResult.append(" r:" + jsonResult.toString());
+				
+				return checkResult.toString();
+			} else if(json.tryEval("errorresponse") != null) {
+				logger.error("queryAsyncJobResult failed. " + json.eval("errorresponse").toString());
 			}
-			match = cloudResp.getElementsByTagName("jobresult");
-			if (0 < match.getLength()) {
-
-				result = "TODO";
-				/*
-				 * 
-				item = match.item(0).getLastChild();
-				result = new String(item.getFirstChild().getNodeValue());
-				*/
-			}
-		
-			checkResult.append(" ");
-			if (null != status)
-				checkResult.append("s:").append(status);
-			if (null != result)
-				checkResult.append(" r:").append(result);
-			return checkResult.toString();
-		} catch (EC2ServiceException error) {
-			logger.error("EC2 checkAsyncResult 1 - ", error);
-			throw error;
-		} catch (Exception e) {
-			logger.error("EC2 checkAsyncResult 2 - ", e);
-			throw new EC2ServiceException(ServerError.InternalError,
-					"An unexpected error occurred.");
+			
+			return "s:-1";
+		} catch(Exception e) {
+			logger.error("Exception ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, "exception when communicating with CloudStack"); 
 		}
 	}
-    
     
     /**
      * Windows has its own device strings.
@@ -3355,6 +3342,9 @@ public class EC2Engine {
 		if ( null == cloudAPIPort ) 
 			 return new String( "http://" + managementServer + "/client/api?" );
 		else return new String( "http://" + managementServer + ":" + cloudAPIPort + "/client/api?" );
-		
+	}
+	
+	public JsonAccessor executeCommand(CloudStackCommand command) throws MalformedURLException, SignatureException, IOException {
+		return _client.execute(command, UserContext.current().getAccessKey(), UserContext.current().getSecretKey());
 	}
 }
