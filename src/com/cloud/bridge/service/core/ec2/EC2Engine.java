@@ -1736,7 +1736,7 @@ public class EC2Engine {
      * Wait until one specific VM has stopped
      */
     private boolean stopVirtualMachine( String instanceId ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
     {
     	EC2Instance[] vms    = new EC2Instance[1];
     	String[]      jobIds = new String[1];
@@ -1760,7 +1760,7 @@ public class EC2Engine {
     }
   
     private boolean startVirtualMachine( String instanceId ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
     {
 	    EC2Instance[] vms    = new EC2Instance[1];
 	    String[]      jobIds = new String[1];
@@ -2144,7 +2144,7 @@ public class EC2Engine {
      * @param jobId
      * @return true - the requested action was successful, false - it failed
      */
-    private boolean waitForAsynch( String jobId ) throws SignatureException 
+    private boolean waitForAsynch( String jobId ) throws Exception 
     {    
         while (true) {
             String result = checkAsyncResult(jobId);
@@ -2176,7 +2176,7 @@ public class EC2Engine {
      * 
      * @return the same array given as 'vms' parameter but with modified vm state
      */
-    private EC2Instance[] waitForStartStop( EC2Instance[] vms, String[] jobIds, int waitCount, String newState ) throws SignatureException 
+    private EC2Instance[] waitForStartStop( EC2Instance[] vms, String[] jobIds, int waitCount, String newState ) throws Exception 
     {
    	    int j=0;
    	    
@@ -3085,29 +3085,31 @@ public class EC2Engine {
      */
 	// checkAsyncResult return is so ugly, need to redo it later, for now just use the new JSON
 	// to fix NPE bugs
-	private String checkAsyncResult(String jobId) {
-		try {
-			CloudStackCommand cmd = new CloudStackCommand("queryAsyncJobResult");
-			cmd.setParam("jobid", jobId);
-			JsonAccessor json = executeCommand(cmd);
-			if(json.eval("queryasyncjobresultresponse") != null) {
-				StringBuffer checkResult = new StringBuffer();
-				checkResult.append("s:").append(json.getAsString("queryasyncjobresultresponse.jobstatus"));
-	
-				JsonElement jsonResult = json.tryEval("queryasyncjobresultresponse.jobresult");
-				if(jsonResult != null)
-					checkResult.append(" r:" + jsonResult.toString());
-				
-				return checkResult.toString();
-			} else if(json.tryEval("errorresponse") != null) {
-				logger.error("queryAsyncJobResult failed. " + json.eval("errorresponse").toString());
+	private String checkAsyncResult(String jobId) throws Exception {
+		CloudStackCommand cmd = new CloudStackCommand("queryAsyncJobResult");
+		cmd.setParam("jobid", jobId);
+		JsonAccessor json = executeCommand(cmd);
+		if(json.tryEval("queryasyncjobresultresponse") != null) {
+			StringBuffer checkResult = new StringBuffer();
+			
+			int jobStatus = json.getAsInt("queryasyncjobresultresponse.jobstatus");
+			if(jobStatus == 2) {
+	    		throw new EC2ServiceException(ServerError.InternalError, 
+	    			json.getAsString("queryasyncjobresultresponse.jobresult.errorcode") + " " + 
+	    			json.getAsString("queryasyncjobresultresponse.jobresult.errortext")); 
 			}
 			
-			return "s:-1";
-		} catch(Exception e) {
-			logger.error("Exception ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "exception when communicating with CloudStack"); 
+			checkResult.append("s:").append(jobStatus);
+			JsonElement jsonResult = json.tryEval("queryasyncjobresultresponse.jobresult");
+			if(jsonResult != null)
+				checkResult.append(" r:" + jsonResult.toString());
+			
+			return checkResult.toString();
+		} else if(json.tryEval("errorresponse") != null) {
+			logger.error("queryAsyncJobResult failed. " + json.eval("errorresponse").toString());
 		}
+		
+		return "s:-1";
 	}
     
     /**
