@@ -18,15 +18,16 @@ package com.cloud.stack;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.security.SignatureException;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import com.cloud.bridge.util.JsonAccessor;
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
@@ -40,6 +41,9 @@ public class CloudStackClient {
     protected final static Logger logger = Logger.getLogger(CloudStackClient.class);
     
 	private String _serviceUrl;
+	
+	private long _pollIntervalMs = 1000;			// 1 second polling interval
+	private long _pollTimeoutMs = 600000;			// 10 minutes polling timeout
 
 	public CloudStackClient(String serviceRootUrl) {
 		assert(serviceRootUrl != null);
@@ -71,9 +75,74 @@ public class CloudStackClient {
 		_serviceUrl = sb.toString();
 	}
 	
-	public JsonAccessor execute(CloudStackCommand cmd, String apiKey, String secretKey) 
-		throws MalformedURLException, SignatureException, IOException {
+	public CloudStackClient setPollInterval(long intervalMs) {
+		_pollIntervalMs = intervalMs;
+		return this;
+	}
+	
+	public CloudStackClient setPollTimeout(long pollTimeoutMs) {
+		_pollTimeoutMs = pollTimeoutMs;
+		return this;
+	}
+	
+	public <T> T call(CloudStackCommand cmd, String apiKey, String secretKey, 
+		String responseName, String responseObjName, Class<T> responseClz)	throws Exception {
 		
+		assert(responseName != null);
+		assert(responseObjName != null);
+		
+		JsonAccessor json = execute(cmd, apiKey, secretKey);
+		if(json.tryEval(responseName + ".jobid") != null) {
+			long startMs = System.currentTimeMillis();
+	        while(System.currentTimeMillis() -  startMs < _pollTimeoutMs) {
+				CloudStackCommand queryJobCmd = new CloudStackCommand("queryAsyncJobResult");
+	        	queryJobCmd.setParam("jobId", json.getAsString(responseName + ".jobid"));
+	        	
+	        	JsonAccessor queryAsyncJobResponse = execute(queryJobCmd, apiKey, secretKey);
+
+	    		if(queryAsyncJobResponse.tryEval("queryasyncjobresultresponse") != null) {
+	    			int jobStatus = queryAsyncJobResponse.getAsInt("queryasyncjobresultresponse.jobstatus");
+	    			switch(jobStatus) {
+	    			case 2:
+	    	    		throw new Exception(queryAsyncJobResponse.getAsString("queryasyncjobresultresponse.jobresult.errorcode") + " " + 
+    	    				queryAsyncJobResponse.getAsString("queryasyncjobresultresponse.jobresult.errortext"));
+	    	    		
+	    			case 0 :
+	            	    try { 
+	            	    	Thread.sleep( _pollIntervalMs ); 
+	            	    } catch( Exception e ) {}
+	            	    break;
+	            	    
+	    			case 1 :
+	    				return (T)(new Gson()).fromJson(queryAsyncJobResponse.eval("queryasyncjobresultresponse.jobresult." + responseObjName), responseClz);
+	    				
+	    			default :
+	    				assert(false);
+	                    throw new Exception("Operation failed - invalid job status response");
+	    			}
+	    		} else {
+	                throw new Exception("Operation failed - invalid JSON response");
+	    		}
+	        }
+	        
+            throw new Exception("Operation failed - async-job query timed out");
+		} else {
+			return (T)(new Gson()).fromJson(json.eval(responseName + "." + responseObjName), responseClz);
+		}
+	}
+
+	// collectionType example :  new TypeToken<List<String>>() {}.getType();
+	public <T> List<T> listCall(CloudStackCommand cmd, String apiKey, String secretKey, 
+		String responseName, String responseObjName, Type collectionType)	throws Exception {
+		
+		assert(responseName != null);
+		assert(responseObjName != null);
+		
+		JsonAccessor json = execute(cmd, apiKey, secretKey);
+		return (new Gson()).fromJson(json.eval(responseName + "." + responseObjName), collectionType);
+	}
+
+	public JsonAccessor execute(CloudStackCommand cmd, String apiKey, String secretKey) throws Exception {
 		JsonParser parser = new JsonParser();
 		URL url = new URL(_serviceUrl + cmd.signCommand(apiKey, secretKey));
 		
@@ -86,7 +155,7 @@ public class CloudStackClient {
         statusCode = ((HttpURLConnection)connect).getResponseCode();
         if(statusCode >= 400) {
         	logger.error("Cloud API call + [" + url.toString() + "] failed with status code: " + statusCode);
-        	throw new IOException("CloudStack API call error : " + statusCode);
+        	throw new IOException("CloudStack API call HTTP response error, HTTP status: " + statusCode);
         }
         
         InputStream inputStream = connect.getInputStream(); 

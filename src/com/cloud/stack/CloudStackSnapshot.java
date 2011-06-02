@@ -19,7 +19,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class CloudStackSnapshot {
 	
-	@SerializedName("id")
+    @SerializedName("id")
     private Long id;
 
     @SerializedName("account")
@@ -58,13 +58,13 @@ public class CloudStackSnapshot {
     @SerializedName("intervaltype")
     private String intervalType;
 
-    @SerializedName("state")
+    @SerializedName(ApiConstants.STATE)
     private String state;
 
     public CloudStackSnapshot() {
     }
-    
-    public Long getId() {
+
+	public Long getId() {
 		return id;
 	}
 

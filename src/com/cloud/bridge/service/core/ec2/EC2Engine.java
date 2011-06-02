@@ -2069,7 +2069,7 @@ public class EC2Engine {
     }
 
     private EC2Snapshot waitForSnapshot( String jobId ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
+        throws EC2ServiceException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException, Exception  
     {
         EC2Snapshot shot   = new EC2Snapshot();
         while( true ) 
@@ -3318,7 +3318,7 @@ public class EC2Engine {
 		else return new String( "http://" + managementServer + ":" + cloudAPIPort + "/client/api?" );
 	}
 	
-	public JsonAccessor executeCommand(CloudStackCommand command) throws MalformedURLException, SignatureException, IOException {
+	public JsonAccessor executeCommand(CloudStackCommand command) throws Exception {
 		return _client.execute(command, UserContext.current().getAccessKey(), UserContext.current().getSecretKey());
 	}
 }
