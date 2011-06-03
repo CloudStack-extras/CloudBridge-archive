@@ -133,7 +133,7 @@ public class CloudStackClient {
 
 	// collectionType example :  new TypeToken<List<String>>() {}.getType();
 	public <T> List<T> listCall(CloudStackCommand cmd, String apiKey, String secretKey, 
-		String responseName, String responseObjName, Type collectionType)	throws Exception {
+		String responseName, String responseObjName, Type collectionType) throws Exception {
 		
 		assert(responseName != null);
 		assert(responseObjName != null);
