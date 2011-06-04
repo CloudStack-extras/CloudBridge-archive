@@ -1517,8 +1517,9 @@ public class EC2Engine {
     	int    waitFor = 0;
     
     	// -> first determine the current state of each VM (becomes it previous state)
-    	try {
-    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet(), null );
+    	try 
+    	{   String[] instanceSet = request.getInstancesSet();
+    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( instanceSet, null );
      	    vms = previousState.getInstanceSet();
         	String[] jobIds = new String[ vms.length ];
     
@@ -1550,13 +1551,40 @@ public class EC2Engine {
         	// -> wait until all the requested stops have completed or failed
         	vms = waitForStartStop( vms, jobIds, waitFor, (request.getDestroyInstances() ? "destroyed" : "stopped"));
         	for( int k=0; k < vms.length; k++ )	instances.addInstance( vms[k] );
+        	
+        	// -> are there any invalid instance IDs, show which ones are bad
+        	if (instanceSet.length != vms.length)
+        	{
+        		boolean found = false;
+        		for( int j=0; j < instanceSet.length; j++, found = false ) 
+        		{
+        			for( int k=0; k < vms.length; k++ ) 
+        			{
+        			     if (vms[k].getId().equalsIgnoreCase( instanceSet[j])) {
+        			    	 found = true;
+        			    	 break;
+        			     }
+        			}
+        			
+        			if (!found) 
+        			{
+        				EC2Instance invalidId = new EC2Instance();
+        				invalidId.setId( instanceSet[j] );
+        				invalidId.setPreviousState( "Error" );
+        				invalidId.setState( "Error" );
+        				instances.addInstance( invalidId );
+        			}
+        		}
+        	}
         	return instances;
 
-    	} catch( EC2ServiceException error ) {
+    	} 
+    	catch( EC2ServiceException error ) {
      		logger.error( "EC2 StopInstances - ", error);
     		throw error;
     		
-    	} catch( Exception e ) {
+    	} 
+    	catch( Exception e ) {
     		logger.error( "EC2 StopInstances - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
