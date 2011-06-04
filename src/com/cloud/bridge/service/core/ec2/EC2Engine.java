@@ -1288,16 +1288,17 @@ public class EC2Engine {
      * Note that more than one VM can be requested rebooted at once. 
      * The Amazon API does not wait around for the result of the operation.
      */
-    public boolean handleRequest(EC2RebootInstances request) 
+    public boolean handleRequest( EC2RebootInstances request ) 
     {
     	EC2Instance[] vms = null;
 
     	// -> reboot is not allowed on destroyed (i.e., terminated) instances
-    	try {
-    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet(), null );
+    	try 
+    	{   String[] instanceSet = request.getInstancesSet();
+    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( instanceSet, null );
      	    vms = previousState.getInstanceSet();
     	    
-     	    // -> send reboot requests for each item 
+     	    // -> send reboot requests for each found VM 
      		for( int i=0; i < vms.length; i++ ) 
      		{
      		   if (vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
@@ -1305,18 +1306,25 @@ public class EC2Engine {
      	       String query = new String( "command=rebootVirtualMachine&id=" + vms[i].getId());
      		   resolveURL(genAPIURL(query, genQuerySignature(query)), "rebootVirtualMachine", true );
      		}
+     		
+     		// -> if some specified VMs where not found we have to tell the caller
+     		if (instanceSet.length != vms.length) 
+        		throw new EC2ServiceException(ClientError.InvalidAMIID_NotFound, "One or more instanceIds do not exist, other instances rebooted.");
+    			
      		return true;
      		
-       	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 RebootInstances - ", error);
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "EC2 RebootInstances - ", e);
+       	} 
+    	catch( EC2ServiceException error ) {
+    		logger.error( "EC2 RebootInstances - ", error );
+    		throw error;   		
+    	} 
+    	catch( Exception e ) {
+    		logger.error( "EC2 RebootInstances - ", e );
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
 
+    
     /**
      * The Amazon API allows one or multiple VMs to be started with a single request.
      * To do this efficiently we first make all the asynch deployVirtualMachine requests
