@@ -12,9 +12,9 @@ import org.apache.log4j.xml.DOMConfigurator;
 
 public class BaseTestCase extends TestCase {
 	protected void setUp() {
-		URL configUrl = System.class.getResource("/conf/log4j-cloud.xml");
+		URL configUrl = System.class.getResource("/conf/log4j-cloud-bridge.xml");
 		if(configUrl != null) {
-			System.out.println("Configure log4j using log4j-cloud.xml");
+			System.out.println("Configure log4j using log4j-cloud-bridge.xml");
 
 			try {
 				File file = new File(configUrl.toURI());

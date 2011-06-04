@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.SignatureException;
@@ -56,9 +58,16 @@ import com.cloud.bridge.service.UserContext;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
-import com.cloud.bridge.service.exception.InternalErrorException;
 import com.cloud.bridge.util.ConfigurationHelper;
+import com.cloud.bridge.util.JsonAccessor;
 import com.cloud.bridge.util.Tuple;
+import com.cloud.stack.CloudStackClient;
+import com.cloud.stack.CloudStackCommand;
+import com.cloud.stack.CloudStackSnapshot;
+import com.cloud.stack.CloudStackVolume;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.reflect.TypeToken;
 
 
 public class EC2Engine {
@@ -68,16 +77,18 @@ public class EC2Engine {
     private String cloudAPIPort        = null;
     
     // -> in milliseconds, time interval to wait before asynch check on a jobId's status
-    private int pollInterval1 = 100;   // for: createTemplate
-    private int pollInterval2 = 100;   // for: deployVirtualMachine
-    private int pollInterval3 = 100;   // for: createVolume
+    private int pollInterval1 = 1000;   // for: createTemplate
+    private int pollInterval2 = 1000;   // for: deployVirtualMachine
+    private int pollInterval3 = 1000;   // for: createVolume
     private int pollInterval4 = 1000;  // for: createSnapshot
-    private int pollInterval5 = 100;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume, disassociateIpAddress
-    private int pollInterval6 = 100;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
+    private int pollInterval5 = 1000;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume, disassociateIpAddress, enableStaticNat, disableStaticNat
+    private int pollInterval6 = 1000;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
     private int CLOUD_STACK_VERSION_2_0 = 200;
     private int CLOUD_STACK_VERSION_2_1 = 210;
     private int CLOUD_STACK_VERSION_2_2 = 220;
     private int cloudStackVersion;
+    
+    private CloudStackClient _client;
    
     public EC2Engine() throws IOException {
 		dbf = DocumentBuilderFactory.newInstance();
@@ -107,6 +118,9 @@ public class EC2Engine {
     		}
    	        managementServer = EC2Prop.getProperty( "managementServer" );
 		    cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
+		    
+		    _client = new CloudStackClient(managementServer, 
+		    	cloudAPIPort != null ? Integer.parseInt(cloudAPIPort) : 80, false);
   	        
    	        try {
    	            pollInterval1  = Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
@@ -607,37 +621,39 @@ public class EC2Engine {
     	}
     }
     
-    
-    public EC2Snapshot createSnapshot( String volumeId ) 
-    {
-		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
-
-    	try {
-	        String query = new String( "command=createSnapshot&volumeId=" + volumeId );
-            Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createSnapshot", true );
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     EC2Snapshot shot = waitForSnapshot( jobId );
-	    	     
-	    	     shot.setVolumeId( volumeId );
-	    	     volumes = listVolumes( volumeId, null, volumes );
-	             EC2Volume[] volSet = volumes.getVolumeSet();
-	             if (0 < volSet.length) shot.setVolumeSize( volSet[0].getSize());
-	    	     return shot;
-            }
- 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-   	        
-       	} catch( EC2ServiceException error ) {
-     		logger.error( "EC2 CreateSnapshot - ", error);
-    		throw error;
-    		
-    	} catch( Exception e ) {
+    public EC2Snapshot createSnapshot( String volumeId ) {
+		try {
+			CloudStackCommand command = new CloudStackCommand("createSnapshot");
+			command.setParam("volumeId", volumeId);
+			CloudStackSnapshot cloudSnapshot = cloudStackCall(command, "createsnapshotresponse", "snapshot", CloudStackSnapshot.class);
+			EC2Snapshot ec2Snapshot = new EC2Snapshot();
+			
+			ec2Snapshot.setId(String.valueOf(cloudSnapshot.getId()));
+			ec2Snapshot.setName(cloudSnapshot.getName());
+			ec2Snapshot.setType(cloudSnapshot.getSnapshotType());
+			ec2Snapshot.setAccountName(cloudSnapshot.getAccountName());
+			ec2Snapshot.setDomainId(String.valueOf(cloudSnapshot.getDomainId()));
+			ec2Snapshot.setCreated(cloudSnapshot.getCreated());
+			ec2Snapshot.setVolumeId(volumeId);
+			
+			CloudStackCommand listVolsCmd = new CloudStackCommand("listVolumes");
+			listVolsCmd.setParam("id", volumeId);
+			List<CloudStackVolume> vols = cloudStackListCall(listVolsCmd, "listvolumesresponse", "volume", 
+				new TypeToken<List<CloudStackVolume>>() {}.getType());
+			
+			if(vols.size() > 0) {
+				assert(vols.get(0).getSize() != null);
+				int sizeInGB =(int)(vols.get(0).getSize().longValue()/1073741824);
+				ec2Snapshot.setVolumeSize(sizeInGB);
+			}
+			
+			return ec2Snapshot;
+		} catch( Exception e ) {
     		logger.error( "EC2 CreateSnapshot - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
     	}
     }
+    
     
     public boolean deleteSnapshot( String snapshotId ) 
     {
@@ -1010,7 +1026,7 @@ public class EC2Engine {
 
         try {
             Map[] addressList = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
-            Map[] vmList      = execList("command=listVirtualMachines&name=%s", vmName);
+            Map[] vmList = execList("command=listVirtualMachines&name=%s", vmName);
 
             if (0 == addressList.length)
                 throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
@@ -1019,8 +1035,11 @@ public class EC2Engine {
 
             String ipId = addressList[0].get("id").toString();
             String vmId = vmList[0].get("id").toString();
-            Map r = execute("command=enableStaticNat&ipAddressId=%s&virtualMachineId=%s", ipId, vmId);
-            return r.get("success").toString().equalsIgnoreCase("true");
+            
+            Map async = execute("command=enableStaticNat&ipAddressId=%s&virtualMachineId=%s", ipId, vmId);
+
+            String jobId = async.get("jobid").toString();
+            return waitForAsynch(jobId);
 
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 AssociateAddress - ", error);
@@ -1732,7 +1751,7 @@ public class EC2Engine {
      * Wait until one specific VM has stopped
      */
     private boolean stopVirtualMachine( String instanceId ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
     {
     	EC2Instance[] vms    = new EC2Instance[1];
     	String[]      jobIds = new String[1];
@@ -1756,7 +1775,7 @@ public class EC2Engine {
     }
   
     private boolean startVirtualMachine( String instanceId ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
     {
 	    EC2Instance[] vms    = new EC2Instance[1];
 	    String[]      jobIds = new String[1];
@@ -1818,400 +1837,6 @@ public class EC2Engine {
     	else return -1;
  	}
    
-    /**
-     * createTemplate is an asynchronus call so here we poll (sleeping so we do not hammer the server)
-     * until the operation completes.
-     * 
-     * @param jobId - parameter returned from the createTemplate request
-     */
-    private EC2CreateImageResponse waitForTemplate( String jobId ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, SignatureException 
-    {
-    	EC2CreateImageResponse image = new EC2CreateImageResponse();
-    	NodeList  match  = null;
-	    Node      item   = null;
-	    int       status = 0;
-	    
-        while( true ) 
-        {
-	      String query = "command=queryAsyncJobResult&jobId=" + jobId;
-	      Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
-	      
-		  match = cloudResp.getElementsByTagName( "jobstatus" ); 
-	      if ( 0 < match.getLength()) {
-	    	   item = match.item(0);
-	    	   status = Integer.parseInt( new String( item.getFirstChild().getNodeValue()));
-          }
-	      else status = 2;
-
-	      switch( status ) {
-	      case 0:  // in progress, slow down the hits from this polling a little
-      	       try { Thread.sleep( pollInterval1 ); }
-    	       catch( Exception e ) {}
-	    	   break;
-	    	   
-	      case 2:  
-	      default:
-  	           match = cloudResp.getElementsByTagName( "jobresult" ); 
-               if ( 0 < match.getLength()) {
-    	            item = match.item(0);
-    	            if (null != item && null != item.getFirstChild())
-    	        	    throw new EC2ServiceException(ServerError.InternalError, "Template action failed: " + item.getFirstChild().getNodeValue());
-               }
-               throw new EC2ServiceException(ServerError.InternalError, "Template action failed");
-	    	   
-		  case 1:  // Successfully completed
-      	       match = cloudResp.getElementsByTagName( "id" ); 
-    	       if (0 < match.getLength()) {
-   	               item = match.item(0);
-   	               image.setId( item.getFirstChild().getNodeValue());
-    	       }
-    	       return image;
-	      }
-       }
-    }
-    
-    /**
-     * Waiting for VMs to deploy, all the information to return to the user is
-     * returned once all the asynch commands finish.  Note that multiple deployVirtualMachine commands 
-     * can be outstanding and here we wait for all of them to complete either successfully
-     * or by failure.   On a failure we continue to wait for the other pending requests.
-     * 
-     * @param vms       - used to change the state of a new vm
-     * @param jobIds    - entries are null after completed, is an array of deployVirtualMachine requests to complete
-     * @param waitCount - number of asynch jobs to wait for, the number of entries in jobIds array
-     * 
-     * @return the same array given as 'vms' parameter but with modified vm state
-     */
-    private EC2Instance[] waitForDeploy( EC2Instance[] vms, String[] jobIds, int waitCount ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
-    {
-   	    NodeList match  = null;
-   	    Node     item   = null;
-   	    int      status = 0;
-   	    int      j      = 0;
-  	    
-	    while( waitCount > 0 ) 
-	    {
- 	      if (null != jobIds[j]) 
- 	      {
- 		      String query = "command=queryAsyncJobResult&jobId=" + jobIds[j];
- 		      Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
-
-			  match = cloudResp.getElementsByTagName( "jobstatus" ); 
-		      if ( 0 < match.getLength()) {
-		    	   item = match.item(0);
-		    	   status = Integer.parseInt( new String( item.getFirstChild().getNodeValue()));
-	          }
-		      else status = 2;
-
-		      switch( status ) {
-		      case 0:  // in progress, slow down the hits from this polling a little
-	        	   try { Thread.sleep( pollInterval2 ); }
-	        	   catch( Exception e ) {}
-		    	   break;
-		    	   
-		      case 2:  // operation failed -- keep waiting for others in progress
-		      default:
-	  	           match = cloudResp.getElementsByTagName( "jobresult" ); 
-	               if ( 0 < match.getLength()) {
-	    	            item = match.item(0);
-	    	            if (null != item && null != item.getFirstChild())
-	    	        	    logger.info( "InternalError - deploy action failed: " + item.getFirstChild().getNodeValue());
-	               }
-	               waitCount--;
-			       jobIds[j] = null;
-		    	   break;
-		      
-		      case 1:  // Successfully completed
-	      	       match = cloudResp.getElementsByTagName( "id" ); 
-	    	       if (0 < match.getLength()) {
-	   	               item = match.item(0);
-	   	               vms[j].setId( item.getFirstChild().getNodeValue());
-	    	       }
-	      	       match = cloudResp.getElementsByTagName( "name" ); 
-	    	       if (0 < match.getLength()) {
-	   	               item = match.item(0);
-	   	               vms[j].setName( item.getFirstChild().getNodeValue());
-	    	       }
-	     	       match = cloudResp.getElementsByTagName( "zonename" ); 
-	    	       if (0 < match.getLength()) {
-	   	               item = match.item(0);
-	   	               vms[j].setZoneName( item.getFirstChild().getNodeValue());
-	    	       }
-	     	       match = cloudResp.getElementsByTagName( "templateid" ); 
-	    	       if (0 < match.getLength()) {
-	   	               item = match.item(0);
-	   	               vms[j].setTemplateId( item.getFirstChild().getNodeValue());
-	    	       }
-	     	       match = cloudResp.getElementsByTagName( "group" ); 
-	    	       if (0 < match.getLength()) {
-	   	               item = match.item(0);
-	   	               if (null != item && null != item.getFirstChild()) 
-	   	            	   vms[j].setGroup( item.getFirstChild().getNodeValue());
-	    	       }
-	     	       match = cloudResp.getElementsByTagName( "state" ); 
-	    	       if (0 < match.getLength()) {
-	   	               item = match.item(0);
-	   	               vms[j].setState( item.getFirstChild().getNodeValue());
-	    	       }
-	     	       match = cloudResp.getElementsByTagName( "created" ); 
-	    	       if (0 < match.getLength()) {
-	   	               item = match.item(0);
-	   	               vms[j].setCreated( item.getFirstChild().getNodeValue());
-	    	       }
-	     	       match = cloudResp.getElementsByTagName( "ipaddress" ); 
-	    	       if (0 < match.getLength()) {
-	   	               item = match.item(0);
-	   	               vms[j].setIpAddress( item.getFirstChild().getNodeValue());
-	    	       }
-	    	       match = cloudResp.getElementsByTagName("account");
-	    	       if (0 < match.getLength()) {
-                       item = match.item(0);
-                       vms[j].setAccountName( item.getFirstChild().getNodeValue());
-                   }
-	    	       match = cloudResp.getElementsByTagName("domainid");
-                   if (0 < match.getLength()) {
-                       item = match.item(0);
-                       vms[j].setDomainId( item.getFirstChild().getNodeValue());
-                   }
-	    	       match = cloudResp.getElementsByTagName("hypervisor");
-                   if (0 < match.getLength()) {
-                       item = match.item(0);
-                       vms[j].setHypervisor( item.getFirstChild().getNodeValue());
-                   }
-	    	       
-	               waitCount--;
-			       jobIds[j] = null;
-			       break;
-		      }
-	      }
- 	      // -> go over the array repeatedly until all are done
-          j++;
-          if (j >= jobIds.length) j=0;
-	   }
-	   return vms;
-    }
-   
-    /**
-     * Each Asynch response had different XML tags to that forces a different waitFor function
-     * to create the required return object.
-     * 
-     * @param jobId 
-     */
-    private EC2Volume waitForVolume( String jobId ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
-    {
-	    EC2Volume vol    = new EC2Volume();
-    	NodeList  match  = null;
-	    Node      item   = null;
-	    int       status = 0;
-	    
-        while( true ) 
-        {
-		  String query = "command=queryAsyncJobResult&jobId=" + jobId;
- 		  Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
-
-		  match = cloudResp.getElementsByTagName( "jobstatus" ); 
-	      if ( 0 < match.getLength()) {
-	    	   item = match.item(0);
-	    	   status = Integer.parseInt( new String( item.getFirstChild().getNodeValue()));
-          }
-	      else status = 2;
-
-	      switch( status ) {
-	      case 0:  // in progress, slow down the hits from this polling a little
-      	       try { Thread.sleep( pollInterval3 ); }
-    	       catch( Exception e ) {}
-	    	   break;
-	    	   
-	      case 2:  
-	      default:
-   	           match = cloudResp.getElementsByTagName( "jobresult" ); 
-               if ( 0 < match.getLength()) {
-    	            item = match.item(0);
-    	            if (null != item && null != item.getFirstChild())
-    	        	    throw new EC2ServiceException(ServerError.InternalError, "Volume action failed: " + item.getFirstChild().getNodeValue());
-               }
-               throw new EC2ServiceException(ServerError.InternalError, "Volume action failed");
-	    	   
-		  case 1:  // Successfully completed
-      	       match = cloudResp.getElementsByTagName( "id" ); 
-    	       if (0 < match.getLength()) {
-   	               item = match.item(0);
-   	               vol.setId( item.getFirstChild().getNodeValue());
-    	       }
-     	       match = cloudResp.getElementsByTagName( "zonename" ); 
-    	       if (0 < match.getLength()) {
-   	               item = match.item(0);
-   	               vol.setZoneName( item.getFirstChild().getNodeValue());
-    	       }
-     	       match = cloudResp.getElementsByTagName( "size" ); 
-    	       if (0 < match.getLength()) {
-   	               item = match.item(0);
-   	               vol.setSize( item.getFirstChild().getNodeValue());
-    	       }
-     	       match = cloudResp.getElementsByTagName( "created" ); 
-    	       if (0 < match.getLength()) {
-   	               item = match.item(0);
-   	               vol.setCreated( item.getFirstChild().getNodeValue());
-    	       }
-    	       vol.setState( "available" );
-    	       return vol;
-	      }
-       }
-    }
-
-    private EC2Snapshot waitForSnapshot( String jobId ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
-    {
-        EC2Snapshot shot   = new EC2Snapshot();
-	    NodeList    match  = null;
-        Node        item   = null;
-        int         status = 0;
-    
-        while( true ) 
-        {
-  		   String query = "command=queryAsyncJobResult&jobId=" + jobId;
- 		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
-
-	       match = cloudResp.getElementsByTagName( "jobstatus" ); 
-           if ( 0 < match.getLength()) {
-    	        item = match.item(0);
-    	        status = Integer.parseInt( new String( item.getFirstChild().getNodeValue()));
-           }
-           else status = 2;
-
-           switch( status ) {
-           case 0:  // in progress, seems to take a long time
-        	    try { Thread.sleep( pollInterval4 ); }
-        	    catch( Exception e ) {}
-    	        break;
-    	   
-           case 2:  
-           default:
-    	        match = cloudResp.getElementsByTagName( "jobresult" ); 
-                if ( 0 < match.getLength()) {
-        	         item = match.item(0);
-        	         if (null != item && null != item.getFirstChild())
-        	         	 throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed: " + item.getFirstChild().getNodeValue());
-                }
-                throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed");
-    	   
-	       case 1:  // Successfully completed
-  	            match = cloudResp.getElementsByTagName( "id" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setId( item.getFirstChild().getNodeValue());
-	            }
- 	            match = cloudResp.getElementsByTagName( "name" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setName( item.getFirstChild().getNodeValue());
-	            }
- 	            match = cloudResp.getElementsByTagName( "snapshottype" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setType( item.getFirstChild().getNodeValue());
-	            }
- 	            match = cloudResp.getElementsByTagName( "account" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setAccountName( item.getFirstChild().getNodeValue());
-	            }
-	            match = cloudResp.getElementsByTagName( "domainid" ); 
-	            if (0 < match.getLength()) {
-                    item = match.item(0);
-                    shot.setDomainId(item.getFirstChild().getNodeValue());
-                }
- 	            match = cloudResp.getElementsByTagName( "created" ); 
-	            if (0 < match.getLength()) {
-	                item = match.item(0);
-	                shot.setCreated( item.getFirstChild().getNodeValue());
-	            }
-	            return shot;
-           }
-        }
-    }
-
-    /**
-     * Wait for the asynch request to finish and we just need to know if it succeeded or not
-     * 
-     * @param jobId
-     * @return true - the requested action was successful, false - it failed
-     */
-    private boolean waitForAsynch( String jobId ) throws SignatureException 
-    {    
-        while (true) {
-            String result = checkAsyncResult(jobId);
-            // System.out.println( "waitForAsynch: " + result );
-
-            if (-1 != result.indexOf("s:1")) {
-                // -> requested action has finished
-                return true;
-            } else if (-1 != result.indexOf("s:2") || -1 != result.indexOf("s:-1")) {
-                // -> requested action has failed
-                logger.error(result);
-                return false;
-            }
-
-            // -> slow down the hits from this polling a little
-            try {
-                Thread.sleep(pollInterval5);
-            } catch (Exception e) {
-            }
-        }
-    }
-
-    /**
-     * Waiting for VMs to start or stop is identical.
-     * 
-     * @param vms       - used to change the state
-     * @param jobIds    - entries are null after completed
-     * @param waitCount - number of asynch jobs to wait for
-     * 
-     * @return the same array given as 'vms' parameter but with modified vm state
-     */
-    private EC2Instance[] waitForStartStop( EC2Instance[] vms, String[] jobIds, int waitCount, String newState ) throws SignatureException 
-    {
-   	    int j=0;
-   	    
-	    while( waitCount > 0 ) 
-	    {
- 	      if (null != jobIds[j]) 
- 	      {  
-		      String result = checkAsyncResult( jobIds[j] );
-		      if ( -1 != result.indexOf( "s:1" )) 
-		      {
-		           // -> requested action has finished
-			       vms[j].setState( newState );
-			       waitCount--;
-			       jobIds[j] = null;
-		      }
-		      else if (-1 != result.indexOf( "s:2" )) 
-		      {
-		           // -> state of the vm has not changed
-			       vms[j].setState( vms[j].getPreviousState());
-			       waitCount--;
-			       jobIds[j] = null;
-		      }
-		      else if (-1 != result.indexOf( "s:-1" ))
-		      {
-		    	   // -> somehow the request has failed on the CloudStack
-		    	   waitCount--;
-		    	   jobIds[j] = null;
-		      }
-		      
-			  // -> slow down the hits from this polling a little
-	  	      try { Thread.sleep( pollInterval6 ); }
-		      catch( Exception e ) {}
-	      }
- 	      // -> go over the array repeatedly until all are done
-          j++;
-          if (j >= jobIds.length) j=0;
-	   }
-	   return vms;
-    }
     
     
     /**
@@ -3073,62 +2698,6 @@ public class EC2Engine {
     }
     
     /**
-     * Has the job finished?
-     * 
-     * @param jobId
-     * @return A string with one or two values, "s:status r:result" if both present.
-     *         "s:-1" means no result returned from CloudStack so request has failed.
-     */
-	private String checkAsyncResult(String jobId) throws EC2ServiceException,
-		InternalErrorException, SignatureException {
-		StringBuffer checkResult = new StringBuffer();
-		NodeList match = null;
-		Node item = null;
-		String status = null;
-		String result = null;
-		
-		try {
-			String query = "command=queryAsyncJobResult&jobId=" + jobId;
-			Document cloudResp = resolveURL(
-					genAPIURL(query, genQuerySignature(query)),
-					"queryAsyncJobResult", true);
-			if (null == cloudResp)
-				return new String("s:-1");
-		
-			match = cloudResp.getElementsByTagName("jobstatus");
-			if (0 < match.getLength()) {
-				item = match.item(0);
-				status = new String(item.getFirstChild().getNodeValue());
-			}
-			match = cloudResp.getElementsByTagName("jobresult");
-			if (0 < match.getLength()) {
-
-				result = "TODO";
-				/*
-				 * 
-				item = match.item(0).getLastChild();
-				result = new String(item.getFirstChild().getNodeValue());
-				*/
-			}
-		
-			checkResult.append(" ");
-			if (null != status)
-				checkResult.append("s:").append(status);
-			if (null != result)
-				checkResult.append(" r:").append(result);
-			return checkResult.toString();
-		} catch (EC2ServiceException error) {
-			logger.error("EC2 checkAsyncResult 1 - ", error);
-			throw error;
-		} catch (Exception e) {
-			logger.error("EC2 checkAsyncResult 2 - ", e);
-			throw new EC2ServiceException(ServerError.InternalError,
-					"An unexpected error occurred.");
-		}
-	}
-    
-    
-    /**
      * Windows has its own device strings.
      * 
      * @param hypervisor
@@ -3221,7 +2790,460 @@ public class EC2Engine {
     	return "error"; 
     }
 
+    //
+    // CloudStack interface methods
+    //
+	public <T> T cloudStackCall(CloudStackCommand cmd, String responseName, String responseObjName, Class<T> responseClz) throws Exception {
+		return _client.call(cmd, UserContext.current().getAccessKey(), UserContext.current().getSecretKey(),
+			responseName, responseObjName, responseClz);
+	}
+	
+	public <T> List<T> cloudStackListCall(CloudStackCommand cmd, String responseName, String responseObjName, Type collectionType) throws Exception {
+		return _client.listCall(cmd, UserContext.current().getAccessKey(), UserContext.current().getSecretKey(),
+			responseName, responseObjName, collectionType);
+	}
+	
+	public JsonAccessor executeCommand(CloudStackCommand command) throws Exception {
+		return _client.execute(command, UserContext.current().getAccessKey(), UserContext.current().getSecretKey());
+	}
     
+	//
+	// Methods are about to be obsolete    
+	//
+	
+    public EC2Snapshot createSnapshot_obsolete( String volumeId ) 
+    {
+		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
+    	try {
+	        String query = new String( "command=createSnapshot&volumeId=" + volumeId );
+            Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createSnapshot", true );
+	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+ 	        if ( 0 < match.getLength()) {
+	    	     Node item = match.item(0);
+	    	     String jobId = new String( item.getFirstChild().getNodeValue());
+	    	     EC2Snapshot shot = waitForSnapshot( jobId );
+	    	     
+	    	     shot.setVolumeId( volumeId );
+	    	     listVolumes( volumeId, null, volumes );
+	             EC2Volume[] volSet = volumes.getVolumeSet();
+	             if (0 < volSet.length) shot.setVolumeSize( volSet[0].getSize());
+	    	     return shot;
+            }
+ 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+   	        
+       	} catch( EC2ServiceException error ) {
+     		logger.error( "EC2 CreateSnapshot - ", error);
+    		throw error;
+    		
+    	} catch( Exception e ) {
+    		logger.error( "EC2 CreateSnapshot - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    	}
+    }
+	
+	
+    /**
+     * createTemplate is an asynchronus call so here we poll (sleeping so we do not hammer the server)
+     * until the operation completes.
+     * 
+     * @param jobId - parameter returned from the createTemplate request
+     */
+    private EC2CreateImageResponse waitForTemplate( String jobId ) 
+        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, SignatureException 
+    {
+    	EC2CreateImageResponse image = new EC2CreateImageResponse();
+    	NodeList  match  = null;
+	    Node      item   = null;
+	    int       status = 0;
+	    
+        while( true ) 
+        {
+	      String query = "command=queryAsyncJobResult&jobId=" + jobId;
+	      Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
+	      
+		  match = cloudResp.getElementsByTagName( "jobstatus" ); 
+	      if ( 0 < match.getLength()) {
+	    	   item = match.item(0);
+	    	   status = Integer.parseInt( new String( item.getFirstChild().getNodeValue()));
+          }
+	      else status = 2;
+
+	      switch( status ) {
+	      case 0:  // in progress, slow down the hits from this polling a little
+      	       try { Thread.sleep( pollInterval1 ); }
+    	       catch( Exception e ) {}
+	    	   break;
+	    	   
+	      case 2:  
+	      default:
+  	           match = cloudResp.getElementsByTagName( "jobresult" ); 
+               if ( 0 < match.getLength()) {
+    	            item = match.item(0);
+    	            if (null != item && null != item.getFirstChild())
+    	        	    throw new EC2ServiceException(ServerError.InternalError, "Template action failed: " + item.getFirstChild().getNodeValue());
+               }
+               throw new EC2ServiceException(ServerError.InternalError, "Template action failed");
+	    	   
+		  case 1:  // Successfully completed
+      	       match = cloudResp.getElementsByTagName( "id" ); 
+    	       if (0 < match.getLength()) {
+   	               item = match.item(0);
+   	               image.setId( item.getFirstChild().getNodeValue());
+    	       }
+    	       return image;
+	      }
+       }
+    }
+    
+    /**
+     * Waiting for VMs to deploy, all the information to return to the user is
+     * returned once all the asynch commands finish.  Note that multiple deployVirtualMachine commands 
+     * can be outstanding and here we wait for all of them to complete either successfully
+     * or by failure.   On a failure we continue to wait for the other pending requests.
+     * 
+     * @param vms       - used to change the state of a new vm
+     * @param jobIds    - entries are null after completed, is an array of deployVirtualMachine requests to complete
+     * @param waitCount - number of asynch jobs to wait for, the number of entries in jobIds array
+     * 
+     * @return the same array given as 'vms' parameter but with modified vm state
+     */
+    private EC2Instance[] waitForDeploy( EC2Instance[] vms, String[] jobIds, int waitCount ) 
+        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
+    {
+   	    NodeList match  = null;
+   	    Node     item   = null;
+   	    int      status = 0;
+   	    int      j      = 0;
+  	    
+	    while( waitCount > 0 ) 
+	    {
+ 	      if (null != jobIds[j]) 
+ 	      {
+ 		      String query = "command=queryAsyncJobResult&jobId=" + jobIds[j];
+ 		      Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
+
+			  match = cloudResp.getElementsByTagName( "jobstatus" ); 
+		      if ( 0 < match.getLength()) {
+		    	   item = match.item(0);
+		    	   status = Integer.parseInt( new String( item.getFirstChild().getNodeValue()));
+	          }
+		      else status = 2;
+
+		      switch( status ) {
+		      case 0:  // in progress, slow down the hits from this polling a little
+	        	   try { Thread.sleep( pollInterval2 ); }
+	        	   catch( Exception e ) {}
+		    	   break;
+		    	   
+		      case 2:  // operation failed -- keep waiting for others in progress
+		      default:
+	  	           match = cloudResp.getElementsByTagName( "jobresult" ); 
+	               if ( 0 < match.getLength()) {
+	    	            item = match.item(0);
+	    	            if (null != item && null != item.getFirstChild())
+	    	        	    logger.info( "InternalError - deploy action failed: " + item.getFirstChild().getNodeValue());
+	               }
+	               waitCount--;
+			       jobIds[j] = null;
+		    	   break;
+		      
+		      case 1:  // Successfully completed
+	      	       match = cloudResp.getElementsByTagName( "id" ); 
+	    	       if (0 < match.getLength()) {
+	   	               item = match.item(0);
+	   	               vms[j].setId( item.getFirstChild().getNodeValue());
+	    	       }
+	      	       match = cloudResp.getElementsByTagName( "name" ); 
+	    	       if (0 < match.getLength()) {
+	   	               item = match.item(0);
+	   	               vms[j].setName( item.getFirstChild().getNodeValue());
+	    	       }
+	     	       match = cloudResp.getElementsByTagName( "zonename" ); 
+	    	       if (0 < match.getLength()) {
+	   	               item = match.item(0);
+	   	               vms[j].setZoneName( item.getFirstChild().getNodeValue());
+	    	       }
+	     	       match = cloudResp.getElementsByTagName( "templateid" ); 
+	    	       if (0 < match.getLength()) {
+	   	               item = match.item(0);
+	   	               vms[j].setTemplateId( item.getFirstChild().getNodeValue());
+	    	       }
+	     	       match = cloudResp.getElementsByTagName( "group" ); 
+	    	       if (0 < match.getLength()) {
+	   	               item = match.item(0);
+	   	               if (null != item && null != item.getFirstChild()) 
+	   	            	   vms[j].setGroup( item.getFirstChild().getNodeValue());
+	    	       }
+	     	       match = cloudResp.getElementsByTagName( "state" ); 
+	    	       if (0 < match.getLength()) {
+	   	               item = match.item(0);
+	   	               vms[j].setState( item.getFirstChild().getNodeValue());
+	    	       }
+	     	       match = cloudResp.getElementsByTagName( "created" ); 
+	    	       if (0 < match.getLength()) {
+	   	               item = match.item(0);
+	   	               vms[j].setCreated( item.getFirstChild().getNodeValue());
+	    	       }
+	     	       match = cloudResp.getElementsByTagName( "ipaddress" ); 
+	    	       if (0 < match.getLength()) {
+	   	               item = match.item(0);
+	   	               vms[j].setIpAddress( item.getFirstChild().getNodeValue());
+	    	       }
+	    	       match = cloudResp.getElementsByTagName("account");
+	    	       if (0 < match.getLength()) {
+                       item = match.item(0);
+                       vms[j].setAccountName( item.getFirstChild().getNodeValue());
+                   }
+	    	       match = cloudResp.getElementsByTagName("domainid");
+                   if (0 < match.getLength()) {
+                       item = match.item(0);
+                       vms[j].setDomainId( item.getFirstChild().getNodeValue());
+                   }
+	    	       match = cloudResp.getElementsByTagName("hypervisor");
+                   if (0 < match.getLength()) {
+                       item = match.item(0);
+                       vms[j].setHypervisor( item.getFirstChild().getNodeValue());
+                   }
+	    	       
+	               waitCount--;
+			       jobIds[j] = null;
+			       break;
+		      }
+	      }
+ 	      // -> go over the array repeatedly until all are done
+          j++;
+          if (j >= jobIds.length) j=0;
+	   }
+	   return vms;
+    }
+   
+    /**
+     * Each Asynch response had different XML tags to that forces a different waitFor function
+     * to create the required return object.
+     * 
+     * @param jobId 
+     */
+    private EC2Volume waitForVolume( String jobId ) 
+        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException 
+    {
+	    EC2Volume vol    = new EC2Volume();
+    	NodeList  match  = null;
+	    Node      item   = null;
+	    int       status = 0;
+	    
+        while( true ) 
+        {
+		  String query = "command=queryAsyncJobResult&jobId=" + jobId;
+ 		  Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
+
+		  match = cloudResp.getElementsByTagName( "jobstatus" ); 
+	      if ( 0 < match.getLength()) {
+	    	   item = match.item(0);
+	    	   status = Integer.parseInt( new String( item.getFirstChild().getNodeValue()));
+          }
+	      else status = 2;
+
+	      switch( status ) {
+	      case 0:  // in progress, slow down the hits from this polling a little
+      	       try { Thread.sleep( pollInterval3 ); }
+    	       catch( Exception e ) {}
+	    	   break;
+	    	   
+	      case 2:  
+	      default:
+   	           match = cloudResp.getElementsByTagName( "jobresult" ); 
+               if ( 0 < match.getLength()) {
+    	            item = match.item(0);
+    	            if (null != item && null != item.getFirstChild())
+    	        	    throw new EC2ServiceException(ServerError.InternalError, "Volume action failed: " + item.getFirstChild().getNodeValue());
+               }
+               throw new EC2ServiceException(ServerError.InternalError, "Volume action failed");
+	    	   
+		  case 1:  // Successfully completed
+      	       match = cloudResp.getElementsByTagName( "id" ); 
+    	       if (0 < match.getLength()) {
+   	               item = match.item(0);
+   	               vol.setId( item.getFirstChild().getNodeValue());
+    	       }
+     	       match = cloudResp.getElementsByTagName( "zonename" ); 
+    	       if (0 < match.getLength()) {
+   	               item = match.item(0);
+   	               vol.setZoneName( item.getFirstChild().getNodeValue());
+    	       }
+     	       match = cloudResp.getElementsByTagName( "size" ); 
+    	       if (0 < match.getLength()) {
+   	               item = match.item(0);
+   	               vol.setSize( item.getFirstChild().getNodeValue());
+    	       }
+     	       match = cloudResp.getElementsByTagName( "created" ); 
+    	       if (0 < match.getLength()) {
+   	               item = match.item(0);
+   	               vol.setCreated( item.getFirstChild().getNodeValue());
+    	       }
+    	       vol.setState( "available" );
+    	       return vol;
+	      }
+       }
+    }
+
+    private EC2Snapshot waitForSnapshot( String jobId ) 
+        throws EC2ServiceException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException, Exception  
+    {
+        EC2Snapshot shot   = new EC2Snapshot();
+        while( true ) 
+        {
+        	CloudStackCommand cmd = new CloudStackCommand("queryAsyncJobResult");
+        	cmd.setParam("jobId", jobId);
+        	JsonAccessor json = executeCommand(cmd);
+        	
+    		if(json.tryEval("queryasyncjobresultresponse") != null) {
+    			int jobStatus = json.getAsInt("queryasyncjobresultresponse.jobstatus");
+    			switch(jobStatus) {
+    			case 2:
+    	    		throw new EC2ServiceException(ServerError.InternalError, 
+    	    			json.getAsString("queryasyncjobresultresponse.jobresult.errorcode") + " " + 
+    	    			json.getAsString("queryasyncjobresultresponse.jobresult.errortext"));
+    	    		
+    			case 0 :
+            	    try { Thread.sleep( pollInterval4 ); } catch( Exception e ) {}
+            	    break;
+            	    
+    			case 1 :
+    				CloudStackSnapshot cloudSnapshot = new Gson().fromJson(json.eval("queryasyncjobresultresponse.jobresult.snapshot"), CloudStackSnapshot.class);
+	                shot.setId(String.valueOf(cloudSnapshot.getId()));
+	                shot.setName(cloudSnapshot.getName());
+	                shot.setType(cloudSnapshot.getSnapshotType());
+	                shot.setAccountName(cloudSnapshot.getAccountName());
+                    shot.setDomainId(String.valueOf(cloudSnapshot.getDomainId()));
+	                shot.setCreated(cloudSnapshot.getCreated());
+    				return shot;
+    				
+    			default :
+    				assert(false);
+                    throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed - invalid JSON response");
+    			}
+    		} else {
+                throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed - invalid JSON response");
+    		}
+        }
+    }
+
+
+    /**
+     * Waiting for VMs to start or stop is identical.
+     * 
+     * @param vms       - used to change the state
+     * @param jobIds    - entries are null after completed
+     * @param waitCount - number of asynch jobs to wait for
+     * 
+     * @return the same array given as 'vms' parameter but with modified vm state
+     */
+    private EC2Instance[] waitForStartStop( EC2Instance[] vms, String[] jobIds, int waitCount, String newState ) throws Exception 
+    {
+   	    int j=0;
+   	    
+	    while( waitCount > 0 ) 
+	    {
+ 	      if (null != jobIds[j]) 
+ 	      {  
+		      String result = checkAsyncResult( jobIds[j] );
+		      if ( -1 != result.indexOf( "s:1" )) 
+		      {
+		           // -> requested action has finished
+			       vms[j].setState( newState );
+			       waitCount--;
+			       jobIds[j] = null;
+		      }
+		      else if (-1 != result.indexOf( "s:2" )) 
+		      {
+		           // -> state of the vm has not changed
+			       vms[j].setState( vms[j].getPreviousState());
+			       waitCount--;
+			       jobIds[j] = null;
+		      }
+		      else if (-1 != result.indexOf( "s:-1" ))
+		      {
+		    	   // -> somehow the request has failed on the CloudStack
+		    	   waitCount--;
+		    	   jobIds[j] = null;
+		      }
+		      
+			  // -> slow down the hits from this polling a little
+	  	      try { Thread.sleep( pollInterval6 ); }
+		      catch( Exception e ) {}
+	      }
+ 	      // -> go over the array repeatedly until all are done
+          j++;
+          if (j >= jobIds.length) j=0;
+	   }
+	   return vms;
+    }
+	
+    /**
+     * Wait for the asynch request to finish and we just need to know if it succeeded or not
+     * 
+     * @param jobId
+     * @return true - the requested action was successful, false - it failed
+     */
+    private boolean waitForAsynch( String jobId ) throws Exception 
+    {    
+        while (true) {
+            String result = checkAsyncResult(jobId);
+            // System.out.println( "waitForAsynch: " + result );
+
+            if (-1 != result.indexOf("s:1")) {
+                // -> requested action has finished
+                return true;
+            } else if (-1 != result.indexOf("s:2") || -1 != result.indexOf("s:-1")) {
+                // -> requested action has failed
+                logger.error(result);
+                return false;
+            }
+
+            // -> slow down the hits from this polling a little
+            try {
+                Thread.sleep(pollInterval5);
+            } catch (Exception e) {
+            }
+        }
+    }
+	
+    /**
+     * Has the job finished?
+     * 
+     * @param jobId
+     * @return A string with one or two values, "s:status r:result" if both present.
+     *         "s:-1" means no result returned from CloudStack so request has failed.
+     */
+	// checkAsyncResult return is so ugly, need to redo it later, for now just use the new JSON
+	// to fix NPE bugs
+	private String checkAsyncResult(String jobId) throws Exception {
+		CloudStackCommand cmd = new CloudStackCommand("queryAsyncJobResult");
+		cmd.setParam("jobid", jobId);
+		JsonAccessor json = executeCommand(cmd);
+		if(json.tryEval("queryasyncjobresultresponse") != null) {
+			StringBuffer checkResult = new StringBuffer();
+			
+			int jobStatus = json.getAsInt("queryasyncjobresultresponse.jobstatus");
+			if(jobStatus == 2) {
+	    		throw new EC2ServiceException(ServerError.InternalError, 
+	    			json.getAsString("queryasyncjobresultresponse.jobresult.errorcode") + " " + 
+	    			json.getAsString("queryasyncjobresultresponse.jobresult.errortext")); 
+			}
+			
+			checkResult.append("s:").append(jobStatus);
+			JsonElement jsonResult = json.tryEval("queryasyncjobresultresponse.jobresult");
+			if(jsonResult != null)
+				checkResult.append(" r:" + jsonResult.toString());
+			
+			return checkResult.toString();
+		} else if(json.tryEval("errorresponse") != null) {
+			logger.error("queryAsyncJobResult failed. " + json.eval("errorresponse").toString());
+		}
+		
+		return "s:-1";
+	}
+	
     Map[] execList(String query, String... args) throws IOException, SignatureException {
         Map r = execute(query, args);
         if (r.isEmpty())
@@ -3360,6 +3382,8 @@ public class EC2Engine {
 		if ( null == cloudAPIPort ) 
 			 return new String( "http://" + managementServer + "/client/api?" );
 		else return new String( "http://" + managementServer + ":" + cloudAPIPort + "/client/api?" );
-		
 	}
+	
+	
+	
 }

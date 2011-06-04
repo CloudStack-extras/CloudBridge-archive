@@ -52,12 +52,12 @@ public class CloudS3CmdTool {
     private AmazonS3Stub serviceStub;
     
 	private static void configLog4j() {
-		URL configUrl = System.class.getResource("/conf/log4j-cloud.xml");
+		URL configUrl = System.class.getResource("/conf/log4j-cloud-bridge.xml");
 		if(configUrl == null)
-			configUrl = ClassLoader.getSystemResource("log4j-cloud.xml");
+			configUrl = ClassLoader.getSystemResource("log4j-cloud-bridge.xml");
 		
 		if(configUrl == null)
-			configUrl = ClassLoader.getSystemResource("conf/log4j-cloud.xml");
+			configUrl = ClassLoader.getSystemResource("conf/log4j-cloud-bridge.xml");
 			
 		if(configUrl != null) {
 			try {
