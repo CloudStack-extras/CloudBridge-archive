@@ -61,6 +61,7 @@ import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.JsonAccessor;
 import com.cloud.bridge.util.Tuple;
+import com.cloud.stack.ApiConstants;
 import com.cloud.stack.CloudStackClient;
 import com.cloud.stack.CloudStackCommand;
 import com.cloud.stack.CloudStackInfoResponse;
@@ -1376,7 +1377,7 @@ public class EC2Engine {
     	    StringBuffer params = new StringBuffer();
        	    params.append( "command=deployVirtualMachine" );
 
-       	    if (null != request.getGroupId()) params.append("&group=" + request.getGroupId());
+       	    if (null != request.getGroupId()) params.append("&" + ApiConstants.SECURITY_GROUP_NAMES + "=" + request.getGroupId());
        	    
        	    String zoneId = toZoneId(request.getZoneName());
        	    
@@ -2384,17 +2385,15 @@ public class EC2Engine {
 
     
     /**
-     * 'nic' is a subobject of the listVirtualMachines
-     * 
-     * @param nic
+     * @param childName
      */
-    private EC2Instance getPrivateAddress( EC2Instance vm, NodeList nic )
+    private String getChildByName( EC2Instance vm, NodeList node, String childName )
     {
-    	int numChild = nic.getLength();
+    	int numChild = node.getLength();
 
     	for( int i=0; i < numChild; i++ ) 
     	{
-    		 Node   child = nic.item(i);
+    		 Node   child = node.item(i);
     		 String name  = child.getNodeName();
     			
     		 if (null != child.getFirstChild()) 
@@ -2402,10 +2401,13 @@ public class EC2Engine {
     		     String value = child.getFirstChild().getNodeValue();
     		     //System.out.println( "nic: " + name + "=" + value );
     		     
-		         if (name.equalsIgnoreCase( "ipaddress" )) vm.setPrivateIpAddress( value ); 
+		         //if (name.equalsIgnoreCase( "ipaddress" )) vm.setPrivateIpAddress( value ); 
+    		     if (name.equalsIgnoreCase(childName)) {
+    		         return value;
+    		     }
     	     }
     	}
-		return vm;  	
+		return null;  	
     }
     
     
@@ -2976,7 +2978,7 @@ public class EC2Engine {
    			            else if (name.equalsIgnoreCase( "name"              )) vm.setName( value );
    			            else if (name.equalsIgnoreCase( "zonename"          )) vm.setZoneName( value );
    			            else if (name.equalsIgnoreCase( "templateid"        )) vm.setTemplateId( value );
-   			            else if (name.equalsIgnoreCase( "group"             )) vm.setGroup( value );
+   			            else if (name.equalsIgnoreCase( "securitygroup"     )) vm.setGroup(getChildByName( vm, child.getChildNodes(), "name"));
    			            else if (name.equalsIgnoreCase( "state"             )) vm.setState( value );
    			            else if (name.equalsIgnoreCase( "created"           )) vm.setCreated( value );
    			            else if (name.equalsIgnoreCase( "ipaddress"         )) vm.setIpAddress( value );
@@ -2986,7 +2988,7 @@ public class EC2Engine {
    			            else if (name.equalsIgnoreCase( "rootdevicetype"    )) vm.setRootDeviceType(value);
    			            else if (name.equalsIgnoreCase( "rootdeviceid"      )) vm.setRootDeviceId( Integer.parseInt( value ));  			                 
    			            else if (name.equalsIgnoreCase( "serviceofferingid" )) vm.setServiceOffering( serviceOfferingIdToInstanceType( value ));
-   			            else if (name.equalsIgnoreCase( "nic"               )) vm = getPrivateAddress( vm, child.getChildNodes());
+   			            else if (name.equalsIgnoreCase( "nic"               )) vm.setPrivateIpAddress(getChildByName( vm, child.getChildNodes(), "ipaddress"));
 	    			}
 	    	    }
     			instances.addInstance( vm );
@@ -3176,7 +3178,7 @@ public class EC2Engine {
 	   	               item = match.item(0);
 	   	               vms[j].setTemplateId( item.getFirstChild().getNodeValue());
 	    	       }
-	     	       match = cloudResp.getElementsByTagName( "group" ); 
+	     	       match = cloudResp.getElementsByTagName( "securitygroup" ); 
 	    	       if (0 < match.getLength()) {
 	   	               item = match.item(0);
 	   	               if (null != item && null != item.getFirstChild()) 
