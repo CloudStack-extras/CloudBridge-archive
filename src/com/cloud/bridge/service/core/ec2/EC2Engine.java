@@ -1451,14 +1451,11 @@ public class EC2Engine {
     {
     	EC2StartInstancesResponse instances = new EC2StartInstancesResponse();
     	EC2Instance[] vms = null;
-    	Node item    = null;
-    	int  waitFor = 0;
     	
     	// -> first determine the current state of each VM (becomes it previous state)
     	try {
     	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet(), null );
      	    vms = previousState.getInstanceSet();
-        	String[] jobIds = new String[ vms.length ];
 
     	    // -> send start requests for each item 
      		for( int i=0; i < vms.length; i++ ) {
@@ -1506,141 +1503,71 @@ public class EC2Engine {
     	return null;
     }
     
-    public EC2StartInstancesResponse handleRequest_obsolete(EC2StartInstances request) 
-    {
-    	EC2StartInstancesResponse instances = new EC2StartInstancesResponse();
-    	EC2Instance[] vms = null;
-    	Node item    = null;
-    	int  waitFor = 0;
-    	
-    	// -> first determine the current state of each VM (becomes it previous state)
-    	try {
-    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet(), null );
-     	    vms = previousState.getInstanceSet();
-        	String[] jobIds = new String[ vms.length ];
-
-    	    // -> send start requests for each item 
-     		for( int i=0; i < vms.length; i++ ) 
-     		{
-     		   // -> if its already running then we are done
-     		   vms[i].setPreviousState( vms[i].getState());
-     		   if (vms[i].getState().equalsIgnoreCase( "Running" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
-
-     	       String query = new String( "command=startVirtualMachine&id=" + vms[i].getId());
-     		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "startVirtualMachine", true );
-     		   
-    	       NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-     	       if (0 < match.getLength()) {
-   	    	       item = match.item(0);
-   	    	       jobIds[i] = new String( item.getFirstChild().getNodeValue());
-   	    	       waitFor++;
-	           }
-     		}
-     		
-        	// -> wait until all the requested starts have completed or failed
-           	vms = waitForStartStop( vms, jobIds, waitFor, "running" );
-        	for( int k=0; k < vms.length; k++ )	instances.addInstance( vms[k] );
-        	return instances;
-
-    	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 StartInstances - ", error);
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "EC2 StartInstances - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-    	}
-    }
-    
-    
-   
     /**
      * Note that more than one VM can be requested stopped at once. 
      * The Amazon API returns the previous state and the modified state as the
      * result of this API.
      */
-    public EC2StopInstancesResponse handleRequest(EC2StopInstances request) 
-    {
+    public EC2StopInstancesResponse handleRequest(EC2StopInstances request) {
     	EC2StopInstancesResponse instances = new EC2StopInstancesResponse();
     	EC2Instance[] vms = null;
-    	String query   = null;
-    	Node   item    = null;
-    	int    waitFor = 0;
-    
+    	
     	// -> first determine the current state of each VM (becomes it previous state)
     	try 
-    	{   String[] instanceSet = request.getInstancesSet();
+    	{   
+    		String[] instanceSet = request.getInstancesSet();
+    		
     	    EC2DescribeInstancesResponse previousState = listVirtualMachines( instanceSet, null );
      	    vms = previousState.getInstanceSet();
-        	String[] jobIds = new String[ vms.length ];
     
     	    // -> send stop requests for each item 
-     		for( int i=0; i < vms.length; i++ ) 
-     		{
+     		for( int i=0; i < vms.length; i++ ) {
      		   vms[i].setPreviousState( vms[i].getState());
      		   
+     		   CloudStackCommand command; 
+     		   CloudStackInfoResponse commandResponse;
      		   if ( request.getDestroyInstances()) {
      			    if (vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
-     		   }
-     		   else {
+     			    
+     			    command = new CloudStackCommand("destroyVirtualMachine");
+     			    command.setParam("id", vms[i].getId());
+          		   	commandResponse = cloudStackCall(command, false, "destroyvirtualmachineresponse", null, CloudStackInfoResponse.class);
+          		   	if(logger.isDebugEnabled())
+          		   		logger.debug("Destroying VM " + vms[i].getId() + " job " + commandResponse.getJobId());
+     		   } else {
      			    if (vms[i].getState().equalsIgnoreCase( "Stopped" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
+     			    
+     			    command = new CloudStackCommand("stopVirtualMachine");
+          		   	command.setParam("id", vms[i].getId());
+     			    
+          		   	commandResponse = cloudStackCall(command, false, "stopvirtualmachineresponse", null, CloudStackInfoResponse.class);
+          		   	if(logger.isDebugEnabled())
+          		   		logger.debug("Stopping VM " + vms[i].getId() + " job " + commandResponse.getJobId());
      		   }
-
-       	       if ( request.getDestroyInstances())
-     	            query = new String( "command=destroyVirtualMachine&id=" + vms[i].getId());
-   	           else query = new String( "command=stopVirtualMachine&id="    + vms[i].getId());
-     		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
      		   
-    	       NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-    	       if (0 < match.getLength()) {
-   	    	       item = match.item(0);
-   	    	       jobIds[i] = new String( item.getFirstChild().getNodeValue());
-   	    	       waitFor++;
-	           }
+      		   CloudStackUserVm vmForNewState = getCloudStackUserVm(vms[i].getId());
+      		   if(vmForNewState != null) {
+     			  if(!vms[i].getState().equals(vmForNewState.getState())) { 
+     				  vms[i].setState(vmForNewState.getState());  
+     			  } else {
+     				  if(commandResponse.getJobId() != null) {
+     					  // TODO : we are querying too soon, we already have a job pending, assume it is taking action
+     					 vms[i].setState("Stoping");
+     				  }
+     			  }
+      		   } else {
+      			   logger.error("VM " + vms[i].getId() + " no longer exists");
+      			   vms[i].setState("Error");
+      		   }
      		}
      		
-        	// -> wait until all the requested stops have completed or failed
-        	vms = waitForStartStop( vms, jobIds, waitFor, (request.getDestroyInstances() ? "destroyed" : "stopped"));
         	for( int k=0; k < vms.length; k++ )	instances.addInstance( vms[k] );
-        	
-        	// -> are there any invalid instance IDs, show which ones are bad
-        	if (instanceSet.length != vms.length)
-        	{
-        		boolean found = false;
-        		for( int j=0; j < instanceSet.length; j++, found = false ) 
-        		{
-        			for( int k=0; k < vms.length; k++ ) 
-        			{
-        			     if (vms[k].getId().equalsIgnoreCase( instanceSet[j])) {
-        			    	 found = true;
-        			    	 break;
-        			     }
-        			}
-        			
-        			if (!found) 
-        			{
-        				EC2Instance invalidId = new EC2Instance();
-        				invalidId.setId( instanceSet[j] );
-        				invalidId.setPreviousState( "Error" );
-        				invalidId.setState( "Error" );
-        				instances.addInstance( invalidId );
-        			}
-        		}
-        	}
         	return instances;
-
-    	} 
-    	catch( EC2ServiceException error ) {
-     		logger.error( "EC2 StopInstances - ", error);
-    		throw error;
-    		
-    	} 
-    	catch( Exception e ) {
+    	} catch( Exception e ) {
     		logger.error( "EC2 StopInstances - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}
     }
-
     
     public List<EC2SSHKeyPair> describeKeyPairs() {
     	ensureVersion(CLOUD_STACK_VERSION_2_2);
@@ -2866,10 +2793,141 @@ public class EC2Engine {
 	public JsonAccessor executeCommand(CloudStackCommand command) throws Exception {
 		return _client.execute(command, UserContext.current().getAccessKey(), UserContext.current().getSecretKey());
 	}
+	
+	
     
 	//
 	// Methods are about to be obsolete    
 	//
+	
+	
+    public EC2StopInstancesResponse handleRequest_obsolete(EC2StopInstances request) 
+    {
+    	EC2StopInstancesResponse instances = new EC2StopInstancesResponse();
+    	EC2Instance[] vms = null;
+    	String query   = null;
+    	Node   item    = null;
+    	int    waitFor = 0;
+    
+    	// -> first determine the current state of each VM (becomes it previous state)
+    	try 
+    	{   String[] instanceSet = request.getInstancesSet();
+    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( instanceSet, null );
+     	    vms = previousState.getInstanceSet();
+        	String[] jobIds = new String[ vms.length ];
+    
+    	    // -> send stop requests for each item 
+     		for( int i=0; i < vms.length; i++ ) 
+     		{
+     		   vms[i].setPreviousState( vms[i].getState());
+     		   
+     		   if ( request.getDestroyInstances()) {
+     			    if (vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
+     		   }
+     		   else {
+     			    if (vms[i].getState().equalsIgnoreCase( "Stopped" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
+     		   }
+
+       	       if ( request.getDestroyInstances())
+     	            query = new String( "command=destroyVirtualMachine&id=" + vms[i].getId());
+   	           else query = new String( "command=stopVirtualMachine&id="    + vms[i].getId());
+     		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
+     		   
+    	       NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+    	       if (0 < match.getLength()) {
+   	    	       item = match.item(0);
+   	    	       jobIds[i] = new String( item.getFirstChild().getNodeValue());
+   	    	       waitFor++;
+	           }
+     		}
+     		
+        	// -> wait until all the requested stops have completed or failed
+        	vms = waitForStartStop( vms, jobIds, waitFor, (request.getDestroyInstances() ? "destroyed" : "stopped"));
+        	for( int k=0; k < vms.length; k++ )	instances.addInstance( vms[k] );
+        	
+        	// -> are there any invalid instance IDs, show which ones are bad
+        	if (instanceSet.length != vms.length)
+        	{
+        		boolean found = false;
+        		for( int j=0; j < instanceSet.length; j++, found = false ) 
+        		{
+        			for( int k=0; k < vms.length; k++ ) 
+        			{
+        			     if (vms[k].getId().equalsIgnoreCase( instanceSet[j])) {
+        			    	 found = true;
+        			    	 break;
+        			     }
+        			}
+        			
+        			if (!found) 
+        			{
+        				EC2Instance invalidId = new EC2Instance();
+        				invalidId.setId( instanceSet[j] );
+        				invalidId.setPreviousState( "Error" );
+        				invalidId.setState( "Error" );
+        				instances.addInstance( invalidId );
+        			}
+        		}
+        	}
+        	return instances;
+
+    	} 
+    	catch( EC2ServiceException error ) {
+     		logger.error( "EC2 StopInstances - ", error);
+    		throw error;
+    		
+    	} 
+    	catch( Exception e ) {
+    		logger.error( "EC2 StopInstances - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    	}
+    }
+	
+    public EC2StartInstancesResponse handleRequest_obsolete(EC2StartInstances request) 
+    {
+    	EC2StartInstancesResponse instances = new EC2StartInstancesResponse();
+    	EC2Instance[] vms = null;
+    	Node item    = null;
+    	int  waitFor = 0;
+    	
+    	// -> first determine the current state of each VM (becomes it previous state)
+    	try {
+    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet(), null );
+     	    vms = previousState.getInstanceSet();
+        	String[] jobIds = new String[ vms.length ];
+
+    	    // -> send start requests for each item 
+     		for( int i=0; i < vms.length; i++ ) 
+     		{
+     		   // -> if its already running then we are done
+     		   vms[i].setPreviousState( vms[i].getState());
+     		   if (vms[i].getState().equalsIgnoreCase( "Running" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
+
+     	       String query = new String( "command=startVirtualMachine&id=" + vms[i].getId());
+     		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "startVirtualMachine", true );
+     		   
+    	       NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+     	       if (0 < match.getLength()) {
+   	    	       item = match.item(0);
+   	    	       jobIds[i] = new String( item.getFirstChild().getNodeValue());
+   	    	       waitFor++;
+	           }
+     		}
+     		
+        	// -> wait until all the requested starts have completed or failed
+           	vms = waitForStartStop( vms, jobIds, waitFor, "running" );
+        	for( int k=0; k < vms.length; k++ )	instances.addInstance( vms[k] );
+        	return instances;
+
+    	} catch( EC2ServiceException error ) {
+    		logger.error( "EC2 StartInstances - ", error);
+    		throw error;
+    		
+    	} catch( Exception e ) {
+    		logger.error( "EC2 StartInstances - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    	}
+    }
 	
     /**
      * Get information on one or more virtual machines depending on the instanceId parameter.
