@@ -47,4 +47,42 @@ public class CloudStackSecurityGroup {
     @SerializedName("ingressrule")
     private List<CloudStackIngressRule> ingressRules;
 
+    public CloudStackSecurityGroup() {
+    }
+    
+	public Long getId() {
+		return id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public String getAccountName() {
+		return accountName;
+	}
+
+	public Long getDomainId() {
+		return domainId;
+	}
+
+	public String getDomainName() {
+		return domainName;
+	}
+
+	public Long getJobId() {
+		return jobId;
+	}
+
+	public Integer getJobStatus() {
+		return jobStatus;
+	}
+
+	public List<CloudStackIngressRule> getIngressRules() {
+		return ingressRules;
+	}
 }

@@ -66,6 +66,8 @@ import com.cloud.stack.CloudStackClient;
 import com.cloud.stack.CloudStackCommand;
 import com.cloud.stack.CloudStackInfoResponse;
 import com.cloud.stack.CloudStackNic;
+import com.cloud.stack.CloudStackResourceLimit;
+import com.cloud.stack.CloudStackSecurityGroup;
 import com.cloud.stack.CloudStackSnapshot;
 import com.cloud.stack.CloudStackUserVm;
 import com.cloud.stack.CloudStackVolume;
@@ -1344,14 +1346,10 @@ public class EC2Engine {
      * have been made then we enter a polling state waiting for all the asynch requests to
      * complete.
      */
-    public EC2RunInstancesResponse handleRequest(EC2RunInstances request) 
-    {
+    public EC2RunInstancesResponse handleRequest(EC2RunInstances request) {
     	EC2RunInstancesResponse instances = new EC2RunInstancesResponse();
-    	NodeList match  = null;
-    	Node     item   = null;
     	int createInstances    = 0;
     	int canCreateInstances = -1;
-    	int waitFor            = 0;
     	int countCreated       = 0;
     	
     	// [A] Can the user create the minimum required number of instances?
@@ -1369,77 +1367,67 @@ public class EC2Engine {
      	    else createInstances = request.getMaxCount();
 
 	        EC2Instance[] vms    = new EC2Instance[ createInstances ];
-	        String[]      jobIds = new String[ createInstances ];
 
-	        
      	    // [B] Create n separate VM instances 
 	        OfferingBundle offer = instanceTypeToOfferBundle( request.getInstanceType());
-    	    StringBuffer params = new StringBuffer();
-       	    params.append( "command=deployVirtualMachine" );
-
-       	    if (null != request.getGroupId()) params.append("&" + ApiConstants.SECURITY_GROUP_NAMES + "=" + request.getGroupId());
-       	    
+	        
+	        CloudStackCommand command = new CloudStackCommand("deployVirtualMachine");
+       	    if (null != request.getGroupId()) 
+       	    	command.setParam(ApiConstants.SECURITY_GROUP_NAMES, request.getGroupId());
+	        
        	    String zoneId = toZoneId(request.getZoneName());
        	    
        	    if (cloudStackVersion >= CLOUD_STACK_VERSION_2_2) {
-           	    if (null != request.getKeyName()) params.append("&keypair=" + safeURLencode(request.getKeyName()));
+           	    if (null != request.getKeyName())
+           	    	command.setParam("keypair", request.getKeyName());
            	    
            	    String dcNetworkType = getDCNetworkType(zoneId);
-           	    if (dcNetworkType.equals("Advanced")) { 
-           	    	params.append("&networkIds=" + getNetworkId(zoneId));
+           	    if (dcNetworkType.equals("Advanced")) {
+           	    	command.setParam("networkIds", getNetworkId(zoneId));
            	    }
        	    }
 
-       	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
-            params.append("&size=" + String.valueOf(request.getSize()));
-       	    params.append( "&templateId=" + request.getTemplateId());
-       	    if (null != request.getUserData()) params.append( "&userData=" + safeURLencode( request.getUserData()));
+       	    command.setParam("serviceOfferingId", offer.getServiceOfferingId());
+       	    command.setParam("size", String.valueOf(request.getSize()));
+       	    command.setParam("templateId", request.getTemplateId());
        	    
-       	    // temp hack
-       	    //String vlanId = hackGetVlanId();
-       	    //if (null != vlanId) params.append( "&vlanId=" + vlanId );
-       	    // temp hack   
+       	    if (null != request.getUserData()) 
+       	    	command.setParam( "userData", request.getUserData());
        	    
-       	    params.append( "&zoneId=" + zoneId);
-       	    String query      = params.toString();
-            String apiCommand = genAPIURL(query, genQuerySignature(query));
- 		
-     		for( int i=0; i < createInstances; i++ ) 
-     		{
-     		   Document cloudResp = resolveURL( apiCommand, "deployVirtualMachine", true );
-     		   vms[i] = new EC2Instance();
-      		    
-    	       match = cloudResp.getElementsByTagName( "jobid" ); 
-     	       if (0 < match.getLength()) {
-   	    	       item = match.item(0);
-   	    	       jobIds[i] = new String( item.getFirstChild().getNodeValue());
-   	    	       waitFor++;
-	           }
+       	    command.setParam("zoneId", zoneId);
+       	    
+     		for( int i=0; i < createInstances; i++ ) {
+     			CloudStackUserVm vm = cloudStackCall(command, true, "deployvirtualmachineresponse", "virtualmachine", CloudStackUserVm.class);
+     			vms[i] = new EC2Instance();
+     			vms[i].setId(String.valueOf(vm.getId()));
+     			vms[i].setName(vm.getName());
+     			vms[i].setZoneName(vm.getZoneName());
+     			vms[i].setTemplateId(String.valueOf(vm.getTemplateId()));
+     			if(vm.getSecurityGroupList() != null && vm.getSecurityGroupList().size() > 0) {
+     				// TODO, we have a list of security groups, just return the first one?
+     				CloudStackSecurityGroup securityGroup = vm.getSecurityGroupList().get(0);
+     				vms[i].setGroup(securityGroup.getName());
+     			}
+     			vms[i].setState(vm.getState());
+     			vms[i].setCreated(vm.getCreated());
+     			vms[i].setIpAddress(vm.getIpAddress());
+     			vms[i].setAccountName(vm.getAccountName());
+     			vms[i].setDomainId(String.valueOf(vm.getDomainId()));
+     			vms[i].setHypervisor(vm.getHypervisor());
+    			vms[i].setServiceOffering( serviceOfferingIdToInstanceType( offer.getServiceOfferingId()));
+    			instances.addInstance( vms[i] );
+    			countCreated++;
      	    }    		
 	   		
-     	   	// [C] Wait until all the requested starts have completed or failed
-     		//  -> did they all succeeded?
-           	vms = waitForDeploy( vms, jobIds, waitFor );
-        	for( int k=0; k < vms.length; k++ )	
-        	{
-        		if (null != vms[k].getId()) {
-        			// request.getInstanceType() can return null
-        			vms[k].setServiceOffering( serviceOfferingIdToInstanceType( offer.getServiceOfferingId()));
-        			instances.addInstance( vms[k] );
-        			countCreated++;
-        		}
-        	}
-
-         	if (0 == countCreated) 
+         	if (0 == countCreated) {
+         		// TODO, we actually need to destroy left-over VMs when the exception is thrown
          		throw new EC2ServiceException(ServerError.InsufficientInstanceCapacity, "Insufficient Instance Capacity" );
+         	}
             
          	return instances;
-            
-    	} catch( EC2ServiceException error ) {
-    		throw error;
      	} catch( Exception e ) {
     		logger.error( "EC2 RunInstances - deploy 2 ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
      	}
     }
     
@@ -1815,35 +1803,30 @@ public class EC2Engine {
      */
     private int calculateAllowedInstances() throws Exception 
     {    
-    	if ( cloudStackVersion >= CLOUD_STACK_VERSION_2_1 )
-    	{
-	    	 NodeList match      = null;
-		     Node     item       = null;
-		     int      maxAllowed = -1;
+    	if ( cloudStackVersion >= CLOUD_STACK_VERSION_2_1 ) {
+		     int maxAllowed = -1;
 		
 	 		 // -> get the user limits on instances
-	     	 String   query     = new String( "command=listResourceLimits&resourceType=0" );
-	 		 Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listResourceLimits", true );
-	 		    
-	  		 match = cloudResp.getElementsByTagName( "max" ); 
-		     if ( 0 < match.getLength()) 
-		     {
-		    	  item = match.item(0);
-	    	      maxAllowed = Integer.parseInt( item.getFirstChild().getNodeValue());
-	    	      if (-1 == maxAllowed) return -1;   // no limit
-		        
-		          // -> how many instances has the user already created?
+		     CloudStackCommand command = new CloudStackCommand("listResourceLimits");
+		     command.setParam("resourceType", "0");
+		     
+		     List<CloudStackResourceLimit> limits = cloudStackListCall(command, "listresourcelimitsresponse", "resourcelimit",
+		     	new TypeToken<List<CloudStackResourceLimit>>() {}.getType());  
+		     if(limits != null && limits.size() > 0) {
+		    	 maxAllowed = (int)limits.get(0).getMax().longValue();
+	    	      if (maxAllowed == -1) 
+	    	    	  return -1;   // no limit
+	    	      
 	    	      EC2DescribeInstancesResponse existingVMS = listVirtualMachines( null, null );
 	    	      EC2Instance[] vmsList = existingVMS.getInstanceSet();
 	    	      return (maxAllowed - vmsList.length);
+		     } else {
+		    	 return 0;
 		     }
-		     else return 0;    	
     	}
     	else return -1;
  	}
    
-    
-    
     /**
      * Performs the cloud API listVirtualMachines one or more times.
      * 
@@ -2802,6 +2785,134 @@ public class EC2Engine {
 	// Methods are about to be obsolete    
 	//
 	
+	
+    public EC2RunInstancesResponse handleRequest_obsolete(EC2RunInstances request) 
+    {
+    	EC2RunInstancesResponse instances = new EC2RunInstancesResponse();
+    	NodeList match  = null;
+    	Node     item   = null;
+    	int createInstances    = 0;
+    	int canCreateInstances = -1;
+    	int waitFor            = 0;
+    	int countCreated       = 0;
+    	
+    	// [A] Can the user create the minimum required number of instances?
+    	try {
+    	    canCreateInstances = calculateAllowedInstances();
+ 	        if (-1 == canCreateInstances) canCreateInstances = request.getMaxCount();
+ 	        
+     	    if (canCreateInstances < request.getMinCount()) {
+    		    logger.info( "EC2 RunInstances - min count too big (" + request.getMinCount() + "), " + canCreateInstances + " left to allocate");
+    		    throw new EC2ServiceException(ClientError.InstanceLimitExceeded ,"Only " + canCreateInstances + " instance(s) left to allocate");	
+     	    }
+
+     	    if ( canCreateInstances < request.getMaxCount()) 
+     		     createInstances = canCreateInstances;
+     	    else createInstances = request.getMaxCount();
+
+	        EC2Instance[] vms    = new EC2Instance[ createInstances ];
+	        String[]      jobIds = new String[ createInstances ];
+
+	        
+     	    // [B] Create n separate VM instances 
+	        OfferingBundle offer = instanceTypeToOfferBundle( request.getInstanceType());
+    	    StringBuffer params = new StringBuffer();
+       	    params.append( "command=deployVirtualMachine" );
+
+       	    if (null != request.getGroupId()) params.append("&" + ApiConstants.SECURITY_GROUP_NAMES + "=" + request.getGroupId());
+       	    
+       	    String zoneId = toZoneId(request.getZoneName());
+       	    
+       	    if (cloudStackVersion >= CLOUD_STACK_VERSION_2_2) {
+           	    if (null != request.getKeyName()) params.append("&keypair=" + safeURLencode(request.getKeyName()));
+           	    
+           	    String dcNetworkType = getDCNetworkType(zoneId);
+           	    if (dcNetworkType.equals("Advanced")) { 
+           	    	params.append("&networkIds=" + getNetworkId(zoneId));
+           	    }
+       	    }
+
+       	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
+            params.append("&size=" + String.valueOf(request.getSize()));
+       	    params.append( "&templateId=" + request.getTemplateId());
+       	    if (null != request.getUserData()) params.append( "&userData=" + safeURLencode( request.getUserData()));
+       	    
+       	    // temp hack
+       	    //String vlanId = hackGetVlanId();
+       	    //if (null != vlanId) params.append( "&vlanId=" + vlanId );
+       	    // temp hack   
+       	    
+       	    params.append( "&zoneId=" + zoneId);
+       	    String query      = params.toString();
+            String apiCommand = genAPIURL(query, genQuerySignature(query));
+ 		
+     		for( int i=0; i < createInstances; i++ ) 
+     		{
+     		   Document cloudResp = resolveURL( apiCommand, "deployVirtualMachine", true );
+     		   vms[i] = new EC2Instance();
+      		    
+    	       match = cloudResp.getElementsByTagName( "jobid" ); 
+     	       if (0 < match.getLength()) {
+   	    	       item = match.item(0);
+   	    	       jobIds[i] = new String( item.getFirstChild().getNodeValue());
+   	    	       waitFor++;
+	           }
+     	    }    		
+	   		
+     	   	// [C] Wait until all the requested starts have completed or failed
+     		//  -> did they all succeeded?
+           	vms = waitForDeploy( vms, jobIds, waitFor );
+        	for( int k=0; k < vms.length; k++ )	
+        	{
+        		if (null != vms[k].getId()) {
+        			// request.getInstanceType() can return null
+        			vms[k].setServiceOffering( serviceOfferingIdToInstanceType( offer.getServiceOfferingId()));
+        			instances.addInstance( vms[k] );
+        			countCreated++;
+        		}
+        	}
+
+         	if (0 == countCreated) 
+         		throw new EC2ServiceException(ServerError.InsufficientInstanceCapacity, "Insufficient Instance Capacity" );
+            
+         	return instances;
+            
+    	} catch( EC2ServiceException error ) {
+    		throw error;
+     	} catch( Exception e ) {
+    		logger.error( "EC2 RunInstances - deploy 2 ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+     	}
+    }
+
+    private int calculateAllowedInstances_obsolete() throws Exception 
+    {    
+    	if ( cloudStackVersion >= CLOUD_STACK_VERSION_2_1 )
+    	{
+	    	 NodeList match      = null;
+		     Node     item       = null;
+		     int      maxAllowed = -1;
+		
+	 		 // -> get the user limits on instances
+	     	 String   query     = new String( "command=listResourceLimits&resourceType=0" );
+	 		 Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listResourceLimits", true );
+	 		    
+	  		 match = cloudResp.getElementsByTagName( "max" ); 
+		     if ( 0 < match.getLength()) 
+		     {
+		    	  item = match.item(0);
+	    	      maxAllowed = Integer.parseInt( item.getFirstChild().getNodeValue());
+	    	      if (-1 == maxAllowed) return -1;   // no limit
+		        
+		          // -> how many instances has the user already created?
+	    	      EC2DescribeInstancesResponse existingVMS = listVirtualMachines( null, null );
+	    	      EC2Instance[] vmsList = existingVMS.getInstanceSet();
+	    	      return (maxAllowed - vmsList.length);
+		     }
+		     else return 0;    	
+    	}
+    	else return -1;
+ 	}
 	
     public EC2StopInstancesResponse handleRequest_obsolete(EC2StopInstances request) 
     {
