@@ -71,6 +71,7 @@ import com.cloud.stack.CloudStackSecurityGroup;
 import com.cloud.stack.CloudStackSnapshot;
 import com.cloud.stack.CloudStackUserVm;
 import com.cloud.stack.CloudStackVolume;
+import com.cloud.stack.CloudStackZone;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
@@ -1741,57 +1742,6 @@ public class EC2Engine {
     	return passwdData;
     }
     
-    
-    /**
-     * Wait until one specific VM has stopped
-     */
-    private boolean stopVirtualMachine( String instanceId ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
-    {
-    	EC2Instance[] vms    = new EC2Instance[1];
-    	String[]      jobIds = new String[1];
-    	
-    	vms[0] = new EC2Instance();
-    	vms[0].setState( "running" );
-    	vms[0].setPreviousState( "running" );
-
-        String query = new String( "command=stopVirtualMachine&id=" + instanceId );
-	    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
-		   
-        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-        if ( 0 < match.getLength()) {
-   	         Node item = match.item(0);
-   	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
-        }
-        else throw new EC2ServiceException(ServerError.InternalError ,"Internal Server Error");
-		
-	    vms = waitForStartStop( vms, jobIds, 1, "stopped" );
-	    return vms[0].getState().equalsIgnoreCase( "stopped" );    	
-    }
-  
-    private boolean startVirtualMachine( String instanceId ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
-    {
-	    EC2Instance[] vms    = new EC2Instance[1];
-	    String[]      jobIds = new String[1];
-	
-	    vms[0] = new EC2Instance();
-	    vms[0].setState( "stopped" );
-	    vms[0].setPreviousState( "stopped" );
-
-        String query = new String( "command=startVirtualMachine&id=" + instanceId );
-        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
-	   
-        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-        if ( 0 < match.getLength()) {
-	         Node item = match.item(0);
-	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
-        }
-        else throw new EC2ServiceException(ServerError.InternalError ,"Internal Server Error");
-	
-        vms = waitForStartStop( vms, jobIds, 1, "running" );
-        return vms[0].getState().equalsIgnoreCase( "running" );    	
-    }
 
     /**
      * RunInstances includes a min and max count of requested instances to create.  
@@ -1920,7 +1870,7 @@ public class EC2Engine {
      * @return the zoneId that matches the given zone name
      */
  	private String toZoneId( String zoneName ) 
- 	    throws EC2ServiceException, SignatureException, IOException, SAXException, ParserConfigurationException 
+ 	    throws Exception 
  	{
  		EC2DescribeAvailabilityZonesResponse zones = null;
  		String[] interestedZones = null;
@@ -1931,7 +1881,8 @@ public class EC2Engine {
  		}
  		zones = listZones( interestedZones );
 	    
- 		if (null == zones.getZoneIdAt( 0 )) throw new EC2ServiceException(ClientError.InvalidParameterValue, "Unknown zoneName value - " + zoneName);
+ 		if (null == zones.getZoneIdAt( 0 )) 
+ 			throw new EC2ServiceException(ClientError.InvalidParameterValue, "Unknown zoneName value - " + zoneName);
  		return zones.getZoneIdAt( 0 );
  	}
  	
@@ -2036,51 +1987,32 @@ public class EC2Engine {
      * 
      * @return EC2DescribeAvailabilityZonesResponse
      */
-    private EC2DescribeAvailabilityZonesResponse listZones( String[] interestedZones ) 
-        throws IOException, SAXException, ParserConfigurationException, EC2ServiceException, SignatureException 
+    private EC2DescribeAvailabilityZonesResponse listZones( String[] interestedZones ) throws Exception 
     {    
     	EC2DescribeAvailabilityZonesResponse zones = new EC2DescribeAvailabilityZonesResponse();
-       	Node   parent = null;
-       	String id     = null;
-       	String name   = null;
-       	
-       	String   sortedQuery = new String( "available=true&command=listZones" );   // -> used to generate the signature
- 		Document cloudResp   = resolveURL(genAPIURL( "command=listZones&available=true", genQuerySignature(sortedQuery)), "listZones", true );
-		NodeList match       = cloudResp.getElementsByTagName( "zone" ); 
-		int length = match.getLength();
-		    
-	    for( int i=0; i < length; i++ ) 
-	    {
-	    	if (null != (parent = match.item(i))) 
-	    	{ 
-	    		NodeList children = parent.getChildNodes();
-	    		int      numChild = children.getLength();
-	    		
-	    		for( int j=0; j < numChild; j++ ) 
-	    		{
-	    			Node   child    = children.item(j);
-	    			String nodeName = child.getNodeName();
-	    			
-   			             if (nodeName.equalsIgnoreCase( "id"   )) id   = child.getFirstChild().getNodeValue();
-   			        else if (nodeName.equalsIgnoreCase( "name" )) name = child.getFirstChild().getNodeValue();
-	    	    }
-	    		
-	 		    // -> are we asking about specific zones?
-	 		    if ( null != interestedZones && 0 < interestedZones.length ) 
-	 		    {
-	 		     	 for( int j=0; j < interestedZones.length; j++ ) 
-	 		     	 {
-	 		    	     if (interestedZones[j].equalsIgnoreCase( name )) {
-	 		    			 zones.addZone( id, name );
+    	
+    	CloudStackCommand command = new CloudStackCommand("listZones");
+    	command.setParam("available", "true");
+    	List<CloudStackZone> cloudZones = cloudStackListCall(command, "listzonesresponse", "zone",
+    		new TypeToken<List<CloudStackZone>>() {}.getType());
+    	
+    	if(cloudZones != null) {
+    		for(CloudStackZone cloudZone : cloudZones) {
+	 		    if ( null != interestedZones && 0 < interestedZones.length ) {
+	 		     	 for( int j=0; j < interestedZones.length; j++ ) {
+	 		    	     if (interestedZones[j].equalsIgnoreCase( cloudZone.getName())) {
+	 		    			 zones.addZone(String.valueOf(cloudZone.getId()), cloudZone.getName());
 	 		    			 break;
 	 		    		 }
 	 		    	 }
+	 		    } else { 
+	 		    	zones.addZone(String.valueOf(cloudZone.getId()), cloudZone.getName());
 	 		    }
-	 		    else zones.addZone( id, name );
-		    }
-	    }
+    		}
+    	}
 		return zones;
     }
+    
   
     /**
      * Get information on one or more virtual machines depending on the instanceId parameter.
@@ -2234,49 +2166,6 @@ public class EC2Engine {
         return offerings;
     }
 
-    /**
-     * Return information on all defined service offerings.
-     */
-    private ServiceOfferings listServiceOfferings() 
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
-    {
-	    ServiceOfferings offerings = new ServiceOfferings();
-	    Node parent = null;
-        String query = new String( "command=listServiceOfferings" );
-	    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listServiceOfferings", true );
-        NodeList match     = cloudResp.getElementsByTagName( "serviceoffering" ); 
-        int      length    = match.getLength();
-
-        for( int i=0; i < length; i++ ) 
-        {
-	        if (null != (parent = match.item(i))) 
-	        { 
-		        NodeList children = parent.getChildNodes();
-		        int      numChild = children.getLength();
-		        ServiceOffer sf = new ServiceOffer();
-		
-		        for( int j=0; j < numChild; j++ ) 
-		        {
-			         Node   child = children.item(j);
-	 		         String name  = child.getNodeName();
-		
-			         if (null != child.getFirstChild()) 
-			         {
-			             String value = child.getFirstChild().getNodeValue();
-		
-		                      if (name.equalsIgnoreCase( "id"        )) sf.setId( value );
-		                 else if (name.equalsIgnoreCase( "name"      )) sf.setName( value );
-		                 else if (name.equalsIgnoreCase( "memory"    )) sf.setMemory( value );
-		                 else if (name.equalsIgnoreCase( "cpunumber" )) sf.setCPUNumber( value );
-		                 else if (name.equalsIgnoreCase( "cpuspeed"  )) sf.setCPUSpeed( value );
-		                 else if (name.equalsIgnoreCase( "created"   )) sf.setCreated( value );
-			         }
-	            }
-		        offerings.addOffer( sf );
-	        }
-	    }
-        return offerings;
-    }
 
     public EC2DescribeSecurityGroupsResponse listSecurityGroups( String[] interestedGroups ) 
         throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
@@ -2330,42 +2219,6 @@ public class EC2Engine {
 	    return groupSet;
     }
     
-    
-    /**
-     * Temporary hack to just get a valid VLANID
-     */
-    private String hackGetVlanId() 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
-    {
-	    Node parent = null; 	
-        Document cloudResp = resolveURL(genAPIURL("command=listVlanIpRanges&vlantype=DirectAttached", genQuerySignature( "command=listVlanIpRanges&vlantype=DirectAttached")), "listVlanIpRanges", true );
-        NodeList match = cloudResp.getElementsByTagName( "vlaniprange" ); 
-        int     length = match.getLength();
-       
-        for( int i=0; i < length; i++ ) 
-        {	   
-   	       if (null != (parent = match.item(i))) 
-   	       { 
-    		   NodeList children = parent.getChildNodes();
-    		   int      numChild = children.getLength();
-    		
-    		   for( int j=0; j < numChild; j++ ) 
-    		   {
-    		       Node   child = children.item(j);
-    			   String name  =  child.getNodeName();
-    			
-    			   if (null != child.getFirstChild()) 
-    			   {
-    			       String value = child.getFirstChild().getNodeValue();
-    			       System.out.println( "listVlanIpRanges " + name + "=" + value );   			     
-    			       if (name.equalsIgnoreCase( "id" )) return value;
-    			   } 
-    	       }
-   	       }
-    	}
-        return null;
-    }
-
     
     /**
      * @param childName
@@ -2780,10 +2633,190 @@ public class EC2Engine {
 	}
 	
 	
-    
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	
 	//
 	// Methods are about to be obsolete    
 	//
+
+    private EC2DescribeAvailabilityZonesResponse listZones_obsolete( String[] interestedZones ) 
+    throws IOException, SAXException, ParserConfigurationException, EC2ServiceException, SignatureException 
+    {    
+	EC2DescribeAvailabilityZonesResponse zones = new EC2DescribeAvailabilityZonesResponse();
+   	Node   parent = null;
+   	String id     = null;
+   	String name   = null;
+   	
+   	String   sortedQuery = new String( "available=true&command=listZones" );   // -> used to generate the signature
+		Document cloudResp   = resolveURL(genAPIURL( "command=listZones&available=true", genQuerySignature(sortedQuery)), "listZones", true );
+	NodeList match       = cloudResp.getElementsByTagName( "zone" ); 
+	int length = match.getLength();
+	    
+    for( int i=0; i < length; i++ ) 
+    {
+    	if (null != (parent = match.item(i))) 
+    	{ 
+    		NodeList children = parent.getChildNodes();
+    		int      numChild = children.getLength();
+    		
+    		for( int j=0; j < numChild; j++ ) 
+    		{
+    			Node   child    = children.item(j);
+    			String nodeName = child.getNodeName();
+    			
+			             if (nodeName.equalsIgnoreCase( "id"   )) id   = child.getFirstChild().getNodeValue();
+			        else if (nodeName.equalsIgnoreCase( "name" )) name = child.getFirstChild().getNodeValue();
+    	    }
+    		
+ 		    // -> are we asking about specific zones?
+ 		    if ( null != interestedZones && 0 < interestedZones.length ) 
+ 		    {
+ 		     	 for( int j=0; j < interestedZones.length; j++ ) 
+ 		     	 {
+ 		    	     if (interestedZones[j].equalsIgnoreCase( name )) {
+ 		    			 zones.addZone( id, name );
+ 		    			 break;
+ 		    		 }
+ 		    	 }
+ 		    }
+ 		    else zones.addZone( id, name );
+	    }
+    }
+	return zones;
+}
+	
+	
+    /**
+     * Return information on all defined service offerings.
+     */
+    private ServiceOfferings listServiceOfferings() 
+        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
+    {
+	    ServiceOfferings offerings = new ServiceOfferings();
+	    Node parent = null;
+        String query = new String( "command=listServiceOfferings" );
+	    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listServiceOfferings", true );
+        NodeList match     = cloudResp.getElementsByTagName( "serviceoffering" ); 
+        int      length    = match.getLength();
+
+        for( int i=0; i < length; i++ ) 
+        {
+	        if (null != (parent = match.item(i))) 
+	        { 
+		        NodeList children = parent.getChildNodes();
+		        int      numChild = children.getLength();
+		        ServiceOffer sf = new ServiceOffer();
+		
+		        for( int j=0; j < numChild; j++ ) 
+		        {
+			         Node   child = children.item(j);
+	 		         String name  = child.getNodeName();
+		
+			         if (null != child.getFirstChild()) 
+			         {
+			             String value = child.getFirstChild().getNodeValue();
+		
+		                      if (name.equalsIgnoreCase( "id"        )) sf.setId( value );
+		                 else if (name.equalsIgnoreCase( "name"      )) sf.setName( value );
+		                 else if (name.equalsIgnoreCase( "memory"    )) sf.setMemory( value );
+		                 else if (name.equalsIgnoreCase( "cpunumber" )) sf.setCPUNumber( value );
+		                 else if (name.equalsIgnoreCase( "cpuspeed"  )) sf.setCPUSpeed( value );
+		                 else if (name.equalsIgnoreCase( "created"   )) sf.setCreated( value );
+			         }
+	            }
+		        offerings.addOffer( sf );
+	        }
+	    }
+        return offerings;
+    }
+	
+	
+    /**
+     * Temporary hack to just get a valid VLANID
+     */
+    private String hackGetVlanId() 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
+    {
+	    Node parent = null; 	
+        Document cloudResp = resolveURL(genAPIURL("command=listVlanIpRanges&vlantype=DirectAttached", genQuerySignature( "command=listVlanIpRanges&vlantype=DirectAttached")), "listVlanIpRanges", true );
+        NodeList match = cloudResp.getElementsByTagName( "vlaniprange" ); 
+        int     length = match.getLength();
+       
+        for( int i=0; i < length; i++ ) 
+        {	   
+   	       if (null != (parent = match.item(i))) 
+   	       { 
+    		   NodeList children = parent.getChildNodes();
+    		   int      numChild = children.getLength();
+    		
+    		   for( int j=0; j < numChild; j++ ) 
+    		   {
+    		       Node   child = children.item(j);
+    			   String name  =  child.getNodeName();
+    			
+    			   if (null != child.getFirstChild()) 
+    			   {
+    			       String value = child.getFirstChild().getNodeValue();
+    			       System.out.println( "listVlanIpRanges " + name + "=" + value );   			     
+    			       if (name.equalsIgnoreCase( "id" )) return value;
+    			   } 
+    	       }
+   	       }
+    	}
+        return null;
+    }
+	
+	
+    /**
+     * Wait until one specific VM has stopped
+     */
+    private boolean stopVirtualMachine( String instanceId ) 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
+    {
+    	EC2Instance[] vms    = new EC2Instance[1];
+    	String[]      jobIds = new String[1];
+    	
+    	vms[0] = new EC2Instance();
+    	vms[0].setState( "running" );
+    	vms[0].setPreviousState( "running" );
+
+        String query = new String( "command=stopVirtualMachine&id=" + instanceId );
+	    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
+		   
+        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+        if ( 0 < match.getLength()) {
+   	         Node item = match.item(0);
+   	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
+        }
+        else throw new EC2ServiceException(ServerError.InternalError ,"Internal Server Error");
+		
+	    vms = waitForStartStop( vms, jobIds, 1, "stopped" );
+	    return vms[0].getState().equalsIgnoreCase( "stopped" );    	
+    }
+  
+    private boolean startVirtualMachine( String instanceId ) 
+        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
+    {
+	    EC2Instance[] vms    = new EC2Instance[1];
+	    String[]      jobIds = new String[1];
+	
+	    vms[0] = new EC2Instance();
+	    vms[0].setState( "stopped" );
+	    vms[0].setPreviousState( "stopped" );
+
+        String query = new String( "command=startVirtualMachine&id=" + instanceId );
+        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
+	   
+        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
+        if ( 0 < match.getLength()) {
+	         Node item = match.item(0);
+	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
+        }
+        else throw new EC2ServiceException(ServerError.InternalError ,"Internal Server Error");
+	
+        vms = waitForStartStop( vms, jobIds, 1, "running" );
+        return vms[0].getState().equalsIgnoreCase( "running" );    	
+    }
 	
 	
     public EC2RunInstancesResponse handleRequest_obsolete(EC2RunInstances request) 
