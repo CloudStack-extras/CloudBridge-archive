@@ -24,7 +24,6 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.SignatureException;
@@ -1069,8 +1068,7 @@ public class EC2Engine {
         }
     }
 
-    public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) 
-    {	
+    public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) {	
     	try {
     		return listZones( request.getZoneSet());
     		
@@ -1080,18 +1078,16 @@ public class EC2Engine {
     		
     	} catch( Exception e ) {
     		logger.error( "EC2 DescribeAvailabilityZones - " ,e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}
     }
     
-    
-    public EC2DescribeVolumesResponse handleRequest( EC2DescribeVolumes request ) 
-    {
+    public EC2DescribeVolumesResponse handleRequest( EC2DescribeVolumes request ) {
     	EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
     	EC2VolumeFilterSet vfs = request.getFilterSet();
 
-    	try 
-    	{   String[] volumeIds = request.getVolumeSet();
+    	try {   
+    		String[] volumeIds = request.getVolumeSet();
    	        if ( 0 == volumeIds.length ) 
    	        {
     	         volumes = listVolumes( null, null, volumes );
@@ -1104,112 +1100,69 @@ public class EC2Engine {
    	        if ( null == vfs )
    	   	         return volumes;
    	        else return vfs.evaluate( volumes );     
-       	} 
-    	catch( EC2ServiceException error ) 
-    	{
-    		logger.error( "EC2 DescribeVolumes - ", error);
-    		throw error;		
-    	} 
-    	catch( Exception e ) 
-    	{
+       	}  catch( Exception e ) {
     		logger.error( "EC2 DescribeVolumes - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}
     }
-   
     
-    public EC2Volume attachVolume( EC2Volume request ) 
-    {
-    	try 
-    	{   request.setDeviceId( mapDeviceToCloudDeviceId( request.getDevice()));
+    public EC2Volume attachVolume( EC2Volume request ) {
+    	try {   
+    		request.setDeviceId( mapDeviceToCloudDeviceId( request.getDevice()));
 
-	        StringBuffer params = new StringBuffer();
-   	        params.append( "command=attachVolume" );
-   	        params.append( "&deviceId=" + request.getDeviceId());
-   	        params.append( "&id=" + request.getId());
-   	        params.append( "&virtualMachineId=" + request.getInstanceId());
-   	        String query = params.toString();
-
-  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "attachVolume", true );
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) 
- 	        {
-	    	     Node item = match.item(0);
-	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     if (waitForAsynch( jobId )) request.setState( "attached" );
-            }
- 	        else throw new EC2ServiceException( ServerError.InternalError, "An unexpected error occurred." );
- 	        
-    	    return request;  	        
-       	} 
-    	catch( EC2ServiceException error ) 
-    	{
-    		logger.error( "EC2 AttachVolume 1 - ", error);
-    		throw error;    		
-    	} 
-    	catch( Exception e ) 
-    	{
+    		CloudStackCommand command = new CloudStackCommand("attachVolume");
+    		command.setParam("deviceId", String.valueOf(request.getDeviceId()));
+    		command.setParam("id", request.getId());
+    		command.setParam("virtualMachineId", request.getInstanceId());
+    		
+    		CloudStackVolume vol = cloudStackCall(command, true, "attachvolumeresponse", "volume", CloudStackVolume.class);
+    		if(vol != null) {
+    			request.setState("attached");
+    			return request;
+    		}
+    		throw new EC2ServiceException( ServerError.InternalError, "An unexpected error occurred." );
+       	} catch( Exception e ) {
     		logger.error( "EC2 AttachVolume 2 - ", e);
-    		throw new EC2ServiceException( ServerError.InternalError, e.toString());
+    		throw new EC2ServiceException( ServerError.InternalError, e.getMessage() != null ? e.getMessage() : e.toString());
     	}   	    
     }
-
-    
-    public EC2Volume detachVolume(EC2Volume request) 
-    {
+   
+    public EC2Volume detachVolume(EC2Volume request) {
     	try {
-	        StringBuffer params = new StringBuffer();
-   	        params.append( "command=detachVolume" );
-   	        params.append( "&id=" + request.getId());
-   	        String query = params.toString();
-
+    		CloudStackCommand command = new CloudStackCommand("detachVolume");
+    		command.setParam("id", request.getId());
+    		
    	        // -> do first cause afterwards the volume has not volume associated with it
  	        // -> if instanceId is not given on the request then we need to look it up for the response
  	        if (null == request.getInstanceId()) {
  	   		    EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
   			    volumes = listVolumes( request.getId(), null, volumes );
  	            EC2Volume[] volSet = volumes.getVolumeSet();
- 	            if (0 < volSet.length) request.setInstanceId( volSet[0].getInstanceId());
+ 	            if (0 < volSet.length) 
+ 	            	request.setInstanceId( volSet[0].getInstanceId());
  	        }
-
-  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "detachVolume", true );
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-                if (waitForAsynch(jobId)) {
-                    request.setState("detached");
-                } else {
-                    throw new EC2ServiceException(ServerError.InternalError, "Unable to detach volume");
-                }
-            } else {
-                throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-            }
  	        
-            return request;
-   	        
-       	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 DetachVolume - ", error);
-    		throw error;
+    		CloudStackVolume vol = cloudStackCall(command, true, "detachvolumeresponse", "volume", CloudStackVolume.class);
+    		if(vol != null) {
+    			request.setState("detached");
+    			return request;
+    		}
     		
-    	} catch( Exception e ) {
+    		throw new EC2ServiceException( ServerError.InternalError, "An unexpected error occurred." );
+       	} catch( Exception e ) {
     		logger.error( "EC2 DetachVolume - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}   	    
     }
-   
     
-    public EC2Volume handleRequest( EC2CreateVolume request ) 
-    { 
-        StringBuffer params = new StringBuffer();
-    	boolean foundDisk = false;
+    public EC2Volume handleRequest( EC2CreateVolume request ) {
+    	CloudStackCommand command = new CloudStackCommand("createVolume");
     	
-    	try 
-    	{   params.append( "command=createVolume" );
-   	        
+    	boolean foundDisk = false;
+    	try {
     		// -> put either snapshotid or diskofferingid on the request
     		String snapshotId = request.getSnapshotId();
-    		Integer size      = request.getSize();
+    		Integer size = request.getSize();
 
    	        if (null == snapshotId)
    	        {
@@ -1218,7 +1171,7 @@ public class EC2Engine {
    	   		    for( int i=0; i < offerSet.length; i++ ) 
    	   		    {
    	   		         if (offerSet[i].getIsCustomized()) {
-   	   		    	     params.append( "&diskofferingid=" + offerSet[i].getId());
+   	   		        	 command.setParam("diskofferingid", offerSet[i].getId());
    	   		    	     foundDisk = true;
    	   		    	     break;
    	   		         } 	   		    		  
@@ -1227,76 +1180,53 @@ public class EC2Engine {
    	        }
    	      
    	        // -> no volume name is given in the Amazon request but is required in the cloud API
-    		String volName = safeURLencode( UUID.randomUUID().toString());
-   	        params.append( "&name=" + volName );
- 
-   	        if (null != size      ) params.append( "&size=" + size.toString());        
-   	        if (null != snapshotId) params.append( "&snapshotId=" + snapshotId );  	        
-   	        params.append( "&zoneId=" + toZoneId( request.getZoneName()));     
-   	        String query = params.toString();   	        
+   	        command.setParam("name", UUID.randomUUID().toString());
    	        
-
-            // ->
-  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createVolume", true );
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     return waitForVolume( jobId );  
-            }
- 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+   	        if (null != size)
+   	        	command.setParam("size", size.toString());
+   	        	
+   	        if (null != snapshotId) 
+   	        	command.setParam("snapshotId", snapshotId);
    	        
-       	} 
-    	catch( EC2ServiceException error ) 
-    	{
-    		logger.error( "EC2 CreateVolume - ", error);
-    		throw error;	
-    	} 
-    	catch( Exception e ) 
-    	{
+   	        command.setParam("zoneId", toZoneId( request.getZoneName()));
+   	        
+   	        CloudStackVolume vol = cloudStackCall(command, true, "createvolumeresponse", "volume", CloudStackVolume.class);
+   	        EC2Volume ec2Vol = new EC2Volume();
+   	        ec2Vol.setId(String.valueOf(vol.getId()));
+   	        ec2Vol.setZoneName(vol.getZoneName());
+   	        ec2Vol.setSize(String.valueOf(vol.getSize()));
+   	        ec2Vol.setCreated(vol.getCreated());
+   	        
+   	        ec2Vol.setState( "available" );
+   	        return ec2Vol;
+       	} catch( Exception e ) {
     		logger.error( "EC2 CreateVolume - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}   	    
     }
-
     
     /**
      * The cloudstack documentation shows this to be an "(A)" (i.e., asynch) operation but it is not.
      * @param request
      * @return
      */
-    public EC2Volume deleteVolume( EC2Volume request ) 
-    {
-    	try 
-    	{   StringBuffer params = new StringBuffer();
-   	        params.append( "command=deleteVolume" );
-   	        params.append( "&id=" + request.getId());
-   	        String query = params.toString();
-
-  		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteVolume", true );
-	        NodeList match = cloudResp.getElementsByTagName( "success" );
- 	        if ( 0 < match.getLength()) 
- 	        {
-	    	     Node item = match.item(0);
-	    	     String value = new String( item.getFirstChild().getNodeValue());
-	    	     if (value.equalsIgnoreCase( "true" )) request.setState( "deleted" );
-            }
- 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-
-    	    return request;   	        
-       	} 
-    	catch( EC2ServiceException error ) 
-    	{
-    		logger.error( "EC2 DeleteVolume 1 - ", error);
-    		throw error;  		
-    	} 
-    	catch( Exception e ) 
-    	{
+    public EC2Volume deleteVolume( EC2Volume request ) {
+    	try {   
+    		CloudStackCommand command = new CloudStackCommand("deleteVolume");
+    		command.setParam("id", request.getId());
+    		
+    		CloudStackInfoResponse response = cloudStackCall(command, true, "deletevolumeresponse", null, CloudStackInfoResponse.class);
+    		if(response.getSuccess() != null && response.getSuccess().booleanValue()) {
+    			request.setState("deleted");
+    			return request;
+    		}
+    		
+ 	        throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+       	} catch( Exception e ) {
     		logger.error( "EC2 DeleteVolume 2 - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}   	    
     }
-
     
     /**
      * Note that more than one VM can be requested rebooted at once. 
@@ -1307,18 +1237,21 @@ public class EC2Engine {
     	EC2Instance[] vms = null;
 
     	// -> reboot is not allowed on destroyed (i.e., terminated) instances
-    	try 
-    	{   String[] instanceSet = request.getInstancesSet();
+    	try {   
+    		String[] instanceSet = request.getInstancesSet();
     	    EC2DescribeInstancesResponse previousState = listVirtualMachines( instanceSet, null );
      	    vms = previousState.getInstanceSet();
     	    
      	    // -> send reboot requests for each found VM 
-     		for( int i=0; i < vms.length; i++ ) 
-     		{
+     		for( int i=0; i < vms.length; i++ ) {
      		   if (vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
 
-     	       String query = new String( "command=rebootVirtualMachine&id=" + vms[i].getId());
-     		   resolveURL(genAPIURL(query, genQuerySignature(query)), "rebootVirtualMachine", true );
+     		   CloudStackCommand command = new CloudStackCommand("rebootVirtualMachine");
+     		   command.setParam("id", vms[i].getId());
+     		   
+     		   CloudStackInfoResponse commandResponse = cloudStackCall(command, false, "rebootvirtualmachineresponse", null, CloudStackInfoResponse.class);
+     		   if(logger.isDebugEnabled())
+     			   logger.debug("Rebooting VM " + vms[i].getId() + " job " + commandResponse.getJobId());
      		}
      		
      		// -> if some specified VMs where not found we have to tell the caller
@@ -1326,15 +1259,9 @@ public class EC2Engine {
         		throw new EC2ServiceException(ClientError.InvalidAMIID_NotFound, "One or more instanceIds do not exist, other instances rebooted.");
     			
      		return true;
-     		
-       	} 
-    	catch( EC2ServiceException error ) {
-    		logger.error( "EC2 RebootInstances - ", error );
-    		throw error;   		
-    	} 
-    	catch( Exception e ) {
+       	} catch( Exception e ) {
     		logger.error( "EC2 RebootInstances - ", e );
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}
     }
 
@@ -1437,8 +1364,7 @@ public class EC2Engine {
      * The Amazon API returns the previous state and the modified state as the
      * result of this API.
      */
-    public EC2StartInstancesResponse handleRequest(EC2StartInstances request) 
-    {
+    public EC2StartInstancesResponse handleRequest(EC2StartInstances request) {
     	EC2StartInstancesResponse instances = new EC2StartInstancesResponse();
     	EC2Instance[] vms = null;
     	
@@ -1801,7 +1727,6 @@ public class EC2Engine {
   	   	     return instances;
   	    else return ifs.evaluate( instances );     
 	}
-
     
     /**  
      * Get one or more templates depending on the volumeId parameter.
@@ -1809,56 +1734,49 @@ public class EC2Engine {
      * @param volumeId   - if interested in one specific volume, null if want to list all volumes
      * @param instanceId - if interested in volumes for a specific instance, null if instance is not important
      */
-    private EC2DescribeVolumesResponse listVolumes( String volumeId, String instanceId, EC2DescribeVolumesResponse volumes ) 
-        throws IOException, SAXException, ParserConfigurationException, EC2ServiceException, SignatureException, ParseException 
-    {    
-       	Node parent = null;    	
-	    StringBuffer params = new StringBuffer();
-   	    params.append( "command=listVolumes" );
-   	    if (null != volumeId  ) params.append( "&id=" + volumeId );
-   	    if (null != instanceId) params.append( "&virtualMachineId=" + instanceId );
-   	    String query = params.toString();
+    private EC2DescribeVolumesResponse listVolumes(String volumeId, String instanceId, 
+    		EC2DescribeVolumesResponse volumes)throws Exception {
 
-       	Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listVolumes", true );
-		NodeList match     = cloudResp.getElementsByTagName( "volume" ); 
-		int length = match.getLength();
-		    
-	    for( int i=0; i < length; i++ ) 
-	    {
-	    	if (null != (parent = match.item(i))) 
-	    	{ 
-	    		NodeList children = parent.getChildNodes();
-	    		int      numChild = children.getLength();
-    			EC2Volume vol = new EC2Volume();
-	    		
-	    		for( int j=0; j < numChild; j++ ) 
-	    		{
-	    			Node   child = children.item(j);
-	    			String name  = child.getNodeName();
-	    			
-	    			if (null != child.getFirstChild()) 
-	    			{
-	    			    String value = child.getFirstChild().getNodeValue();
-	    			
-		                     if (name.equalsIgnoreCase( "id"              )) vol.setId( value );
-   			            else if (name.equalsIgnoreCase( "attached"        )) vol.setAttached( value );
-	   			        else if (name.equalsIgnoreCase( "created"         )) vol.setCreated( value );
-	   			        else if (name.equalsIgnoreCase( "deviceid"        )) vol.setDeviceId( Integer.parseInt( value ));
-	   			        else if (name.equalsIgnoreCase( "hypervisor"      )) vol.setHypervisor( value );
-	   			        else if (name.equalsIgnoreCase( "snapshotid"      )) vol.setSnapShotId( value );		                     
-	   			        else if (name.equalsIgnoreCase( "state"           )) vol.setState( mapToAmazonVolState(value));
-	   			        else if (name.equalsIgnoreCase( "size"            )) vol.setSize( value );
-	   			        else if (name.equalsIgnoreCase( "type"            )) vol.setType( value );
-	   			        else if (name.equalsIgnoreCase( "virtualmachineid")) vol.setInstanceId( value );
-	   			        else if (name.equalsIgnoreCase( "vmstate"         )) vol.setVMState( value );
-	   			        else if (name.equalsIgnoreCase( "zonename"        )) vol.setZoneName( value );
-	    			}
-	    	    }
-	 		    volumes.addVolume( vol );
-		    }
-	    }
+    	CloudStackCommand command = new CloudStackCommand("listVolumes");
+    	if(null != volumeId)
+    		command.setParam("id", volumeId);
+    	if(null != instanceId)
+    		command.setParam("virtualMachineId", instanceId);
+    	
+    	List<CloudStackVolume> vols = cloudStackListCall(command, "listvolumesresponse", "volume",
+    		new TypeToken<List<CloudStackVolume>>() {}.getType());
+
+    	if(vols != null && vols.size() > 0) {
+    		for(CloudStackVolume vol : vols) {
+				EC2Volume ec2Vol = new EC2Volume();
+				ec2Vol.setId(String.valueOf(vol.getId()));
+				if(vol.getAttached() != null)
+					ec2Vol.setAttached(vol.getAttached());
+				ec2Vol.setCreated(vol.getCreated());
+				
+				if(vol.getDeviceId() != null)
+					ec2Vol.setDeviceId((int)vol.getDeviceId().longValue());
+				ec2Vol.setHypervisor(vol.getHypervisor());
+				
+				if(vol.getSnapshotId() != null)
+					ec2Vol.setSnapShotId(String.valueOf(vol.getSnapshotId()));
+				ec2Vol.setState(mapToAmazonVolState(vol.getState()));
+				ec2Vol.setSize(String.valueOf(vol.getSize()));
+				ec2Vol.setType(vol.getVolumeType());
+				
+				if(vol.getVirtualMachineId() != null)
+					ec2Vol.setInstanceId(String.valueOf(vol.getVirtualMachineId()));
+				
+				if(vol.getVirtualMachineState() != null)
+					ec2Vol.setVMState(vol.getVirtualMachineState());
+				ec2Vol.setZoneName(vol.getZoneName());
+				
+	 		    volumes.addVolume(ec2Vol);
+    		}
+    	}
+    	
 		return volumes;
-    }
+	}
 
     /**
      * Translate the given zone name into the required zoneId.  Query for 
@@ -2639,53 +2557,6 @@ public class EC2Engine {
 	// Methods are about to be obsolete    
 	//
 
-    private EC2DescribeAvailabilityZonesResponse listZones_obsolete( String[] interestedZones ) 
-    throws IOException, SAXException, ParserConfigurationException, EC2ServiceException, SignatureException 
-    {    
-	EC2DescribeAvailabilityZonesResponse zones = new EC2DescribeAvailabilityZonesResponse();
-   	Node   parent = null;
-   	String id     = null;
-   	String name   = null;
-   	
-   	String   sortedQuery = new String( "available=true&command=listZones" );   // -> used to generate the signature
-		Document cloudResp   = resolveURL(genAPIURL( "command=listZones&available=true", genQuerySignature(sortedQuery)), "listZones", true );
-	NodeList match       = cloudResp.getElementsByTagName( "zone" ); 
-	int length = match.getLength();
-	    
-    for( int i=0; i < length; i++ ) 
-    {
-    	if (null != (parent = match.item(i))) 
-    	{ 
-    		NodeList children = parent.getChildNodes();
-    		int      numChild = children.getLength();
-    		
-    		for( int j=0; j < numChild; j++ ) 
-    		{
-    			Node   child    = children.item(j);
-    			String nodeName = child.getNodeName();
-    			
-			             if (nodeName.equalsIgnoreCase( "id"   )) id   = child.getFirstChild().getNodeValue();
-			        else if (nodeName.equalsIgnoreCase( "name" )) name = child.getFirstChild().getNodeValue();
-    	    }
-    		
- 		    // -> are we asking about specific zones?
- 		    if ( null != interestedZones && 0 < interestedZones.length ) 
- 		    {
- 		     	 for( int j=0; j < interestedZones.length; j++ ) 
- 		     	 {
- 		    	     if (interestedZones[j].equalsIgnoreCase( name )) {
- 		    			 zones.addZone( id, name );
- 		    			 break;
- 		    		 }
- 		    	 }
- 		    }
- 		    else zones.addZone( id, name );
-	    }
-    }
-	return zones;
-}
-	
-	
     /**
      * Return information on all defined service offerings.
      */
@@ -2729,7 +2600,6 @@ public class EC2Engine {
 	    }
         return offerings;
     }
-	
 	
     /**
      * Temporary hack to just get a valid VLANID
@@ -2816,384 +2686,6 @@ public class EC2Engine {
 	
         vms = waitForStartStop( vms, jobIds, 1, "running" );
         return vms[0].getState().equalsIgnoreCase( "running" );    	
-    }
-	
-	
-    public EC2RunInstancesResponse handleRequest_obsolete(EC2RunInstances request) 
-    {
-    	EC2RunInstancesResponse instances = new EC2RunInstancesResponse();
-    	NodeList match  = null;
-    	Node     item   = null;
-    	int createInstances    = 0;
-    	int canCreateInstances = -1;
-    	int waitFor            = 0;
-    	int countCreated       = 0;
-    	
-    	// [A] Can the user create the minimum required number of instances?
-    	try {
-    	    canCreateInstances = calculateAllowedInstances();
- 	        if (-1 == canCreateInstances) canCreateInstances = request.getMaxCount();
- 	        
-     	    if (canCreateInstances < request.getMinCount()) {
-    		    logger.info( "EC2 RunInstances - min count too big (" + request.getMinCount() + "), " + canCreateInstances + " left to allocate");
-    		    throw new EC2ServiceException(ClientError.InstanceLimitExceeded ,"Only " + canCreateInstances + " instance(s) left to allocate");	
-     	    }
-
-     	    if ( canCreateInstances < request.getMaxCount()) 
-     		     createInstances = canCreateInstances;
-     	    else createInstances = request.getMaxCount();
-
-	        EC2Instance[] vms    = new EC2Instance[ createInstances ];
-	        String[]      jobIds = new String[ createInstances ];
-
-	        
-     	    // [B] Create n separate VM instances 
-	        OfferingBundle offer = instanceTypeToOfferBundle( request.getInstanceType());
-    	    StringBuffer params = new StringBuffer();
-       	    params.append( "command=deployVirtualMachine" );
-
-       	    if (null != request.getGroupId()) params.append("&" + ApiConstants.SECURITY_GROUP_NAMES + "=" + request.getGroupId());
-       	    
-       	    String zoneId = toZoneId(request.getZoneName());
-       	    
-       	    if (cloudStackVersion >= CLOUD_STACK_VERSION_2_2) {
-           	    if (null != request.getKeyName()) params.append("&keypair=" + safeURLencode(request.getKeyName()));
-           	    
-           	    String dcNetworkType = getDCNetworkType(zoneId);
-           	    if (dcNetworkType.equals("Advanced")) { 
-           	    	params.append("&networkIds=" + getNetworkId(zoneId));
-           	    }
-       	    }
-
-       	    params.append( "&serviceOfferingId=" + offer.getServiceOfferingId());
-            params.append("&size=" + String.valueOf(request.getSize()));
-       	    params.append( "&templateId=" + request.getTemplateId());
-       	    if (null != request.getUserData()) params.append( "&userData=" + safeURLencode( request.getUserData()));
-       	    
-       	    // temp hack
-       	    //String vlanId = hackGetVlanId();
-       	    //if (null != vlanId) params.append( "&vlanId=" + vlanId );
-       	    // temp hack   
-       	    
-       	    params.append( "&zoneId=" + zoneId);
-       	    String query      = params.toString();
-            String apiCommand = genAPIURL(query, genQuerySignature(query));
- 		
-     		for( int i=0; i < createInstances; i++ ) 
-     		{
-     		   Document cloudResp = resolveURL( apiCommand, "deployVirtualMachine", true );
-     		   vms[i] = new EC2Instance();
-      		    
-    	       match = cloudResp.getElementsByTagName( "jobid" ); 
-     	       if (0 < match.getLength()) {
-   	    	       item = match.item(0);
-   	    	       jobIds[i] = new String( item.getFirstChild().getNodeValue());
-   	    	       waitFor++;
-	           }
-     	    }    		
-	   		
-     	   	// [C] Wait until all the requested starts have completed or failed
-     		//  -> did they all succeeded?
-           	vms = waitForDeploy( vms, jobIds, waitFor );
-        	for( int k=0; k < vms.length; k++ )	
-        	{
-        		if (null != vms[k].getId()) {
-        			// request.getInstanceType() can return null
-        			vms[k].setServiceOffering( serviceOfferingIdToInstanceType( offer.getServiceOfferingId()));
-        			instances.addInstance( vms[k] );
-        			countCreated++;
-        		}
-        	}
-
-         	if (0 == countCreated) 
-         		throw new EC2ServiceException(ServerError.InsufficientInstanceCapacity, "Insufficient Instance Capacity" );
-            
-         	return instances;
-            
-    	} catch( EC2ServiceException error ) {
-    		throw error;
-     	} catch( Exception e ) {
-    		logger.error( "EC2 RunInstances - deploy 2 ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-     	}
-    }
-
-    private int calculateAllowedInstances_obsolete() throws Exception 
-    {    
-    	if ( cloudStackVersion >= CLOUD_STACK_VERSION_2_1 )
-    	{
-	    	 NodeList match      = null;
-		     Node     item       = null;
-		     int      maxAllowed = -1;
-		
-	 		 // -> get the user limits on instances
-	     	 String   query     = new String( "command=listResourceLimits&resourceType=0" );
-	 		 Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listResourceLimits", true );
-	 		    
-	  		 match = cloudResp.getElementsByTagName( "max" ); 
-		     if ( 0 < match.getLength()) 
-		     {
-		    	  item = match.item(0);
-	    	      maxAllowed = Integer.parseInt( item.getFirstChild().getNodeValue());
-	    	      if (-1 == maxAllowed) return -1;   // no limit
-		        
-		          // -> how many instances has the user already created?
-	    	      EC2DescribeInstancesResponse existingVMS = listVirtualMachines( null, null );
-	    	      EC2Instance[] vmsList = existingVMS.getInstanceSet();
-	    	      return (maxAllowed - vmsList.length);
-		     }
-		     else return 0;    	
-    	}
-    	else return -1;
- 	}
-	
-    public EC2StopInstancesResponse handleRequest_obsolete(EC2StopInstances request) 
-    {
-    	EC2StopInstancesResponse instances = new EC2StopInstancesResponse();
-    	EC2Instance[] vms = null;
-    	String query   = null;
-    	Node   item    = null;
-    	int    waitFor = 0;
-    
-    	// -> first determine the current state of each VM (becomes it previous state)
-    	try 
-    	{   String[] instanceSet = request.getInstancesSet();
-    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( instanceSet, null );
-     	    vms = previousState.getInstanceSet();
-        	String[] jobIds = new String[ vms.length ];
-    
-    	    // -> send stop requests for each item 
-     		for( int i=0; i < vms.length; i++ ) 
-     		{
-     		   vms[i].setPreviousState( vms[i].getState());
-     		   
-     		   if ( request.getDestroyInstances()) {
-     			    if (vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
-     		   }
-     		   else {
-     			    if (vms[i].getState().equalsIgnoreCase( "Stopped" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
-     		   }
-
-       	       if ( request.getDestroyInstances())
-     	            query = new String( "command=destroyVirtualMachine&id=" + vms[i].getId());
-   	           else query = new String( "command=stopVirtualMachine&id="    + vms[i].getId());
-     		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
-     		   
-    	       NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-    	       if (0 < match.getLength()) {
-   	    	       item = match.item(0);
-   	    	       jobIds[i] = new String( item.getFirstChild().getNodeValue());
-   	    	       waitFor++;
-	           }
-     		}
-     		
-        	// -> wait until all the requested stops have completed or failed
-        	vms = waitForStartStop( vms, jobIds, waitFor, (request.getDestroyInstances() ? "destroyed" : "stopped"));
-        	for( int k=0; k < vms.length; k++ )	instances.addInstance( vms[k] );
-        	
-        	// -> are there any invalid instance IDs, show which ones are bad
-        	if (instanceSet.length != vms.length)
-        	{
-        		boolean found = false;
-        		for( int j=0; j < instanceSet.length; j++, found = false ) 
-        		{
-        			for( int k=0; k < vms.length; k++ ) 
-        			{
-        			     if (vms[k].getId().equalsIgnoreCase( instanceSet[j])) {
-        			    	 found = true;
-        			    	 break;
-        			     }
-        			}
-        			
-        			if (!found) 
-        			{
-        				EC2Instance invalidId = new EC2Instance();
-        				invalidId.setId( instanceSet[j] );
-        				invalidId.setPreviousState( "Error" );
-        				invalidId.setState( "Error" );
-        				instances.addInstance( invalidId );
-        			}
-        		}
-        	}
-        	return instances;
-
-    	} 
-    	catch( EC2ServiceException error ) {
-     		logger.error( "EC2 StopInstances - ", error);
-    		throw error;
-    		
-    	} 
-    	catch( Exception e ) {
-    		logger.error( "EC2 StopInstances - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-    	}
-    }
-	
-    public EC2StartInstancesResponse handleRequest_obsolete(EC2StartInstances request) 
-    {
-    	EC2StartInstancesResponse instances = new EC2StartInstancesResponse();
-    	EC2Instance[] vms = null;
-    	Node item    = null;
-    	int  waitFor = 0;
-    	
-    	// -> first determine the current state of each VM (becomes it previous state)
-    	try {
-    	    EC2DescribeInstancesResponse previousState = listVirtualMachines( request.getInstancesSet(), null );
-     	    vms = previousState.getInstanceSet();
-        	String[] jobIds = new String[ vms.length ];
-
-    	    // -> send start requests for each item 
-     		for( int i=0; i < vms.length; i++ ) 
-     		{
-     		   // -> if its already running then we are done
-     		   vms[i].setPreviousState( vms[i].getState());
-     		   if (vms[i].getState().equalsIgnoreCase( "Running" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
-
-     	       String query = new String( "command=startVirtualMachine&id=" + vms[i].getId());
-     		   Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "startVirtualMachine", true );
-     		   
-    	       NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-     	       if (0 < match.getLength()) {
-   	    	       item = match.item(0);
-   	    	       jobIds[i] = new String( item.getFirstChild().getNodeValue());
-   	    	       waitFor++;
-	           }
-     		}
-     		
-        	// -> wait until all the requested starts have completed or failed
-           	vms = waitForStartStop( vms, jobIds, waitFor, "running" );
-        	for( int k=0; k < vms.length; k++ )	instances.addInstance( vms[k] );
-        	return instances;
-
-    	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 StartInstances - ", error);
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "EC2 StartInstances - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-    	}
-    }
-	
-    /**
-     * Get information on one or more virtual machines depending on the instanceId parameter.
-     * 
-     * @param instanceId - if null then return information on all existing instances, otherwise
-     *                     just return information on the matching instance.
-     * @param instances  - a container object to fill with one or more EC2Instance objects
-     * 
-     * @return the same object passed in as the "instances" parameter modified with one or more
-     *         EC2Instance objects loaded.
-     */
-    private EC2DescribeInstancesResponse lookupInstances_obsolete( String instanceId, EC2DescribeInstancesResponse instances ) 
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException, 
-               InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
-    {
-       	Node parent = null;
-	    StringBuffer params = new StringBuffer();
-   	    params.append( "command=listVirtualMachines" );
-   	    if (null != instanceId) params.append( "&id=" + instanceId );
-   	    String query = params.toString();
-
-       	Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "listVirtualMachines", true );
-	    NodeList match     = cloudResp.getElementsByTagName( "virtualmachine" ); 
-	    int      length    = match.getLength();
-
-	    for( int i=0; i < length; i++ ) 
-	    {
-	    	if (null != (parent = match.item(i))) 
-	    	{ 
-	    		NodeList children = parent.getChildNodes();
-	    		int      numChild = children.getLength();
-    			EC2Instance vm = new EC2Instance();
-	    		
-	    		for( int j=0; j < numChild; j++ ) 
-	    		{
-	    		    // -> each template has many child tags
-	    			Node   child = children.item(j);
-	    			String name  = child.getNodeName();
-    			
-	    			if (null != child.getFirstChild()) 
-	    			{
-	    			    String value = child.getFirstChild().getNodeValue();
-	    			    //System.out.println( "\n*** vm: " + name + " = " + value );
-	    			
-   			                 if (name.equalsIgnoreCase( "id"                )) vm.setId( value );
-   			            else if (name.equalsIgnoreCase( "name"              )) vm.setName( value );
-   			            else if (name.equalsIgnoreCase( "zonename"          )) vm.setZoneName( value );
-   			            else if (name.equalsIgnoreCase( "templateid"        )) vm.setTemplateId( value );
-   			            else if (name.equalsIgnoreCase( "securitygroup"     )) vm.setGroup(getChildByName( vm, child.getChildNodes(), "name"));
-   			            else if (name.equalsIgnoreCase( "state"             )) vm.setState( value );
-   			            else if (name.equalsIgnoreCase( "created"           )) vm.setCreated( value );
-   			            else if (name.equalsIgnoreCase( "ipaddress"         )) vm.setIpAddress( value );
-   			            else if (name.equalsIgnoreCase( "account" 	        )) vm.setAccountName(value);
-   			            else if (name.equalsIgnoreCase( "domainid" 	        )) vm.setDomainId(value);
-   			            else if (name.equalsIgnoreCase( "hypervisor"        )) vm.setHypervisor(value);
-   			            else if (name.equalsIgnoreCase( "rootdevicetype"    )) vm.setRootDeviceType(value);
-   			            else if (name.equalsIgnoreCase( "rootdeviceid"      )) vm.setRootDeviceId( Integer.parseInt( value ));  			                 
-   			            else if (name.equalsIgnoreCase( "serviceofferingid" )) vm.setServiceOffering( serviceOfferingIdToInstanceType( value ));
-   			            else if (name.equalsIgnoreCase( "nic"               )) vm.setPrivateIpAddress(getChildByName( vm, child.getChildNodes(), "ipaddress"));
-	    			}
-	    	    }
-    			instances.addInstance( vm );
-	    	}
-	    }
-	    return instances;
-    }
-	
-    public EC2Snapshot createSnapshot_obsolete( String volumeId ) 
-    {
-		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
-    	try {
-	        String query = new String( "command=createSnapshot&volumeId=" + volumeId );
-            Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createSnapshot", true );
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     EC2Snapshot shot = waitForSnapshot( jobId );
-	    	     
-	    	     shot.setVolumeId( volumeId );
-	    	     listVolumes( volumeId, null, volumes );
-	             EC2Volume[] volSet = volumes.getVolumeSet();
-	             if (0 < volSet.length) shot.setVolumeSize( volSet[0].getSize());
-	    	     return shot;
-            }
- 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-   	        
-       	} catch( EC2ServiceException error ) {
-     		logger.error( "EC2 CreateSnapshot - ", error);
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "EC2 CreateSnapshot - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-    	}
-    }
-    
-    public boolean deleteSnapshot_obsolete( String snapshotId ) 
-    {
-    	try {
-	        String query = new String( "command=deleteSnapshot&id=" + snapshotId );
-            Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteSnapshot", true );
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     if (waitForAsynch( jobId )) return true;
-            }
- 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-
-    	    return false;
-   	        
-       	} catch( EC2ServiceException error ) {
-     		logger.error( "EC2 DeleteSnapshot - ", error);
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "EC2 DeleteSnapshot - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-    	}
     }
 	
     /**
@@ -3439,49 +2931,6 @@ public class EC2Engine {
 	      }
        }
     }
-
-    private EC2Snapshot waitForSnapshot( String jobId ) 
-        throws EC2ServiceException, SAXException, ParserConfigurationException, DOMException, ParseException, SignatureException, Exception  
-    {
-        EC2Snapshot shot   = new EC2Snapshot();
-        while( true ) 
-        {
-        	CloudStackCommand cmd = new CloudStackCommand("queryAsyncJobResult");
-        	cmd.setParam("jobId", jobId);
-        	JsonAccessor json = executeCommand(cmd);
-        	
-    		if(json.tryEval("queryasyncjobresultresponse") != null) {
-    			int jobStatus = json.getAsInt("queryasyncjobresultresponse.jobstatus");
-    			switch(jobStatus) {
-    			case 2:
-    	    		throw new EC2ServiceException(ServerError.InternalError, 
-    	    			json.getAsString("queryasyncjobresultresponse.jobresult.errorcode") + " " + 
-    	    			json.getAsString("queryasyncjobresultresponse.jobresult.errortext"));
-    	    		
-    			case 0 :
-            	    try { Thread.sleep( pollInterval4 ); } catch( Exception e ) {}
-            	    break;
-            	    
-    			case 1 :
-    				CloudStackSnapshot cloudSnapshot = new Gson().fromJson(json.eval("queryasyncjobresultresponse.jobresult.snapshot"), CloudStackSnapshot.class);
-	                shot.setId(String.valueOf(cloudSnapshot.getId()));
-	                shot.setName(cloudSnapshot.getName());
-	                shot.setType(cloudSnapshot.getSnapshotType());
-	                shot.setAccountName(cloudSnapshot.getAccountName());
-                    shot.setDomainId(String.valueOf(cloudSnapshot.getDomainId()));
-	                shot.setCreated(cloudSnapshot.getCreated());
-    				return shot;
-    				
-    			default :
-    				assert(false);
-                    throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed - invalid JSON response");
-    			}
-    		} else {
-                throw new EC2ServiceException(ServerError.InternalError, "Snapshot action failed - invalid JSON response");
-    		}
-        }
-    }
-
 
     /**
      * Waiting for VMs to start or stop is identical.
