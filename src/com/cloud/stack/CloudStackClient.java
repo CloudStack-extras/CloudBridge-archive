@@ -85,14 +85,13 @@ public class CloudStackClient {
 		return this;
 	}
 	
-	public <T> T call(CloudStackCommand cmd, String apiKey, String secretKey, 
+	public <T> T call(CloudStackCommand cmd, String apiKey, String secretKey, boolean followToAsyncResult, 
 		String responseName, String responseObjName, Class<T> responseClz)	throws Exception {
 		
 		assert(responseName != null);
-		assert(responseObjName != null);
 		
 		JsonAccessor json = execute(cmd, apiKey, secretKey);
-		if(json.tryEval(responseName + ".jobid") != null) {
+		if(followToAsyncResult && json.tryEval(responseName + ".jobid") != null) {
 			long startMs = System.currentTimeMillis();
 	        while(System.currentTimeMillis() -  startMs < _pollTimeoutMs) {
 				CloudStackCommand queryJobCmd = new CloudStackCommand("queryAsyncJobResult");
@@ -114,7 +113,10 @@ public class CloudStackClient {
 	            	    break;
 	            	    
 	    			case 1 :
-	    				return (T)(new Gson()).fromJson(queryAsyncJobResponse.eval("queryasyncjobresultresponse.jobresult." + responseObjName), responseClz);
+	    				if(responseObjName != null)
+	    					return (T)(new Gson()).fromJson(queryAsyncJobResponse.eval("queryasyncjobresultresponse.jobresult." + responseObjName), responseClz);
+	    				else
+	    					return (T)(new Gson()).fromJson(queryAsyncJobResponse.eval("queryasyncjobresultresponse.jobresult"), responseClz);
 	    				
 	    			default :
 	    				assert(false);
@@ -127,7 +129,10 @@ public class CloudStackClient {
 	        
             throw new Exception("Operation failed - async-job query timed out");
 		} else {
-			return (T)(new Gson()).fromJson(json.eval(responseName + "." + responseObjName), responseClz);
+			if(responseObjName != null)
+				return (T)(new Gson()).fromJson(json.eval(responseName + "." + responseObjName), responseClz);
+			else
+				return (T)(new Gson()).fromJson(json.eval(responseName), responseClz);
 		}
 	}
 
@@ -136,10 +141,12 @@ public class CloudStackClient {
 		String responseName, String responseObjName, Type collectionType) throws Exception {
 		
 		assert(responseName != null);
-		assert(responseObjName != null);
 		
 		JsonAccessor json = execute(cmd, apiKey, secretKey);
-		return (new Gson()).fromJson(json.eval(responseName + "." + responseObjName), collectionType);
+
+		if(responseObjName != null)
+			return (new Gson()).fromJson(json.eval(responseName + "." + responseObjName), collectionType);
+		return (new Gson()).fromJson(json.eval(responseName), collectionType);
 	}
 
 	public JsonAccessor execute(CloudStackCommand cmd, String apiKey, String secretKey) throws Exception {

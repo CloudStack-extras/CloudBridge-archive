@@ -36,4 +36,3 @@
     <mapping resource="com/cloud/bridge/model/SAcl.hbm.xml"/>
 </session-factory>
 </hibernate-configuration>
-

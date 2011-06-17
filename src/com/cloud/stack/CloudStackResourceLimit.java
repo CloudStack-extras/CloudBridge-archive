@@ -15,20 +15,9 @@
  */
 package com.cloud.stack;
 
-import java.util.List;
-
 import com.google.gson.annotations.SerializedName;
 
-public class CloudStackSecurityGroup {
-    @SerializedName("id")
-    private Long id;
-
-    @SerializedName("name")
-    private String name;
-
-    @SerializedName("description")
-    private String description;
-
+public class CloudStackResourceLimit {
     @SerializedName("account")
     private String accountName;
 
@@ -37,30 +26,15 @@ public class CloudStackSecurityGroup {
 
     @SerializedName("domain")
     private String domainName;
-    
-    @SerializedName(ApiConstants.JOB_ID)
-    private Long jobId;
 
-    @SerializedName("jobstatus")
-    private Integer jobStatus;
+    @SerializedName("resourcetype")
+    private String resourceType;
 
-    @SerializedName("ingressrule")
-    private List<CloudStackIngressRule> ingressRules;
+    @SerializedName("max")
+    private Long max;
 
-    public CloudStackSecurityGroup() {
+    public CloudStackResourceLimit() {
     }
-    
-	public Long getId() {
-		return id;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public String getDescription() {
-		return description;
-	}
 
 	public String getAccountName() {
 		return accountName;
@@ -74,15 +48,11 @@ public class CloudStackSecurityGroup {
 		return domainName;
 	}
 
-	public Long getJobId() {
-		return jobId;
+	public String getResourceType() {
+		return resourceType;
 	}
 
-	public Integer getJobStatus() {
-		return jobStatus;
-	}
-
-	public List<CloudStackIngressRule> getIngressRules() {
-		return ingressRules;
+	public Long getMax() {
+		return max;
 	}
 }
