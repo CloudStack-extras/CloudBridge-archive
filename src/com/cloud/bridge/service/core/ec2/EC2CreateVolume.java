@@ -23,9 +23,9 @@ import com.cloud.bridge.service.exception.EC2ServiceException;
 public class EC2CreateVolume {
     protected final static Logger logger = Logger.getLogger(EC2CreateVolume.class);
 
-	private Integer    size;   // <- in gigs
-	private String snapshotId;
-	private String zoneName;
+	private Integer size;   // <- in gigs
+	private String  snapshotId;
+	private String  zoneName;
     
 	public EC2CreateVolume() {
 		snapshotId = null;
@@ -38,7 +38,10 @@ public class EC2CreateVolume {
 	 * 
 	 * @param size - valid values are [1 .. 1024] and represent gigBytes
 	 */
-	public void setSize(String size) {
+	public void setSize(String size) 
+	{
+		if (null == size) return;  // size is an optional parameter
+		
 		try {
 		    this.size = Integer.parseInt(size);
 		}
