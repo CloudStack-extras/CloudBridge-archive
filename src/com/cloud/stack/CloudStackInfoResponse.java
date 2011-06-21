@@ -29,6 +29,9 @@ public class CloudStackInfoResponse {
 	
     @SerializedName(ApiConstants.JOB_ID)
     private Long jobId;
+    
+    @SerializedName(ApiConstants.ID)
+    private Long id;
 
 	public CloudStackInfoResponse() {
     }
@@ -48,4 +51,8 @@ public class CloudStackInfoResponse {
     public Long getJobId() {
 		return jobId;
 	}
+    
+    public Long getId() {
+    	return id;
+    }
 }

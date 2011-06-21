@@ -631,7 +631,21 @@ public class EC2Engine {
 		try {
 			CloudStackCommand command = new CloudStackCommand("createSnapshot");
 			command.setParam("volumeId", volumeId);
-			CloudStackSnapshot cloudSnapshot = cloudStackCall(command, true, "createsnapshotresponse", "snapshot", CloudStackSnapshot.class);
+			
+			CloudStackInfoResponse response = cloudStackCall(command, false, "createsnapshotresponse", null, CloudStackInfoResponse.class);
+			if(response.getJobId() == null || response.getId() == null) {
+				throw new Exception("Invalid CloudStack API response");
+			}
+			
+			CloudStackCommand listSnapshotCmd = new CloudStackCommand("listSnapshots");
+			listSnapshotCmd.setParam("id", String.valueOf(response.getId()));
+			
+			List<CloudStackSnapshot> tmpList = cloudStackListCall(listSnapshotCmd, "listsnapshotsresponse", "snapshot", 
+				new TypeToken<List<CloudStackSnapshot>> () {}.getType());
+			if(tmpList == null || tmpList.size() != 1)
+				throw new Exception("Invalid CloudStack API response to list a just created snapshot");
+			
+			CloudStackSnapshot cloudSnapshot = tmpList.get(0);
 			EC2Snapshot ec2Snapshot = new EC2Snapshot();
 			
 			ec2Snapshot.setId(String.valueOf(cloudSnapshot.getId()));
@@ -2137,34 +2151,6 @@ public class EC2Engine {
 	    return groupSet;
     }
     
-    
-    /**
-     * @param childName
-     */
-    private String getChildByName( EC2Instance vm, NodeList node, String childName )
-    {
-    	int numChild = node.getLength();
-
-    	for( int i=0; i < numChild; i++ ) 
-    	{
-    		 Node   child = node.item(i);
-    		 String name  = child.getNodeName();
-    			
-    		 if (null != child.getFirstChild()) 
-    		 {
-    		     String value = child.getFirstChild().getNodeValue();
-    		     //System.out.println( "nic: " + name + "=" + value );
-    		     
-		         //if (name.equalsIgnoreCase( "ipaddress" )) vm.setPrivateIpAddress( value ); 
-    		     if (name.equalsIgnoreCase(childName)) {
-    		         return value;
-    		     }
-    	     }
-    	}
-		return null;  	
-    }
-    
-    
     /**
      * Ingress Rules are one more level down the XML tree.
      */
@@ -2217,7 +2203,45 @@ public class EC2Engine {
      * 
      * @param interestedShots - can be null, should be a subset of all snapshots
      */
-    private EC2DescribeSnapshotsResponse listSnapshots( String[] interestedShots ) 
+    
+    private EC2DescribeSnapshotsResponse listSnapshots( String[] interestedShots ) throws Exception {
+		EC2DescribeSnapshotsResponse snapshots = new EC2DescribeSnapshotsResponse();
+		
+		List<CloudStackSnapshot> cloudSnapshots;
+		if(interestedShots == null || interestedShots.length == 0) {
+			CloudStackCommand cmd = new CloudStackCommand("listSnapshots");
+			cloudSnapshots = this.cloudStackListCall(cmd, "listsnapshotsresponse", "snapshot", 
+				new TypeToken<List<CloudStackSnapshot>> () {}.getType());
+		} else {
+			cloudSnapshots = new ArrayList<CloudStackSnapshot>();
+			
+			for(String id : interestedShots) {
+				CloudStackCommand cmd = new CloudStackCommand("listSnapshots");
+				cmd.setParam("id", id);
+
+				List<CloudStackSnapshot> tmpList = this.cloudStackListCall(cmd, "listsnapshotsresponse", "snapshot", 
+					new TypeToken<List<CloudStackSnapshot>> () {}.getType());
+				cloudSnapshots.addAll(tmpList);
+			}
+		}
+		
+		for(CloudStackSnapshot cloudSnapshot : cloudSnapshots) {
+			EC2Snapshot shot  = new EC2Snapshot();
+	        shot.setId(String.valueOf(cloudSnapshot.getId()));
+			shot.setName(cloudSnapshot.getName());
+			shot.setVolumeId(String.valueOf(cloudSnapshot.getVolumeId()));
+			shot.setType(cloudSnapshot.getSnapshotType());
+			shot.setState(cloudSnapshot.getState());
+			shot.setCreated(cloudSnapshot.getCreated());
+			shot.setAccountName(cloudSnapshot.getAccountName());
+			shot.setDomainId(String.valueOf(cloudSnapshot.getDomainId()));
+			
+			snapshots.addSnapshot(shot);
+		}
+	    return snapshots;
+	}
+    
+    private EC2DescribeSnapshotsResponse listSnapshots_obsolete( String[] interestedShots ) 
         throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
     {
     	EC2DescribeSnapshotsResponse snapshots = new EC2DescribeSnapshotsResponse();
