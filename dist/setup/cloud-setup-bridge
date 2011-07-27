@@ -112,10 +112,15 @@ function saveValues () {
 
 echo "Welcome to the CloudBridge setup."
 
+
 if [ ! -e $settingsFile ]
 then 
+    settingsFile=$1
+    if [ ! -e $settingsFile ]
+    then
 	echo "Error: Settings file not found."
 	exit 1
+    fi
 fi
 if [ ! -w $settingsFile ]
 then 

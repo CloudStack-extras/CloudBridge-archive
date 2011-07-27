@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Iterator;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -1045,10 +1046,13 @@ public class EC2Engine {
             String vmId = vmList[0].get("id").toString();
             
             Map async = execute("command=enableStaticNat&ipAddressId=%s&virtualMachineId=%s", ipId, vmId);
-
-            String jobId = async.get("jobid").toString();
-            return waitForAsynch(jobId);
-
+	    String stat = async.get("success").toString();
+	    if (stat.compareToIgnoreCase("true") == 0) {
+		return true;
+	    } 
+	    // if not, check for job id and wait...
+	    String jobId = async.get("jobid").toString();
+	    return waitForAsynch(jobId);
         } catch( EC2ServiceException error ) {
             logger.error( "EC2 AssociateAddress - ", error);
             throw error;
@@ -2747,14 +2751,23 @@ public class EC2Engine {
 		
 		return "s:-1";
 	}
-	
-    Map[] execList(String query, String... args) throws IOException, SignatureException {
-        Map r = execute(query, args);
-        if (r.isEmpty())
-            return new Map[0];
 
-        List l = (List) unwrap(r);
-        return (Map[]) l.toArray(new Map[0]);
+    Map[] execList(String query, String... args) throws IOException, SignatureException {
+        Map res = execute(query, args);
+        if (res.isEmpty())
+            return new Map[0];
+	// The problem here is there is a count kv pair prior to the array of objects
+	// in some cases, so we need to pop the count key:val pair  Kind of kludgy, but gets past this bug...
+	Iterator resIter = res.values().iterator();
+	resIter.next();
+	List l = null;
+	try {
+	    l = (List) resIter.next();
+	} catch(ClassCastException e) {
+	    // just unwrap the original map...
+	    l = (List) unwrap(res);
+	}
+	return (Map[]) l.toArray(new Map[0]);
     }
 
     Map execute(String query, String... args) throws IOException, SignatureException {
