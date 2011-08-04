@@ -55,6 +55,8 @@ import org.apache.axis2.databinding.utils.writer.MTOMAwareXMLSerializer;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
+import com.amazon.ec2.AllocateAddressResponse;
+import com.amazon.ec2.AssociateAddressResponse;
 import com.amazon.ec2.AttachVolumeResponse;
 import com.amazon.ec2.AuthorizeSecurityGroupIngressResponse;
 import com.amazon.ec2.CreateImageResponse;
@@ -77,11 +79,13 @@ import com.amazon.ec2.DescribeSecurityGroupsResponse;
 import com.amazon.ec2.DescribeSnapshotsResponse;
 import com.amazon.ec2.DescribeVolumesResponse;
 import com.amazon.ec2.DetachVolumeResponse;
+import com.amazon.ec2.DisassociateAddressResponse;
 import com.amazon.ec2.GetPasswordDataResponse;
 import com.amazon.ec2.ImportKeyPairResponse;
 import com.amazon.ec2.ModifyImageAttributeResponse;
 import com.amazon.ec2.RebootInstancesResponse;
 import com.amazon.ec2.RegisterImageResponse;
+import com.amazon.ec2.ReleaseAddressResponse;
 import com.amazon.ec2.ResetImageAttributeResponse;
 import com.amazon.ec2.RevokeSecurityGroupIngressResponse;
 import com.amazon.ec2.RunInstancesResponse;
@@ -91,6 +95,8 @@ import com.amazon.ec2.TerminateInstancesResponse;
 import com.cloud.bridge.model.UserCredentials;
 import com.cloud.bridge.persist.dao.OfferingDao;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
+import com.cloud.bridge.service.core.ec2.EC2AllocateAddress;
+import com.cloud.bridge.service.core.ec2.EC2AssociateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
@@ -101,6 +107,7 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeInstances;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSecurityGroups;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshots;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
+import com.cloud.bridge.service.core.ec2.EC2DisassociateAddress;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Filter;
 import com.cloud.bridge.service.core.ec2.EC2GroupFilterSet;
@@ -109,6 +116,7 @@ import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
+import com.cloud.bridge.service.core.ec2.EC2ReleaseAddress;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
 import com.cloud.bridge.service.core.ec2.EC2SecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2SnapshotFilterSet;
@@ -1172,7 +1180,6 @@ public class EC2RestServlet extends HttpServlet {
 		DescribeInstancesResponse EC2response = EC2SoapServiceImpl.toDescribeInstancesResponse( engine.handleRequest( EC2request ), engine);
 		serializeResponse(response, EC2response);
     }
-
     
     private void describeAddresses( HttpServletRequest request, HttpServletResponse response )
         throws ADBException, XMLStreamException, IOException {
@@ -1194,20 +1201,35 @@ public class EC2RestServlet extends HttpServlet {
 
     private void allocateAddress( HttpServletRequest request, HttpServletResponse response )
         throws ADBException, XMLStreamException, IOException {
-        EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-        serializeResponse(response, EC2SoapServiceImpl.toAllocateAddressResponse( engine.allocateAddress() ));
+    	
+    	EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
+    	
+    	EC2AllocateAddress ec2Request = new EC2AllocateAddress();
+    	
+    	AllocateAddressResponse ec2Response = EC2SoapServiceImpl.toAllocateAddressResponse( engine.handleRequest ( ec2Request ));
+    	
+    	serializeResponse(response, ec2Response);
     }
 
     private void releaseAddress( HttpServletRequest request, HttpServletResponse response )
         throws ADBException, XMLStreamException, IOException {
-        EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
+    	
+    	EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 
-        String publicIp = request.getParameter( "PublicIp" );
-        if (null == publicIp) {
-            response.sendError(530, "Missing PublicIp parameter" );
-            return;
-        }
-        serializeResponse(response, EC2SoapServiceImpl.toReleaseAddressResponse( engine.releaseAddress(publicIp) ));
+		String publicIp = request.getParameter( "PublicIp" );
+		if (publicIp == null) { 
+			response.sendError(530, "Missing PublicIp parameter");
+			return;
+		}
+    	
+    	EC2ReleaseAddress ec2Request = new EC2ReleaseAddress();
+    	if (ec2Request != null) {
+    		ec2Request.setPublicIp(publicIp);
+    	}
+    	
+    	ReleaseAddressResponse EC2Response = EC2SoapServiceImpl.toReleaseAddressResponse( engine.handleRequest( ec2Request ));
+
+    	serializeResponse(response, EC2Response);
     }
 
     private void associateAddress( HttpServletRequest request, HttpServletResponse response )
@@ -1224,11 +1246,20 @@ public class EC2RestServlet extends HttpServlet {
             response.sendError(530, "Missing InstanceId parameter" );
             return;
         }
-        serializeResponse(response, EC2SoapServiceImpl.toAssociateAddressResponse( engine.associateAddress(publicIp, instanceId) ));
+        
+        EC2AssociateAddress ec2Request = new EC2AssociateAddress();
+        if (ec2Request != null) {
+        	ec2Request.setInstanceId(instanceId);
+        	ec2Request.setPublicIp(publicIp);
+        }
+
+        AssociateAddressResponse ec2Response = EC2SoapServiceImpl.toAssociateAddressResponse( engine.handleRequest( ec2Request ));
+        
+        serializeResponse(response, ec2Response);
     }
 
     private void disassociateAddress( HttpServletRequest request, HttpServletResponse response )
-        throws ADBException, XMLStreamException, IOException {
+        throws ADBException, XMLStreamException, IOException {    	
         EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
 
         String publicIp = request.getParameter( "PublicIp" );
@@ -1236,7 +1267,15 @@ public class EC2RestServlet extends HttpServlet {
             response.sendError(530, "Missing PublicIp parameter" );
             return;
         }
-        serializeResponse(response, EC2SoapServiceImpl.toDisassociateAddressResponse( engine.disassociateAddress(publicIp) ));
+        
+        EC2DisassociateAddress ec2Request = new EC2DisassociateAddress();
+        if (ec2Request != null) {
+        	ec2Request.setPublicIp(publicIp);
+        }
+        
+        DisassociateAddressResponse ec2Response = EC2SoapServiceImpl.toDisassociateAddressResponse( engine.handleRequest( ec2Request ) ); 
+        
+        serializeResponse(response, ec2Response);
     }
 
     

@@ -65,6 +65,7 @@ import com.cloud.stack.ApiConstants;
 import com.cloud.stack.CloudStackClient;
 import com.cloud.stack.CloudStackCommand;
 import com.cloud.stack.CloudStackInfoResponse;
+import com.cloud.stack.CloudStackIpAddress;
 import com.cloud.stack.CloudStackNic;
 import com.cloud.stack.CloudStackResourceLimit;
 import com.cloud.stack.CloudStackSecurityGroup;
@@ -365,6 +366,7 @@ public class EC2Engine {
      * @param request
      * @return
      */
+ 
     public boolean revokeSecurityGroup( EC2AuthorizeRevokeSecurityGroup request ) 
     {
 		if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
@@ -717,6 +719,135 @@ public class EC2Engine {
 	    }
     }
     
+	public boolean handleRequest(EC2ReleaseAddress request) {
+		try {
+			CloudStackCommand listIPAddrCmd = new CloudStackCommand("listPublicIpAddresses");
+			if (listIPAddrCmd != null) {
+				listIPAddrCmd.setParam("ipAddress", request.getPublicIp());
+			}
+			List<CloudStackIpAddress> addrList = cloudStackListCall(listIPAddrCmd, "listpublicipaddressesresponse", "publicipaddress", new TypeToken<List<CloudStackIpAddress>> () {}.getType());
+			if (addrList == null || addrList.size() != 1) {
+				throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
+			}
+			CloudStackIpAddress cloudIp = addrList.get(0);
+			
+	    	CloudStackCommand command = new CloudStackCommand("disassociateIpAddress");
+	    	if (command != null) {
+	    		command.setParam("id", cloudIp.getId().toString());
+	    	}
+	    	CloudStackInfoResponse response = cloudStackCall(command, true, "disassociateipaddressresponse", "success", CloudStackInfoResponse.class);
+	    	if (response != null) {
+	    		return response.getSuccess();
+	    	}
+		} catch(Exception e) {
+			logger.error("EC2 ReleaseAddress - ", e);
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+		}
+		return false;
+	}
+
+	public boolean handleRequest( EC2AssociateAddress request ) {
+		try {
+			CloudStackCommand listIPAddrCmd = new CloudStackCommand("listPublicIpAddresses");
+			if (listIPAddrCmd != null) {
+				listIPAddrCmd.setParam("ipAddress", request.getPublicIp());
+			}
+			List<CloudStackIpAddress> addrList = cloudStackListCall(listIPAddrCmd, "listpublicipaddressesresponse", "publicipaddress", new TypeToken<List<CloudStackIpAddress>> () {}.getType());
+			if (addrList == null || addrList.size() != 1) {
+				throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
+			}
+			CloudStackIpAddress cloudIp = addrList.get(0);
+			
+			CloudStackCommand listVmCmd = new CloudStackCommand("listVirtualMachines");
+	    	if (listVmCmd != null) {
+	    		listVmCmd.setParam("id", request.getInstanceId());
+	    	}
+	    	
+	    	List<CloudStackUserVm> vmList = cloudStackListCall(listVmCmd, "listvirtualmachinesresponse", "virtualmachine", new TypeToken<List<CloudStackUserVm>>() {}.getType());
+	    	if (vmList == null || vmList.size() != 1) {
+	    		throw new EC2ServiceException(ClientError.InvalidParameterValue, "Instance not found");
+	    	}
+	    	
+	    	CloudStackUserVm cloudVm = vmList.get(0);
+	    	
+	    	CloudStackCommand command = new CloudStackCommand("enableStaticNat");
+	    	if (command != null) {
+	    		command.setParam("ipAddressId", cloudIp.getId().toString());
+	    		command.setParam("virtualMachineId", cloudVm.getId().toString());
+	    	}
+	    	CloudStackInfoResponse response = cloudStackCall(command, true, "enablestaticnatresponse", null, CloudStackInfoResponse.class);
+	    	if (response != null) {
+	    		return response.getSuccess();
+	    	}
+			
+		} catch(Exception e) {
+			logger.error( "EC2 AssociateAddress - ", e);
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+		}
+		return false;
+	}
+
+	public boolean handleRequest( EC2DisassociateAddress request ) {
+		try {
+			CloudStackCommand listIPAddrCmd = new CloudStackCommand("listPublicIpAddresses");
+			if (listIPAddrCmd != null) {
+				listIPAddrCmd.setParam("ipAddress", request.getPublicIp());
+			}
+			List<CloudStackIpAddress> addrList = cloudStackListCall(listIPAddrCmd, "listpublicipaddressesresponse", "publicipaddress", new TypeToken<List<CloudStackIpAddress>> () {}.getType());
+			if (addrList == null || addrList.size() != 1) {
+				throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
+			}			
+			CloudStackIpAddress cloudIp = addrList.get(0);
+
+			CloudStackCommand command = new CloudStackCommand("disableStaticNat");
+	    	if (command != null) {
+	    		command.setParam("ipAddressId", cloudIp.getId().toString());
+	    	}
+	    	
+	    	CloudStackInfoResponse response = cloudStackCall(command, true, "disablestaticnatresponse", null, CloudStackInfoResponse.class);
+	    	if (response != null) {
+	    		return response.getSuccess();
+	    	}
+		} catch(Exception e) {
+			logger.error( "EC2 DisassociateAddress - ", e);
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+		}
+		return false;
+	}
+
+	public EC2Address handleRequest( EC2AllocateAddress request )
+    {
+    	try {
+	    	CloudStackCommand command = new CloudStackCommand("associateIpAddress");
+	    	if (command != null) {
+	    			command.setParam("zoneId", toZoneId(null));
+	    	}
+	    	CloudStackInfoResponse response = cloudStackCall(command, false, "associateipaddressresponse", null, CloudStackInfoResponse.class);
+	    	if (response.getJobId() == null || response.getId() == null) {
+	    		throw new Exception("Invalid CloudStack API response");			
+	    	}
+	    	
+	    	CloudStackCommand listIPAddressesCmd = new CloudStackCommand("listPublicIpAddresses");
+	    	listIPAddressesCmd.setParam("id", String.valueOf(response.getId()));
+	    	
+	    	List<CloudStackIpAddress> tmpList = cloudStackListCall(listIPAddressesCmd, "listpublicipaddressesresponse", "publicipaddress", new TypeToken<List<CloudStackIpAddress>> () {}.getType());
+	    	if (tmpList == null || tmpList.size() != 1) {
+	    		throw new Exception("Invalid CloudStack API response to list a just associated IP Address");
+	    	}
+	    	
+	    	CloudStackIpAddress cloudipaddress = tmpList.get(0);
+
+	    	EC2Address ec2Address = new EC2Address();
+	    	ec2Address.setAssociatedInstanceId(String.valueOf(cloudipaddress.getId()));
+	    	ec2Address.setIpAddress(cloudipaddress.getIpAddress());
+	    	
+	    	return ec2Address;
+    	} catch(Exception e) { 
+       		logger.error( "EC2 AllocateAddress - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
+    }
+    
     /**
      * We only support the imageSet version of this call or when no search parameters are passed
      * which results in asking for all templates.
@@ -921,7 +1052,7 @@ public class EC2Engine {
     	}
     }
 
-    
+
     public Map[] describeAddresses(String[] publicIps)
     {
         try {
@@ -930,7 +1061,7 @@ public class EC2Engine {
 
             Map<String, String> id2name = new HashMap<String, String>();
             for (Map vm: vmList) {
-                id2name.put(vm.get("id").toString(), vm.get("name").toString());
+                id2name.put(vm.get("id").toString(), vm.get("id").toString());
             }
             for (Map a: addressList) {
                 if (a.containsKey("virtualmachineid")) {
@@ -964,24 +1095,6 @@ public class EC2Engine {
 
         } catch( Exception e ) {
             logger.error( "EC2 DescribeAddresses - ", e);
-            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-        }
-    }
-
-    public String allocateAddress()
-    {
-        try {
-            Map r = execute("command=associateIpAddress&zoneId=%s", toZoneId(null));
-            String ipId = r.get("id").toString();
-            Map[] l = execList("command=listPublicIpAddresses&id=%s", ipId);
-            return l[0].get("ipaddress").toString();
-
-        } catch( EC2ServiceException error ) {
-            logger.error( "EC2 AllocateAddress - ", error);
-            throw error;
-
-        } catch( Exception e ) {
-            logger.error( "EC2 AllocateAddress - ", e);
             throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
         }
     }
@@ -1028,64 +1141,7 @@ public class EC2Engine {
 		}
 	}
 
-    public boolean associateAddress(String publicIp, String vmName)
-    {
-        if (null == publicIp || null == vmName)
-            throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "Both IP address and instance id are required");
-
-        try {
-            Map[] addressList = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
-            Map[] vmList = execList("command=listVirtualMachines&name=%s", vmName);
-
-            if (0 == addressList.length)
-                throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
-            if (0 == vmList.length)
-                throw new EC2ServiceException(ClientError.InvalidParameterValue, "Instance not found.");
-
-            String ipId = addressList[0].get("id").toString();
-            String vmId = vmList[0].get("id").toString();
-            
-            Map async = execute("command=enableStaticNat&ipAddressId=%s&virtualMachineId=%s", ipId, vmId);
-	    String stat = async.get("success").toString();
-	    if (stat.compareToIgnoreCase("true") == 0) {
-		return true;
-	    } 
-	    // if not, check for job id and wait...
-	    String jobId = async.get("jobid").toString();
-	    return waitForAsynch(jobId);
-        } catch( EC2ServiceException error ) {
-            logger.error( "EC2 AssociateAddress - ", error);
-            throw error;
-
-        } catch( Exception e ) {
-            logger.error( "EC2 AssociateAddress - ", e);
-            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-        }
-    }
-
-    public boolean disassociateAddress(String publicIp)
-    {
-        if (null == publicIp)
-            throw new EC2ServiceException(EC2ServiceException.ServerError.InternalError, "IP address is a required parameter");
-
-        try {
-            Map[] l     = execList("command=listPublicIpAddresses&ipAddress=%s", publicIp);
-            String ipId = l[0].get("id").toString();
-            Map async   = execute("command=disableStaticNat&ipAddressId=%s", ipId);
-
-            String jobId = async.get("jobid").toString();
-            return waitForAsynch(jobId);
-
-        } catch( EC2ServiceException error ) {
-            logger.error( "EC2 DisassociateAddress - ", error);
-            throw error;
-
-        } catch( Exception e ) {
-            logger.error( "EC2 DisassociateAddress - ", e);
-            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-        }
-    }
-
+    
     public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) {	
     	try {
     		return listZones( request.getZoneSet());
@@ -2229,6 +2285,10 @@ public class EC2Engine {
 			}
 		}
 		
+		if (cloudSnapshots == null) { 
+			return null;
+		}
+		
 		for(CloudStackSnapshot cloudSnapshot : cloudSnapshots) {
 			EC2Snapshot shot  = new EC2Snapshot();
 	        shot.setId(String.valueOf(cloudSnapshot.getId()));
@@ -2693,6 +2753,7 @@ public class EC2Engine {
      * @param jobId
      * @return true - the requested action was successful, false - it failed
      */
+    
     private boolean waitForAsynch( String jobId ) throws Exception 
     {    
         while (true) {
@@ -2715,7 +2776,6 @@ public class EC2Engine {
             }
         }
     }
-	
     /**
      * Has the job finished?
      * 
@@ -2751,7 +2811,7 @@ public class EC2Engine {
 		
 		return "s:-1";
 	}
-
+	
     Map[] execList(String query, String... args) throws IOException, SignatureException {
         Map res = execute(query, args);
         if (res.isEmpty())
@@ -2785,7 +2845,6 @@ public class EC2Engine {
         Map jo = (Map) JSONValue.parse(new InputStreamReader(in));
         return (Map) unwrap(jo);
     }
-
     String calculateSignature(String query) throws SignatureException {
         String[] params = query.split("&");
         Arrays.sort(params);
@@ -2900,4 +2959,5 @@ public class EC2Engine {
 			 return new String( "http://" + managementServer + "/client/api?" );
 		else return new String( "http://" + managementServer + ":" + cloudAPIPort + "/client/api?" );
 	}
+
 }

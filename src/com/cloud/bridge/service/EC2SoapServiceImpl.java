@@ -24,6 +24,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.amazon.ec2.*;
+import com.cloud.bridge.service.core.ec2.EC2Address;
+import com.cloud.bridge.service.core.ec2.EC2AllocateAddress;
+import com.cloud.bridge.service.core.ec2.EC2AssociateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateImageResponse;
@@ -40,6 +43,7 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshots;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshotsResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumesResponse;
+import com.cloud.bridge.service.core.ec2.EC2DisassociateAddress;
 import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Filter;
 import com.cloud.bridge.service.core.ec2.EC2GroupFilterSet;
@@ -50,6 +54,7 @@ import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2PasswordData;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
+import com.cloud.bridge.service.core.ec2.EC2ReleaseAddress;
 import com.cloud.bridge.service.core.ec2.EC2RunInstances;
 import com.cloud.bridge.service.core.ec2.EC2RunInstancesResponse;
 import com.cloud.bridge.service.core.ec2.EC2SSHKeyPair;
@@ -314,28 +319,38 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 
     @Override
     public AllocateAddressResponse allocateAddress(AllocateAddress allocateAddress) {
-        return toAllocateAddressResponse( engine.allocateAddress() );
+    	EC2AllocateAddress request = new EC2AllocateAddress();
+
+    	return toAllocateAddressResponse( engine.handleRequest( request ));
     }
 
     @Override
     public ReleaseAddressResponse releaseAddress(ReleaseAddress releaseAddress) {
-        String publicIp = releaseAddress.getReleaseAddress().getPublicIp();
-        return toReleaseAddressResponse( engine.releaseAddress(publicIp) );
+    	EC2ReleaseAddress request = new EC2ReleaseAddress();
+    	
+    	request.setPublicIp(releaseAddress.getReleaseAddress().getPublicIp());
+    	
+        return toReleaseAddressResponse( engine.handleRequest( request ) );
     }
 
     @Override
     public AssociateAddressResponse associateAddress(AssociateAddress associateAddress) {
-        String publicIp   = associateAddress.getAssociateAddress().getPublicIp();
-        String instanceId = associateAddress.getAssociateAddress().getInstanceId();
-        return toAssociateAddressResponse( engine.associateAddress(publicIp, instanceId) );
+    	EC2AssociateAddress request = new EC2AssociateAddress();
+    	
+    	request.setPublicIp(associateAddress.getAssociateAddress().getPublicIp());
+    	request.setInstanceId(associateAddress.getAssociateAddress().getInstanceId());
+    	
+        return toAssociateAddressResponse( engine.handleRequest( request ) );
     }
 
     @Override
     public DisassociateAddressResponse disassociateAddress(DisassociateAddress disassociateAddress) {
-        String publicIp = disassociateAddress.getDisassociateAddress().getPublicIp();
-        return toDisassociateAddressResponse( engine.disassociateAddress(publicIp) );
+    	EC2DisassociateAddress request = new EC2DisassociateAddress();
+    	
+    	request.setPublicIp(disassociateAddress.getDisassociateAddress().getPublicIp());
+    	
+        return toDisassociateAddressResponse( engine.handleRequest( request ) );
     }
-
     
 	public DescribeSecurityGroupsResponse describeSecurityGroups(DescribeSecurityGroups describeSecurityGroups) 
 	{
@@ -357,7 +372,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toDescribeSecurityGroupsResponse( engine.handleRequest( request ));
 	}
 
-	
 	public DescribeSnapshotsResponse describeSnapshots(DescribeSnapshots describeSnapshots) 
 	{
 		EC2DescribeSnapshots request = new EC2DescribeSnapshots();
@@ -1088,44 +1102,47 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         }};
     }
 
-    public static AllocateAddressResponse toAllocateAddressResponse(final String publicIp) {
-
-        return new AllocateAddressResponse() {{
-            setAllocateAddressResponse(new AllocateAddressResponseType() {{
-                setRequestId(UUID.randomUUID().toString());
-                setPublicIp(publicIp);
-            }});
-        }};
+    public static AllocateAddressResponse toAllocateAddressResponse(final EC2Address ec2Address) {
+    	AllocateAddressResponse response = new AllocateAddressResponse();
+    	AllocateAddressResponseType param1 = new AllocateAddressResponseType();
+    	
+    	param1.setPublicIp(ec2Address.getIpAddress());
+    	param1.setRequestId(UUID.randomUUID().toString());
+    	response.setAllocateAddressResponse(param1);
+    	return response;
     }
 
     public static ReleaseAddressResponse toReleaseAddressResponse(final boolean result) {
-
-        return new ReleaseAddressResponse() {{
-            setReleaseAddressResponse(new ReleaseAddressResponseType() {{
-                setRequestId(UUID.randomUUID().toString());
-                set_return(result);
-            }});
-        }};
+    	ReleaseAddressResponse response = new ReleaseAddressResponse();
+    	ReleaseAddressResponseType param1 = new ReleaseAddressResponseType();
+    	
+    	param1.set_return(result);
+    	param1.setRequestId(UUID.randomUUID().toString());
+    	
+    	response.setReleaseAddressResponse(param1);
+    	return response;
     }
 
     public static AssociateAddressResponse toAssociateAddressResponse(final boolean result) {
-
-        return new AssociateAddressResponse() {{
-            setAssociateAddressResponse(new AssociateAddressResponseType() {{
-                setRequestId(UUID.randomUUID().toString());
-                set_return(result);
-            }});
-        }};
+    	AssociateAddressResponse response = new AssociateAddressResponse();
+    	AssociateAddressResponseType param1 = new AssociateAddressResponseType();
+    	
+    	param1.setRequestId(UUID.randomUUID().toString());
+    	param1.set_return(result);
+    	
+    	response.setAssociateAddressResponse(param1);
+    	return response;
     }
 
     public static DisassociateAddressResponse toDisassociateAddressResponse(final boolean result) {
-
-        return new DisassociateAddressResponse() {{
-            setDisassociateAddressResponse(new DisassociateAddressResponseType() {{
-                setRequestId(UUID.randomUUID().toString());
-                set_return(result);
-            }});
-        }};
+    	DisassociateAddressResponse response = new DisassociateAddressResponse();
+    	DisassociateAddressResponseType param1 = new DisassociateAddressResponseType();
+    	
+    	param1.setRequestId(UUID.randomUUID().toString());
+    	param1.set_return(result);
+    	
+    	response.setDisassociateAddressResponse(param1);
+    	return response;
     }
 
 	/**
