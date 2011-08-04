@@ -210,13 +210,11 @@
 				<include name="mysql-connector-java-5.1.7-bin.jar" />
 			</fileset>
 		</copy>
-<!--
 		<copy overwrite="true" todir="${deploy.dir}/conf">
 			<fileset dir="${base.dir}/conf/">
 				<include name="**/*" />
 			</fileset>
 		</copy>
--->
 		<copy overwrite="true" todir="${deploy.dir}/webapps/bridge/WEB-INF/conf">
 			<fileset dir="${base.dir}/resource/Axis2/">
 				<include name="axis2.xml" />
