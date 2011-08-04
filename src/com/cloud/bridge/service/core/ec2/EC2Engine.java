@@ -735,7 +735,7 @@ public class EC2Engine {
 	    	if (command != null) {
 	    		command.setParam("id", cloudIp.getId().toString());
 	    	}
-	    	CloudStackInfoResponse response = cloudStackCall(command, true, "disassociateipaddressresponse", "success", CloudStackInfoResponse.class);
+	    	CloudStackInfoResponse response = cloudStackCall(command, true, "disassociateipaddressresponse", null, CloudStackInfoResponse.class);
 	    	if (response != null) {
 	    		return response.getSuccess();
 	    	}
@@ -1099,49 +1099,6 @@ public class EC2Engine {
         }
     }
 
-	public boolean releaseAddress(String publicIp) {
-		if (null == publicIp)
-			throw new EC2ServiceException(ServerError.InternalError,
-					"IP address is a required parameter");
-		try {
-			Map[] l = execList("command=listPublicIpAddresses&ipAddress=%s",
-					publicIp);
-			
-			if (l == null || l.length == 0) {
-				logger.error("Unable to find ip address " + publicIp);
-				return false;
-			}
-			String ipId = l[0].get("id").toString();
-			
-			String query = new String("command=disassociateIpAddress&id=" + ipId);
-			Document cloudResp = resolveURL(
-					genAPIURL(query, genQuerySignature(query)),
-					"disassociateIpAddress", true);
-			
-			NodeList match = cloudResp.getElementsByTagName("jobid");
-			if (0 < match.getLength()) {
-				Node item = match.item(0);
-				String jobId = new String(item.getFirstChild().getNodeValue());
-				if (waitForAsynch(jobId))
-					return true;
-			} else
-				throw new EC2ServiceException(ServerError.InternalError,
-						"An unexpected error occurred during ip address release.");
-
-			return false;
-			
-		} catch (EC2ServiceException error) {
-			logger.error("EC2 ReleaseAddress: ", error);
-			throw error;
-
-		} catch (Exception e) {
-			logger.error("EC2 ReleaseAddress: ", e);
-			throw new EC2ServiceException(ServerError.InternalError,
-					"An unexpected error occurred.");
-		}
-	}
-
-    
     public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) {	
     	try {
     		return listZones( request.getZoneSet());
