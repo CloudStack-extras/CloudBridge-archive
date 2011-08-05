@@ -2741,42 +2741,6 @@ public class EC2Engine {
 		return "s:-1";
 	}
 	
-	Map[] execList(String query, String... args) throws IOException,
-			SignatureException {
-		Map res = execute(query, args);
-		if (res.isEmpty())
-			return new Map[0];
-		// The problem here is there is a count kv pair prior to the array of
-		// objects
-		// in some cases, so we need to pop the count key:val pair Kind of
-		// kludgy, but gets past this bug...
-		Iterator resIter = res.values().iterator();
-		resIter.next();
-		List l = null;
-		try {
-			l = (List) resIter.next();
-		} catch (ClassCastException e) {
-			// just unwrap the original map...
-			l = (List) unwrap(res);
-		}
-		return (Map[]) l.toArray(new Map[0]);
-	}
-
-    Map execute(String query, String... args) throws IOException, SignatureException {
-        for (int i = 0; i < args.length; i++) {
-            args[i] = safeURLencode(args[i]);
-        }
-        return execute(String.format(query, args));
-    }
-
-    Map execute(String query) throws IOException, SignatureException {
-        query += "&response=json&apiKey=" + safeURLencode(UserContext.current().getAccessKey());
-        String sig = calculateSignature(query);
-        String url = getServerURL() + query + "&signature=" + safeURLencode(sig);
-        InputStream in = openURL(url, "Unknown", true);
-        Map jo = (Map) JSONValue.parse(new InputStreamReader(in));
-        return (Map) unwrap(jo);
-    }
     String calculateSignature(String query) throws SignatureException {
         String[] params = query.split("&");
         Arrays.sort(params);
@@ -2785,10 +2749,6 @@ public class EC2Engine {
             b.append("&" + params[i]);
         }
         return calculateRFC2104HMAC(b.toString().toLowerCase(), UserContext.current().getSecretKey());
-    }
-
-    Object unwrap(Map m) {
-        return m.values().iterator().next();
     }
 
     private String genAPIURL( String query, String signature) throws UnsupportedEncodingException 
