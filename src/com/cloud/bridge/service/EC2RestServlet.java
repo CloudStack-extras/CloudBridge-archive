@@ -1183,7 +1183,7 @@ public class EC2RestServlet extends HttpServlet {
     
     private void describeAddresses( HttpServletRequest request, HttpServletResponse response )
         throws ADBException, XMLStreamException, IOException {
-        EC2DescribeAddresses EC2request = new EC2DescribeAddresses();
+        EC2DescribeAddresses ec2Request = new EC2DescribeAddresses();
 
         // -> load in all the "PublicIp.n" parameters if any
         Enumeration names = request.getParameterNames();
@@ -1191,12 +1191,12 @@ public class EC2RestServlet extends HttpServlet {
             String key = (String)names.nextElement();
             if (key.startsWith("PublicIp")) {
                 String[] value = request.getParameterValues( key );
-                if (null != value && 0 < value.length) EC2request.addPublicIp( value[0] );
+                if (null != value && 0 < value.length) ec2Request.addPublicIp( value[0] );
             }
         }
         // -> execute the request
         EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-        serializeResponse(response, EC2SoapServiceImpl.toDescribeAddressesResponse( engine.describeAddresses( EC2request.getPublicIpsSet() )));
+        serializeResponse(response, EC2SoapServiceImpl.toDescribeAddressesResponse( engine.handleRequest( ec2Request)));
     }
 
     private void allocateAddress( HttpServletRequest request, HttpServletResponse response )

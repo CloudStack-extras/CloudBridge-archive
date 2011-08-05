@@ -18,6 +18,7 @@ package com.cloud.bridge.service;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateImageResponse;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
+import com.cloud.bridge.service.core.ec2.EC2DescribeAddressesResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZones;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZonesResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
@@ -306,15 +308,15 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	
     @Override
     public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
-        EC2DescribeAddresses request = new EC2DescribeAddresses();
+        EC2DescribeAddresses ec2Request = new EC2DescribeAddresses();
         DescribeAddressesType dat = describeAddresses.getDescribeAddresses();
 
         DescribeAddressesInfoType dait = dat.getPublicIpsSet();
         DescribeAddressesItemType[] items = dait.getItem();
         if (null != items) {  // -> can be empty
-            for( int i=0; i < items.length; i++ ) request.addPublicIp( items[i].getPublicIp());
+            for( int i=0; i < items.length; i++ ) ec2Request.addPublicIp( items[i].getPublicIp());
         }
-        return toDescribeAddressesResponse( engine.describeAddresses( request.getPublicIpsSet() ));
+        return toDescribeAddressesResponse( engine.handleRequest( ec2Request ));
     }
 
     @Override
@@ -1079,27 +1081,28 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	
-    public static DescribeAddressesResponse toDescribeAddressesResponse(Map[] addresses) {
-        final DescribeAddressesResponseItemType[] items = new DescribeAddressesResponseItemType[addresses.length];
-
-        for (int i = 0; i < addresses.length; i++) {
-            Map a = addresses[i];
-
-            items[i] = new DescribeAddressesResponseItemType();
-            items[i].setPublicIp(a.get("ipaddress").toString());
-            if (a.containsKey("virtualmachinename")) {
-                items[i].setInstanceId(a.get("virtualmachinename").toString());
-            }
-        }
-
-        return new DescribeAddressesResponse() {{
-            setDescribeAddressesResponse(new DescribeAddressesResponseType() {{
-                setRequestId(UUID.randomUUID().toString());
-                setAddressesSet(new DescribeAddressesResponseInfoType() {{
-                    setItem(items);
-                }});
-            }});
-        }};
+    public static DescribeAddressesResponse toDescribeAddressesResponse(EC2DescribeAddressesResponse engineResponse) {
+    	List<DescribeAddressesResponseItemType> items = new ArrayList<DescribeAddressesResponseItemType>();
+    	EC2Address[] addressSet = engineResponse.getAddressSet();
+    	
+    	for (EC2Address addr: addressSet) {
+    		DescribeAddressesResponseItemType item = new DescribeAddressesResponseItemType();
+    		item.setPublicIp(addr.getIpAddress());
+    		item.setInstanceId(addr.getAssociatedInstanceId());
+    		items.add(item);
+    	}
+    	DescribeAddressesResponseInfoType descAddrRespInfoType = new DescribeAddressesResponseInfoType();
+    	// this cast shouldn't be necessary, but yeah...
+    	descAddrRespInfoType.setItem((DescribeAddressesResponseItemType[]) items.toArray());
+    	
+    	DescribeAddressesResponseType descAddrRespType = new DescribeAddressesResponseType();   	
+    	descAddrRespType.setRequestId(UUID.randomUUID().toString());
+    	descAddrRespType.setAddressesSet(descAddrRespInfoType);
+    	
+    	DescribeAddressesResponse descAddrResp = new DescribeAddressesResponse();
+    	descAddrResp.setDescribeAddressesResponse(descAddrRespType);
+    	
+    	return descAddrResp;
     }
 
     public static AllocateAddressResponse toAllocateAddressResponse(final EC2Address ec2Address) {

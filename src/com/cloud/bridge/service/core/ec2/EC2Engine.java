@@ -499,8 +499,8 @@ public class EC2Engine {
    	    } 	
     }
 
-    
     /**
+    
      * Does the permission from the request (left) match the permission from the cloudStack query (right).
      * If the cloudStack rule matches then we return its ruleId.
      * 
@@ -719,19 +719,72 @@ public class EC2Engine {
 	    }
     }
     
+    /*
+     * internal Helper functions to wrap CloudStackCommands used commonly...
+     * 
+     */
+    
+    private List<CloudStackIpAddress> getCloudStackIpAddressesFromKeyValue(String key, String value) throws Exception {
+		CloudStackCommand listIPAddrCmd = new CloudStackCommand("listPublicIpAddresses");
+		if (listIPAddrCmd != null && key != null && value != null) {
+			listIPAddrCmd.setParam(key, value);
+		}
+		return cloudStackListCall(listIPAddrCmd, "listpublicipaddressesresponse", "publicipaddress", new TypeToken<List<CloudStackIpAddress>> () {}.getType());
+    }
+    
+    private CloudStackIpAddress getCloudStackIpAddressFromKeyValue(String key, String value) throws Exception {
+    	List<CloudStackIpAddress> addrList = getCloudStackIpAddressesFromKeyValue(key, value);
+		if (addrList == null || addrList.size() != 1) {
+			throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
+		}
+		return addrList.get(0);
+    }
+    
+    private List<CloudStackUserVm> getCloudStackUserVmsFromKeyValue(String key, String value) throws Exception {
+    	CloudStackCommand listVmCmd = new CloudStackCommand("listVirtualMachines");
+    	if (listVmCmd != null && key != null && value != null) {
+    		listVmCmd.setParam(key, value);
+    	}
+    	
+    	return cloudStackListCall(listVmCmd, "listvirtualmachinesresponse", "virtualmachine", new TypeToken<List<CloudStackUserVm>>() {}.getType());
+    }
+    
+    private CloudStackUserVm getCloudStackUserVmFromKeyValue(String key, String value) throws Exception {
+    	List<CloudStackUserVm> vmList = getCloudStackUserVmsFromKeyValue(key, value);
+    	if (vmList == null || vmList.size() != 1) {
+    		throw new EC2ServiceException(ClientError.InvalidParameterValue, "Instance not found");
+    	}
+    	
+    	return vmList.get(0);
+    }
+
+    public EC2DescribeAddressesResponse handleRequest(EC2DescribeAddresses request) {
+    	try {
+            EC2DescribeAddressesResponse response = new EC2DescribeAddressesResponse();
+
+            List<CloudStackIpAddress> addrList = getCloudStackIpAddressesFromKeyValue(null, null);
+            
+        	for (CloudStackIpAddress addr: addrList) {
+        		// remember, if no filters are set, request.inPublicIpSet always returns true
+        		if (request.inPublicIpSet(addr.getIpAddress())) {
+            		EC2Address ec2Address = new EC2Address();
+        			ec2Address.setIpAddress(addr.getIpAddress());
+        			ec2Address.setAssociatedInstanceId(addr.getVirtualMachineId().toString());
+        			response.addAddress(ec2Address);
+        		}
+        	}
+        	return response;
+    	} catch(Exception e) {
+    		logger.error("EC2 DescribeAddresses - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
+    }
+    
 	public boolean handleRequest(EC2ReleaseAddress request) {
 		try {
-			CloudStackCommand listIPAddrCmd = new CloudStackCommand("listPublicIpAddresses");
-			if (listIPAddrCmd != null) {
-				listIPAddrCmd.setParam("ipAddress", request.getPublicIp());
-			}
-			List<CloudStackIpAddress> addrList = cloudStackListCall(listIPAddrCmd, "listpublicipaddressesresponse", "publicipaddress", new TypeToken<List<CloudStackIpAddress>> () {}.getType());
-			if (addrList == null || addrList.size() != 1) {
-				throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
-			}
-			CloudStackIpAddress cloudIp = addrList.get(0);
-			
-	    	CloudStackCommand command = new CloudStackCommand("disassociateIpAddress");
+			CloudStackIpAddress cloudIp = getCloudStackIpAddressFromKeyValue("ipaddress", request.getPublicIp());
+
+			CloudStackCommand command = new CloudStackCommand("disassociateIpAddress");
 	    	if (command != null) {
 	    		command.setParam("id", cloudIp.getId().toString());
 	    	}
@@ -748,27 +801,8 @@ public class EC2Engine {
 
 	public boolean handleRequest( EC2AssociateAddress request ) {
 		try {
-			CloudStackCommand listIPAddrCmd = new CloudStackCommand("listPublicIpAddresses");
-			if (listIPAddrCmd != null) {
-				listIPAddrCmd.setParam("ipAddress", request.getPublicIp());
-			}
-			List<CloudStackIpAddress> addrList = cloudStackListCall(listIPAddrCmd, "listpublicipaddressesresponse", "publicipaddress", new TypeToken<List<CloudStackIpAddress>> () {}.getType());
-			if (addrList == null || addrList.size() != 1) {
-				throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
-			}
-			CloudStackIpAddress cloudIp = addrList.get(0);
-			
-			CloudStackCommand listVmCmd = new CloudStackCommand("listVirtualMachines");
-	    	if (listVmCmd != null) {
-	    		listVmCmd.setParam("id", request.getInstanceId());
-	    	}
-	    	
-	    	List<CloudStackUserVm> vmList = cloudStackListCall(listVmCmd, "listvirtualmachinesresponse", "virtualmachine", new TypeToken<List<CloudStackUserVm>>() {}.getType());
-	    	if (vmList == null || vmList.size() != 1) {
-	    		throw new EC2ServiceException(ClientError.InvalidParameterValue, "Instance not found");
-	    	}
-	    	
-	    	CloudStackUserVm cloudVm = vmList.get(0);
+			CloudStackIpAddress cloudIp = getCloudStackIpAddressFromKeyValue("ipaddress", request.getPublicIp());
+	    	CloudStackUserVm cloudVm = getCloudStackUserVmFromKeyValue("id", request.getInstanceId());
 	    	
 	    	CloudStackCommand command = new CloudStackCommand("enableStaticNat");
 	    	if (command != null) {
@@ -789,15 +823,7 @@ public class EC2Engine {
 
 	public boolean handleRequest( EC2DisassociateAddress request ) {
 		try {
-			CloudStackCommand listIPAddrCmd = new CloudStackCommand("listPublicIpAddresses");
-			if (listIPAddrCmd != null) {
-				listIPAddrCmd.setParam("ipAddress", request.getPublicIp());
-			}
-			List<CloudStackIpAddress> addrList = cloudStackListCall(listIPAddrCmd, "listpublicipaddressesresponse", "publicipaddress", new TypeToken<List<CloudStackIpAddress>> () {}.getType());
-			if (addrList == null || addrList.size() != 1) {
-				throw new EC2ServiceException(ClientError.InvalidParameterValue, "Address not allocated to account.");
-			}			
-			CloudStackIpAddress cloudIp = addrList.get(0);
+			CloudStackIpAddress cloudIp = getCloudStackIpAddressFromKeyValue("ipaddress", request.getPublicIp());
 
 			CloudStackCommand command = new CloudStackCommand("disableStaticNat");
 	    	if (command != null) {
@@ -827,19 +853,11 @@ public class EC2Engine {
 	    		throw new Exception("Invalid CloudStack API response");			
 	    	}
 	    	
-	    	CloudStackCommand listIPAddressesCmd = new CloudStackCommand("listPublicIpAddresses");
-	    	listIPAddressesCmd.setParam("id", String.valueOf(response.getId()));
-	    	
-	    	List<CloudStackIpAddress> tmpList = cloudStackListCall(listIPAddressesCmd, "listpublicipaddressesresponse", "publicipaddress", new TypeToken<List<CloudStackIpAddress>> () {}.getType());
-	    	if (tmpList == null || tmpList.size() != 1) {
-	    		throw new Exception("Invalid CloudStack API response to list a just associated IP Address");
-	    	}
-	    	
-	    	CloudStackIpAddress cloudipaddress = tmpList.get(0);
+	    	CloudStackIpAddress cloudIp = getCloudStackIpAddressFromKeyValue("id", String.valueOf(response.getId()));
 
 	    	EC2Address ec2Address = new EC2Address();
-	    	ec2Address.setAssociatedInstanceId(String.valueOf(cloudipaddress.getId()));
-	    	ec2Address.setIpAddress(cloudipaddress.getIpAddress());
+	    	ec2Address.setAssociatedInstanceId(String.valueOf(cloudIp.getId()));
+	    	ec2Address.setIpAddress(cloudIp.getIpAddress());
 	    	
 	    	return ec2Address;
     	} catch(Exception e) { 
@@ -1052,52 +1070,6 @@ public class EC2Engine {
     	}
     }
 
-
-    public Map[] describeAddresses(String[] publicIps)
-    {
-        try {
-            Map[] addressList = execList("command=listPublicIpAddresses");
-            Map[] vmList      = execList("command=listVirtualMachines");
-
-            Map<String, String> id2name = new HashMap<String, String>();
-            for (Map vm: vmList) {
-                id2name.put(vm.get("id").toString(), vm.get("id").toString());
-            }
-            for (Map a: addressList) {
-                if (a.containsKey("virtualmachineid")) {
-                    String vmId = a.get("virtualmachineid").toString();
-                    a.put("virtualmachinename", id2name.get(vmId));
-                }
-            }
-
-            if (null == publicIps || 0 == publicIps.length)
-                return addressList;
-
-            // Otherwise, we filter addressList using publicIps.
-
-            Map<String, Map> ip2address = new HashMap<String, Map>();
-            for (Map a: addressList) {
-                ip2address.put(a.get("ipaddress").toString(), a);
-            }
-
-            List<Map> filtered = new ArrayList<Map>();
-            for (String ip: publicIps) {
-                Map a = ip2address.get(ip);
-                if (null != a) {
-                    filtered.add(a);
-                }
-            }
-            return filtered.toArray(new Map[0]);
-
-        } catch( EC2ServiceException error ) {
-            logger.error( "EC2 DescribeAddresses - ", error);
-            throw error;
-
-        } catch( Exception e ) {
-            logger.error( "EC2 DescribeAddresses - ", e);
-            throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-        }
-    }
 
     public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) {	
     	try {
@@ -2769,23 +2741,26 @@ public class EC2Engine {
 		return "s:-1";
 	}
 	
-    Map[] execList(String query, String... args) throws IOException, SignatureException {
-        Map res = execute(query, args);
-        if (res.isEmpty())
-            return new Map[0];
-	// The problem here is there is a count kv pair prior to the array of objects
-	// in some cases, so we need to pop the count key:val pair  Kind of kludgy, but gets past this bug...
-	Iterator resIter = res.values().iterator();
-	resIter.next();
-	List l = null;
-	try {
-	    l = (List) resIter.next();
-	} catch(ClassCastException e) {
-	    // just unwrap the original map...
-	    l = (List) unwrap(res);
+	Map[] execList(String query, String... args) throws IOException,
+			SignatureException {
+		Map res = execute(query, args);
+		if (res.isEmpty())
+			return new Map[0];
+		// The problem here is there is a count kv pair prior to the array of
+		// objects
+		// in some cases, so we need to pop the count key:val pair Kind of
+		// kludgy, but gets past this bug...
+		Iterator resIter = res.values().iterator();
+		resIter.next();
+		List l = null;
+		try {
+			l = (List) resIter.next();
+		} catch (ClassCastException e) {
+			// just unwrap the original map...
+			l = (List) unwrap(res);
+		}
+		return (Map[]) l.toArray(new Map[0]);
 	}
-	return (Map[]) l.toArray(new Map[0]);
-    }
 
     Map execute(String query, String... args) throws IOException, SignatureException {
         for (int i = 0; i < args.length; i++) {
