@@ -1092,8 +1092,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     		items.add(item);
     	}
     	DescribeAddressesResponseInfoType descAddrRespInfoType = new DescribeAddressesResponseInfoType();
-    	// this cast shouldn't be necessary, but yeah...
-    	descAddrRespInfoType.setItem((DescribeAddressesResponseItemType[]) items.toArray());
+    	descAddrRespInfoType.setItem(items.toArray(new DescribeAddressesResponseItemType[0]));
     	
     	DescribeAddressesResponseType descAddrRespType = new DescribeAddressesResponseType();   	
     	descAddrRespType.setRequestId(UUID.randomUUID().toString());

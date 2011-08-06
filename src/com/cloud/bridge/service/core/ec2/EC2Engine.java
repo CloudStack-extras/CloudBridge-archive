@@ -20,7 +20,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
@@ -31,10 +30,7 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Iterator;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -46,8 +42,6 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
-import org.json.simple.JSONValue;
-import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -73,7 +67,6 @@ import com.cloud.stack.CloudStackSnapshot;
 import com.cloud.stack.CloudStackUserVm;
 import com.cloud.stack.CloudStackVolume;
 import com.cloud.stack.CloudStackZone;
-import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 
@@ -86,9 +79,6 @@ public class EC2Engine {
     
     // -> in milliseconds, time interval to wait before asynch check on a jobId's status
     private int pollInterval1 = 1000;   // for: createTemplate
-    private int pollInterval2 = 1000;   // for: deployVirtualMachine
-    private int pollInterval3 = 1000;   // for: createVolume
-    private int pollInterval4 = 1000;  // for: createSnapshot
     private int pollInterval5 = 1000;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume, disassociateIpAddress, enableStaticNat, disableStaticNat
     private int pollInterval6 = 1000;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
     private int CLOUD_STACK_VERSION_2_0 = 200;
@@ -132,9 +122,9 @@ public class EC2Engine {
   	        
    	        try {
    	            pollInterval1  = Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
-   	            pollInterval2  = Integer.parseInt( EC2Prop.getProperty( "pollInterval2", "100"  ));
-   	            pollInterval3  = Integer.parseInt( EC2Prop.getProperty( "pollInterval3", "100"  ));
-   	            pollInterval4  = Integer.parseInt( EC2Prop.getProperty( "pollInterval4", "1000" ));
+   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval2", "100"  ));
+   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval3", "100"  ));
+   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval4", "1000" ));
    	            pollInterval5  = Integer.parseInt( EC2Prop.getProperty( "pollInterval5", "100"  ));
    	            pollInterval6  = Integer.parseInt( EC2Prop.getProperty( "pollInterval6", "100"  ));
    	        } catch( Exception e ) {
@@ -769,7 +759,8 @@ public class EC2Engine {
         		if (request.inPublicIpSet(addr.getIpAddress())) {
             		EC2Address ec2Address = new EC2Address();
         			ec2Address.setIpAddress(addr.getIpAddress());
-        			ec2Address.setAssociatedInstanceId(addr.getVirtualMachineId().toString());
+        			if (addr.getVirtualMachineId() != null) 
+        				ec2Address.setAssociatedInstanceId(addr.getVirtualMachineId().toString());
         			response.addAddress(ec2Address);
         		}
         	}
@@ -1389,7 +1380,7 @@ public class EC2Engine {
      		   if(logger.isDebugEnabled())
      			   logger.debug("Starting VM " + vms[i].getId() + " job " + commandResponse.getJobId());
      		   
-     		  CloudStackUserVm vmForNewState = getCloudStackUserVm(vms[i].getId());
+     		  CloudStackUserVm vmForNewState = getCloudStackUserVmFromKeyValue("id", vms[i].getId());
      		  if(vmForNewState != null) {
      			  if(!vms[i].getState().equals(vmForNewState.getState())) { 
      				  vms[i].setState(vmForNewState.getState());  
@@ -1409,19 +1400,7 @@ public class EC2Engine {
     		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}
     }
-    
-    private CloudStackUserVm getCloudStackUserVm(String instanceId) throws Exception {
-    	assert(instanceId != null);
-    	
-    	CloudStackCommand listCommand = new CloudStackCommand("listVirtualMachines");
-    	listCommand.setParam("id", instanceId);
-    	List<CloudStackUserVm> vms = cloudStackListCall(listCommand, "listvirtualmachinesresponse", "virtualmachine", 
-	   		new TypeToken<List<CloudStackUserVm>>() {}.getType());
-    	if(vms != null && vms.size() == 1)
-    		return vms.get(0);
-    	return null;
-    }
-    
+
     /**
      * Note that more than one VM can be requested stopped at once. 
      * The Amazon API returns the previous state and the modified state as the
@@ -1464,7 +1443,7 @@ public class EC2Engine {
           		   		logger.debug("Stopping VM " + vms[i].getId() + " job " + commandResponse.getJobId());
      		   }
      		   
-      		   CloudStackUserVm vmForNewState = getCloudStackUserVm(vms[i].getId());
+      		   CloudStackUserVm vmForNewState = getCloudStackUserVmFromKeyValue("id", vms[i].getId());
       		   if(vmForNewState != null) {
      			  if(!vms[i].getState().equals(vmForNewState.getState())) { 
      				  vms[i].setState(vmForNewState.getState());  
@@ -1948,12 +1927,7 @@ public class EC2Engine {
     private EC2DescribeInstancesResponse lookupInstances( String instanceId, EC2DescribeInstancesResponse instances ) 
 	    throws Exception {
 
-    	CloudStackCommand command = new CloudStackCommand("listVirtualMachines");
-    	if(null != instanceId)
-    		command.setParam("id", instanceId);
-    	
-    	List<CloudStackUserVm> vms = cloudStackListCall(command, "listvirtualmachinesresponse", "virtualmachine", 
-    		new TypeToken<List<CloudStackUserVm>>() {}.getType());
+    	List<CloudStackUserVm> vms = getCloudStackUserVmsFromKeyValue("id", instanceId);
     	
     	for(CloudStackUserVm cloudVm : vms) {
 			EC2Instance ec2Vm = new EC2Instance();
