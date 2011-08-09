@@ -21,7 +21,6 @@ import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import com.amazon.ec2.*;
@@ -31,7 +30,9 @@ import com.cloud.bridge.service.core.ec2.EC2AssociateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
 import com.cloud.bridge.service.core.ec2.EC2CreateImageResponse;
+import com.cloud.bridge.service.core.ec2.EC2CreateKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
+import com.cloud.bridge.service.core.ec2.EC2DeleteKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddressesResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZones;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZonesResponse;
@@ -39,6 +40,8 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImagesResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeInstances;
 import com.cloud.bridge.service.core.ec2.EC2DescribeInstancesResponse;
+import com.cloud.bridge.service.core.ec2.EC2DescribeKeyPairs;
+import com.cloud.bridge.service.core.ec2.EC2DescribeKeyPairsResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSecurityGroups;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSecurityGroupsResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshots;
@@ -50,9 +53,11 @@ import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Filter;
 import com.cloud.bridge.service.core.ec2.EC2GroupFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2Image;
+import com.cloud.bridge.service.core.ec2.EC2ImportKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2Instance;
 import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
+import com.cloud.bridge.service.core.ec2.EC2KeyPairFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2PasswordData;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
@@ -79,7 +84,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 
     private static EC2Engine engine;
     
-    public EC2SoapServiceImpl(EC2Engine engine) {
+    @SuppressWarnings("static-access")
+	public EC2SoapServiceImpl(EC2Engine engine) {
     	this.engine = engine;
     }
 
@@ -760,6 +766,30 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 
+	// filtersets
+	private EC2KeyPairFilterSet toKeyPairFilterSet( FilterSetType fst )
+	{
+		EC2KeyPairFilterSet vfs = new EC2KeyPairFilterSet();
+		
+		FilterType[] items = fst.getItem();
+		if (items != null) {
+			// -> each filter can have one or more values associated with it
+			for (FilterType item : items) {
+				EC2Filter oneFilter = new EC2Filter();
+				String filterName = item.getName();
+				oneFilter.setName( filterName );
+				
+				ValueSetType vst = item.getValueSet();
+				ValueType[] valueItems = vst.getItem();
+				for (ValueType valueItem : valueItems) {
+					oneFilter.addValueEncoded( valueItem.getValue());
+				}
+				vfs.addFilter( oneFilter );
+			}
+		}		
+		return vfs;
+	}
+
 	
 	private EC2VolumeFilterSet toVolumeFilterSet( FilterSetType fst, String[] timeStrs )
 	{
@@ -893,7 +923,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return ifs;
 	}
 
-	
+	// toMethods
 	public static DescribeVolumesResponse toDescribeVolumesResponse( EC2DescribeVolumesResponse engineResponse ) 
 	{
 	    DescribeVolumesResponse      response = new DescribeVolumesResponse();
@@ -1710,77 +1740,104 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 	
 	public DescribeKeyPairsResponse describeKeyPairs(DescribeKeyPairs describeKeyPairs) {
-		// TODO: Handle filters for key-name and fingerprint
 		
-		return toDescribeKeyPairs(engine.describeKeyPairs());
+		EC2DescribeKeyPairs ec2Request = new EC2DescribeKeyPairs();
+		DescribeKeyPairsType dkt = describeKeyPairs.getDescribeKeyPairs();
+		FilterSetType fst = dkt.getFilterSet();
+		
+		if (fst != null) {
+				ec2Request.setKeyFilterSet(toKeyPairFilterSet(fst));
+		}
+		
+		return toDescribeKeyPairs(engine.handleRequest(ec2Request));
 	}
 	
-	@SuppressWarnings("serial")
-	public static DescribeKeyPairsResponse toDescribeKeyPairs(final List<EC2SSHKeyPair> keyList) {
-		return new DescribeKeyPairsResponse() {{
-			setDescribeKeyPairsResponse(new DescribeKeyPairsResponseType() {{ 
-				setRequestId(UUID.randomUUID().toString());
-				setKeySet(new DescribeKeyPairsResponseInfoType());
-				if (keyList != null && keyList.size() > 0) {
-					for (final EC2SSHKeyPair key : keyList) { 
-						getKeySet().addItem(new DescribeKeyPairsResponseItemType() {{
-							setKeyName(key.getKeyName());
-							setKeyFingerprint(key.getFingerprint());
-						}});
-					}
-				}
-			}});
-		}};
+	public static DescribeKeyPairsResponse toDescribeKeyPairs(final EC2DescribeKeyPairsResponse response) {
+		EC2SSHKeyPair[] keyPairs = response.getKeyPairSet();
+		
+		DescribeKeyPairsResponseInfoType respInfoType = new DescribeKeyPairsResponseInfoType();
+		if (keyPairs != null && keyPairs.length > 0) {
+			for (final EC2SSHKeyPair key : keyPairs) {
+				DescribeKeyPairsResponseItemType respItemType = new DescribeKeyPairsResponseItemType();
+				respItemType.setKeyFingerprint(key.getFingerprint());
+				respItemType.setKeyName(key.getKeyName());
+				respInfoType.addItem(respItemType);
+			}
+		}
+		
+		DescribeKeyPairsResponseType respType = new DescribeKeyPairsResponseType();
+		respType.setRequestId(UUID.randomUUID().toString());
+		respType.setKeySet(respInfoType);
+
+		DescribeKeyPairsResponse resp = new DescribeKeyPairsResponse();
+		resp.setDescribeKeyPairsResponse(respType);
+		return resp;
 	}
 	
 	public ImportKeyPairResponse importKeyPair(ImportKeyPair importKeyPair) {
-		String keyName = importKeyPair.getImportKeyPair().getKeyName();
 		String publicKey = importKeyPair.getImportKeyPair().getPublicKeyMaterial();
         if (!publicKey.contains(" "))
-             publicKey = new String(Base64.decodeBase64(publicKey.getBytes())); 
-		
-		return toImportKeyPair(engine.importKeyPair(keyName, publicKey));
+             publicKey = new String(Base64.decodeBase64(publicKey.getBytes()));
+        
+        EC2ImportKeyPair ec2Request = new EC2ImportKeyPair();
+    	if (ec2Request != null) {
+    		ec2Request.setKeyName(importKeyPair.getImportKeyPair().getKeyName());
+    		ec2Request.setPublicKeyMaterial(publicKey);
+    	}
+
+		return toImportKeyPair(engine.handleRequest(ec2Request));
 	}
 	
-	@SuppressWarnings("serial")
 	public static ImportKeyPairResponse toImportKeyPair(final EC2SSHKeyPair key) {
-		return new ImportKeyPairResponse() {{
-			setImportKeyPairResponse(new ImportKeyPairResponseType() {{
-				setRequestId(UUID.randomUUID().toString());
-				setKeyName(key.getKeyName());
-				setKeyFingerprint(key.getFingerprint());
-			}});
-		}}; 
+		ImportKeyPairResponseType respType = new ImportKeyPairResponseType();
+		respType.setRequestId(UUID.randomUUID().toString());
+		respType.setKeyName(key.getKeyName());
+		respType.setKeyFingerprint(key.getFingerprint());
+		
+		ImportKeyPairResponse response = new ImportKeyPairResponse();
+		response.setImportKeyPairResponse(respType);
+		
+		return response;
 	}
 	
 	public CreateKeyPairResponse createKeyPair(CreateKeyPair createKeyPair) {
-		return toCreateKeyPair(engine.createKeyPair(createKeyPair.getCreateKeyPair().getKeyName()));
+		EC2CreateKeyPair ec2Request = new EC2CreateKeyPair();
+    	if (ec2Request != null) {
+    		ec2Request.setKeyName(createKeyPair.getCreateKeyPair().getKeyName());
+    	}
+
+		return toCreateKeyPair(engine.handleRequest( ec2Request ));
 	}
 	
-	@SuppressWarnings("serial")
 	public static CreateKeyPairResponse toCreateKeyPair(final EC2SSHKeyPair key) {
-		return new CreateKeyPairResponse() {{
-			setCreateKeyPairResponse(new CreateKeyPairResponseType() {{
-				setRequestId(UUID.randomUUID().toString());
-				setKeyName(key.getKeyName());
-				setKeyFingerprint(key.getFingerprint());
-				setKeyMaterial(key.getPrivateKey());
-			}});
-		}};
+		CreateKeyPairResponseType respType = new CreateKeyPairResponseType();
+		respType.setRequestId(UUID.randomUUID().toString());
+		respType.setKeyName(key.getKeyName());
+		respType.setKeyFingerprint(key.getFingerprint());
+		respType.setKeyMaterial(key.getPrivateKey());
+		
+		CreateKeyPairResponse response = new CreateKeyPairResponse();
+		response.setCreateKeyPairResponse(respType);
+		
+		return response;
 	}
 	
 	public DeleteKeyPairResponse deleteKeyPair(DeleteKeyPair deleteKeyPair) {
-		return toDeleteKeyPair(engine.deleteKeyPair(deleteKeyPair.getDeleteKeyPair().getKeyName()));
+		EC2DeleteKeyPair ec2Request = new EC2DeleteKeyPair();
+		ec2Request.setKeyName(deleteKeyPair.getDeleteKeyPair().getKeyName());
+		
+		return toDeleteKeyPair(engine.handleRequest(ec2Request));
 	}
 	
-	@SuppressWarnings("serial")
 	public static DeleteKeyPairResponse toDeleteKeyPair(final boolean success) {
-		return new DeleteKeyPairResponse() {{
-			setDeleteKeyPairResponse(new DeleteKeyPairResponseType() {{
-				setRequestId(UUID.randomUUID().toString());
-				set_return(success);
-			}});
-		}};
+		DeleteKeyPairResponseType respType = new DeleteKeyPairResponseType();
+		respType.setRequestId(UUID.randomUUID().toString());
+		respType.set_return(success);
+		
+		DeleteKeyPairResponse response = new DeleteKeyPairResponse();
+		response.setDeleteKeyPairResponse(respType);
+		
+		return response;
 	}
 	
 	public GetPasswordDataResponse getPasswordData(GetPasswordData getPasswordData) {

@@ -158,7 +158,6 @@ public class EC2VolumeFilterSet {
 		
 	    for( int i=0; i < set.length; i++ )
 	    {
-	    	//System.out.println( "contsinsString: " + lookingFor + " " + set[i] );
 	    	if (lookingFor.matches( set[i] )) return true;
 	    }
 	    return false;

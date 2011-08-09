@@ -60,6 +60,7 @@ import com.cloud.stack.CloudStackClient;
 import com.cloud.stack.CloudStackCommand;
 import com.cloud.stack.CloudStackInfoResponse;
 import com.cloud.stack.CloudStackIpAddress;
+import com.cloud.stack.CloudStackKeyPair;
 import com.cloud.stack.CloudStackNic;
 import com.cloud.stack.CloudStackResourceLimit;
 import com.cloud.stack.CloudStackSecurityGroup;
@@ -747,8 +748,120 @@ public class EC2Engine {
     	
     	return vmList.get(0);
     }
+    
+    private List<CloudStackKeyPair> getCloudStackKeyPairsFromKeyValue(String key, String value) throws Exception {
+    	CloudStackCommand listKeyPairCmd = new CloudStackCommand("listSSHKeyPairs");
+    	if (listKeyPairCmd != null && key != null && value != null) {
+    		listKeyPairCmd.setParam(key, value);
+    	}
+    	
+    	return cloudStackListCall(listKeyPairCmd, "listsshkeypairsresponse", "keypair", new TypeToken<List<CloudStackKeyPair>>() {}.getType());
+    }
 
-    public EC2DescribeAddressesResponse handleRequest(EC2DescribeAddresses request) {
+    /* NOT USED ANYWHERE
+    private CloudStackKeyPair getCloudStackKeyPairFromKeyValue(String key, String value) throws Exception {
+    	List<CloudStackKeyPair> keyPairList = getCloudStackKeyPairsFromKeyValue(key, value);
+    	if (keyPairList == null || keyPairList.size() != 1) {
+    		throw new EC2ServiceException(ClientError.InvalidParameterValue, "Key Pair not found");
+    	}
+    	return keyPairList.get(0);
+    }
+    */
+    
+    // handlers
+    public EC2DescribeKeyPairsResponse handleRequest( EC2DescribeKeyPairs request ) {
+    	try {
+    		EC2KeyPairFilterSet filterSet = request.getKeyFilterSet();
+
+    		// doing a by name list, should actually already be covered in the filters
+    		// doing it here to save time
+    		List<CloudStackKeyPair> keyPairs = getCloudStackKeyPairsFromKeyValue("name", request.getKeyName());
+    		
+    		// this should be reworked... converting from CloudStackKeyPairResponse to EC2SSHKeyPair is dumb
+    		List<EC2SSHKeyPair> keyPairsList = new ArrayList<EC2SSHKeyPair>();
+    		
+    		for (CloudStackKeyPair respKeyPair: keyPairs) {
+    			EC2SSHKeyPair ec2KeyPair = new EC2SSHKeyPair();
+    			ec2KeyPair.setFingerprint(respKeyPair.getFingerprint());
+    			ec2KeyPair.setKeyName(respKeyPair.getName());
+    			ec2KeyPair.setPrivateKey(respKeyPair.getPrivatekey());
+    			keyPairsList.add(ec2KeyPair);
+    		}
+    		
+    		return filterSet.evaluate(keyPairsList);
+    	} catch(Exception e) {
+    		logger.error("EC2 DescribeKeyPairs - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
+    }
+    
+    public boolean handleRequest( EC2DeleteKeyPair request ) {
+    	try {
+    		CloudStackCommand command = new CloudStackCommand("deleteSSHKeyPair");
+    		if (command != null) {
+    			command.setParam("name", request.getKeyName());
+    		}
+			CloudStackInfoResponse callResponse = cloudStackCall(command, true, "deletekeypairresponse", null, CloudStackInfoResponse.class);
+	    	if (callResponse == null) { 
+				throw new Exception("Ivalid CloudStack API response");
+	    	}
+	    	
+	    	return callResponse.getSuccess();
+    	} catch(Exception e) {
+    		logger.error("EC2 DeleteKeyPair - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
+    }
+    
+    public EC2SSHKeyPair handleRequest( EC2CreateKeyPair request ) {
+    	try {
+    		CloudStackCommand command = new CloudStackCommand("createSSHKeyPair");
+    		if (command != null) {
+    			command.setParam("name", request.getKeyName());
+    		}
+    		CloudStackKeyPair callResponse = cloudStackCall(command, true, "createkeypairresponse", "keypair", CloudStackKeyPair.class);
+			if (callResponse == null) {
+				throw new Exception("Ivalid CloudStack API response");
+    		}
+
+    		EC2SSHKeyPair response = new EC2SSHKeyPair();
+    		response.setFingerprint(callResponse.getFingerprint());
+			response.setKeyName(callResponse.getName());
+			response.setPrivateKey(callResponse.getPrivatekey());
+
+			return response;
+    		
+    	} catch (Exception e) {
+    		logger.error("EC2 CreateKeyPair - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
+    }
+    
+    public EC2SSHKeyPair handleRequest( EC2ImportKeyPair request ) {
+    	try {
+    		CloudStackCommand command = new CloudStackCommand("registerSSHKeyPair");
+    		if (command != null) {
+    			command.setParam("name", request.getKeyName());
+    			command.setParam("publickey", request.getPublicKeyMaterial());
+    		}
+    		CloudStackKeyPair callResponse = cloudStackCall(command, true, "registerkeypairresponse", "keypair", CloudStackKeyPair.class);
+			if (callResponse == null) {
+				throw new Exception("Ivalid CloudStack API response");
+    		}
+
+    		EC2SSHKeyPair response = new EC2SSHKeyPair();
+    		response.setFingerprint(callResponse.getFingerprint());
+			response.setKeyName(callResponse.getName());
+			response.setPrivateKey(callResponse.getPrivatekey());
+    		
+    		return response;
+    	} catch (Exception e) {
+    		logger.error("EC2 ImportKeyPair - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
+    }
+
+    public EC2DescribeAddressesResponse handleRequest( EC2DescribeAddresses request ) {
     	try {
             EC2DescribeAddressesResponse response = new EC2DescribeAddressesResponse();
 
@@ -1465,159 +1578,6 @@ public class EC2Engine {
     		logger.error( "EC2 StopInstances - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}
-    }
-    
-    public List<EC2SSHKeyPair> describeKeyPairs() {
-    	ensureVersion(CLOUD_STACK_VERSION_2_2);
-    	
-    	String query = "command=listSSHKeyPairs";
-    	Document response = null;
-    	
-    	try {
-			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listSSHKeyPairs", true);
-		} catch (EC2ServiceException e) {
-			logger.error( "EC2 Describe KeyPairs - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
-		} catch (Exception e) {
-			logger.error( "EC2 Describe KeyPairs - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
-		}
-		
-		List<EC2SSHKeyPair> returnList = new ArrayList<EC2SSHKeyPair>();
-		NodeList match = response.getElementsByTagName("keypair"); 
-	   
-		for (int i=0; i < match.getLength(); i++) {
-			EC2SSHKeyPair keyPair = new EC2SSHKeyPair();
-			Node parent = null;
-			
-			if ((parent = match.item(i)) != null) { 
-				NodeList children = parent.getChildNodes();
-	    		
-				for( int j=0; j < children.getLength(); j++ ) {
-					Node child = children.item(j);
-	    			String name = child.getNodeName();
-	    			
-	    			if (child.getFirstChild() != null) {
-	    				if (name.equalsIgnoreCase("name"))
-	    					keyPair.setKeyName(child.getFirstChild().getNodeValue());
-	    				else if (name.equalsIgnoreCase("fingerprint"))
-	    					keyPair.setFingerprint(child.getFirstChild().getNodeValue());
-	    			} 
-				}
-			}
-			
-			if (keyPair.getKeyName() != null && keyPair.getFingerprint() != null)
-				returnList.add(keyPair);
-		}
-    	
-		return returnList;
-    }
-    
-    public EC2SSHKeyPair importKeyPair(String keyName, String publicKey) {     	
-    	ensureVersion(CLOUD_STACK_VERSION_2_2);
-
-    	String query = "command=registerSSHKeyPair";
-    	Document response = null;
-    	
-    	try {
-        	query += "&name=".concat(safeURLencode(keyName));
-        	query += "&publickey=".concat(safeURLencode(publicKey));
-        	response = resolveURL(genAPIURL(query, genQuerySignature(query)), "registerSSHKeyPair", true);
-		} catch (EC2ServiceException e) {
-			logger.error( "EC2 Describe KeyPairs - ", e);
-
-			if (e.getMessage().startsWith("431")) // Needs improvement
-				throw new EC2ServiceException(ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
-			else
-				throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
-			
-		} catch (Exception e) {
-			logger.error( "EC2 Describe KeyPairs - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
-		}
-
-		EC2SSHKeyPair keyPair = new EC2SSHKeyPair();		
-		NodeList pair = response.getElementsByTagName("keypair");
-		if (pair.getLength() > 0 && pair.item(0) != null && pair.item(0).hasChildNodes()) {
-			NodeList values = pair.item(0).getChildNodes();
-			for (int i = 0; i < values.getLength(); i++) {
-				Node value = values.item(i);
-    			if (value.getFirstChild() != null) {
-    				if (value.getNodeName().equals("name")) 
-    					keyPair.setKeyName(value.getFirstChild().getNodeValue());
-    				if (value.getNodeName().equals("fingerprint")) 
-    					keyPair.setFingerprint(value.getFirstChild().getNodeValue());
-    			}
-			}
-		}
-
-    	return keyPair;
-    }
-    
-    public EC2SSHKeyPair createKeyPair(String keyName) {
-    	ensureVersion(CLOUD_STACK_VERSION_2_2);
-
-    	String query = "command=createSSHKeyPair";
-    	Document response = null;
-    	
-    	try {
-        	query += "&name=".concat(URLEncoder.encode(keyName, "utf8"));
-			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "createSSHKeyPair", true);
-		} catch (EC2ServiceException e) {
-			logger.error( "EC2 Describe KeyPairs - ", e);
-
-			if (e.getMessage().startsWith("431")) // Needs improvement
-				throw new EC2ServiceException(ClientError.InvalidKeyPair_Duplicate, e.getMessage().replaceFirst("431 ", ""));
-			else
-				throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
-			
-		} catch (Exception e) {
-			logger.error( "EC2 Describe KeyPairs - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
-		}
-		
-		EC2SSHKeyPair keyPair = new EC2SSHKeyPair();		
-		NodeList pair = response.getElementsByTagName("keypair");
-		if (pair.getLength() > 0 && pair.item(0) != null && pair.item(0).hasChildNodes()) {
-			NodeList values = pair.item(0).getChildNodes();
-			for (int i = 0; i < values.getLength(); i++) {
-				Node value = values.item(i);
-    			if (value.getFirstChild() != null) {
-    				if (value.getNodeName().equals("name")) 
-    					keyPair.setKeyName(value.getFirstChild().getNodeValue());
-    				if (value.getNodeName().equals("fingerprint")) 
-    					keyPair.setFingerprint(value.getFirstChild().getNodeValue());
-    				if (value.getNodeName().equals("privatekey"))
-    					keyPair.setPrivateKey(value.getFirstChild().getNodeValue());
-    			}
-			}
-		}
-
-    	return keyPair;	
-    }
-    
-    public boolean deleteKeyPair(String keyName) {
-    	ensureVersion(CLOUD_STACK_VERSION_2_2);
-
-    	String query = "command=deleteSSHKeyPair";
-    	Document response = null;
-    	
-    	try {
-        	query += "&name=".concat(URLEncoder.encode(keyName, "utf8"));
-			response = resolveURL(genAPIURL(query, genQuerySignature(query)), "deleteSSHKeyPair", true);
-		} catch (EC2ServiceException e) {
-			logger.error( "EC2 Describe KeyPairs - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());	
-		} catch (Exception e) {
-			logger.error( "EC2 Describe KeyPairs - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
-		}
-		
-		NodeList success = response.getElementsByTagName("success");
-		if (success != null && success.getLength() > 0 && success.item(0).hasChildNodes())
-			return success.item(0).getFirstChild().getNodeValue().equals("true");
-		
-		return false;
     }
     
     public EC2PasswordData getPasswordData(String instanceId) {

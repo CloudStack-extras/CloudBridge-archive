@@ -99,11 +99,14 @@ import com.cloud.bridge.service.core.ec2.EC2AllocateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AssociateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
+import com.cloud.bridge.service.core.ec2.EC2CreateKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
+import com.cloud.bridge.service.core.ec2.EC2DeleteKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZones;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeInstances;
+import com.cloud.bridge.service.core.ec2.EC2DescribeKeyPairs;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSecurityGroups;
 import com.cloud.bridge.service.core.ec2.EC2DescribeSnapshots;
 import com.cloud.bridge.service.core.ec2.EC2DescribeVolumes;
@@ -112,8 +115,10 @@ import com.cloud.bridge.service.core.ec2.EC2Engine;
 import com.cloud.bridge.service.core.ec2.EC2Filter;
 import com.cloud.bridge.service.core.ec2.EC2GroupFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2Image;
+import com.cloud.bridge.service.core.ec2.EC2ImportKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
+import com.cloud.bridge.service.core.ec2.EC2KeyPairFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2ReleaseAddress;
@@ -1466,27 +1471,46 @@ public class EC2RestServlet extends HttpServlet {
     
     private void describeKeyPairs(HttpServletRequest request, HttpServletResponse response) 
 			throws ADBException, XMLStreamException, IOException {
-		// TODO: Handle filters for key-name and finger print
+    	EC2DescribeKeyPairs ec2Request = new EC2DescribeKeyPairs();
+
+    	ec2Request.setKeyName(request.getParameter("KeyName"));
+    	EC2Filter[] filterSet = extractFilters( request );
+        if (null != filterSet){
+        	EC2KeyPairFilterSet vfs = new EC2KeyPairFilterSet();
+        	for (EC2Filter filter : filterSet) {
+        		vfs.addFilter(filter);
+        	}
+        	ec2Request.setKeyFilterSet(vfs);
+        }
 
     	DescribeKeyPairsResponse EC2Response = EC2SoapServiceImpl.toDescribeKeyPairs(
-    			ServiceProvider.getInstance().getEC2Engine().describeKeyPairs());
+    			ServiceProvider.getInstance().getEC2Engine().handleRequest( ec2Request ));
     	serializeResponse(response, EC2Response);
     }
 
     private void importKeyPair(HttpServletRequest request, HttpServletResponse response) 
 			throws ADBException, XMLStreamException, IOException {
+    	
     	String keyName = request.getParameter("KeyName");
     	String publicKeyMaterial = request.getParameter("PublicKeyMaterial");
     	if (keyName==null && publicKeyMaterial==null) {
     		response.sendError(530, "Missing parameter");
     		return;
     	}
-    	
-        if (!publicKeyMaterial.contains(" "))
+
+    	if (!publicKeyMaterial.contains(" "))
             publicKeyMaterial = new String(Base64.decodeBase64(publicKeyMaterial.getBytes())); 
     	
+
+    	
+    	EC2ImportKeyPair ec2Request = new EC2ImportKeyPair();
+    	if (ec2Request != null) {
+    		ec2Request.setKeyName(request.getParameter("KeyName"));
+    		ec2Request.setPublicKeyMaterial(request.getParameter("PublicKeyMaterial"));
+    	}
+    	
     	ImportKeyPairResponse EC2Response = EC2SoapServiceImpl.toImportKeyPair(
-    			ServiceProvider.getInstance().getEC2Engine().importKeyPair(keyName, publicKeyMaterial));
+    			ServiceProvider.getInstance().getEC2Engine().handleRequest( ec2Request ));
     	serializeResponse(response, EC2Response);
     }
 
@@ -1498,8 +1522,13 @@ public class EC2RestServlet extends HttpServlet {
     		return;
     	}
     	
+    	EC2CreateKeyPair ec2Request = new EC2CreateKeyPair();
+    	if (ec2Request != null) {
+    		ec2Request.setKeyName(keyName);
+    	}
+    	
     	CreateKeyPairResponse EC2Response = EC2SoapServiceImpl.toCreateKeyPair(
-    			ServiceProvider.getInstance().getEC2Engine().createKeyPair(keyName));
+    			ServiceProvider.getInstance().getEC2Engine().handleRequest( ec2Request ));
     	serializeResponse(response, EC2Response);	
     }
 
@@ -1511,8 +1540,11 @@ public class EC2RestServlet extends HttpServlet {
     		return;
     	}
     	
+    	EC2DeleteKeyPair ec2Request = new EC2DeleteKeyPair();
+    	ec2Request.setKeyName(keyName);
+    	    	
     	DeleteKeyPairResponse EC2Response = EC2SoapServiceImpl.toDeleteKeyPair(
-    			ServiceProvider.getInstance().getEC2Engine().deleteKeyPair(keyName));
+    			ServiceProvider.getInstance().getEC2Engine().handleRequest(ec2Request));
     	serializeResponse(response, EC2Response);
     }
     
