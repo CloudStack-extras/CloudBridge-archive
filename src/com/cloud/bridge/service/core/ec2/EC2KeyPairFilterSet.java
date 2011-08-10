@@ -24,11 +24,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.cloud.bridge.service.EC2SoapServiceImpl;
-import com.cloud.bridge.service.exception.EC2ServiceException;
-import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
-import com.cloud.stack.CloudStackKeyPair;
-
 /**
  * @author slriv
  *

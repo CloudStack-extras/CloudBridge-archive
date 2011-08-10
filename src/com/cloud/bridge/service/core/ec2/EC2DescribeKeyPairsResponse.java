@@ -19,8 +19,6 @@ package com.cloud.bridge.service.core.ec2;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.cloud.stack.CloudStackKeyPair;
-
 /**
  * @author slriv
  *
