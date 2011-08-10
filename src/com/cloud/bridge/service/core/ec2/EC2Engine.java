@@ -62,6 +62,7 @@ import com.cloud.stack.CloudStackInfoResponse;
 import com.cloud.stack.CloudStackIpAddress;
 import com.cloud.stack.CloudStackKeyPair;
 import com.cloud.stack.CloudStackNic;
+import com.cloud.stack.CloudStackPasswordData;
 import com.cloud.stack.CloudStackResourceLimit;
 import com.cloud.stack.CloudStackSecurityGroup;
 import com.cloud.stack.CloudStackSnapshot;
@@ -576,8 +577,7 @@ public class EC2Engine {
      * 
      * @throws UnsupportedEncodingException 
      */
-    private String constructNetworkUserList( EC2SecurityGroup[] groups ) throws UnsupportedEncodingException 
-    {
+    private String constructNetworkUserList( EC2SecurityGroup[] groups ) throws UnsupportedEncodingException {
     	if (null == groups || 0 == groups.length) return null;    	
     	StringBuffer userList = new StringBuffer();
 
@@ -669,10 +669,9 @@ public class EC2Engine {
     }
     
     public boolean deleteSnapshot(String snapshotId) {
-    	CloudStackCommand command = new CloudStackCommand("deleteSnapshot");
-    	command.setParam("id", snapshotId);
-    	
-    	try {
+       	try {
+        	CloudStackCommand command = new CloudStackCommand("deleteSnapshot");
+        	command.setParam("id", snapshotId);
 	    	CloudStackInfoResponse response = cloudStackCall(command, false, "deletesnapshotresponse", null, CloudStackInfoResponse.class);
 	    	if(response.getJobId() != null)
 	    		return true;
@@ -692,21 +691,18 @@ public class EC2Engine {
             images = listTemplates( request.getId(), images );
             EC2Image[] imageSet = images.getImageSet();
 
- 	        String query = new String( "command=updateTemplate" +
-	                                   "&displayText=" + safeURLencode( request.getDescription()) +
-	                                   "&id="          + request.getId() +
-	                                   "&name="        + safeURLencode( imageSet[0].getName()));
-
-            resolveURL(genAPIURL(query, genQuerySignature(query)), "updateTemplate", true );
-            return true;
-	        
-   	    } catch( EC2ServiceException error ) {
- 		    logger.error( "EC2 ModifyImage - ", error);
-		    throw error;
-		
+    		CloudStackCommand command = new CloudStackCommand("updateTemplate");
+    		if (command != null) {
+    			command.setParam("displayText", request.getDescription());
+    			command.setParam("id", request.getId());
+    			command.setParam("name", imageSet[0].getName());
+    		}
+    		
+    		CloudStackInfoResponse response = cloudStackCall(command, true, "updatetemplateresponse", null, CloudStackInfoResponse.class);
+    		return response.getSuccess();
 	    } catch( Exception e ) {
 		    logger.error( "EC2 ModifyImage - ", e);
-		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+		    throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
 	    }
     }
     
@@ -714,7 +710,6 @@ public class EC2Engine {
      * internal Helper functions to wrap CloudStackCommands used commonly...
      * 
      */
-    
     private List<CloudStackIpAddress> getCloudStackIpAddressesFromKeyValue(String key, String value) throws Exception {
 		CloudStackCommand listIPAddrCmd = new CloudStackCommand("listPublicIpAddresses");
 		if (listIPAddrCmd != null && key != null && value != null) {
@@ -757,25 +752,101 @@ public class EC2Engine {
     	
     	return cloudStackListCall(listKeyPairCmd, "listsshkeypairsresponse", "keypair", new TypeToken<List<CloudStackKeyPair>>() {}.getType());
     }
-
-    /* NOT USED ANYWHERE
-    private CloudStackKeyPair getCloudStackKeyPairFromKeyValue(String key, String value) throws Exception {
-    	List<CloudStackKeyPair> keyPairList = getCloudStackKeyPairsFromKeyValue(key, value);
-    	if (keyPairList == null || keyPairList.size() != 1) {
-    		throw new EC2ServiceException(ClientError.InvalidParameterValue, "Key Pair not found");
-    	}
-    	return keyPairList.get(0);
-    }
-    */
     
+    /**
+     * If given a specific list of snapshots of interest, then only values from those snapshots are returned.
+     * 
+     * @param interestedShots - can be null, should be a subset of all snapshots
+     */
+    
+    private EC2DescribeSnapshotsResponse listSnapshots( String[] interestedShots ) throws Exception {
+		EC2DescribeSnapshotsResponse snapshots = new EC2DescribeSnapshotsResponse();
+		
+		List<CloudStackSnapshot> cloudSnapshots;
+		if(interestedShots == null || interestedShots.length == 0) {
+			CloudStackCommand cmd = new CloudStackCommand("listSnapshots");
+			cloudSnapshots = this.cloudStackListCall(cmd, "listsnapshotsresponse", "snapshot", 
+				new TypeToken<List<CloudStackSnapshot>> () {}.getType());
+		} else {
+			cloudSnapshots = new ArrayList<CloudStackSnapshot>();
+			
+			for(String id : interestedShots) {
+				CloudStackCommand cmd = new CloudStackCommand("listSnapshots");
+				cmd.setParam("id", id);
+
+				List<CloudStackSnapshot> tmpList = this.cloudStackListCall(cmd, "listsnapshotsresponse", "snapshot", 
+					new TypeToken<List<CloudStackSnapshot>> () {}.getType());
+				cloudSnapshots.addAll(tmpList);
+			}
+		}
+		
+		if (cloudSnapshots == null) { 
+			return null;
+		}
+		
+		for(CloudStackSnapshot cloudSnapshot : cloudSnapshots) {
+			EC2Snapshot shot  = new EC2Snapshot();
+	        shot.setId(String.valueOf(cloudSnapshot.getId()));
+			shot.setName(cloudSnapshot.getName());
+			shot.setVolumeId(String.valueOf(cloudSnapshot.getVolumeId()));
+			shot.setType(cloudSnapshot.getSnapshotType());
+			shot.setState(cloudSnapshot.getState());
+			shot.setCreated(cloudSnapshot.getCreated());
+			shot.setAccountName(cloudSnapshot.getAccountName());
+			shot.setDomainId(String.valueOf(cloudSnapshot.getDomainId()));
+			
+			snapshots.addSnapshot(shot);
+		}
+	    return snapshots;
+	}
+
+
     // handlers
+    public EC2PasswordData getPasswordData(String instanceId) {
+    	try {
+	    	CloudStackCommand command = new CloudStackCommand("getVMPassword");
+			if (command != null) {
+				command.setParam("id", instanceId);
+			}
+			CloudStackPasswordData callResponse = cloudStackCall(command, true, "getvmpasswordresponse", "encryptedPassword", CloudStackPasswordData.class);
+			EC2PasswordData passwdData = new EC2PasswordData();
+			if (callResponse != null) {
+				passwdData.setInstanceId(instanceId);
+				passwdData.setEncryptedPassword(callResponse.getEncryptedpassword());
+			}
+			return passwdData;
+    	} catch(Exception e) {
+    		logger.error("EC2 GetPasswordData - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
+    }
+
     public EC2DescribeKeyPairsResponse handleRequest( EC2DescribeKeyPairs request ) {
     	try {
     		EC2KeyPairFilterSet filterSet = request.getKeyFilterSet();
+    		String[] keyNames = request.getKeyNames();
 
-    		// doing a by name list, should actually already be covered in the filters
-    		// doing it here to save time
-    		List<CloudStackKeyPair> keyPairs = getCloudStackKeyPairsFromKeyValue("name", request.getKeyName());
+    		List<CloudStackKeyPair> keyPairs = getCloudStackKeyPairsFromKeyValue(null, null);
+    		
+    		// Let's trim the list of keypairs to only the ones listed in keyNames
+    		if (keyPairs != null && keyNames != null && keyNames.length > 0) {
+	    		for (CloudStackKeyPair keyPair : keyPairs) {
+	    			boolean matched = false;
+	    			for (String keyName : keyNames) {
+	    				if (keyPair.getName().contains(keyName)) {
+	    					matched = true;
+	    					break;
+	    				}
+	    			}
+	    			if (matched == false) {
+	    				keyPairs.remove(keyPair);
+	    			}
+	    		}
+    		}
+    		
+    		if (keyPairs.isEmpty() == true) {
+    			throw new EC2ServiceException(ServerError.InternalError, "No keypairs left!");
+    		}
     		
     		// this should be reworked... converting from CloudStackKeyPairResponse to EC2SSHKeyPair is dumb
     		List<EC2SSHKeyPair> keyPairsList = new ArrayList<EC2SSHKeyPair>();
@@ -1023,19 +1094,16 @@ public class EC2Engine {
     	    EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
             volumes = listVolumes( null, request.getInstanceId(), volumes );
             EC2Volume[] volSet = volumes.getVolumeSet();
-            for( int i=0; i < volSet.length; i++ ) 
-            {
-            	 String volType = volSet[i].getType();
-            	 if (volType.equalsIgnoreCase( "ROOT" )) 
-            	 {
-            		 String vmState = volSet[i].getVMState();
-            		 if (vmState.equalsIgnoreCase( "running" ) || vmState.equalsIgnoreCase( "starting" )) 
-            		 {
+            for (EC2Volume vol : volSet) {
+            	 String volType = vol.getType();
+            	 if (vol.getType().equalsIgnoreCase( "ROOT" )) {
+            		 String vmState = vol.getVMState();
+            		 if (vmState.equalsIgnoreCase( "running" ) || vmState.equalsIgnoreCase( "starting" )) {
             			 needsRestart = true;
-            			 if (!stopVirtualMachine( request.getInstanceId()))
+            			 if (!stopVirtualMachine( request.getInstanceId() ))
             		         throw new EC2ServiceException(ClientError.IncorrectState, "CreateImage - instance must be in a stopped state");
             		 }           		 
-            		 volumeId = volSet[i].getId();
+            		 volumeId = vol.getId();
             		 break;
             	 }
             }
@@ -1069,9 +1137,8 @@ public class EC2Engine {
  	        
  	        
  	        // [C] If we stopped the virtual machine now we need to restart it
- 	        if (needsRestart) 
- 	        {
-   			    if (!startVirtualMachine( request.getInstanceId()))
+ 	        if (needsRestart) {
+   			    if (!startVirtualMachine( request.getInstanceId() )) 
 		            throw new EC2ServiceException(ServerError.InternalError
 		            		,"CreateImage - restarting instance " + request.getInstanceId() + " failed");
  	        }
@@ -1580,35 +1647,6 @@ public class EC2Engine {
     	}
     }
     
-    public EC2PasswordData getPasswordData(String instanceId) {
-    	ensureVersion(CLOUD_STACK_VERSION_2_2);
-
-    	String query = "command=getVMPassword";
-    	Document response = null;
-    	EC2PasswordData passwdData = new EC2PasswordData();
-    	passwdData.setInstanceId(instanceId);
-    	
-    	try {
-    		query += "&id=".concat(URLEncoder.encode(instanceId, "utf8"));
-    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "getVMPassword", true);
-    		NodeList passwd = response.getElementsByTagName("encryptedpassword");
-    		if (passwd != null && passwd.getLength() > 0 && passwd.item(0).hasChildNodes())
-    			passwdData.setEncryptedPassword(passwd.item(0).getFirstChild().getNodeValue());
-
-    	} catch (EC2ServiceException e) {
-    		if (!e.getMessage().startsWith("431 No password for VM with id")) { 
-    			logger.error( "EC2 Describe KeyPairs - ", e);
-    			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
-    		} else {
-    			passwdData.setEncryptedPassword("");
-    		}
-    	} catch (Exception e) {
-    		logger.error( "EC2 Describe KeyPairs - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
-    	}
-
-    	return passwdData;
-    }
     
 
     /**
@@ -2120,54 +2158,7 @@ public class EC2Engine {
     	}
 		return perm;
     }
-    
-    /**
-     * If given a specific list of snapshots of interest, then only values from those snapshots are returned.
-     * 
-     * @param interestedShots - can be null, should be a subset of all snapshots
-     */
-    
-    private EC2DescribeSnapshotsResponse listSnapshots( String[] interestedShots ) throws Exception {
-		EC2DescribeSnapshotsResponse snapshots = new EC2DescribeSnapshotsResponse();
-		
-		List<CloudStackSnapshot> cloudSnapshots;
-		if(interestedShots == null || interestedShots.length == 0) {
-			CloudStackCommand cmd = new CloudStackCommand("listSnapshots");
-			cloudSnapshots = this.cloudStackListCall(cmd, "listsnapshotsresponse", "snapshot", 
-				new TypeToken<List<CloudStackSnapshot>> () {}.getType());
-		} else {
-			cloudSnapshots = new ArrayList<CloudStackSnapshot>();
-			
-			for(String id : interestedShots) {
-				CloudStackCommand cmd = new CloudStackCommand("listSnapshots");
-				cmd.setParam("id", id);
-
-				List<CloudStackSnapshot> tmpList = this.cloudStackListCall(cmd, "listsnapshotsresponse", "snapshot", 
-					new TypeToken<List<CloudStackSnapshot>> () {}.getType());
-				cloudSnapshots.addAll(tmpList);
-			}
-		}
-		
-		if (cloudSnapshots == null) { 
-			return null;
-		}
-		
-		for(CloudStackSnapshot cloudSnapshot : cloudSnapshots) {
-			EC2Snapshot shot  = new EC2Snapshot();
-	        shot.setId(String.valueOf(cloudSnapshot.getId()));
-			shot.setName(cloudSnapshot.getName());
-			shot.setVolumeId(String.valueOf(cloudSnapshot.getVolumeId()));
-			shot.setType(cloudSnapshot.getSnapshotType());
-			shot.setState(cloudSnapshot.getState());
-			shot.setCreated(cloudSnapshot.getCreated());
-			shot.setAccountName(cloudSnapshot.getAccountName());
-			shot.setDomainId(String.valueOf(cloudSnapshot.getDomainId()));
-			
-			snapshots.addSnapshot(shot);
-		}
-	    return snapshots;
-	}
-
+      
     public Account getAccount() {
     	String query = "command=listAccounts";
     	Document response = null;
@@ -2450,7 +2441,6 @@ public class EC2Engine {
 	
 	
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
-	
 	//
 	// Methods are about to be obsolete    
 	//
@@ -2458,7 +2448,7 @@ public class EC2Engine {
     /**
      * Wait until one specific VM has stopped
      */
-    private boolean stopVirtualMachine( String instanceId ) 
+    private boolean stopVirtualMachine( String instanceId) 
         throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
     {
     	EC2Instance[] vms    = new EC2Instance[1];

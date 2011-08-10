@@ -65,7 +65,7 @@ public class EC2KeyPairFilterSet {
 	}
 
 
-	public EC2DescribeKeyPairsResponse evaluate( List<EC2SSHKeyPair> sampleList ) throws ParseException	{
+	public EC2DescribeKeyPairsResponse evaluate( List<EC2SSHKeyPair> sampleList) throws ParseException	{
 		EC2DescribeKeyPairsResponse resultList = new EC2DescribeKeyPairsResponse();
 		
 		boolean matched;

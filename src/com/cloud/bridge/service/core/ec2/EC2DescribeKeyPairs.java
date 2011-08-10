@@ -16,29 +16,33 @@
 
 package com.cloud.bridge.service.core.ec2;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author slriv
  *
  */
 public class EC2DescribeKeyPairs {
 	private EC2KeyPairFilterSet keyFilterSet;
-	private String keyName;
+	private List<String> keyNames;
 	
 	public EC2DescribeKeyPairs() {
+		keyNames = new ArrayList<String>();
 	}
 	
 	/**
-	 * @return the keyName
+	 * @return the keyNames String Array
 	 */
-	public String getKeyName() {
-		return keyName;
+	public String[] getKeyNames() {
+		return keyNames.toArray(new String[0]);
 	}
 
 	/**
-	 * @param keyName the keyName to set
+	 * @param keyName the keyName to add
 	 */
-	public void setKeyName(String keyName) {
-		this.keyName = keyName;
+	public void addKeyName(String keyName) {
+		keyNames.add(keyName);
 	}
 
 	/**

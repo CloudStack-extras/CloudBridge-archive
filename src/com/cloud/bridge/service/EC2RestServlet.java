@@ -1472,8 +1472,14 @@ public class EC2RestServlet extends HttpServlet {
     private void describeKeyPairs(HttpServletRequest request, HttpServletResponse response) 
 			throws ADBException, XMLStreamException, IOException {
     	EC2DescribeKeyPairs ec2Request = new EC2DescribeKeyPairs();
-
-    	ec2Request.setKeyName(request.getParameter("KeyName"));
+    	
+    	
+        String[] keyNames = request.getParameterValues( "KeyName" );
+        if (keyNames != null) { 
+        	for (String keyName : keyNames) {
+        		ec2Request.addKeyName(keyName);
+        	}
+        }
     	EC2Filter[] filterSet = extractFilters( request );
         if (null != filterSet){
         	EC2KeyPairFilterSet vfs = new EC2KeyPairFilterSet();
@@ -1555,7 +1561,7 @@ public class EC2RestServlet extends HttpServlet {
     		response.sendError(530, "Missing InstanceId parameter");
     		return;
     	}
-  	
+    	
     	GetPasswordDataResponse EC2Response = EC2SoapServiceImpl.toGetPasswordData(
     			ServiceProvider.getInstance().getEC2Engine().getPasswordData(instanceId));
     	serializeResponse(response, EC2Response);

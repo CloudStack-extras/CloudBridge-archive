@@ -1742,11 +1742,20 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	public DescribeKeyPairsResponse describeKeyPairs(DescribeKeyPairs describeKeyPairs) {
 		
 		EC2DescribeKeyPairs ec2Request = new EC2DescribeKeyPairs();
-		DescribeKeyPairsType dkt = describeKeyPairs.getDescribeKeyPairs();
-		FilterSetType fst = dkt.getFilterSet();
+
+		// multiple keynames may be provided
+		DescribeKeyPairsInfoType kset = describeKeyPairs.getDescribeKeyPairs().getKeySet();
+		if (kset != null) {
+			DescribeKeyPairsItemType[] keyPairKeys = kset.getItem();
+			for (DescribeKeyPairsItemType key : keyPairKeys) {
+				ec2Request.addKeyName(key.getKeyName());
+			}
+		}
 		
-		if (fst != null) {
-				ec2Request.setKeyFilterSet(toKeyPairFilterSet(fst));
+		// multiple filters may be provided
+		FilterSetType fset = describeKeyPairs.getDescribeKeyPairs().getFilterSet();
+		if (fset != null) {
+			ec2Request.setKeyFilterSet(toKeyPairFilterSet(fset));
 		}
 		
 		return toDescribeKeyPairs(engine.handleRequest(ec2Request));
