@@ -56,9 +56,12 @@ import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.JsonAccessor;
 import com.cloud.bridge.util.Tuple;
 import com.cloud.stack.ApiConstants;
+import com.cloud.stack.CloudStackAccount;
 import com.cloud.stack.CloudStackClient;
 import com.cloud.stack.CloudStackCommand;
+import com.cloud.stack.CloudStackDiskOfferings;
 import com.cloud.stack.CloudStackInfoResponse;
+import com.cloud.stack.CloudStackIngressRule;
 import com.cloud.stack.CloudStackIpAddress;
 import com.cloud.stack.CloudStackKeyPair;
 import com.cloud.stack.CloudStackNic;
@@ -66,6 +69,7 @@ import com.cloud.stack.CloudStackPasswordData;
 import com.cloud.stack.CloudStackResourceLimit;
 import com.cloud.stack.CloudStackSecurityGroup;
 import com.cloud.stack.CloudStackSnapshot;
+import com.cloud.stack.CloudStackTemplate;
 import com.cloud.stack.CloudStackUserVm;
 import com.cloud.stack.CloudStackVolume;
 import com.cloud.stack.CloudStackZone;
@@ -1968,222 +1972,155 @@ public class EC2Engine {
      * @return the same object passed in as the "images" parameter modified with one or more
      *         EC2Image objects loaded.
      */
-    private EC2DescribeImagesResponse listTemplates( String templateId, EC2DescribeImagesResponse images ) 
-        throws IOException, ParserConfigurationException, SAXException, EC2ServiceException, SignatureException 
-    {
-    	Node parent = null;
-	    StringBuffer params = new StringBuffer();
-   	    params.append( "command=listTemplates" );
-   	    if (null != templateId) params.append( "&id=" + templateId );
-   	    params.append( "&templateFilter=executable" );   // -> a required parameter
-   	    String query = params.toString();
-
-       	Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listTemplates", true );
-	    NodeList match     = cloudResp.getElementsByTagName( "template" ); 
-	    int      length    = match.getLength();
-
-	    for( int i=0; i < length; i++ ) 
-	    {	   
-	    	if (null != (parent = match.item(i))) 
-	    	{ 
-	    		NodeList children = parent.getChildNodes();
-	    		int      numChild = children.getLength();
-    			EC2Image template = new EC2Image();
-	    		
-	    		for( int j=0; j < numChild; j++ ) 
-	    		{
-	    		    // -> each template has many child tags
-	    			Node   child = children.item(j);
-	    			String name  =  child.getNodeName();
-	    			
-	    			if (null != child.getFirstChild()) 
-	    			{
-	    			    String value = child.getFirstChild().getNodeValue();
-	    			    
-	    			         if (name.equalsIgnoreCase( "id"         )) template.setId( value );
-	    			    else if (name.equalsIgnoreCase( "name"       )) template.setName( value );
-	    			    else if (name.equalsIgnoreCase( "displaytext")) template.setDescription( value );
-	    			    else if (name.equalsIgnoreCase( "ostypeid"   )) template.setOsTypeId( value );
-	    			    else if (name.equalsIgnoreCase( "ispublic"   )) template.setIsPublic( value.equalsIgnoreCase( "true" ));
-	    			    else if (name.equalsIgnoreCase( "isready"    )) template.setIsReady( value.equalsIgnoreCase( "true" ));
-	    			    else if (name.equalsIgnoreCase( "account"    )) template.setAccountName( value );
-	    			    else if (name.equalsIgnoreCase( "domainid"   )) template.setDomainId(value);
-	    			}
-	    	    }
-    			images.addImage( template );
+    private EC2DescribeImagesResponse listTemplates( String templateId, EC2DescribeImagesResponse images ) throws EC2ServiceException {
+    	try {
+	    	CloudStackCommand command = new CloudStackCommand("listTemplates");
+	    	if (command != null) {
+	    		if (templateId != null) command.setParam("id", templateId);
+	    		command.setParam("templateFilter", "executable");
 	    	}
-	    }
-	    return images;
+	    	List<CloudStackTemplate> resp = cloudStackListCall(command, "listtemplatesresponse", "template", 
+	    			new TypeToken<List<CloudStackTemplate>>() {}.getType());
+	    	for (CloudStackTemplate temp : resp) {
+	    		EC2Image ec2Image = new EC2Image();
+	    		ec2Image.setId(temp.getId().toString());
+	    		ec2Image.setAccountName(temp.getAccount());
+	    		ec2Image.setName(temp.getName());
+	    		ec2Image.setDescription(temp.getDisplayText());
+	    		ec2Image.setOsTypeId(temp.getOsTypeId().toString());
+	    		ec2Image.setIsPublic(temp.isPublic());
+	    		ec2Image.setIsReady(temp.isReady());
+	    		ec2Image.setDomainId(temp.getDomainId().toString());
+	    		images.addImage(ec2Image);
+	    	}
+	    	return images;
+    	} catch(Exception e) {
+			logger.error( "List Templates - ", e);
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
     }
 
     /**
      * Return information on all defined disk offerings.
      */
-    private DiskOfferings listDiskOfferings() 
-        throws IOException, ParserConfigurationException, SAXException, ParseException, EC2ServiceException, SignatureException 
-   {
-   	    DiskOfferings offerings = new DiskOfferings();
-    	Node parent  = null;
-	    String query = new String( "command=listDiskOfferings" );
-   	    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "listDiskOfferings", true );
-        NodeList match     = cloudResp.getElementsByTagName( "diskoffering" ); 
-        int      length    = match.getLength();
-
-        for( int i=0; i < length; i++ ) 
-        {
-    	    if (null != (parent = match.item(i))) 
-    	    { 
-    		    NodeList children = parent.getChildNodes();
-    		    int      numChild = children.getLength();
-			    DiskOffer df = new DiskOffer();
+    private DiskOfferings listDiskOfferings() throws EC2ServiceException {
+    	try {
+    		CloudStackCommand command = new CloudStackCommand("listDiskOfferings");
+    		List<CloudStackDiskOfferings> disks = cloudStackListCall(command, "listdiskofferingsresponse", "diskoffering", 
+    				new TypeToken<List<CloudStackDiskOfferings>>() {}.getType());
     		
-    		    for( int j=0; j < numChild; j++ ) 
-    		    {
-    			    Node   child = children.item(j);
-    			    String name  = child.getNodeName();
-			
-    			    if (null != child.getFirstChild()) 
-    			    {
-    			        String value = child.getFirstChild().getNodeValue();
-      			
-			                 if (name.equalsIgnoreCase( "id"           )) df.setId( value );
-			            else if (name.equalsIgnoreCase( "name"         )) df.setName( value );
-			            else if (name.equalsIgnoreCase( "disksize"     )) df.setSize( value );
-			            else if (name.equalsIgnoreCase( "created"      )) df.setCreated( value );
-			            else if (name.equalsIgnoreCase( "iscustomized" )) df.setIsCustomized( value.equalsIgnoreCase( "true" ));
-    			    }
-    	        }
-			    offerings.addOffer( df );
-    	    }
+    		DiskOfferings offerings = new DiskOfferings();
+    		for (CloudStackDiskOfferings disk : disks) {
+    			DiskOffer df = new DiskOffer();
+    			df.setId(disk.getId().toString());
+    			df.setCreated(disk.getCreated());
+    			df.setIsCustomized(disk.isCustomized());
+    			df.setName(disk.getName());
+    			df.setSize(disk.getDiskSize().toString());
+    			offerings.addOffer(df);
+    		}
+    		return offerings;
+    	} catch(Exception e) {
+			logger.error( "Disk Offerings - ", e);
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
     	}
-        return offerings;
     }
 
 
     public EC2DescribeSecurityGroupsResponse listSecurityGroups( String[] interestedGroups ) 
         throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
     {
-    	EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
-    	Node parent = null; 	
-	    Document cloudResp = resolveURL(genAPIURL( "command=listSecurityGroups", genQuerySignature("command=listSecurityGroups")), "listSecurityGroups", true );
-        NodeList match = cloudResp.getElementsByTagName( "securitygroup" ); 
-	    int     length = match.getLength();
-	       
-	    for( int i=0; i < length; i++ ) 
-	    {	   
-	   	    if (null != (parent = match.item(i))) 
-	   	    { 
-	    		NodeList children = parent.getChildNodes();
-	    		int      numChild = children.getLength();
-    			EC2SecurityGroup group  = new EC2SecurityGroup();
-	    		
-	    		for( int j=0; j < numChild; j++ ) 
-	    		{
-	    		     Node   child = children.item(j);
-	    			 String name  =  child.getNodeName();
-	    			
-	    			 if (null != child.getFirstChild()) 
-	    			 {
-	    			     String value = child.getFirstChild().getNodeValue();
-	    			     //System.out.println( "listSecurityGroups " + name + "=" + value );
-	    			     
-   			                  if (name.equalsIgnoreCase( "id"          )) group.setId( value );
-   			             else if (name.equalsIgnoreCase( "name"        )) group.setName( value );
-	    			     else if (name.equalsIgnoreCase( "description" )) group.setDescription( value );
-	    			     else if (name.equalsIgnoreCase( "account"     )) group.setAccount( value );
-	    			     else if (name.equalsIgnoreCase( "domainid"    )) group.setDomainId( value ); 
-	    			     else if (name.equalsIgnoreCase( "ingressrule" )) group.addIpPermission( toPermission( child.getChildNodes()));
-	    			 } 
-	    	    }
-	 		    // -> are we asking about specific security groups?
-	 		    if ( null != interestedGroups && 0 < interestedGroups.length ) 
-	 		    {
-	 		     	 for( int j=0; j < interestedGroups.length; j++ ) 
-	 		     	 {
-	 		    	     if (interestedGroups[j].equalsIgnoreCase( group.getName())) {
-	 		    	    	 groupSet.addGroup( group );
-	 		    			 break;
-	 		    		 }
-	 		    	 }
-	 		    }
-	 		    else groupSet.addGroup( group );
-	    	}
-	    }
-	    return groupSet;
+    	try {
+    		EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
+    		CloudStackCommand command = new CloudStackCommand("listSecurityGroups");
+    		List<CloudStackSecurityGroup> groups = cloudStackListCall(command, "listsecuritygroupsresponse", "securitygroup", 
+    				new TypeToken<List<CloudStackSecurityGroup>>() {}.getType());
+    		
+    		for (CloudStackSecurityGroup group : groups) {
+    			boolean matched = false;
+    			if (interestedGroups.length > 0) {
+	    			for (String groupName :interestedGroups) {
+	    				if (groupName.equalsIgnoreCase(group.getName())) {
+	    					matched = true;
+	    					break;
+	    				}
+	    			}
+    			} else {
+    				matched = true;
+    			}
+    			if (!matched) continue;
+    			EC2SecurityGroup ec2Group = new EC2SecurityGroup();
+    			// not sure if we should set both account and account name to accountname
+    			ec2Group.setAccount(group.getAccountName());
+    			ec2Group.setAccountName(group.getAccountName());
+    			ec2Group.setName(group.getName());
+    			ec2Group.setDescription(group.getDescription());
+    			ec2Group.setDomainId(group.getDomainId().toString());
+    			ec2Group.setId(group.getId().toString());
+    			ec2Group.addIpPermission(toPermission(group));
+
+    			groupSet.addGroup(ec2Group);
+    		}
+    		return groupSet;
+    	} catch(Exception e) {
+			logger.error( "List Security Groups - ", e);
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
+    }
+    
+    private EC2IpPermission toPermission( CloudStackSecurityGroup group ) {
+    	List<CloudStackIngressRule> rules = group.getIngressRules();
+    	
+    	if (rules == null || rules.isEmpty()) return null;
+    	
+    	EC2IpPermission perm = new EC2IpPermission();
+    	for (CloudStackIngressRule rule : rules) {
+    		perm.setProtocol(rule.getProtocol());
+    		perm.setFromPort(rule.getStartPort());
+    		perm.setToPort(rule.getEndPort());
+    		perm.setRuleId(rule.getRuleId().toString());
+    		perm.setIcmpCode(rule.getIcmpCode().toString());
+    		perm.setIcmpType(rule.getIcmpType().toString());
+    		perm.setCIDR(rule.getCidr());
+    		perm.addIpRange(rule.getCidr());
+    		
+    		if (rule.getAccountName() != null && rule.getSecurityGroupName() != null) {
+	    		EC2SecurityGroup newGroup = new EC2SecurityGroup();
+	    		newGroup.setAccount(rule.getAccountName());
+	    		newGroup.setName(rule.getSecurityGroupName());
+	    		perm.addUser(newGroup);
+    		}
+    	}
+    	return perm;
     }
     
     /**
-     * Ingress Rules are one more level down the XML tree.
+     * 
+     * @return List of accounts
+     * 
+     *	This isn't used anywhere, but it used to be???
      */
-    private EC2IpPermission toPermission( NodeList rule ) 
-    {
-    	int numChild = rule.getLength();
-    	EC2IpPermission perm = new EC2IpPermission();
-    	String account   = null;
-    	String groupName = null;
-
-    	for( int i=0; i < numChild; i++ ) 
-    	{
-    		 Node   child = rule.item(i);
-    		 String name  = child.getNodeName();
-    			
-    		 if (null != child.getFirstChild()) 
-    		 {
-    		     String value = child.getFirstChild().getNodeValue();
-    		     //System.out.println( "ingress rule: " + name + "=" + value );
-    		     
-		              if (name.equalsIgnoreCase( "protocol"          )) perm.setProtocol( value ); 
-		         else if (name.equalsIgnoreCase( "startport"         )) perm.setFromPort( Integer.parseInt( value ));
-		         else if (name.equalsIgnoreCase( "endport"           )) perm.setToPort( Integer.parseInt( value ));
-		         else if (name.equalsIgnoreCase( "ruleid"            )) perm.setRuleId( value );		                  
-			     else if (name.equalsIgnoreCase( "icmpcode"          )) perm.setIcmpCode( value );
-			     else if (name.equalsIgnoreCase( "icmptype"          )) perm.setIcmpType( value );  			                  
-		         else if (name.equalsIgnoreCase( "account"           )) account = value;
-		         else if (name.equalsIgnoreCase( "securitygroupname" )) groupName = value ;
-		         else if (name.equalsIgnoreCase( "cidr"              )) {
-		        	 perm.addIpRange( value );
-		        	 perm.setCIDR( value );
-		         }
-		              
-		         if (null != account && null != groupName) 
-		         {
-		        	 EC2SecurityGroup group = new EC2SecurityGroup();
-		        	 group.setAccount( account );
-		        	 group.setName( groupName );
-		        	 account   = null;
-		        	 groupName = null;
-		        	 perm.addUser( group );
-		         }
-    	     }
-    	}
-		return perm;
-    }
-      
-    public Account getAccount() {
-    	String query = "command=listAccounts";
-    	Document response = null;
-    	Account account = new Account();
-
+    
+    public Account[] getAccounts() {
     	try {
-    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listAccounts", true);
-		} catch (Exception e) {
+	    	CloudStackCommand command = new CloudStackCommand("listAccounts");
+	    	List<Account> acctList = new ArrayList<Account>();
+    		List<CloudStackAccount> accts = cloudStackListCall(command, "listaccountsresponse", "account", 
+    				new TypeToken<List<CloudStackAccount>>() {}.getType());
+    		for (CloudStackAccount acct : accts) {
+    			Account newAcct = new Account();
+    			newAcct.setAccountName(acct.getName());
+    			newAcct.setDomainId(acct.getDomainId().toString());
+    			newAcct.setDomainName(acct.getDomain());
+    			newAcct.setId(acct.getId().toString());
+    			acctList.add(newAcct);
+    		}
+    		return acctList.toArray(new Account[0]);
+    			
+    	} catch (Exception e) {
 			logger.error( "List Accounts - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
-		}
-
-		NodeList match = response.getElementsByTagName("id");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setId(match.item(0).getFirstChild().getNodeValue());
-		
-		match = response.getElementsByTagName("name");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setAccountName(match.item(0).getFirstChild().getNodeValue());
-		
-		match = response.getElementsByTagName("domainid");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setDomainId(match.item(0).getFirstChild().getNodeValue());
-		
-		match = response.getElementsByTagName("domain");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) account.setDomainName(match.item(0).getFirstChild().getNodeValue());
-
-		return account;
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
     }
     
     /**

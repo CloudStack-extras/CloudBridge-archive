@@ -1629,73 +1629,73 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return response;
 	}
 	
-	public static DescribeSecurityGroupsResponse toDescribeSecurityGroupsResponse(EC2DescribeSecurityGroupsResponse engineResponse ) {
+	public static DescribeSecurityGroupsResponse toDescribeSecurityGroupsResponse(
+			EC2DescribeSecurityGroupsResponse engineResponse) {
 		DescribeSecurityGroupsResponse response = new DescribeSecurityGroupsResponse();
 		DescribeSecurityGroupsResponseType param1 = new DescribeSecurityGroupsResponseType();
 		SecurityGroupSetType param2 = new SecurityGroupSetType();
-		
+
 		EC2SecurityGroup[] groups = engineResponse.getGroupSet();
-	    for( int i=0; i < groups.length; i++ ) {
-		     SecurityGroupItemType param3 = new SecurityGroupItemType();
-		     String accountName = groups[i].getAccountName();
-			 String domainId = groups[i].getDomainId();
-			 String ownerId = domainId + ":" + accountName;
-		     
-		     param3.setOwnerId(ownerId);
-		     param3.setGroupName( groups[i].getName());
-		     String desc = groups[i].getDescription();
-		     param3.setGroupDescription((null != desc ? desc : ""));
-		     
-		     IpPermissionSetType param4 = new IpPermissionSetType();
-		     EC2IpPermission[] perms = groups[i].getIpPermissionSet();
-		     for( int j=0; j < perms.length; j++ ) 
-		     {
-		    	IpPermissionType param5 = new IpPermissionType();
-		    	param5.setIpProtocol( perms[j].getProtocol());
-		    	param5.setFromPort( perms[j].getFromPort());
-		    	param5.setToPort( perms[j].getToPort());
-		    	
-		    	// -> user groups
-		    	EC2SecurityGroup[] userSet = perms[j].getUserSet();
-		    	if ( null == userSet || 0 == userSet.length ) {
-			    	 UserIdGroupPairSetType param8 = new UserIdGroupPairSetType();
-			    	 param5.setGroups( param8 );	
-		    	}
-		    	else {
-		    		 for( int h=0; h < userSet.length; h++ ) {
-				    	 UserIdGroupPairSetType param8 = new UserIdGroupPairSetType();
-				    	 UserIdGroupPairType param9 = new UserIdGroupPairType();
-				    	 param9.setUserId( userSet[h].getAccount());
-				    	 param9.setGroupName( userSet[h].getName());
-				    	 param8.addItem( param9 );
-				    	 param5.setGroups( param8 );			    			 
-		    		 }
-		    	}
-		    	
-		    	// -> or CIDR list
-		    	String[] rangeSet = perms[j].getIpRangeSet();
-		    	if ( null == rangeSet || 0 == rangeSet.length ) {
-	    		     IpRangeSetType param6 = new IpRangeSetType();
- 		    	     param5.setIpRanges( param6 );	
-		    	}
-		    	else {
-		    	     for( int k=0; k < rangeSet.length; k++ ) {
-		    		    IpRangeSetType  param6 = new IpRangeSetType();
-		    		    IpRangeItemType param7 = new IpRangeItemType();
-		    		    param7.setCidrIp( rangeSet[k] );
-		    		    param6.addItem( param7 );
-			    	    param5.setIpRanges( param6 );
-		    	     }
-		    	}
-		        param4.addItem( param5 );
-		     }
-             param3.setIpPermissions( param4 );     	 
-		     param2.addItem( param3 );
-	    }
-		
-		param1.setSecurityGroupInfo( param2 );
-	    param1.setRequestId( UUID.randomUUID().toString());
-		response.setDescribeSecurityGroupsResponse( param1 );
+		for (EC2SecurityGroup group : groups) {
+			SecurityGroupItemType param3 = new SecurityGroupItemType();
+			String accountName = group.getAccountName();
+			String domainId = group.getDomainId();
+			String ownerId = domainId + ":" + accountName;
+
+			param3.setOwnerId(ownerId);
+			param3.setGroupName(group.getName());
+			String desc = group.getDescription();
+			param3.setGroupDescription((null != desc ? desc : ""));
+
+			IpPermissionSetType param4 = new IpPermissionSetType();
+			EC2IpPermission[] perms = group.getIpPermissionSet();
+			for (EC2IpPermission perm : perms) {
+				// TODO: Fix kludges like this...
+				if (perm == null)
+					continue;
+				IpPermissionType param5 = new IpPermissionType();
+				param5.setIpProtocol(perm.getProtocol());
+				param5.setFromPort(perm.getFromPort());
+				param5.setToPort(perm.getToPort());
+
+				// -> user groups
+				EC2SecurityGroup[] userSet = perm.getUserSet();
+				if (null == userSet || 0 == userSet.length) {
+					UserIdGroupPairSetType param8 = new UserIdGroupPairSetType();
+					param5.setGroups(param8);
+				} else {
+					for (EC2SecurityGroup secGroup : userSet) {
+						UserIdGroupPairSetType param8 = new UserIdGroupPairSetType();
+						UserIdGroupPairType param9 = new UserIdGroupPairType();
+						param9.setUserId(secGroup.getAccount());
+						param9.setGroupName(secGroup.getName());
+						param8.addItem(param9);
+						param5.setGroups(param8);
+					}
+				}
+
+				// -> or CIDR list
+				String[] rangeSet = perm.getIpRangeSet();
+				if (null == rangeSet || 0 == rangeSet.length) {
+					IpRangeSetType param6 = new IpRangeSetType();
+					param5.setIpRanges(param6);
+				} else {
+					for (String range : rangeSet) {
+						IpRangeSetType param6 = new IpRangeSetType();
+						IpRangeItemType param7 = new IpRangeItemType();
+						param7.setCidrIp(range);
+						param6.addItem(param7);
+						param5.setIpRanges(param6);
+					}
+				}
+				param4.addItem(param5);
+			}
+			param3.setIpPermissions(param4);
+			param2.addItem(param3);
+		}
+		param1.setSecurityGroupInfo(param2);
+		param1.setRequestId(UUID.randomUUID().toString());
+		response.setDescribeSecurityGroupsResponse(param1);
 		return response;
 	}
 	
