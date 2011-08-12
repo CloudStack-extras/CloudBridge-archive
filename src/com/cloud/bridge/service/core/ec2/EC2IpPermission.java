@@ -25,8 +25,8 @@ public class EC2IpPermission {
 	private String ruleId;
 	private String icmpCode;
 	private String icmpType;
-	private int    fromPort;
-	private int    toPort;
+	private Integer fromPort;
+	private Integer toPort;
 	private List<EC2SecurityGroup> userSet  = new ArrayList<EC2SecurityGroup>();    // a list of groups identifying users 
 	private List<String>           rangeSet = new ArrayList<String>();              // a list of strings identifying CIDR
 
@@ -80,19 +80,19 @@ public class EC2IpPermission {
 		return this.icmpType;
 	}
 
-	public void setFromPort( int fromPort ) {
+	public void setFromPort( Integer fromPort ) {
 		this.fromPort = fromPort;
 	}
 	
-	public int getFromPort() {
+	public Integer getFromPort() {
 		return this.fromPort;
 	}
 	
-	public void setToPort( int toPort ) {
+	public void setToPort( Integer toPort ) {
 		this.toPort = toPort;
 	}
 
-	public int getToPort() {
+	public Integer getToPort() {
 		return this.toPort;
 	}
 	

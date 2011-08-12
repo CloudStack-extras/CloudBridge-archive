@@ -19,32 +19,20 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.security.SignatureException;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.cloud.bridge.persist.dao.OfferingDao;
@@ -57,6 +45,7 @@ import com.cloud.bridge.util.JsonAccessor;
 import com.cloud.bridge.util.Tuple;
 import com.cloud.stack.ApiConstants;
 import com.cloud.stack.CloudStackAccount;
+import com.cloud.stack.CloudStackCapabilities;
 import com.cloud.stack.CloudStackClient;
 import com.cloud.stack.CloudStackCommand;
 import com.cloud.stack.CloudStackDiskOfferings;
@@ -64,16 +53,19 @@ import com.cloud.stack.CloudStackInfoResponse;
 import com.cloud.stack.CloudStackIngressRule;
 import com.cloud.stack.CloudStackIpAddress;
 import com.cloud.stack.CloudStackKeyPair;
+import com.cloud.stack.CloudStackNetwork;
+import com.cloud.stack.CloudStackNetworkOffering;
 import com.cloud.stack.CloudStackNic;
+import com.cloud.stack.CloudStackOsType;
 import com.cloud.stack.CloudStackPasswordData;
 import com.cloud.stack.CloudStackResourceLimit;
 import com.cloud.stack.CloudStackSecurityGroup;
+import com.cloud.stack.CloudStackSecurityGroupIngress;
 import com.cloud.stack.CloudStackSnapshot;
 import com.cloud.stack.CloudStackTemplate;
 import com.cloud.stack.CloudStackUserVm;
 import com.cloud.stack.CloudStackVolume;
 import com.cloud.stack.CloudStackZone;
-import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 
 
@@ -84,9 +76,6 @@ public class EC2Engine {
     private String cloudAPIPort        = null;
     
     // -> in milliseconds, time interval to wait before asynch check on a jobId's status
-    private int pollInterval1 = 1000;   // for: createTemplate
-    private int pollInterval5 = 1000;   // for: deleteSnapshot, deleteTemplate, deleteVolume, attachVolume, detachVolume, disassociateIpAddress, enableStaticNat, disableStaticNat
-    private int pollInterval6 = 1000;   // for: startVirtualMachine, destroyVirtualMachine, stopVirtualMachine
     private int CLOUD_STACK_VERSION_2_0 = 200;
     private int CLOUD_STACK_VERSION_2_1 = 210;
     private int CLOUD_STACK_VERSION_2_2 = 220;
@@ -127,17 +116,22 @@ public class EC2Engine {
 		    	cloudAPIPort != null ? Integer.parseInt(cloudAPIPort) : 80, false);
   	        
    	        try {
-   	            pollInterval1  = Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
+   	        	// These are all going away, since cloudStackClient has it's own intervals configured
+   	        	Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
    	            Integer.parseInt( EC2Prop.getProperty( "pollInterval2", "100"  ));
    	            Integer.parseInt( EC2Prop.getProperty( "pollInterval3", "100"  ));
    	            Integer.parseInt( EC2Prop.getProperty( "pollInterval4", "1000" ));
-   	            pollInterval5  = Integer.parseInt( EC2Prop.getProperty( "pollInterval5", "100"  ));
-   	            pollInterval6  = Integer.parseInt( EC2Prop.getProperty( "pollInterval6", "100"  ));
+   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval5", "100"  ));
+   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval6", "100"  ));
    	        } catch( Exception e ) {
     			logger.warn("Invalid polling interval, using default values", e);
    	        }
    	        
-            cloudStackVersion = getCloudStackVersion(EC2Prop);
+   	        try {
+   	        	cloudStackVersion = getCloudStackVersion(EC2Prop);
+   	        } catch(Exception e) {
+   	    		logger.error( "EC2 Loading Configuration file - ", e);
+   	        }
             
      	    OfferingDao ofDao = new OfferingDao();
      	    try {
@@ -191,11 +185,10 @@ public class EC2Engine {
      	    } catch(Exception e) {
      	    	logger.error("Unexpected exception ", e);
      	    }
-    	} 
-       	else logger.error( "ec2-service.properties not found" );
+    	} else logger.error( "ec2-service.properties not found" );
 	}
     
-    private int getCloudStackVersion(Properties prop) 
+    private int getCloudStackVersion(Properties prop) throws Exception 
     {	
     	String versionProp = prop.getProperty( "cloudstackVersion", null );
     	if(versionProp!=null){
@@ -219,33 +212,19 @@ public class EC2Engine {
     	return getCloudStackVersionBasedOnCapabilitiesCmd();
 	}
     
-    private int getCloudStackVersionBasedOnCapabilitiesCmd() {
-    	StringBuilder query = new StringBuilder();
-    	query.append(getServerURL());
-    	query.append("command=listCapabilities");
-    	Document response = null;
-    	   	    	
-    	try {
-    	    response = resolveURL(query.toString(), "listCapabilities", false);
-    	} catch (Exception e) {
-    		// listCapabilities is introduced in 2.2 - if the command fails the CloudStack 
-    		// is older. Default to 2.1 in that case.
+    private int getCloudStackVersionBasedOnCapabilitiesCmd() throws Exception {
+    	CloudStackCommand command = new CloudStackCommand("listCapabilities");
+    	CloudStackCapabilities resp = cloudStackCall(command, true, "listcapabilitiesresponse", "capability", CloudStackCapabilities.class);
+    	if (resp != null) {
+    		if (resp.getCloudStackVersion().startsWith("2.2.")) {
+    			return CLOUD_STACK_VERSION_2_2;
+    		}
+    	} else {
+    		// 2.1 and before don't have a listCapabilities command
     		return CLOUD_STACK_VERSION_2_1;
     	}
-    	
-    	String version = "unknown";
-    	NodeList responseList = response.getElementsByTagName("cloudStackVersion");
-    	if (responseList != null && responseList.getLength() > 0 && responseList.item(0).hasChildNodes())
-			version = responseList.item(0).getFirstChild().getNodeValue();
-    	
-    	if (!version.equals("unknown")) {
-    		if(version.equals("2.2.0")){
-    			return CLOUD_STACK_VERSION_2_2;
-    		}    	
-    	}
-    	
-    	// Default to 2.2
-    	return CLOUD_STACK_VERSION_2_2;
+    	// This should only fall through after we move out of 2.2.x timeframe
+    	return CLOUD_STACK_VERSION_2_2; // default
     }
 
 	/**
@@ -259,31 +238,12 @@ public class EC2Engine {
      * @param secretKey - Cloud.com's API secret key
      * @return true if the account exists, false otherwise
      */
-    public boolean validateAccount( String accessKey, String secretKey ) 
-    {
-    	try {
-        	StringBuffer sigOver = new StringBuffer();
-        	sigOver.append( "apikey=" ).append( safeURLencode( accessKey ));
-        	sigOver.append( "&" ).append( "command=listAccounts" );
-        	String signature = calculateRFC2104HMAC( sigOver.toString().toLowerCase(), secretKey );
-
-          	StringBuffer apiCommand = new StringBuffer();
-            apiCommand.append( getServerURL());
-            apiCommand.append( "command=listAccounts" );
-            apiCommand.append( "&apikey=" ).append( safeURLencode( accessKey ));
-            apiCommand.append( "&signature=" ).append( safeURLencode( signature ));
-
-            resolveURL( apiCommand.toString(), "listAccounts", true );
-            return true;
-            
-       	} catch( EC2ServiceException error ) {
-     		logger.error( "validateAccount - ", error);
-    		throw error;
-    		
-    	} catch( Exception e ) {
-    		logger.error( "validateAccount - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    public boolean validateAccount( String accessKey, String secretKey ) {
+    	Account[] accts = getAccounts(accessKey, secretKey);
+    	if (accts == null || accts.length == 0) {
+    		return false;
     	}
+    	return true;
     }
 
     /**
@@ -292,63 +252,61 @@ public class EC2Engine {
      * @param request
      * @return was the security group created?
      */
-    public boolean createSecurityGroup(EC2SecurityGroup request) 
-    {
-		if (null == request.getDescription() || null == request.getName()) 
+    public boolean createSecurityGroup(EC2SecurityGroup request) {
+    	if (null == request.getDescription() || null == request.getName()) 
 			 throw new EC2ServiceException(ServerError.InternalError, "Both name & description are required");
 
     	try {
-	        String query = new String( "command=createSecurityGroup" +
-	        		                   "&description=" + safeURLencode( request.getDescription()) + 
-	        		                   "&name="        + safeURLencode( request.getName()));
-	        
-            resolveURL(genAPIURL(query, genQuerySignature(query)), "createSecurityGroup", true );
-      		return true;
-     		
-       	} catch( EC2ServiceException error ) {
-    		logger.error( "EC2 CreateSecurityGroup - ", error);
-    		throw error;
-    		
+    		CloudStackCommand cmd = new CloudStackCommand("createSecurityGroup");
+    		if (cmd != null) {
+    			cmd.setParam("description", request.getDescription());
+    			cmd.setParam("name", request.getName());
+    		}
+    		CloudStackInfoResponse resp = cloudStackCall(cmd, true, "createsecuritygroupresponse", null, CloudStackInfoResponse.class);
+    		// TODO: this should be reworked... this is not 'good enough'
+    		if (resp != null && resp.getId() != null) {
+    			return resp.getSuccess();
+    		}
+    		return false;
     	} catch( Exception e ) {
     		logger.error( "EC2 CreateSecurityGroup - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
     	}
     }
     
     public boolean deleteSecurityGroup(EC2SecurityGroup request) 
     {
-	if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
+    	if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
 
-   	try {
-	        String query = new String( "command=deleteSecurityGroup&name=" + safeURLencode( request.getName()));        
-            resolveURL( genAPIURL( query, genQuerySignature(query)), "deleteSecurityGroup", true );
-     		return true;
-    		
-      	} catch( EC2ServiceException error ) {
-   		    logger.error( "EC2 DeleteSecurityGroup - ", error);
-   		    throw error;
-   		
-   	    } catch( Exception e ) {
-   		    logger.error( "EC2 DeleteSecurityGroup - ", e);
-   		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-   	    }
+    	try {
+    		CloudStackCommand cmd = new CloudStackCommand("deleteSecurityGroup");
+    		if (cmd != null) {
+    			cmd.setParam("name", request.getName());
+    		}
+    		CloudStackInfoResponse resp = cloudStackCall(cmd, true, "deletesecuritygroupresponse", null, CloudStackInfoResponse.class);
+    		if (resp != null && resp.getId() != null) {
+    			return resp.getSuccess();
+    		}
+    		return false;
+    	} catch( Exception e ) {
+    		logger.error( "EC2 DeleteSecurityGroup - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
     }
     
     public EC2DescribeSecurityGroupsResponse handleRequest( EC2DescribeSecurityGroups request ) 
     {
-    	try 
-    	{   EC2DescribeSecurityGroupsResponse response = listSecurityGroups( request.getGroupSet());
-        	EC2GroupFilterSet gfs = request.getFilterSet();
-    		
-	        if ( null == gfs )
-	   	         return response;
-	        else return gfs.evaluate( response );     
-       	} 
-    	catch( EC2ServiceException error ) {
+    	try {
+    		EC2DescribeSecurityGroupsResponse response = listSecurityGroups( request.getGroupSet());
+    		EC2GroupFilterSet gfs = request.getFilterSet();
+
+    		if ( null == gfs )
+    			return response;
+    		else return gfs.evaluate( response );     
+    	} catch( EC2ServiceException error ) {
     		logger.error( "EC2 DescribeSecurityGroups - ", error);
     		throw error;   		
-    	} 
-    	catch( Exception e ) {
+    	} catch( Exception e ) {
     		logger.error( "EC2 DescribeSecurityGroups - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
@@ -388,111 +346,65 @@ public class EC2Engine {
   	        if (null == ruleId)
   	    		throw new EC2ServiceException(ClientError.InvalidGroup_NotFound, "Cannot find matching ruleid.");
 
+   	    	CloudStackCommand cmd = new CloudStackCommand("revokeSecurityGroupIngress");
+   	    	if (cmd != null) {
+   	    		cmd.setParam("id", ruleId);
+   	    	}
    	    	
-   	    	String query = new String( "command=revokeSecurityGroupIngress&id=" + ruleId );        
-	        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "revokeSecurityGroup", true );
-
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-		    if ( 0 < match.getLength()) 
-		    {
-		     	 Node item = match.item(0);
-		    	 String jobId = new String( item.getFirstChild().getNodeValue());
-		    	 if (!waitForAsynch( jobId )) 
-		    		 throw new EC2ServiceException(ServerError.InternalError, "revokeSecurityGroup failed" );
-	 	    } 
-	 	    else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-		    
-		    return true;		
-      	} 
-   	    catch( EC2ServiceException error ) {
-   		    logger.error( "EC2 revokeSecurityGroup" + " - " + error.toString());
-   		    throw error; 		
-   	    } 
-   	    catch( Exception e ) {
-   		    logger.error( "EC2 revokeSecurityGroup" + " - " + e.toString());
-   		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+   	    	CloudStackInfoResponse resp = cloudStackCall(cmd, true, "revokesecuritygroupingressresponse", null, CloudStackInfoResponse.class);
+   	    	if (resp != null && resp.getId() != null) {
+   	    		return resp.getSuccess();
+   	    	}
+   	    	return false;
+      	} catch( Exception e ) {
+   		    logger.error( "EC2 revokeSecurityGroupIngress" + " - " + e.getMessage());
+   		    throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
    	    } 	
     }
 
     
     /**
-     * The Cload Stack API only handles one item out of the EC2 request at a time.
+     * authorizeSecurityGroup
      * 
      * @param request - ip permission parameters
-     * @param command - { authorizeSecurityGroupIngress | revokeSecurityGroupIngress }
      */
-    public boolean securityGroupRequest(EC2AuthorizeRevokeSecurityGroup request, String command ) 
+    public boolean authorizeSecurityGroup(EC2AuthorizeRevokeSecurityGroup request ) 
     {
 		if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
     	
-		StringBuffer url    = new StringBuffer();   // -> used to derive URL for Cloud Stack
-		StringBuffer sorted = new StringBuffer();   // -> used for signature generation
-		StringBuffer params = new StringBuffer();   // -> used to construct common set of parameters
-		
 		EC2IpPermission[] items = request.getIpPermissionSet();
 		
    	    try {
-   	    	for( int i=0; i < items.length; i++  ) {
+   	    	for (EC2IpPermission ipPerm : items) {
+   	    		CloudStackCommand cmd = new CloudStackCommand("authorizeSecurityGroupIngress");
+   	    		cmd.setParam("cidrlist", constructCIDRList( ipPerm.getIpRangeSet()));
    	    		
-   	    	   // -> cidrList is before command for the sorted version used for signature generation
-  	    	   String cidrList = constructCIDRList( items[i].getIpRangeSet());
-    	       url.append( "command=" + command );	
-    	       if ( null != cidrList) {
-     	    	    url.append( "&" + cidrList );   // &cidrList
-    	    	    sorted.append( cidrList );      // cidrList before command
-    	    	    sorted.append( "&command=" + command );	
-    	       }
-    	       else sorted.append( "command="  + command );	
-
-    	       
-   	    	   String protocol = items[i].getProtocol();
-   	    	   if ( protocol.equalsIgnoreCase( "icmp" )) {
-  	   	            params.append( "&icmpCode="         + items[i].getToPort());
-   	   	            params.append( "&icmpType="         + items[i].getFromPort());
-   	   	            params.append( "&protocol="         + safeURLencode( protocol ));
-   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
-   	    	   }
-   	    	   else {
-  	   	            params.append( "&endPort="          + items[i].getToPort());
-   	   	            params.append( "&protocol="         + safeURLencode( protocol ));
-   	   	            params.append( "&securityGroupName=" + safeURLencode( request.getName()));
-   	   	            params.append( "&startPort="        + items[i].getFromPort());
-   	    	   }
-    	
-   	    	   // -> sorted is: cidrList=&command=... while url is: command=&cidrList=...
-   	    	   String netParams = params.toString();
-   	    	   url.append( netParams );
-   	    	   sorted.append( netParams );
-
-   	    	   String userList = constructNetworkUserList( items[i].getUserSet());
-   	    	   if (null != userList) {
-   	    		   url.append( userList );
-   	   	    	   sorted.append( userList );
-   	    	   }
-
-	           Document cloudResp = resolveURL(genAPIURL(url.toString(), genQuerySignature(sorted.toString())), command, true );
-               NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-		       if ( 0 < match.getLength()) {
-		    	    Node item = match.item(0);
-		    	    String jobId = new String( item.getFirstChild().getNodeValue());
-		    	    if (!waitForAsynch( jobId )) throw new EC2ServiceException(ServerError.InternalError, command + " failed" );
-	 	        } 
-	 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-
-	            url.setLength( 0 );
-   	    	    sorted.setLength( 0 );
-   	    	    params.setLength( 0 );
+   	    		if (ipPerm.getProtocol().equalsIgnoreCase("icmp")) {
+   	    			cmd.setParam("icmpCode", ipPerm.getToPort().toString());
+   	    			cmd.setParam("icmpType", ipPerm.getFromPort().toString());
+   	    		} else {
+   	    			cmd.setParam("endPort", ipPerm.getToPort().toString());
+   	    			cmd.setParam("startPort", ipPerm.getFromPort().toString());
+   	    		}
+    			cmd.setParam("protocol", ipPerm.getProtocol());
+    			cmd.setParam("securityGroupName", request.getName());
+    			EC2SecurityGroup[] groups = ipPerm.getUserSet();
+    			int i = 0;
+    			for (EC2SecurityGroup group : groups) {
+    				cmd.setParam("userSecurityGroupList["+i+"].account", group.getAccount());
+    				cmd.setParam("userSecurityGroupList["+i+"].group", group.getName());
+    				i++;
+    			}
+    			CloudStackSecurityGroupIngress resp = cloudStackCall(cmd, true, "authorizesecuritygroupingressresponse", "securitygroup", CloudStackSecurityGroupIngress.class);
+    			if (resp == null || resp.getRuleId() == null) {
+    				throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    			}
    	    	}
-     		return true;
-    		
-      	} catch( EC2ServiceException error ) {
-   		    logger.error( "EC2 " + command + "- ", error);
-   		    throw error;
-   		
-   	    } catch( Exception e ) {
-   		    logger.error( "EC2 " + command + " - ", e);
-   		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-   	    } 	
+   	    } catch(Exception e) {
+   		    logger.error( "EC2 AuthorizeSecurityGroupIngress - ", e);
+   		    throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+   	    }
+		return true;
     }
 
     /**
@@ -571,27 +483,8 @@ public class EC2Engine {
     		if (0 < i) cidrList.append( "," );
     		cidrList.append( ipRanges[i] );
     	}
-    	
-    	String temp = safeURLencode( cidrList.toString());	
-    	return new String( "cidrList=" + temp );
+    	return cidrList.toString();
     }
-    
-    /**
-     * The Cloud Stack API uses array notation to pass along a set of these values.
-     * 
-     * @throws UnsupportedEncodingException 
-     */
-    private String constructNetworkUserList( EC2SecurityGroup[] groups ) throws UnsupportedEncodingException {
-    	if (null == groups || 0 == groups.length) return null;    	
-    	StringBuffer userList = new StringBuffer();
-
-    	for( int i=0; i < groups.length; i++ ) {
-        	userList.append( "&userSecurityGroupList["+i+"].account=" + safeURLencode( groups[i].getAccount()));
-        	userList.append( "&userSecurityGroupList["+i+"].group="   + safeURLencode( groups[i].getName()));		
-    	}
-    	return userList.toString();
-    }
-    
     
     public EC2DescribeSnapshotsResponse handleRequest( EC2DescribeSnapshots request ) 
     {
@@ -1099,7 +992,6 @@ public class EC2Engine {
             volumes = listVolumes( null, request.getInstanceId(), volumes );
             EC2Volume[] volSet = volumes.getVolumeSet();
             for (EC2Volume vol : volSet) {
-            	 String volType = vol.getType();
             	 if (vol.getType().equalsIgnoreCase( "ROOT" )) {
             		 String vmState = vol.getVMState();
             		 if (vmState.equalsIgnoreCase( "running" ) || vmState.equalsIgnoreCase( "starting" )) {
@@ -1123,38 +1015,29 @@ public class EC2Engine {
             EC2Image[] imageSet = images.getImageSet();
             String osTypeId = imageSet[0].getOsTypeId();
             
-            String description = request.getDescription();
-  	        String query = new String( "command=createTemplate" +
-  	        		                   "&displayText=" + (null == description ? "" : safeURLencode( description )) +
-  	        		                   "&name="        + safeURLencode( request.getName()) +
-  	        		                   "&osTypeId="    + osTypeId +
-  	        		                   "&volumeId="    + volumeId );
- 		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "createTemplate", true );
- 		    
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     response = waitForTemplate( jobId );  
+            CloudStackCommand cmd = new CloudStackCommand("createTemplate");
+            if (cmd != null) {
+            	cmd.setParam("displayText", (request.getDescription() == null ? "" : request.getDescription()));
+            	cmd.setParam("name", request.getName());
+            	cmd.setParam("osTypeId", osTypeId);
+            	cmd.setParam("volumeId", volumeId);
             }
- 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
- 	        
+            CloudStackTemplate resp = cloudStackCall(cmd, true, "createtemplateresponse", "template", CloudStackTemplate.class);
+            if (resp == null || resp.getId() == null) {
+            	throw new EC2ServiceException(ServerError.InternalError, "An upexpected error occurred.");
+            }
  	        
  	        // [C] If we stopped the virtual machine now we need to restart it
  	        if (needsRestart) {
    			    if (!startVirtualMachine( request.getInstanceId() )) 
-		            throw new EC2ServiceException(ServerError.InternalError
-		            		,"CreateImage - restarting instance " + request.getInstanceId() + " failed");
+		            throw new EC2ServiceException(ServerError.InternalError, 
+		            		"CreateImage - restarting instance " + request.getInstanceId() + " failed");
  	        }
  	        return response;
     	    
-    	} catch( EC2ServiceException error ) {
- 		    logger.error( "EC2 CreateImage - ", error);
-		    throw error;
-		
 	    } catch( Exception e ) {
 		    logger.error( "EC2 CreateImage - ", e);
-		    throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+		    throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
 	    }
     }
     
@@ -1168,33 +1051,27 @@ public class EC2Engine {
     		if (null == request.getFormat()   || null == request.getName() || null == request.getOsTypeName() ||
     		    null == request.getLocation() || null == request.getZoneName())
     			throw new EC2ServiceException(ServerError.InternalError, "Missing parameter - location/architecture/name");
-    			
-            // -> the parameters must be in sorted order for proper signature generation
-	        String query = new String( "command=registerTemplate" +
-	       	 	                       "&displayText=" + (null == request.getDescription() ? safeURLencode( request.getName()) : safeURLencode( request.getDescription())) +
-	       		                       "&format="      + safeURLencode( request.getFormat()) +
-	       		                       "&name="        + safeURLencode( request.getName()) +
-	       		                       "&osTypeId="    + safeURLencode( toOSTypeId( request.getOsTypeName())) +
-	       		                       "&url="         + safeURLencode( request.getLocation()) +
-	       		                       "&zoneId="      + toZoneId( request.getZoneName()));
-
-		    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "registerTemplate", true );
-		    
-		    EC2CreateImageResponse image = new EC2CreateImageResponse(); 
-            NodeList match = cloudResp.getElementsByTagName( "id" ); 
-	        if ( 0 < match.getLength()) {
-    	        Node item = match.item(0);
-    	        image.setId( item.getFirstChild().getNodeValue());
-            }
-	        return image;
-	    
-	    } catch( EC2ServiceException error ) {
-		    logger.error( "EC2 RegisterImage - ", error);
-	        throw error;
-	
+    		
+    		CloudStackCommand cmd = new CloudStackCommand("registerTemplate");
+    		if (cmd != null) {
+    			cmd.setParam("displayText", (request.getDescription() == null ? request.getName() : request.getDescription()));
+    			cmd.setParam("format", request.getFormat());
+    			cmd.setParam("name", request.getName());
+    			cmd.setParam("osTypeId", toOSTypeId( request.getOsTypeName()));
+    			cmd.setParam("url", request.getLocation());
+    			cmd.setParam("zoneId", request.getZoneName());
+    		}
+    		
+    		CloudStackTemplate resp = cloudStackCall(cmd, true, "registertemplateresponse", "template", CloudStackTemplate.class);
+    		if (resp != null && resp.getId() != null) {
+    			EC2CreateImageResponse image = new EC2CreateImageResponse();
+    			image.setId(resp.getId().toString());
+    			return image;
+    		}
+    		return null;
         } catch( Exception e ) {
 	        logger.error( "EC2 RegisterImage - ", e);
-	        throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+	        throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
         }
     }
     
@@ -1205,25 +1082,15 @@ public class EC2Engine {
     public boolean deregisterImage( EC2Image image ) 
     {
     	try {
-	        String query = new String( "command=deleteTemplate&id=" + image.getId());
-            Document cloudResp = resolveURL(genAPIURL( query, genQuerySignature(query)), "deleteTemplate", true );
-	        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
- 	        if ( 0 < match.getLength()) {
-	    	     Node item = match.item(0);
-	    	     String jobId = new String( item.getFirstChild().getNodeValue());
-	    	     if (waitForAsynch( jobId )) return true;
-            }
- 	        else throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-
-    	    return false;
-   	        
-       	} catch( EC2ServiceException error ) {
-     		logger.error( "EC2 DeregisterImage - ", error);
-    		throw error;
-    		
+    		CloudStackCommand cmd = new CloudStackCommand("deleteTemplate");
+    		if (cmd != null) {
+    			cmd.setParam("id", image.getId());
+    		}
+    		CloudStackInfoResponse resp = cloudStackCall(cmd, true, "deletetemplateresponse", null, CloudStackInfoResponse.class);
+    		return resp.getSuccess();
     	} catch( Exception e ) {
     		logger.error( "EC2 DeregisterImage - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
     	}
     }
     
@@ -1830,8 +1697,7 @@ public class EC2Engine {
  	    OfferingDao ofDao = new OfferingDao();
         String amazonOffering = ofDao.getAmazonOffering( serviceOfferingId.trim());
 
- 		if ( null == amazonOffering ) 
- 		{
+ 		if ( null == amazonOffering ) {
  			 logger.warn( "No instanceType match for serverOfferingId: [" + serviceOfferingId + "]" );
  			 return "m1.small";
  		}
@@ -1845,40 +1711,21 @@ public class EC2Engine {
  	 * @param osTypeName
  	 * @return the Cloud.com API osTypeId 
  	 */
-    private String toOSTypeId( String osTypeName ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException 
-    {
-   	    Node   parent = null;
-   	    String id     = null;
-   	
-		Document cloudResp = resolveURL(genAPIURL("command=listOsTypes", genQuerySignature("command=listOsTypes")), "listOsTypes", true );
-	    NodeList match     = cloudResp.getElementsByTagName( "ostype" ); 
-	    
-	    int length = match.getLength();
-        for( int i=0; i < length; i++ ) 
-        {
-    	    if (null != (parent = match.item(i))) 
-    	    { 
-    		    NodeList children = parent.getChildNodes();
-    		    int      numChild = children.getLength();
-    		
-    		    for( int j=0; j < numChild; j++ ) 
-    		    {
-    			    Node   child    = children.item(j);
-    			    String nodeName = child.getNodeName();
-    			
-			        if (nodeName.equalsIgnoreCase( "id" )) 
-			        	id = child.getFirstChild().getNodeValue();
-			        
-			        if (nodeName.equalsIgnoreCase( "description" )) 
-			        {
-			        	String description = child.getFirstChild().getNodeValue();
-			        	if (-1 != description.indexOf( osTypeName )) return id;
-			        }
-    	        }
-	        }
-        }
-		throw new EC2ServiceException(ClientError.InvalidParameterValue, "Unknown osTypeName value - " + osTypeName);
+    private String toOSTypeId( String osTypeName ) throws Exception { 
+    	try {
+    		CloudStackCommand command = new CloudStackCommand("listOsTypes");
+    		List<CloudStackOsType> osTypes = cloudStackListCall(command, "listostypesresponse", "ostype", 
+    				new TypeToken<List<CloudStackOsType>>() {}.getType());
+    		for (CloudStackOsType osType : osTypes) {
+    			if (osType.getDescription().indexOf(osTypeName) != -1)
+    				return osType.getId().toString();
+    		}
+    		return null;
+    	} catch(Exception e) {
+    		logger.error( "List OS Types - ", e);
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+    	}
+    	
     }
 
     /**
@@ -2100,12 +1947,14 @@ public class EC2Engine {
      * 
      *	This isn't used anywhere, but it used to be???
      */
-    
     public Account[] getAccounts() {
+    	return getAccounts(UserContext.current().getAccessKey(), UserContext.current().getSecretKey());
+    }
+    public Account[] getAccounts(String accessKey, String secretKey) {
     	try {
 	    	CloudStackCommand command = new CloudStackCommand("listAccounts");
 	    	List<Account> acctList = new ArrayList<Account>();
-    		List<CloudStackAccount> accts = cloudStackListCall(command, "listaccountsresponse", "account", 
+    		List<CloudStackAccount> accts = _client.listCall(command, accessKey, secretKey, "listaccountsresponse", "account", 
     				new TypeToken<List<CloudStackAccount>>() {}.getType());
     		for (CloudStackAccount acct : accts) {
     			Account newAcct = new Account();
@@ -2128,8 +1977,9 @@ public class EC2Engine {
      * Creates a new one if no network is found.
      * 
      * @return A network id suitable for use.
+     * @throws Exception 
      */
-    private String getNetworkId(String zoneId) {
+    private String getNetworkId(String zoneId) throws Exception {
     	String networkId = null;
     	
     	if (networkId==null) networkId = getNetworkId("direct", false);
@@ -2140,132 +1990,75 @@ public class EC2Engine {
     	return networkId;
     }
     
-    private String getNetworkId(String networkType, boolean shared) {
-    	String query = "command=listNetworks";
-    	Document response = null;
-    	
-    	// Only need to specify account and domainid when admin
-    	//if (!shared) {
-        //	Account account = getAccount();
-    	//	query = query.concat("&account=").concat(account.getAccountName());
-    	//	query = query.concat("&domainid=").concat(account.getDomainId());
-    	//} 
-    		
-    	query = query.concat("&isdefault=").concat("true");
-    	if (shared) query = query.concat("&isshared=").concat("true");
-    	query = query.concat("&type=").concat(networkType);
-    	
-    	try {
-    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listNetworks", true);
-    	} catch (Exception e) {
-    		logger.error( "List Networks - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    private String getNetworkId(String networkType, boolean shared) throws Exception {
+    	CloudStackCommand command = new CloudStackCommand("listNetworks");
+    	if (command != null) {
+    		command.setParam("isdefault", "true");
+    		if (shared) command.setParam("isshared", "true");
+    		command.setParam("type", networkType);
     	}
-    	
-    	// Return the first network id found.
-    	NodeList parent = response.getElementsByTagName("network");
-    	if (parent.getLength() > 0 && parent.item(0).hasChildNodes()) {
-    		NodeList children = parent.item(0).getChildNodes();
-    		for (int i = 0; i < children.getLength(); i++) {
-    			if (children.item(0).getNodeName().equals("id")) {
-    				return children.item(0).getTextContent();
-    			}
-    		}
+    	List<CloudStackNetwork> networks = cloudStackListCall(command, "listnetworksresponse", "network", 
+    			new TypeToken<List<CloudStackNetwork>>() {}.getType());
+    	if (!networks.isEmpty()) {
+	    	// Return the first network id found. TODO: Is this right?  
+	    	return networks.get(0).getId().toString();
     	}
-    	
     	return null;
     }
     
-    private String createNetwork(String zoneId) {
-    	String query = "command=createNetwork";
-    	Document response = null;
-    	//Account account = getAccount();
+    private String createNetwork(String zoneId) throws Exception {
+    	CloudStackCommand command = new CloudStackCommand("createNetwork");
     	Tuple<String, String> networkOffering = getNetworkOffering();
-    	
-    	try {
-    		//query = query.concat("&account=").concat(account.getAccountName());
-    		query = query.concat("&displaytext=").concat(safeURLencode(networkOffering.getSecond()));
-    		//query = query.concat("&domainid=").concat(account.getDomainId());
-    		query = query.concat("&name=").concat(safeURLencode("EC2 created network"));
-    		query = query.concat("&networkofferingid=").concat(networkOffering.getFirst());
-    		query = query.concat("&zoneid=").concat(zoneId);
-		
-    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "createNetwork", true);
-    	} catch (Exception e) {
-    		logger.error("Create Network - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	if (command != null) {
+//			Leaving these comments here because we have a bug about this stuff...
+//    		command.setParam("account", account.getAccountName());
+    		command.setParam("displaytext", networkOffering.getSecond());
+//			command.setParam("domainid", account.getDomainId());
+    		command.setParam("name", "EC2 created network");
+    		command.setParam("networkofferingid", networkOffering.getFirst());
+    		command.setParam("zoneid", zoneId);
     	}
-		
-		NodeList match = response.getElementsByTagName("id");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) 
-			return match.item(0).getFirstChild().getNodeValue();
-		
-		logger.error("Create Network - Unable to create a new network");
-		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	CloudStackInfoResponse resp = cloudStackCall(command, true, "createnetworkresponse", null, CloudStackInfoResponse.class);
+    	if (resp.getJobId() == null || resp.getId() == null) {
+    		throw new Exception("Invalid CloudStack API response");
+    	}
+    	return resp.getId().toString();
     }
     
-    private Tuple<String, String> getNetworkOffering() {
-    	String query = "command=listNetworkOfferings";
-    	Document response = null;
-    	
-    	query = query.concat("&isdefault=true");
-    	query = query.concat("&traffictype=guest");
-    	
-    	try {
-    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listNetworkOfferings", true);
-    	} catch (Exception e) {
-    		logger.error("List Network Offerings - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    /*
+     * returns tuple with id and displaytext of first network offering provided
+     */
+    private Tuple<String, String> getNetworkOffering() throws Exception {
+    	CloudStackCommand command = new CloudStackCommand("listNetworkOfferings");
+    	if (command != null) {
+    		command.setParam("isdefault", "true");
+    		command.setParam("traffictype", "guest");
     	}
-    	
-    	Tuple<String, String> offering = new Tuple<String, String>("", ""); 
-		NodeList match = response.getElementsByTagName("id");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) { 
-			offering.setFirst(match.item(0).getFirstChild().getNodeValue());
-		} else {
-    		logger.error("List Network Offerings - No suitable network offering found");
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
-		}
-		match = response.getElementsByTagName("displaytext");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) {
-			offering.setSecond(match.item(0).getFirstChild().getNodeValue());
-		}
-    	
-    	return offering;
+    	List<CloudStackNetworkOffering> offerings = cloudStackListCall(command, "listnetworkofferingsresponse", "networkoffering",
+    			new TypeToken<List<CloudStackNetworkOffering>>() {}.getType());
+    	if (!offerings.isEmpty()) {
+    		Tuple<String, String> offering = new Tuple<String, String>("", "");
+    		offering.setFirst(offerings.get(0).getId().toString());
+    		offering.setFirst(offerings.get(0).getDisplayText());
+    		return offering;
+    	}
+    	return null;
     }
     
-    private String getDCNetworkType(String zoneId) {
-    	String query = "command=listZones";
-    	Document response = null;
-
-    	query = query.concat("&id=").concat(zoneId);
-    	
-      	try {
-    		response = resolveURL(genAPIURL(query, genQuerySignature(query)), "listZones", true);
-    	} catch (Exception e) {
-    		logger.error("List Zones - ", e);
-    		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    private String getDCNetworkType(String zoneId) throws Exception {
+    	CloudStackCommand command = new CloudStackCommand("listZones");
+    	if (command != null) {
+    		command.setParam("id", zoneId);
     	}
+    	List<CloudStackZone> zones = cloudStackListCall(command, "listzonesresponse", "zone",
+    			new TypeToken<List<CloudStackZone>>() {}.getType());
     	
-		NodeList match = response.getElementsByTagName("networktype");
-		if (match.getLength() > 0 && match.item(0).hasChildNodes()) {
-			return match.item(0).getFirstChild().getNodeValue();
-		}
-
-		logger.error("List Zones - Unable to determine zone network type");
-		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred");
+    	if (!zones.isEmpty()) {
+    		return zones.get(0).getNetworkType(); 
+    	}
+    	return null;
     }
        
-    /**
-     * Ensures that the CloudStack back-end is at least of version @param csVersion. 
-     * Throws a Server.InternalError {@link EC2ServiceException} if it's not.  
-     */
-    private void ensureVersion(int csVersion) {
-    	if (cloudStackVersion < csVersion) 
-    		throw new EC2ServiceException(ServerError.InternalError, "CloudStack version " 
-    				+ String.valueOf((double)csVersion/100) + " or higher is needed for this command.");
-    }
-    
     /**
      * Windows has its own device strings.
      * 
@@ -2377,340 +2170,38 @@ public class EC2Engine {
 	}
 	
 	
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
-	//
-	// Methods are about to be obsolete    
-	//
-	
-    /**
+	/**
      * Wait until one specific VM has stopped
      */
-    private boolean stopVirtualMachine( String instanceId) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
-    {
-    	EC2Instance[] vms    = new EC2Instance[1];
-    	String[]      jobIds = new String[1];
-    	
-    	vms[0] = new EC2Instance();
-    	vms[0].setState( "running" );
-    	vms[0].setPreviousState( "running" );
-
-        String query = new String( "command=stopVirtualMachine&id=" + instanceId );
-	    Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
-		   
-        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-        if ( 0 < match.getLength()) {
-   	         Node item = match.item(0);
-   	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
-        }
-        else throw new EC2ServiceException(ServerError.InternalError ,"Internal Server Error");
-		
-	    vms = waitForStartStop( vms, jobIds, 1, "stopped" );
-	    return vms[0].getState().equalsIgnoreCase( "stopped" );    	
+    private boolean stopVirtualMachine( String instanceId) throws Exception {
+    	try {
+	    	CloudStackCommand cmd = new CloudStackCommand("stopVirtualMachine");
+	    	if (cmd != null) {
+	    		cmd.setParam("id", instanceId);
+	    	}
+	    	CloudStackInfoResponse resp =  cloudStackCall(cmd, true, "stopvirtualmachineresponse", null, CloudStackInfoResponse.class);
+	    	if (logger.isDebugEnabled())
+	    		logger.debug("Stopping VM " + instanceId );
+	    	return resp.getSuccess();
+    	} catch(Exception e) {
+    		logger.error( "StopVirtualMachine - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
+    	}
     }
   
-    private boolean startVirtualMachine( String instanceId ) 
-        throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, Exception 
-    {
-	    EC2Instance[] vms    = new EC2Instance[1];
-	    String[]      jobIds = new String[1];
-	
-	    vms[0] = new EC2Instance();
-	    vms[0].setState( "stopped" );
-	    vms[0].setPreviousState( "stopped" );
-
-        String query = new String( "command=startVirtualMachine&id=" + instanceId );
-        Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), query, true );
-	   
-        NodeList match = cloudResp.getElementsByTagName( "jobid" ); 
-        if ( 0 < match.getLength()) {
-	         Node item = match.item(0);
-	         jobIds[0] = new String( item.getFirstChild().getNodeValue());
-        }
-        else throw new EC2ServiceException(ServerError.InternalError ,"Internal Server Error");
-	
-        vms = waitForStartStop( vms, jobIds, 1, "running" );
-        return vms[0].getState().equalsIgnoreCase( "running" );    	
+    private boolean startVirtualMachine( String instanceId ) throws Exception {
+    	try {
+    		CloudStackCommand cmd = new CloudStackCommand("startVirtualMachine");
+    		if (cmd != null) {
+    			cmd.setParam("id", instanceId);
+    		}
+    		CloudStackInfoResponse resp = cloudStackCall(cmd, true, "startvirtualmachineresponse", null, CloudStackInfoResponse.class);
+    		if (logger.isDebugEnabled())
+    			logger.debug("Starting VM " + instanceId );
+    		return resp.getSuccess();
+    	} catch(Exception e) {
+    		logger.error("StartVirtualMachine - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
+    	}
     }
-	
-    /**
-     * createTemplate is an asynchronus call so here we poll (sleeping so we do not hammer the server)
-     * until the operation completes.
-     * 
-     * @param jobId - parameter returned from the createTemplate request
-     */
-    private EC2CreateImageResponse waitForTemplate( String jobId ) 
-        throws EC2ServiceException, IOException, SAXException, ParserConfigurationException, SignatureException 
-    {
-    	EC2CreateImageResponse image = new EC2CreateImageResponse();
-    	NodeList  match  = null;
-	    Node      item   = null;
-	    int       status = 0;
-	    
-        while( true ) 
-        {
-	      String query = "command=queryAsyncJobResult&jobId=" + jobId;
-	      Document cloudResp = resolveURL(genAPIURL(query, genQuerySignature(query)), "queryAsyncJobResult", true );
-	      
-		  match = cloudResp.getElementsByTagName( "jobstatus" ); 
-	      if ( 0 < match.getLength()) {
-	    	   item = match.item(0);
-	    	   status = Integer.parseInt( new String( item.getFirstChild().getNodeValue()));
-          }
-	      else status = 2;
-
-	      switch( status ) {
-	      case 0:  // in progress, slow down the hits from this polling a little
-      	       try { Thread.sleep( pollInterval1 ); }
-    	       catch( Exception e ) {}
-	    	   break;
-	    	   
-	      case 2:  
-	      default:
-  	           match = cloudResp.getElementsByTagName( "jobresult" ); 
-               if ( 0 < match.getLength()) {
-    	            item = match.item(0);
-    	            if (null != item && null != item.getFirstChild())
-    	        	    throw new EC2ServiceException(ServerError.InternalError, "Template action failed: " + item.getFirstChild().getNodeValue());
-               }
-               throw new EC2ServiceException(ServerError.InternalError, "Template action failed");
-	    	   
-		  case 1:  // Successfully completed
-      	       match = cloudResp.getElementsByTagName( "id" ); 
-    	       if (0 < match.getLength()) {
-   	               item = match.item(0);
-   	               image.setId( item.getFirstChild().getNodeValue());
-    	       }
-    	       return image;
-	      }
-       }
-    }
-    
-
-    /**
-     * Waiting for VMs to start or stop is identical.
-     * 
-     * @param vms       - used to change the state
-     * @param jobIds    - entries are null after completed
-     * @param waitCount - number of asynch jobs to wait for
-     * 
-     * @return the same array given as 'vms' parameter but with modified vm state
-     */
-    private EC2Instance[] waitForStartStop( EC2Instance[] vms, String[] jobIds, int waitCount, String newState ) throws Exception 
-    {
-   	    int j=0;
-   	    
-	    while( waitCount > 0 ) 
-	    {
- 	      if (null != jobIds[j]) 
- 	      {  
-		      String result = checkAsyncResult( jobIds[j] );
-		      if ( -1 != result.indexOf( "s:1" )) 
-		      {
-		           // -> requested action has finished
-			       vms[j].setState( newState );
-			       waitCount--;
-			       jobIds[j] = null;
-		      }
-		      else if (-1 != result.indexOf( "s:2" )) 
-		      {
-		           // -> state of the vm has not changed
-			       vms[j].setState( vms[j].getPreviousState());
-			       waitCount--;
-			       jobIds[j] = null;
-		      }
-		      else if (-1 != result.indexOf( "s:-1" ))
-		      {
-		    	   // -> somehow the request has failed on the CloudStack
-		    	   waitCount--;
-		    	   jobIds[j] = null;
-		      }
-		      
-			  // -> slow down the hits from this polling a little
-	  	      try { Thread.sleep( pollInterval6 ); }
-		      catch( Exception e ) {}
-	      }
- 	      // -> go over the array repeatedly until all are done
-          j++;
-          if (j >= jobIds.length) j=0;
-	   }
-	   return vms;
-    }
-	
-    /**
-     * Wait for the asynch request to finish and we just need to know if it succeeded or not
-     * 
-     * @param jobId
-     * @return true - the requested action was successful, false - it failed
-     */
-    
-    private boolean waitForAsynch( String jobId ) throws Exception 
-    {    
-        while (true) {
-            String result = checkAsyncResult(jobId);
-            // System.out.println( "waitForAsynch: " + result );
-
-            if (-1 != result.indexOf("s:1")) {
-                // -> requested action has finished
-                return true;
-            } else if (-1 != result.indexOf("s:2") || -1 != result.indexOf("s:-1")) {
-                // -> requested action has failed
-                logger.error(result);
-                return false;
-            }
-
-            // -> slow down the hits from this polling a little
-            try {
-                Thread.sleep(pollInterval5);
-            } catch (Exception e) {
-            }
-        }
-    }
-    /**
-     * Has the job finished?
-     * 
-     * @param jobId
-     * @return A string with one or two values, "s:status r:result" if both present.
-     *         "s:-1" means no result returned from CloudStack so request has failed.
-     */
-	// checkAsyncResult return is so ugly, need to redo it later, for now just use the new JSON
-	// to fix NPE bugs
-	private String checkAsyncResult(String jobId) throws Exception {
-		CloudStackCommand cmd = new CloudStackCommand("queryAsyncJobResult");
-		cmd.setParam("jobid", jobId);
-		JsonAccessor json = executeCommand(cmd);
-		if(json.tryEval("queryasyncjobresultresponse") != null) {
-			StringBuffer checkResult = new StringBuffer();
-			
-			int jobStatus = json.getAsInt("queryasyncjobresultresponse.jobstatus");
-			if(jobStatus == 2) {
-	    		throw new EC2ServiceException(ServerError.InternalError, 
-	    			json.getAsString("queryasyncjobresultresponse.jobresult.errorcode") + " " + 
-	    			json.getAsString("queryasyncjobresultresponse.jobresult.errortext")); 
-			}
-			
-			checkResult.append("s:").append(jobStatus);
-			JsonElement jsonResult = json.tryEval("queryasyncjobresultresponse.jobresult");
-			if(jsonResult != null)
-				checkResult.append(" r:" + jsonResult.toString());
-			
-			return checkResult.toString();
-		} else if(json.tryEval("errorresponse") != null) {
-			logger.error("queryAsyncJobResult failed. " + json.eval("errorresponse").toString());
-		}
-		
-		return "s:-1";
-	}
-	
-    String calculateSignature(String query) throws SignatureException {
-        String[] params = query.split("&");
-        Arrays.sort(params);
-        StringBuilder b = new StringBuilder(params[0]);
-        for (int i = 1; i < params.length; i++) {
-            b.append("&" + params[i]);
-        }
-        return calculateRFC2104HMAC(b.toString().toLowerCase(), UserContext.current().getSecretKey());
-    }
-
-    private String genAPIURL( String query, String signature) throws UnsupportedEncodingException 
-    {
-		UserContext ctx = UserContext.current();
-		if ( null != ctx ) {
-       	     StringBuffer apiCommand = new StringBuffer();
-             apiCommand.append( getServerURL());
-             apiCommand.append( query );
-             apiCommand.append( "&apikey=" ).append( safeURLencode( ctx.getAccessKey()));
-             apiCommand.append( "&signature=" ).append( safeURLencode( signature ));
-             return apiCommand.toString();
-		}
-		else return null;
-    }
-    
-    /**
-     * Calculated the signature that is required for the Developer API.
-     * 
-     * @param sortedCommand - must be in sorted order, and URL encoded.
-     * 
-     * @return a hash of the lower-cased query string using the HMAC SHA-1 algorithm with the secret key
-     */
-    private String genQuerySignature( String sortedCommand ) throws UnsupportedEncodingException, SignatureException 
-    {
-    	StringBuffer sigOver = new StringBuffer();
-    	sigOver.append( "apikey=" ).append( safeURLencode( UserContext.current().getAccessKey() ));
-    	sigOver.append( "&" ).append( sortedCommand );
-    	return calculateRFC2104HMAC( sigOver.toString().toLowerCase(), UserContext.current().getSecretKey());
-    }
-    
-    /**
-     * Create a signature by the following method:
-     *     new String( Base64( SHA1( key, byte array )))
-     * 
-     * @param signIt    - the data to generate a keyed HMAC over
-     * @param secretKey - the user's unique key for the HMAC operation
-     * 
-     * @return String   - the recalculated string
-     */
-    private String calculateRFC2104HMAC( String signIt, String secretKey ) throws SignatureException 
-    {
-   	    String result = null;
-   	    try { 	 
-   	    	SecretKeySpec key = new SecretKeySpec( secretKey.getBytes(), "HmacSHA1" );
-   	        Mac hmacSha1 = Mac.getInstance( "HmacSHA1" );
-   	        hmacSha1.init( key ); 
-            byte [] rawHmac = hmacSha1.doFinal( signIt.getBytes());
-            result = new String( Base64.encodeBase64( rawHmac ));
-   	    }
-   	    catch( Exception e ) {
-   		    throw new SignatureException( "Failed to generate keyed HMAC on soap request: " + e.getMessage());
-   	    }
-   	    return result.trim();
-    }
-
-    /**
-     * Every function in the engine is going to need to resolve a cloud API URL into an XML document.
-     * 
-     * @param uri - a complete cloud client API uri
-     * @returns a parsed XML document from the cloud API server. 
-     */
-	private Document resolveURL( String uri, String command, boolean logRequest ) 
-	    throws IOException, SAXException, ParserConfigurationException, EC2ServiceException  
-	{	
-		DocumentBuilder db = dbf.newDocumentBuilder();
-		return db.parse(openURL(uri, command, logRequest));
-    }
-
-    private InputStream openURL(String uri, String command, boolean logRequest)
-        throws IOException, EC2ServiceException  
-    {
-		if (logRequest) logger.debug( "Cloud API call + [" + uri + "]" );
-		String errorMsg = null;
-        URL cloudapi = new URL( uri );
-        HttpURLConnection connect = (HttpURLConnection) cloudapi.openConnection();
-        Integer code = new Integer( connect.getResponseCode());
-        if (400 <= code.intValue()) 
-        {
-        	if ( null != (errorMsg = connect.getResponseMessage()))
-        		 throw new EC2ServiceException(ServerError.InternalError, code.toString() + " " + errorMsg);
-        	else if ( null != (errorMsg = connect.getHeaderField("X-Description")))
-        		 throw new EC2ServiceException(ServerError.InternalError, code.toString() + " " + errorMsg);
-        	else throw new EC2ServiceException(ServerError.InternalError, command + " cloud API HTTP Error: " + code.toString());
-        }
-        return connect.getInputStream();
-    }
-	
-	/**
-	 * Normalized URL encoding uses "%20" for spaces instead of "+" signs.
-	 */
-	private String safeURLencode( String param ) throws UnsupportedEncodingException 
-	{
-	    return URLEncoder.encode( param, "UTF-8" ).replaceAll( "\\+", "%20" );
-	}
-	
-	private String getServerURL() 
-	{	
-		if ( null == cloudAPIPort ) 
-			 return new String( "http://" + managementServer + "/client/api?" );
-		else return new String( "http://" + managementServer + ":" + cloudAPIPort + "/client/api?" );
-	}
-
 }

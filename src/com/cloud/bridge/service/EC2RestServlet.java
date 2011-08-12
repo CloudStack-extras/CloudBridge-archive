@@ -647,7 +647,8 @@ public class EC2RestServlet extends HttpServlet {
 	    EC2request.addIpPermission( perm );	
 		
 	    // -> execute the request
-        RevokeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toRevokeSecurityGroupIngressResponse( ServiceProvider.getInstance().getEC2Engine().securityGroupRequest( EC2request, "revokeSecurityGroupIngress" ));
+        RevokeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toRevokeSecurityGroupIngressResponse( 
+        		ServiceProvider.getInstance().getEC2Engine().revokeSecurityGroup( EC2request ));
         serializeResponse(response, EC2response);
     }
 
@@ -715,7 +716,8 @@ public class EC2RestServlet extends HttpServlet {
 
 		
 	    // -> execute the request
-        AuthorizeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toAuthorizeSecurityGroupIngressResponse( ServiceProvider.getInstance().getEC2Engine().securityGroupRequest( EC2request, "authorizeSecurityGroupIngress" ));
+        AuthorizeSecurityGroupIngressResponse EC2response = EC2SoapServiceImpl.toAuthorizeSecurityGroupIngressResponse( 
+        		ServiceProvider.getInstance().getEC2Engine().authorizeSecurityGroup( EC2request ));
         serializeResponse(response, EC2response);
     }
     
