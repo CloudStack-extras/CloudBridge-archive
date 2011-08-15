@@ -125,29 +125,29 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         EC2AuthorizeRevokeSecurityGroup request = new  EC2AuthorizeRevokeSecurityGroup();
 
         request.setName( groupName );
-         
-        for( int i=0; i < items.length; i++ ) {
+        
+        for (IpPermissionType ipPerm : items) {
     	   EC2IpPermission perm = new EC2IpPermission();       	
-    	   perm.setProtocol( items[i].getIpProtocol());
-    	   perm.setFromPort( items[i].getFromPort());
-    	   perm.setToPort(   items[i].getToPort());
+    	   perm.setProtocol( ipPerm.getIpProtocol());
+    	   perm.setFromPort( ipPerm.getFromPort());
+    	   perm.setToPort( ipPerm.getToPort());
   	
-    	   UserIdGroupPairSetType groups = items[i].getGroups();
+    	   UserIdGroupPairSetType groups = ipPerm.getGroups();
     	   if (null != groups) {
     		   UserIdGroupPairType[] groupItems = groups.getItem();
-    		   for( int j=0; null != groupItems && j < groupItems.length; j++ ) {
+    		   for (UserIdGroupPairType groupPair : groupItems) {
     			  EC2SecurityGroup user = new EC2SecurityGroup();
-    			  user.setName( groupItems[j].getGroupName());
-    			  user.setAccount( groupItems[j].getUserId());
+    			  user.setName( groupPair.getGroupName());
+    			  user.setAccount( groupPair.getUserId());
     			  perm.addUser( user );
     		   }    		
     	   }     	
    
-    	   IpRangeSetType ranges = items[i].getIpRanges();
+    	   IpRangeSetType ranges = ipPerm.getIpRanges();
     	   if (null != ranges) {
     		   IpRangeItemType[] rangeItems = ranges.getItem();
-    		   for( int k=0; null != rangeItems && k < rangeItems.length; k++ ) 
-    			  perm.addIpRange( rangeItems[k].getCidrIp());
+    		   for (IpRangeItemType ipRange: rangeItems) 
+    			  perm.addIpRange( ipRange.getCidrIp());
     	   }  
    
     	   request.addIpPermission( perm );
@@ -1702,8 +1702,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	public static CreateSecurityGroupResponse toCreateSecurityGroupResponse( boolean success ) {
 		CreateSecurityGroupResponse response = new CreateSecurityGroupResponse();
 		CreateSecurityGroupResponseType param1 = new CreateSecurityGroupResponseType();
-		
-		param1.set_return( success );
+
+		param1.set_return(success);
 		param1.setRequestId( UUID.randomUUID().toString());
 		response.setCreateSecurityGroupResponse( param1 );
 		return response;

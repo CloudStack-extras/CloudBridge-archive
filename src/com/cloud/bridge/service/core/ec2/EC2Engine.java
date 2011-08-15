@@ -116,18 +116,6 @@ public class EC2Engine {
 		    	cloudAPIPort != null ? Integer.parseInt(cloudAPIPort) : 80, false);
   	        
    	        try {
-   	        	// These are all going away, since cloudStackClient has it's own intervals configured
-   	        	Integer.parseInt( EC2Prop.getProperty( "pollInterval1", "100"  ));
-   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval2", "100"  ));
-   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval3", "100"  ));
-   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval4", "1000" ));
-   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval5", "100"  ));
-   	            Integer.parseInt( EC2Prop.getProperty( "pollInterval6", "100"  ));
-   	        } catch( Exception e ) {
-    			logger.warn("Invalid polling interval, using default values", e);
-   	        }
-   	        
-   	        try {
    	        	cloudStackVersion = getCloudStackVersion(EC2Prop);
    	        } catch(Exception e) {
    	    		logger.error( "EC2 Loading Configuration file - ", e);
@@ -247,12 +235,10 @@ public class EC2Engine {
     }
 
     /**
-     * Remember to pre-sort the parameters in alphabetical order.
-     * 
      * @param request
      * @return was the security group created?
      */
-    public boolean createSecurityGroup(EC2SecurityGroup request) {
+    public Boolean createSecurityGroup(EC2SecurityGroup request) {
     	if (null == request.getDescription() || null == request.getName()) 
 			 throw new EC2ServiceException(ServerError.InternalError, "Both name & description are required");
 
@@ -262,10 +248,10 @@ public class EC2Engine {
     			cmd.setParam("description", request.getDescription());
     			cmd.setParam("name", request.getName());
     		}
-    		CloudStackInfoResponse resp = cloudStackCall(cmd, true, "createsecuritygroupresponse", null, CloudStackInfoResponse.class);
-    		// TODO: this should be reworked... this is not 'good enough'
+    		
+    		CloudStackSecurityGroup resp = cloudStackCall(cmd, true, "createsecuritygroupresponse", null, CloudStackSecurityGroup.class);
     		if (resp != null && resp.getId() != null) {
-    			return resp.getSuccess();
+    			return true;
     		}
     		return false;
     	} catch( Exception e ) {
@@ -311,7 +297,6 @@ public class EC2Engine {
     		throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
     	}
     }
-
     
     /**
      * CloudStack supports revoke only by using the ruleid of the ingress rule.   
@@ -1945,11 +1930,11 @@ public class EC2Engine {
      * 
      * @return List of accounts
      * 
-     *	This isn't used anywhere, but it used to be???
      */
     public Account[] getAccounts() {
     	return getAccounts(UserContext.current().getAccessKey(), UserContext.current().getSecretKey());
     }
+    
     public Account[] getAccounts(String accessKey, String secretKey) {
     	try {
 	    	CloudStackCommand command = new CloudStackCommand("listAccounts");
