@@ -8,7 +8,7 @@ settingsFile="/usr/share/cloud/bridge/conf/ec2-service.properties"
 function readCurrentSettings () {
 	readVar managementServer
 	readVar cloudAPIPort
-        readVar cloudstackVersion
+    readVar cloudstackVersion
 	readVar WSDLVersion
 	readVar keystore
 	readVar keystorePass
@@ -25,12 +25,6 @@ function readCurrentSettings () {
 	readVar dbName
 	readVar dbUser
 	readVar dbPassword
-	readVar pollInterval1
-	readVar pollInterval2
-	readVar pollInterval3
-	readVar pollInterval4
-	readVar pollInterval5
-	readVar pollInterval6
 }
 
 function readVar () {
@@ -102,12 +96,6 @@ function saveValues () {
 	saveValue dbName
 	saveValue dbUser
 	saveValue dbPassword
-	saveValue pollInterval1
-	saveValue pollInterval2
-	saveValue pollInterval3
-	saveValue pollInterval4
-	saveValue pollInterval5
-	saveValue pollInterval6
 }
 
 echo "Welcome to the CloudBridge setup."
