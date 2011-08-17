@@ -380,10 +380,8 @@ public class EC2Engine {
     				cmd.setParam("userSecurityGroupList["+i+"].group", group.getName());
     				i++;
     			}
-    			CloudStackSecurityGroupIngress resp = cloudStackCall(cmd, true, "authorizesecuritygroupingressresponse", "securitygroup", CloudStackSecurityGroupIngress.class);
-    			if (resp == null || resp.getRuleId() == null) {
-    				throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
-    			}
+    			CloudStackSecurityGroupIngress resp = cloudStackCall(cmd, true, "authorizesecuritygroupingress", "securitygroup", CloudStackSecurityGroupIngress.class);
+    			logger.error(resp.toString());
    	    	}
    	    } catch(Exception e) {
    		    logger.error( "EC2 AuthorizeSecurityGroupIngress - ", e);
@@ -1910,9 +1908,9 @@ public class EC2Engine {
     		perm.setProtocol(rule.getProtocol());
     		perm.setFromPort(rule.getStartPort());
     		perm.setToPort(rule.getEndPort());
-    		perm.setRuleId(rule.getRuleId().toString());
-    		perm.setIcmpCode(rule.getIcmpCode().toString());
-    		perm.setIcmpType(rule.getIcmpType().toString());
+    		perm.setRuleId(rule.getRuleId() != null ? rule.getRuleId().toString() : new String());
+    		perm.setIcmpCode(rule.getIcmpCode() != null ? rule.getIcmpCode().toString() : new String());
+    		perm.setIcmpType(rule.getIcmpType() != null ? rule.getIcmpType().toString() : new String());
     		perm.setCIDR(rule.getCidr());
     		perm.addIpRange(rule.getCidr());
     		
@@ -1966,7 +1964,7 @@ public class EC2Engine {
      */
     private String getNetworkId(String zoneId) throws Exception {
     	String networkId = null;
-    	
+    	// really hate doing this like this, why not just get all networks and walk the list?
     	if (networkId==null) networkId = getNetworkId("direct", false);
     	if (networkId==null) networkId = getNetworkId("direct", true);
     	if (networkId==null) networkId = getNetworkId("virtual", false);
@@ -1976,44 +1974,52 @@ public class EC2Engine {
     }
     
     private String getNetworkId(String networkType, boolean shared) throws Exception {
-    	CloudStackCommand command = new CloudStackCommand("listNetworks");
-    	if (command != null) {
-    		command.setParam("isdefault", "true");
-    		if (shared) command.setParam("isshared", "true");
-    		command.setParam("type", networkType);
-    	}
-    	List<CloudStackNetwork> networks = cloudStackListCall(command, "listnetworksresponse", "network", 
-    			new TypeToken<List<CloudStackNetwork>>() {}.getType());
-    	if (!networks.isEmpty()) {
-	    	// Return the first network id found. TODO: Is this right?  
-	    	return networks.get(0).getId().toString();
+    	try {
+	    	CloudStackCommand command = new CloudStackCommand("listNetworks");
+	    	if (command != null) {
+	    		command.setParam("isdefault", "true");
+	    		if (shared) command.setParam("isshared", "true");
+	    		command.setParam("type", networkType);
+	    	}
+	    	List<CloudStackNetwork> networks = cloudStackListCall(command, "listnetworksresponse", "network", 
+	    			new TypeToken<List<CloudStackNetwork>>() {}.getType());
+	    	if (networks == null) return null;
+	    	for (CloudStackNetwork network : networks) {
+	    		// Let's be sure the underlying network offering is available
+	    		CloudStackNetworkOffering offering = getNetworkOffering(network.getNetworkOfferingId().toString());
+	    		if (!offering.getAvailability().equalsIgnoreCase("unavailable")) {
+	    			return network.getId().toString();
+	    		}
+	    	}
+    	} catch (Exception e) {
+			logger.error( "get Network ID - " + e.getMessage());
     	}
     	return null;
     }
     
     private String createNetwork(String zoneId) throws Exception {
     	CloudStackCommand command = new CloudStackCommand("createNetwork");
-    	Tuple<String, String> networkOffering = getNetworkOffering();
+    	CloudStackNetworkOffering networkOffering = getNetworkOffering();
     	if (command != null) {
 //			Leaving these comments here because we have a bug about this stuff...
 //    		command.setParam("account", account.getAccountName());
-    		command.setParam("displaytext", networkOffering.getSecond());
+    		command.setParam("displaytext", networkOffering.getDisplayText());
 //			command.setParam("domainid", account.getDomainId());
     		command.setParam("name", "EC2 created network");
-    		command.setParam("networkofferingid", networkOffering.getFirst());
+    		command.setParam("networkofferingid", networkOffering.getId().toString());
     		command.setParam("zoneid", zoneId);
     	}
-    	CloudStackInfoResponse resp = cloudStackCall(command, true, "createnetworkresponse", null, CloudStackInfoResponse.class);
-    	if (resp.getJobId() == null || resp.getId() == null) {
+    	CloudStackInfoResponse resp = cloudStackCall(command, false, "createnetworkresponse", "network", CloudStackInfoResponse.class);
+    	if (resp == null || resp.getJobId() == null || resp.getId() == null) {
     		throw new Exception("Invalid CloudStack API response");
     	}
     	return resp.getId().toString();
     }
     
     /*
-     * returns tuple with id and displaytext of first network offering provided
+     * returns first network offering provided
      */
-    private Tuple<String, String> getNetworkOffering() throws Exception {
+    private CloudStackNetworkOffering getNetworkOffering() throws Exception {
     	CloudStackCommand command = new CloudStackCommand("listNetworkOfferings");
     	if (command != null) {
     		command.setParam("isdefault", "true");
@@ -2021,13 +2027,24 @@ public class EC2Engine {
     	}
     	List<CloudStackNetworkOffering> offerings = cloudStackListCall(command, "listnetworkofferingsresponse", "networkoffering",
     			new TypeToken<List<CloudStackNetworkOffering>>() {}.getType());
-    	if (!offerings.isEmpty()) {
-    		Tuple<String, String> offering = new Tuple<String, String>("", "");
-    		offering.setFirst(offerings.get(0).getId().toString());
-    		offering.setFirst(offerings.get(0).getDisplayText());
-    		return offering;
+    	
+    	for (CloudStackNetworkOffering offer : offerings) {
+    		if (!offer.getAvailability().equalsIgnoreCase("unavailable")) {
+    			return offer;
+    		}
     	}
     	return null;
+    }
+    
+    /*
+     * @param networkOfferingId - the network offering you wish to retrieve
+     */
+    private CloudStackNetworkOffering getNetworkOffering(String networkOfferingId) throws Exception {
+    	CloudStackCommand command = new CloudStackCommand("listNetworkOfferings");
+    	if (command != null) {
+    		command.setParam("id", networkOfferingId);
+    	}
+    	return cloudStackCall(command, false, "listnetworkofferingsresponse", "networkoffering", CloudStackNetworkOffering.class);
     }
     
     private String getDCNetworkType(String zoneId) throws Exception {

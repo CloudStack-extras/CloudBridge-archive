@@ -133,7 +133,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	   perm.setToPort( ipPerm.getToPort());
   	
     	   UserIdGroupPairSetType groups = ipPerm.getGroups();
-    	   if (null != groups) {
+    	   if (null != groups && groups.getItem() != null) {
     		   UserIdGroupPairType[] groupItems = groups.getItem();
     		   for (UserIdGroupPairType groupPair : groupItems) {
     			  EC2SecurityGroup user = new EC2SecurityGroup();
@@ -144,10 +144,10 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	   }     	
    
     	   IpRangeSetType ranges = ipPerm.getIpRanges();
-    	   if (null != ranges) {
+    	   if (ranges != null && ranges.getItem() != null) {
     		   IpRangeItemType[] rangeItems = ranges.getItem();
     		   for (IpRangeItemType ipRange: rangeItems) 
-    			  perm.addIpRange( ipRange.getCidrIp());
+    			  perm.addIpRange( ipRange.getCidrIp() );
     	   }  
    
     	   request.addIpPermission( perm );
