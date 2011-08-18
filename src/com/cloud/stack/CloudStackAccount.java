@@ -74,7 +74,7 @@ public class CloudStackAccount {
 	@SerializedName("enabled")
 	private String enabled;
 	@SerializedName("user")
-	private CloudStackUser user;
+	private CloudStackUser[] user;
 	
 	/**
 	 * 
@@ -261,7 +261,7 @@ public class CloudStackAccount {
 	/**
 	 * @return the user
 	 */
-	public CloudStackUser getUser() {
+	public CloudStackUser[] getUser() {
 		return user;
 	}
 
@@ -443,7 +443,7 @@ public class CloudStackAccount {
 	/**
 	 * @param user the user to set
 	 */
-	public void setUser(CloudStackUser user) {
+	public void setUser(CloudStackUser[] user) {
 		this.user = user;
 	}
 

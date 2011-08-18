@@ -42,7 +42,7 @@ public class CloudStackClient {
     
 	private String _serviceUrl;
 	
-	private long _pollIntervalMs = 1000;			// 1 second polling interval
+	private long _pollIntervalMs = 2000;			// 1 second polling interval
 	private long _pollTimeoutMs = 600000;			// 10 minutes polling timeout
 
 	public CloudStackClient(String serviceRootUrl) {
@@ -171,7 +171,7 @@ public class CloudStackClient {
         statusCode = ((HttpURLConnection)connect).getResponseCode();
         if(statusCode >= 400) {
         	logger.error("Cloud API call + [" + url.toString() + "] failed with status code: " + statusCode);
-        	throw new IOException("CloudStack API call HTTP response error, HTTP status: " + statusCode);
+        	throw new IOException("CloudStack API call HTTP response error, HTTP status code: " + statusCode);
         }
         
         InputStream inputStream = connect.getInputStream(); 

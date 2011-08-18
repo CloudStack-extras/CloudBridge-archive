@@ -227,7 +227,7 @@ public class CloudStackTemplate {
 	 * @param ostypeid the ostypeid to set
 	 */
 	public void setOsTypeId(Long ostypeid) {
-		this.osTypeId = osTypeId;
+		this.osTypeId = ostypeid;
 	}
 
 	/**

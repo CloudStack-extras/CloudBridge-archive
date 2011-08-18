@@ -42,7 +42,6 @@ import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.JsonAccessor;
-import com.cloud.bridge.util.Tuple;
 import com.cloud.stack.ApiConstants;
 import com.cloud.stack.CloudStackAccount;
 import com.cloud.stack.CloudStackCapabilities;
@@ -63,6 +62,7 @@ import com.cloud.stack.CloudStackSecurityGroup;
 import com.cloud.stack.CloudStackSecurityGroupIngress;
 import com.cloud.stack.CloudStackSnapshot;
 import com.cloud.stack.CloudStackTemplate;
+import com.cloud.stack.CloudStackUser;
 import com.cloud.stack.CloudStackUserVm;
 import com.cloud.stack.CloudStackVolume;
 import com.cloud.stack.CloudStackZone;
@@ -226,12 +226,17 @@ public class EC2Engine {
      * @param secretKey - Cloud.com's API secret key
      * @return true if the account exists, false otherwise
      */
-    public boolean validateAccount( String accessKey, String secretKey ) {
-    	Account[] accts = getAccounts(accessKey, secretKey);
-    	if (accts == null || accts.length == 0) {
-    		return false;
+    public boolean validateAccount( String accessKey, String secretKey ) throws EC2ServiceException {
+    	try {
+	    	CloudStackAccount[] accts = getAccounts(accessKey, secretKey);
+	    	if (accts == null || accts.length == 0) {
+	    		return false;
+	    	}
+	    	return true;
+    	} catch(Exception e) {
+    		logger.error("Validate account failed!");
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
     	}
-    	return true;
     }
 
     /**
@@ -1292,7 +1297,6 @@ public class EC2Engine {
     		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}
     }
-
     
     /**
      * The Amazon API allows one or multiple VMs to be started with a single request.
@@ -1337,9 +1341,19 @@ public class EC2Engine {
            	    if (null != request.getKeyName())
            	    	command.setParam("keypair", request.getKeyName());
            	    
-           	    String dcNetworkType = getDCNetworkType(zoneId);
-           	    if (dcNetworkType.equals("Advanced")) {
-           	    	command.setParam("networkIds", getNetworkId(zoneId));
+           	    CloudStackZone[] zones = getZones("id", zoneId);
+           	    if (zones != null) {
+	           	    CloudStackZone zone = zones[0];           	    
+	           	    if (zone.getNetworkType().equalsIgnoreCase("advanced") && zone.isSecurityGroupsEnabled() == false) {
+	           	    	String netId = getNetworkId(zoneId);
+	           	    	if (netId == null) {
+	           	    		// let's try createNetwork now
+	           	    		netId = createNetwork(zoneId);
+	           	    	}
+	           	    	if (netId != null) {
+	           	    		command.setParam("networkids", netId);
+	           	    	}
+	           	    }
            	    }
        	    }
 
@@ -1382,7 +1396,7 @@ public class EC2Engine {
             
          	return instances;
      	} catch( Exception e ) {
-    		logger.error( "EC2 RunInstances - deploy 2 ", e);
+    		logger.error( "EC2 RunInstances - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
      	}
     }
@@ -1723,10 +1737,7 @@ public class EC2Engine {
     {    
     	EC2DescribeAvailabilityZonesResponse zones = new EC2DescribeAvailabilityZonesResponse();
     	
-    	CloudStackCommand command = new CloudStackCommand("listZones");
-    	command.setParam("available", "true");
-    	List<CloudStackZone> cloudZones = cloudStackListCall(command, "listzonesresponse", "zone",
-    		new TypeToken<List<CloudStackZone>>() {}.getType());
+    	CloudStackZone[] cloudZones = getZones("available", "true");
     	
     	if(cloudZones != null) {
     		for(CloudStackZone cloudZone : cloudZones) {
@@ -1927,140 +1938,147 @@ public class EC2Engine {
     /**
      * 
      * @return List of accounts
+     * @throws Exception 
      * 
      */
-    public Account[] getAccounts() {
-    	return getAccounts(UserContext.current().getAccessKey(), UserContext.current().getSecretKey());
-    }
     
-    public Account[] getAccounts(String accessKey, String secretKey) {
-    	try {
+    public CloudStackAccount[] getAccounts(String accessKey, String secretKey) throws Exception {
 	    	CloudStackCommand command = new CloudStackCommand("listAccounts");
-	    	List<Account> acctList = new ArrayList<Account>();
     		List<CloudStackAccount> accts = _client.listCall(command, accessKey, secretKey, "listaccountsresponse", "account", 
     				new TypeToken<List<CloudStackAccount>>() {}.getType());
-    		for (CloudStackAccount acct : accts) {
-    			Account newAcct = new Account();
-    			newAcct.setAccountName(acct.getName());
-    			newAcct.setDomainId(acct.getDomainId().toString());
-    			newAcct.setDomainName(acct.getDomain());
-    			newAcct.setId(acct.getId().toString());
-    			acctList.add(newAcct);
-    		}
-    		return acctList.toArray(new Account[0]);
-    			
-    	} catch (Exception e) {
-			logger.error( "List Accounts - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
-    	}
+    		if (accts != null) return accts.toArray(new CloudStackAccount[0]);
+    		return null;
     }
-    
+
+    public CloudStackAccount[] getAccounts() throws Exception {
+    	return getAccounts(UserContext.current().getAccessKey(), UserContext.current().getSecretKey());
+    }
+
     /**
      * Check for three network types in succession until one is found.
-     * Creates a new one if no network is found.
      * 
      * @return A network id suitable for use.
      * @throws Exception 
      */
     private String getNetworkId(String zoneId) throws Exception {
     	String networkId = null;
-    	// really hate doing this like this, why not just get all networks and walk the list?
-    	if (networkId==null) networkId = getNetworkId("direct", false);
-    	if (networkId==null) networkId = getNetworkId("direct", true);
-    	if (networkId==null) networkId = getNetworkId("virtual", false);
-    	if (networkId==null) networkId = createNetwork(zoneId);
+
+    	if (networkId==null) networkId = getNetworkId("Direct", false, zoneId);
+    	if (networkId==null) networkId = getNetworkId("Direct", true, zoneId);
+    	if (networkId==null) networkId = getNetworkId("Virtual", false, zoneId);
     	
     	return networkId;
     }
     
-    private String getNetworkId(String networkType, boolean shared) throws Exception {
+    private String getNetworkId(String networkType, boolean shared, String zoneId) {
     	try {
-	    	CloudStackCommand command = new CloudStackCommand("listNetworks");
+        	CloudStackCommand command = new CloudStackCommand("listNetworks");
 	    	if (command != null) {
 	    		command.setParam("isdefault", "true");
 	    		if (shared) command.setParam("isshared", "true");
 	    		command.setParam("type", networkType);
+	    		command.setParam("zoneid", zoneId);
 	    	}
 	    	List<CloudStackNetwork> networks = cloudStackListCall(command, "listnetworksresponse", "network", 
 	    			new TypeToken<List<CloudStackNetwork>>() {}.getType());
 	    	if (networks == null) return null;
 	    	for (CloudStackNetwork network : networks) {
-	    		// Let's be sure the underlying network offering is available
-	    		CloudStackNetworkOffering offering = getNetworkOffering(network.getNetworkOfferingId().toString());
-	    		if (!offering.getAvailability().equalsIgnoreCase("unavailable")) {
-	    			return network.getId().toString();
-	    		}
+	    		if (network.getNetworkOfferingAvailability().equalsIgnoreCase("unavailable") != true) return network.getId().toString();
 	    	}
     	} catch (Exception e) {
-			logger.error( "get Network ID - " + e.getMessage());
+			logger.error( "Get Network ID - type? [" + networkType + "] shared? [" + shared + "] error: " + e.toString());
     	}
     	return null;
     }
-    
     private String createNetwork(String zoneId) throws Exception {
-    	CloudStackCommand command = new CloudStackCommand("createNetwork");
-    	CloudStackNetworkOffering networkOffering = getNetworkOffering();
-    	if (command != null) {
-//			Leaving these comments here because we have a bug about this stuff...
-//    		command.setParam("account", account.getAccountName());
-    		command.setParam("displaytext", networkOffering.getDisplayText());
-//			command.setParam("domainid", account.getDomainId());
-    		command.setParam("name", "EC2 created network");
-    		command.setParam("networkofferingid", networkOffering.getId().toString());
-    		command.setParam("zoneid", zoneId);
+    	try {
+	    	CloudStackNetworkOffering offering = null;
+	    	CloudStackNetworkOffering[] offerings = getNetworkOfferings("guestiptype", "Virtual");
+	    	for (CloudStackNetworkOffering offer:offerings) {
+	    		if (offer.getAvailability().equalsIgnoreCase("unavailable") == false && 
+	    				offer.getIsDefault()) {
+	    			offering = offer;
+	    			// find first that meets our criteria, and let's break out of the loop!
+	    			break;
+	    		}
+	    	}
+	    	if (offering == null) {
+	    		logger.error("Unable to find a suitable virtual network offering!");
+	    		return null;
+	    	}
+	    	
+	    	CloudStackCommand command = new CloudStackCommand("createNetwork");
+	    	if (command != null) {
+	    		command.setParam("displaytext", "createNetwork - " + offering.getDisplayText());
+	    		command.setParam("name", "createNetwork - " + offering.getName());
+	    		command.setParam("networkofferingid", offering.getId().toString());
+	    		command.setParam("zoneid", zoneId);
+	    	}
+	    	CloudStackInfoResponse resp = cloudStackCall(command, false, "createnetworkresponse", "network", CloudStackInfoResponse.class);
+	    	if (resp == null || resp.getJobId() == null || resp.getId() == null) {
+	    		logger.error("createNetwork failed!");
+	    		throw new Exception("Invalid CloudStack API response");
+	    	}
+	    	return resp.getId().toString();
+    	} catch (Exception e) {
+			logger.error("createNetwork - " + e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}
-    	CloudStackInfoResponse resp = cloudStackCall(command, false, "createnetworkresponse", "network", CloudStackInfoResponse.class);
-    	if (resp == null || resp.getJobId() == null || resp.getId() == null) {
-    		throw new Exception("Invalid CloudStack API response");
-    	}
-    	return resp.getId().toString();
     }
     
-    /*
-     * returns first network offering provided
-     */
-    private CloudStackNetworkOffering getNetworkOffering() throws Exception {
-    	CloudStackCommand command = new CloudStackCommand("listNetworkOfferings");
-    	if (command != null) {
-    		command.setParam("isdefault", "true");
-    		command.setParam("traffictype", "guest");
+    private CloudStackNetworkOffering[] getNetworkOfferings(String key, String val) throws Exception {
+    	try {
+	    	CloudStackCommand command = new CloudStackCommand("listNetworkOfferings");
+	    	if (command != null && key != null && val != null) {
+	    		command.setParam(key, val);
+	    	}
+	    	List<CloudStackNetworkOffering> offerings = cloudStackListCall(command, "listnetworkofferingsresponse", "networkoffering",
+	    			new TypeToken<List<CloudStackNetworkOffering>>() {}.getType());
+	    	if (offerings != null) {
+	    		return offerings.toArray(new CloudStackNetworkOffering[0]); 
+	    	}
+	    	return null;
+    	} catch(Exception e) { 
+    		logger.error("getNetworkOfferings " + e);
+    		throw new Exception("Invalid CloudstackAPI response.  " + e.getMessage());
     	}
-    	List<CloudStackNetworkOffering> offerings = cloudStackListCall(command, "listnetworkofferingsresponse", "networkoffering",
-    			new TypeToken<List<CloudStackNetworkOffering>>() {}.getType());
-    	
-    	for (CloudStackNetworkOffering offer : offerings) {
-    		if (!offer.getAvailability().equalsIgnoreCase("unavailable")) {
-    			return offer;
-    		}
-    	}
-    	return null;
     }
     
-    /*
-     * @param networkOfferingId - the network offering you wish to retrieve
-     */
     private CloudStackNetworkOffering getNetworkOffering(String networkOfferingId) throws Exception {
-    	CloudStackCommand command = new CloudStackCommand("listNetworkOfferings");
-    	if (command != null) {
-    		command.setParam("id", networkOfferingId);
+    	try {
+    		CloudStackNetworkOffering[] offerings = getNetworkOfferings("id", networkOfferingId);
+    		if (offerings != null) {
+	    		for (CloudStackNetworkOffering offering: offerings) {
+	    			if (offering.getAvailability().equalsIgnoreCase("unavailable") != true && offering.getIsDefault() && offering.getTraffictype().equalsIgnoreCase("guest")) {
+	    				return offering;
+	    			}
+	    		}
+    		}
+	    	return null;	    	
+    	} catch(Exception e) { 
+    		logger.error("getNetworkOffering " + e);
+    		throw new Exception("Invalid CloudstackAPI response.  " + e.getMessage());
     	}
-    	return cloudStackCall(command, false, "listnetworkofferingsresponse", "networkoffering", CloudStackNetworkOffering.class);
     }
     
-    private String getDCNetworkType(String zoneId) throws Exception {
-    	CloudStackCommand command = new CloudStackCommand("listZones");
-    	if (command != null) {
-    		command.setParam("id", zoneId);
+    private CloudStackZone[] getZones(String key, String val) {
+    	try {
+    		CloudStackCommand command = new CloudStackCommand("listZones");
+    		if (command != null && key != null && val != null) { 
+    			command.setParam(key, val);
+    		}
+    		List<CloudStackZone> zones = cloudStackListCall(command, "listzonesresponse", "zone",
+        			new TypeToken<List<CloudStackZone>>() {}.getType());
+    		if (zones != null) {
+    			return zones.toArray(new CloudStackZone[0]);
+    		}
+    		return null;
+    	} catch (Exception e) {
+    		logger.error( "List Zones - ", e);
+    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
     	}
-    	List<CloudStackZone> zones = cloudStackListCall(command, "listzonesresponse", "zone",
-    			new TypeToken<List<CloudStackZone>>() {}.getType());
-    	
-    	if (!zones.isEmpty()) {
-    		return zones.get(0).getNetworkType(); 
-    	}
-    	return null;
     }
-       
+    
     /**
      * Windows has its own device strings.
      * 
