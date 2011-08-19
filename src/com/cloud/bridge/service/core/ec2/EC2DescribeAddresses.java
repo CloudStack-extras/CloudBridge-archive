@@ -18,7 +18,7 @@ package com.cloud.bridge.service.core.ec2;
 import java.util.HashSet;
 
 public class EC2DescribeAddresses {
-
+	private EC2AddressFilterSet filterSet;
 	private HashSet<String> publicIpsSet = new HashSet<String>();
 
 	public EC2DescribeAddresses() {
@@ -40,5 +40,19 @@ public class EC2DescribeAddresses {
 	// probably don't need this silly function...
 	public String[] getPublicIpsSet() {
 		return publicIpsSet.toArray(new String[0]);
+	}
+
+	/**
+	 * @return the keyFilterSet
+	 */
+	public EC2AddressFilterSet getFilterSet() {
+		return filterSet;
+	}
+
+	/**
+	 * @param keyFilterSet the keyFilterSet to set
+	 */
+	public void setFilterSet(EC2AddressFilterSet keyFilterSet) {
+		this.filterSet = keyFilterSet;
 	}
 }

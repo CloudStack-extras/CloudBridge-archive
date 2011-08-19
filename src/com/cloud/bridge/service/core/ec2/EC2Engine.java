@@ -483,11 +483,10 @@ public class EC2Engine {
     	{   // -> query to get the volume size for each snapshot
     		EC2DescribeSnapshotsResponse response = listSnapshots( request.getSnapshotSet());
     		EC2Snapshot[] snapshots = response.getSnapshotSet();
-    		for( int i=0; i < snapshots.length; i++ ) 
-    		{
-    			volumes = listVolumes( snapshots[i].getVolumeId(), null, volumes );
+    		for (EC2Snapshot snap : snapshots) {
+    			volumes = listVolumes( snap.getVolumeId(), null, volumes );
                 EC2Volume[] volSet = volumes.getVolumeSet();
-                if (0 < volSet.length) snapshots[i].setVolumeSize( volSet[0].getSize());
+                if (0 < volSet.length) snap.setVolumeSize( volSet[0].getSize());
                 volumes.reset();
     		}
     		
@@ -819,9 +818,9 @@ public class EC2Engine {
 
     public EC2DescribeAddressesResponse handleRequest( EC2DescribeAddresses request ) {
     	try {
-            EC2DescribeAddressesResponse response = new EC2DescribeAddressesResponse();
-
             List<CloudStackIpAddress> addrList = getCloudStackIpAddressesFromKeyValue(null, null);
+    		EC2AddressFilterSet filterSet = request.getFilterSet();
+            List<EC2Address> addressList = new ArrayList<EC2Address>();
             
         	for (CloudStackIpAddress addr: addrList) {
         		// remember, if no filters are set, request.inPublicIpSet always returns true
@@ -830,10 +829,11 @@ public class EC2Engine {
         			ec2Address.setIpAddress(addr.getIpAddress());
         			if (addr.getVirtualMachineId() != null) 
         				ec2Address.setAssociatedInstanceId(addr.getVirtualMachineId().toString());
-        			response.addAddress(ec2Address);
+        			addressList.add(ec2Address);
         		}
         	}
-        	return response;
+
+            return filterSet.evaluate(addressList);
     	} catch(Exception e) {
     		logger.error("EC2 DescribeAddresses - ", e);
     		throw new EC2ServiceException(ServerError.InternalError, e.getMessage());

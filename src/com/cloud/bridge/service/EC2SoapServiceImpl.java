@@ -25,6 +25,7 @@ import java.util.UUID;
 
 import com.amazon.ec2.*;
 import com.cloud.bridge.service.core.ec2.EC2Address;
+import com.cloud.bridge.service.core.ec2.EC2AddressFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2AllocateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AssociateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
@@ -316,12 +317,19 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     public DescribeAddressesResponse describeAddresses(DescribeAddresses describeAddresses) {
         EC2DescribeAddresses ec2Request = new EC2DescribeAddresses();
         DescribeAddressesType dat = describeAddresses.getDescribeAddresses();
-
+        
         DescribeAddressesInfoType dait = dat.getPublicIpsSet();
         DescribeAddressesItemType[] items = dait.getItem();
-        if (null != items) {  // -> can be empty
-            for( int i=0; i < items.length; i++ ) ec2Request.addPublicIp( items[i].getPublicIp());
+        if (items != null) {  // -> can be empty
+        	for (DescribeAddressesItemType itemType : items) 
+        		ec2Request.addPublicIp( itemType.getPublicIp());
         }
+
+        FilterSetType fset = dat.getFilterSet();
+        if (fset != null) {
+        	ec2Request.setFilterSet(toAddressFilterSet(fset));
+        }
+        
         return toDescribeAddressesResponse( engine.handleRequest( ec2Request ));
     }
 
@@ -767,6 +775,28 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	// filtersets
+	private EC2AddressFilterSet toAddressFilterSet( FilterSetType fst )	{
+		EC2AddressFilterSet vfs = new EC2AddressFilterSet();
+		
+		FilterType[] items = fst.getItem();
+		if (items != null) {
+			// -> each filter can have one or more values associated with it
+			for (FilterType item : items) {
+				EC2Filter oneFilter = new EC2Filter();
+				String filterName = item.getName();
+				oneFilter.setName( filterName );
+				
+				ValueSetType vst = item.getValueSet();
+				ValueType[] valueItems = vst.getItem();
+				for (ValueType valueItem : valueItems) {
+					oneFilter.addValueEncoded( valueItem.getValue());
+				}
+				vfs.addFilter( oneFilter );
+			}
+		}		
+		return vfs;
+	}
+	
 	private EC2KeyPairFilterSet toKeyPairFilterSet( FilterSetType fst )
 	{
 		EC2KeyPairFilterSet vfs = new EC2KeyPairFilterSet();
