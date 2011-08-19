@@ -1561,12 +1561,10 @@ public class EC2Engine {
     {
 	    EC2DescribeInstancesResponse instances = new EC2DescribeInstancesResponse();
  	 
-        if (null == virtualMachineIds || 0 == virtualMachineIds.length) 
-        {
+        if (null == virtualMachineIds || 0 == virtualMachineIds.length) {
 	        instances = lookupInstances( null, instances );
 	    } else {
-	    	for( int i=0; i <  virtualMachineIds.length; i++ ) 
-		    {
+	    	for( int i=0; i <  virtualMachineIds.length; i++ ) {
 		       instances = lookupInstances( virtualMachineIds[i], instances );
 		    }
 	    }

@@ -1010,31 +1010,33 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    ReservationSetType param2 = new ReservationSetType();
 
 		EC2Instance[] instances = engineResponse.getInstanceSet();
-		for( int i=0; i < instances.length; i++ ) 
-		{
-			String accountName = instances[i].getAccountName();
-			String domainId = instances[i].getDomainId();
+		
+		for (EC2Instance inst:instances) {
+//		for( int i=0; i < instances.length; i++ ) 
+//		{
+			String accountName = inst.getAccountName();
+			String domainId = inst.getDomainId();
 			String ownerId = domainId + ":" + accountName;
 		
 			ReservationInfoType param3 = new ReservationInfoType();
-	        param3.setReservationId( instances[i].getId());   // -> an id we could track down if needed
+	        param3.setReservationId( inst.getId());   // -> an id we could track down if needed
 	        param3.setOwnerId(ownerId);
 	        param3.setRequesterId( "" );
 	        
 			GroupSetType  param4 = new GroupSetType();
 			GroupItemType param5 = new GroupItemType();
-			param5.setGroupId( (null == instances[i].getGroup() ? "" : instances[i].getGroup()));
+			param5.setGroupId( (null == inst.getGroup() ? "" : inst.getGroup()));
 			param4.addItem( param5 );
 	        param3.setGroupSet( param4 );
 	        
 	        RunningInstancesSetType  param6 = new RunningInstancesSetType();
 	        RunningInstancesItemType param7 = new RunningInstancesItemType();
-	        param7.setInstanceId( instances[i].getId());
-	        param7.setImageId( instances[i].getTemplateId());
+	        param7.setInstanceId( inst.getId());
+	        param7.setImageId( inst.getTemplateId());
 	        
 	        InstanceStateType param8 = new InstanceStateType();
-	        param8.setCode( toAmazonCode( instances[i].getState()));
-	        param8.setName( toAmazonStateName( instances[i].getState()));
+	        param8.setCode( toAmazonCode( inst.getState()));
+	        param8.setName( toAmazonStateName( inst.getState()));
 	        param7.setInstanceState( param8 );
 	        
 	        param7.setPrivateDnsName( "" );
@@ -1042,7 +1044,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        param7.setReason( "" );
 	        param7.setKeyName( "" );
 	        param7.setAmiLaunchIndex( "" );
-	        param7.setInstanceType( instances[i].getServiceOffering());
+	        param7.setInstanceType( inst.getServiceOffering());
 	        
 	        ProductCodesSetType param9 = new ProductCodesSetType();
 	        ProductCodesSetItemType param10 = new ProductCodesSetItemType();
@@ -1050,7 +1052,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param9.addItem( param10 );
 	        param7.setProductCodes( param9 );
 	        
-	        Calendar cal = instances[i].getCreated();
+	        Calendar cal = inst.getCreated();
 	        if ( null == cal ) {
 	        	 cal = Calendar.getInstance();
 	        	 cal.set( 1970, 1, 1 );
@@ -1058,7 +1060,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        param7.setLaunchTime( cal );
 	        
 	        PlacementResponseType param11 = new PlacementResponseType();
-	        param11.setAvailabilityZone( instances[i].getZoneName());
+	        param11.setAvailabilityZone( inst.getZoneName());
 	        param11.setGroupName( "" );
 	        param7.setPlacement( param11 );
 	        param7.setKernelId( "" );
@@ -1070,9 +1072,9 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setMonitoring( param12 );
             param7.setSubnetId( "" );
             param7.setVpcId( "" );
-            String ipAddr = instances[i].getPrivateIpAddress();
+            String ipAddr = inst.getPrivateIpAddress();
             param7.setPrivateIpAddress((null != ipAddr ? ipAddr : ""));
-	        param7.setIpAddress( instances[i].getIpAddress());
+	        param7.setIpAddress( inst.getIpAddress());
 	        
 	        StateReasonType param13 = new StateReasonType();
 	        param13.setCode( "" );
@@ -1080,7 +1082,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setStateReason( param13 );
             param7.setArchitecture( "" );
             param7.setRootDeviceType( "" );
-        	String devicePath = engine.cloudDeviceIdToDevicePath( instances[i].getHypervisor(), instances[i].getRootDeviceId());
+        	String devicePath = engine.cloudDeviceIdToDevicePath( inst.getHypervisor(), inst.getRootDeviceId());
             param7.setRootDeviceName( devicePath );
             
             InstanceBlockDeviceMappingResponseType param14 = new InstanceBlockDeviceMappingResponseType();
@@ -1194,6 +1196,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		else if (cloudState.equalsIgnoreCase( "Starting"  )) return 0;
 		else if (cloudState.equalsIgnoreCase( "Stopping"  )) return 64;
 		else if (cloudState.equalsIgnoreCase( "Error"     )) return 1;
+		else if (cloudState.equalsIgnoreCase( "Expunging" )) return 48;
 		else return 16;
 	}
 	
@@ -1207,6 +1210,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		else if (cloudState.equalsIgnoreCase( "Starting"  )) return new String( "pending" );
 		else if (cloudState.equalsIgnoreCase( "Stopping"  )) return new String( "stopping" );
 		else if (cloudState.equalsIgnoreCase( "Error"     )) return new String( "error" );
+		else if (cloudState.equalsIgnoreCase( "Expunging" )) return new String( "terminated");
 		else return new String( "running" );
 	}
 	
