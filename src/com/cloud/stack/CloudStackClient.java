@@ -149,9 +149,8 @@ public class CloudStackClient {
 		if(responseObjName != null)
 			try {
 				return (new Gson()).fromJson(json.eval(responseName + "." + responseObjName), collectionType);
-			} catch(NullPointerException e) {
+			} catch(Exception e) {
 				// this happens because responseObjName won't exist if there are no objects in the list.
-				// 
 				logger.debug("Unable to find responseObjName:[" + responseObjName + "].  Returning null! Exception: " + e.getMessage());
 				return null;
 			}

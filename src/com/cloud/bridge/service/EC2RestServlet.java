@@ -158,6 +158,7 @@ public class EC2RestServlet extends HttpServlet {
 	 * We build the path to where the keystore holding the WS-Security X509 certificates
 	 * are stored.
 	 */
+	@Override
 	public void init( ServletConfig config ) throws ServletException {
        File propertiesFile = ConfigurationHelper.findConfigurationFile("ec2-service.properties");
        Properties EC2Prop = null;
@@ -185,11 +186,13 @@ public class EC2RestServlet extends HttpServlet {
        }
     }
 	
+	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
 	    doGetOrPost(req, resp);
     }
 	
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
+    @Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
 	    doGetOrPost(req, resp);
     }
 
@@ -1004,7 +1007,7 @@ public class EC2RestServlet extends HttpServlet {
         int count = 0;
 
         // -> load in all the "InstanceId.n" parameters if any
-        Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
         while( names.hasMoreElements()) {
             String key = (String)names.nextElement();
             if (key.startsWith("InstanceId")) {
@@ -1028,7 +1031,7 @@ public class EC2RestServlet extends HttpServlet {
         int count = 0;
 
         // -> load in all the "InstanceId.n" parameters if any
-        Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
         while( names.hasMoreElements()) {
 	        String key = (String)names.nextElement();
 	        if (key.startsWith("InstanceId")) {
@@ -1052,7 +1055,7 @@ public class EC2RestServlet extends HttpServlet {
 	    int count = 0;
 	
 	    // -> load in all the "InstanceId.n" parameters if any
-	    Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
 	    while( names.hasMoreElements()) {
 		    String key = (String)names.nextElement();
 		    if (key.startsWith("InstanceId")) {
@@ -1076,7 +1079,7 @@ public class EC2RestServlet extends HttpServlet {
         int count = 0;
 
         // -> load in all the "InstanceId.n" parameters if any
-        Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
         while( names.hasMoreElements()) {
 	        String key = (String)names.nextElement();
 	        if (key.startsWith("InstanceId")) {
@@ -1104,7 +1107,7 @@ public class EC2RestServlet extends HttpServlet {
 		EC2DescribeAvailabilityZones EC2request = new EC2DescribeAvailabilityZones();
 		
 		// -> load in all the "ZoneName.n" parameters if any
-		Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
 		while( names.hasMoreElements()) {
 			String key = (String)names.nextElement();
 			if (key.startsWith("ZoneName")) {
@@ -1122,7 +1125,7 @@ public class EC2RestServlet extends HttpServlet {
 		EC2DescribeImages EC2request = new EC2DescribeImages();
 		
 		// -> load in all the "ImageId.n" parameters if any, and ignore all other parameters
-		Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
 		while( names.hasMoreElements()) {
 			String key = (String)names.nextElement();
 			if (key.startsWith("ImageId")) {
@@ -1163,7 +1166,7 @@ public class EC2RestServlet extends HttpServlet {
 		EC2DescribeInstances EC2request = new EC2DescribeInstances();
 		
 		// -> load in all the "InstanceId.n" parameters if any
-		Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
 		while( names.hasMoreElements()) 
 		{
 			String key = (String)names.nextElement();
@@ -1193,7 +1196,7 @@ public class EC2RestServlet extends HttpServlet {
         EC2DescribeAddresses ec2Request = new EC2DescribeAddresses();
 
         // -> load in all the "PublicIp.n" parameters if any
-        Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
         while( names.hasMoreElements()) {
             String key = (String)names.nextElement();
             if (key.startsWith("PublicIp")) {
@@ -1292,7 +1295,7 @@ public class EC2RestServlet extends HttpServlet {
 	    EC2DescribeSecurityGroups EC2request = new EC2DescribeSecurityGroups();
 	
 	    // -> load in all the "GroupName.n" parameters if any
-	    Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
 	    while( names.hasMoreElements()) 
 	    {
 		   String key = (String)names.nextElement();
@@ -1324,7 +1327,7 @@ public class EC2RestServlet extends HttpServlet {
     	String instanceType = null;
 	
     	// -> we are only handling queries about the "Attribute=instanceType"
-		Enumeration names = request.getParameterNames();
+		Enumeration<?> names = request.getParameterNames();
 		while( names.hasMoreElements()) {
 			String key = (String)names.nextElement();
 			if (key.startsWith("Attribute")) {
@@ -1356,7 +1359,7 @@ public class EC2RestServlet extends HttpServlet {
 	    EC2DescribeSnapshots EC2request = new EC2DescribeSnapshots();
 	
 	    // -> load in all the "SnapshotId.n" parameters if any, and ignore any other parameters
-	    Enumeration names = request.getParameterNames();
+	    Enumeration<?> names = request.getParameterNames();
 	    while( names.hasMoreElements()) 
 	    {
 		    String key = (String)names.nextElement();
@@ -1388,7 +1391,7 @@ public class EC2RestServlet extends HttpServlet {
         EC2DescribeVolumes EC2request = new EC2DescribeVolumes();
 
         // -> load in all the "VolumeId.n" parameters if any
-        Enumeration names = request.getParameterNames();
+        Enumeration<?> names = request.getParameterNames();
         while( names.hasMoreElements()) 
         {
 	        String key = (String)names.nextElement();
@@ -1721,7 +1724,7 @@ public class EC2RestServlet extends HttpServlet {
     		logger.info("Request requestURI: " + request.getRequestURI());
     		logger.info("Request requestURL: " + request.getRequestURL());
     		logger.info("Request servletPath: " + request.getServletPath());
-    		Enumeration headers = request.getHeaderNames();
+    		Enumeration<?> headers = request.getHeaderNames();
     		if(headers != null) {
     			while(headers.hasMoreElements()) {
     				Object headerName = headers.nextElement();
@@ -1729,7 +1732,7 @@ public class EC2RestServlet extends HttpServlet {
     			}
     		}
     		
-    		Enumeration params = request.getParameterNames();
+    		Enumeration<?> params = request.getParameterNames();
     		if(params != null) {
     			while(params.hasMoreElements()) {
     				Object paramName = params.nextElement();

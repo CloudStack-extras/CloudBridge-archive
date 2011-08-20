@@ -62,7 +62,6 @@ import com.cloud.stack.CloudStackSecurityGroup;
 import com.cloud.stack.CloudStackSecurityGroupIngress;
 import com.cloud.stack.CloudStackSnapshot;
 import com.cloud.stack.CloudStackTemplate;
-import com.cloud.stack.CloudStackUser;
 import com.cloud.stack.CloudStackUserVm;
 import com.cloud.stack.CloudStackVolume;
 import com.cloud.stack.CloudStackZone;
@@ -482,6 +481,9 @@ public class EC2Engine {
     	try 
     	{   // -> query to get the volume size for each snapshot
     		EC2DescribeSnapshotsResponse response = listSnapshots( request.getSnapshotSet());
+    		if (response == null) {
+    			return new EC2DescribeSnapshotsResponse();
+    		}
     		EC2Snapshot[] snapshots = response.getSnapshotSet();
     		for (EC2Snapshot snap : snapshots) {
     			volumes = listVolumes( snap.getVolumeId(), null, volumes );
@@ -492,7 +494,7 @@ public class EC2Engine {
     		
     	    if ( null == sfs )
      	   	     return response;
-     	    else return sfs.evaluate( response );     
+     	    else return sfs.evaluate( response );
        	} 
     	catch( EC2ServiceException error ) {
     		logger.error( "EC2 DescribeSnapshots - ", error);
@@ -556,7 +558,7 @@ public class EC2Engine {
        	try {
         	CloudStackCommand command = new CloudStackCommand("deleteSnapshot");
         	command.setParam("id", snapshotId);
-	    	CloudStackInfoResponse response = cloudStackCall(command, false, "deletesnapshotresponse", null, CloudStackInfoResponse.class);
+	    	CloudStackInfoResponse response = cloudStackCall(command, true, "deletesnapshotresponse", null, CloudStackInfoResponse.class);
 	    	if(response.getJobId() != null)
 	    		return true;
 	    	
@@ -647,7 +649,7 @@ public class EC2Engine {
 		EC2DescribeSnapshotsResponse snapshots = new EC2DescribeSnapshotsResponse();
 		
 		List<CloudStackSnapshot> cloudSnapshots;
-		if(interestedShots == null || interestedShots.length == 0) {
+		if (interestedShots == null || interestedShots.length == 0) {
 			CloudStackCommand cmd = new CloudStackCommand("listSnapshots");
 			cloudSnapshots = this.cloudStackListCall(cmd, "listsnapshotsresponse", "snapshot", 
 				new TypeToken<List<CloudStackSnapshot>> () {}.getType());
