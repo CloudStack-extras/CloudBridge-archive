@@ -1196,14 +1196,12 @@ public class EC2Engine {
     		String snapshotId = request.getSnapshotId();
     		Integer size = request.getSize();
 
-   	        if (null == snapshotId)
-   	        {
+   	        if (null == snapshotId) {
    	   	        DiskOfferings findDisk = listDiskOfferings(); 
    	   		    DiskOffer[] offerSet   = findDisk.getOfferSet();
-   	   		    for( int i=0; i < offerSet.length; i++ ) 
-   	   		    {
-   	   		         if (offerSet[i].getIsCustomized()) {
-   	   		        	 command.setParam("diskofferingid", offerSet[i].getId());
+   	   		    for (DiskOffer offer : offerSet) {
+   	   		         if (offer.getIsCustomized()) {
+   	   		        	 command.setParam("diskofferingid", offer.getId());
    	   		    	     foundDisk = true;
    	   		    	     break;
    	   		         } 	   		    		  
@@ -1274,16 +1272,16 @@ public class EC2Engine {
     	    EC2DescribeInstancesResponse previousState = listVirtualMachines( instanceSet, null );
      	    vms = previousState.getInstanceSet();
     	    
-     	    // -> send reboot requests for each found VM 
-     		for( int i=0; i < vms.length; i++ ) {
-     		   if (vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
+     	    // -> send reboot requests for each found VM
+     	    for (EC2Instance vm : vms) {
+     		   if (vm.getState().equalsIgnoreCase( "Destroyed" )) continue;
 
      		   CloudStackCommand command = new CloudStackCommand("rebootVirtualMachine");
-     		   command.setParam("id", vms[i].getId());
+     		   command.setParam("id", vm.getId());
      		   
-     		   CloudStackInfoResponse commandResponse = cloudStackCall(command, false, "rebootvirtualmachineresponse", null, CloudStackInfoResponse.class);
+     		   CloudStackInfoResponse commandResponse = cloudStackCall(command, true, "rebootvirtualmachineresponse", null, CloudStackInfoResponse.class);
      		   if(logger.isDebugEnabled())
-     			   logger.debug("Rebooting VM " + vms[i].getId() + " job " + commandResponse.getJobId());
+     			   logger.debug("Rebooting VM " + vm.getId() + " job " + commandResponse.getJobId());
      		}
      		
      		// -> if some specified VMs where not found we have to tell the caller
