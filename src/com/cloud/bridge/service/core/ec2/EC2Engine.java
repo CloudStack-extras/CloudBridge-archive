@@ -319,16 +319,14 @@ public class EC2Engine {
         
 		EC2IpPermission[] items = request.getIpPermissionSet();
         		
-   	    try 
-  	    {   EC2DescribeSecurityGroupsResponse response = listSecurityGroups( groupSet );
-  	        EC2SecurityGroup[] groupInfo = response.getGroupSet();
+   	    try {   
+   	    	EC2DescribeSecurityGroupsResponse response = listSecurityGroups( groupSet );
+  	        EC2SecurityGroup[] groups = response.getGroupSet();
    	    	
-  	        for( int i=0; i < groupInfo.length && null == ruleId; i++ )
-  	        {
-  	        	EC2IpPermission[] perms = groupInfo[i].getIpPermissionSet();
-  	        	for( int j=0; j < perms.length && null == ruleId; j++ )
-  	        	{
-  	        		ruleId = doesRuleMatch( items[0], perms[j] );
+  	        for (EC2SecurityGroup group : groups) {
+  	        	EC2IpPermission[] perms = group.getIpPermissionSet();
+  	        	for (EC2IpPermission perm : perms) {
+   	        		ruleId = doesRuleMatch( items[0], perm );
   	        	}
   	        }
   	        
@@ -340,7 +338,7 @@ public class EC2Engine {
    	    		cmd.setParam("id", ruleId);
    	    	}
    	    	
-   	    	CloudStackInfoResponse resp = cloudStackCall(cmd, true, "revokesecuritygroupingressresponse", null, CloudStackInfoResponse.class);
+   	    	CloudStackInfoResponse resp = cloudStackCall(cmd, true, "revokesecuritygroupingress", null, CloudStackInfoResponse.class);
    	    	if (resp != null && resp.getId() != null) {
    	    		return resp.getSuccess();
    	    	}
@@ -407,8 +405,7 @@ public class EC2Engine {
 	{
 		int matches = 0;
 		
-		if (null != permLeft.getIcmpType() && null != permLeft.getIcmpCode())
-		{
+		if (null != permLeft.getIcmpType() && null != permLeft.getIcmpCode()) {
 			if (null == permRight.getIcmpType() || null == permRight.getIcmpCode()) return null;
 			    
 			if (!permLeft.getIcmpType().equalsIgnoreCase( permRight.getIcmpType())) return null;
@@ -417,8 +414,7 @@ public class EC2Engine {
 		}
 		
 		// -> "Valid Values for EC2 security groups: tcp | udp | icmp or the corresponding protocol number (6 | 17 | 1)."
-		if (null != permLeft.getProtocol())
-		{
+		if (null != permLeft.getProtocol()) {
 			if (null == permRight.getProtocol()) return null;
 			
 			String protocol = permLeft.getProtocol();
@@ -431,8 +427,7 @@ public class EC2Engine {
 		}
 		
 		
-		if (null != permLeft.getCIDR())
-		{
+		if (null != permLeft.getCIDR()) {
 			if (null == permRight.getCIDR()) return null;
 			
 			if (!permLeft.getCIDR().equalsIgnoreCase( permRight.getCIDR())) return null;
@@ -440,15 +435,17 @@ public class EC2Engine {
 		}
 
 		// -> is the port(s) from the request (left) a match of the rule's port(s) 
-		if (0 != permLeft.getFromPort())
-		{
+		if (0 != permLeft.getFromPort()) {
 			// -> -1 means all ports match
 			if (-1 != permLeft.getFromPort()) {
-			   if (!(permLeft.getFromPort() == permRight.getFromPort() && permLeft.getToPort() == permRight.getToPort())) return null;
+			   if (permLeft.getFromPort().compareTo(permRight.getFromPort()) != 0 || 
+					   permLeft.getToPort().compareTo(permRight.getToPort()) != 0) 
+				   return null;
 			}
 			matches++;
 		}
 		
+	
 		// -> was permLeft set up properly with at least one property to match?
 		if ( 0 == matches ) 
 			 return null;
@@ -1898,7 +1895,7 @@ public class EC2Engine {
     			ec2Group.setDescription(group.getDescription());
     			ec2Group.setDomainId(group.getDomainId().toString());
     			ec2Group.setId(group.getId().toString());
-    			ec2Group.addIpPermission(toPermission(group));
+    			toPermission(ec2Group, group);
 
     			groupSet.addGroup(ec2Group);
     		}
@@ -1909,13 +1906,13 @@ public class EC2Engine {
     	}
     }
     
-    private EC2IpPermission toPermission( CloudStackSecurityGroup group ) {
+    private boolean toPermission(EC2SecurityGroup response, CloudStackSecurityGroup group ) {
     	List<CloudStackIngressRule> rules = group.getIngressRules();
     	
-    	if (rules == null || rules.isEmpty()) return null;
+    	if (rules == null || rules.isEmpty()) return false;
     	
-    	EC2IpPermission perm = new EC2IpPermission();
     	for (CloudStackIngressRule rule : rules) {
+        	EC2IpPermission perm = new EC2IpPermission();
     		perm.setProtocol(rule.getProtocol());
     		perm.setFromPort(rule.getStartPort());
     		perm.setToPort(rule.getEndPort());
@@ -1931,8 +1928,9 @@ public class EC2Engine {
 	    		newGroup.setName(rule.getSecurityGroupName());
 	    		perm.addUser(newGroup);
     		}
+    		response.addIpPermission(perm);
     	}
-    	return perm;
+    	return true;
     }
     
     /**

@@ -378,7 +378,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         DescribeSecurityGroupsSetType sgst = sgt.getSecurityGroupSet();
         DescribeSecurityGroupsSetItemType[] items = sgst.getItem();
 		if (null != items) {  // -> can be empty
-			for( int i=0; i < items.length; i++ ) request.addGroupName( items[i].getGroupName());
+			for (DescribeSecurityGroupsSetItemType item:items) request.addGroupName(item.getGroupName());
 		}
 		
 		if (null != fst) {
