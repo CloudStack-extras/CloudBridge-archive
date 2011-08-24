@@ -581,7 +581,7 @@ public class EC2Engine {
     			command.setParam("name", imageSet[0].getName());
     		}
     		
-    		CloudStackInfoResponse response = cloudStackCall(command, true, "updatetemplateresponse", null, CloudStackInfoResponse.class);
+    		CloudStackInfoResponse response = cloudStackCall(command, true, "updatetemplateresponse", "template", CloudStackInfoResponse.class);
     		return response.getSuccess();
 	    } catch( Exception e ) {
 		    logger.error( "EC2 ModifyImage - ", e);
