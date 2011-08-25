@@ -1279,9 +1279,9 @@ public class EC2Engine {
      		   CloudStackCommand command = new CloudStackCommand("rebootVirtualMachine");
      		   command.setParam("id", vm.getId());
      		   
-     		   CloudStackInfoResponse commandResponse = cloudStackCall(command, true, "rebootvirtualmachineresponse", null, CloudStackInfoResponse.class);
-     		   if(logger.isDebugEnabled())
-     			   logger.debug("Rebooting VM " + vm.getId() + " job " + commandResponse.getJobId());
+     		   CloudStackInfoResponse resp = cloudStackCall(command, true, "rebootvirtualmachineresponse", null, CloudStackInfoResponse.class);
+     		   if (logger.isDebugEnabled())
+     			   logger.debug("Rebooting VM " + vm.getId() + " job " + resp.getJobId());
      		}
      		
      		// -> if some specified VMs where not found we have to tell the caller
@@ -1302,7 +1302,6 @@ public class EC2Engine {
     	int canCreateInstances = -1;
     	int countCreated       = 0;
     	
-    	// [A] Can the user create the minimum required number of instances?
     	try {
     		// ugly...
     	    canCreateInstances = calculateAllowedInstances();
@@ -1339,28 +1338,20 @@ public class EC2Engine {
        	    	throw new EC2ServiceException(ClientError.InvalidZone_NotFound, "ZoneId " + request.getZoneName() + " not found!");
        	    }
        	    CloudStackZone zone = zones[0];
-       	    // if basic or advanced without securitygroupsenabled, we need to pick our network or create a new one
-/*       	    if (zone.getNetworkType().equalsIgnoreCase("advanced") && zone.isSecurityGroupsEnabled() == false) { 
-	   	    	String netId = getNetworkId(zone.getId().toString());
-	   	    	if (netId == null) // let's try createNetwork now
-	   	    		netId = createNetwork(zone.getId().toString());
-	   	    	if (netId != null) 
-	   	    		command.setParam("networkids", netId);
-       	    }
-*/
-       	    
-       	    // Let's just make some assumptions here.
+       	    command.setParam("zoneId", zoneId);
+
+       	    // network
        	    CloudStackNetwork network = findNetwork(zone);
        	    if (network != null) command.setParam("networkids", network.getId().toString());
        	    command.setParam("serviceOfferingId", offer.getServiceOfferingId());
        	    command.setParam("size", String.valueOf(request.getSize()));
        	    command.setParam("templateId", request.getTemplateId());
        	    
+       	    // userdata
        	    if (null != request.getUserData()) 
        	    	command.setParam( "userData", request.getUserData());
        	    
-       	    command.setParam("zoneId", zoneId);
-       	    
+       	    // now actually deploy the vms
      		for( int i=0; i < createInstances; i++ ) {
      			CloudStackUserVm resp = cloudStackCall(command, true, "deployvirtualmachineresponse", "virtualmachine", CloudStackUserVm.class);
      			EC2Instance vm = new EC2Instance();
@@ -1949,8 +1940,10 @@ public class EC2Engine {
     }
 
     private CloudStackNetwork findNetwork(CloudStackZone zone) throws Exception {
+    	
     	// for basic networking, we don't specify a networkid for deployvm
     	if (zone.getNetworkType().equalsIgnoreCase("Basic")) return null;
+    	
     	// for Advanced (and whatever else comes along) we need to find a network & specify it in deployvm
     	CloudStackCommand command = new CloudStackCommand("listNetworks");
     	if (command != null) {
@@ -1966,6 +1959,7 @@ public class EC2Engine {
     			// we don't want any network with an unavailable network offering.
     			continue;
     		if (zone.isSecurityGroupsEnabled()) {
+    			// supported options...
     			// find system SecurityGroupEnabled default Guest Direct network
     			if (net.getSecurityGroupEnabled() && net.getTrafficType().equalsIgnoreCase("Guest")) 
     				return net;
@@ -1983,7 +1977,9 @@ public class EC2Engine {
     					net.getTrafficType().equalsIgnoreCase("Guest")) 
     				return net;    	
     		} else {
-    			if (net.getType().equalsIgnoreCase("Virtual")) 
+    			// pretty much everything is supported, so long as securitygroupenabled isn't set. 
+    			if (net.getType().equalsIgnoreCase("Virtual") &&
+    					!net.getSecurityGroupEnabled()) 
     				return net;
     		}
     	}
