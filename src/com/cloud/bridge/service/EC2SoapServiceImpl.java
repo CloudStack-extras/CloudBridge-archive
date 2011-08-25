@@ -1362,7 +1362,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	public static RunInstancesResponse toRunInstancesResponse(EC2RunInstancesResponse engineResponse, EC2Engine engine ) {
 	    RunInstancesResponse response = new RunInstancesResponse();
 	    RunInstancesResponseType param1 = new RunInstancesResponseType();
-
+	    
 	    param1.setReservationId( "" );
 	    
 		GroupSetType  param2 = new GroupSetType();
@@ -1373,20 +1373,20 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    
 	    RunningInstancesSetType param6 = new RunningInstancesSetType();
 		EC2Instance[] instances = engineResponse.getInstanceSet();
-		for( int i=0; i < instances.length; i++ ) {
+		for (EC2Instance inst : instances) {
 	        RunningInstancesItemType param7 = new RunningInstancesItemType();
-	        param7.setInstanceId( instances[i].getId());
-	        param7.setImageId( instances[i].getTemplateId());
+	        param7.setInstanceId( inst.getId());
+	        param7.setImageId( inst.getTemplateId());
 	        
-	        String accountName = instances[i].getAccountName();
-			String domainId = instances[i].getDomainId();
+	        String accountName = inst.getAccountName();
+			String domainId = inst.getDomainId();
 			String ownerId = domainId + ":" + accountName;
 		
 	        param1.setOwnerId(ownerId);
 			
 	        InstanceStateType param8 = new InstanceStateType();
-	        param8.setCode( toAmazonCode( instances[i].getState()));
-	        param8.setName( toAmazonStateName( instances[i].getState()));
+	        param8.setCode( toAmazonCode( inst.getState()));
+	        param8.setName( toAmazonStateName( inst.getState()));
 	        param7.setInstanceState( param8 );
 	        
 	        param7.setPrivateDnsName( "" );
@@ -1401,9 +1401,9 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param9.addItem( param10 );
 	        param7.setProductCodes( param9 );
 	        
-	        param7.setInstanceType( instances[i].getServiceOffering());
+	        param7.setInstanceType( inst.getServiceOffering());
         	// -> CloudStack seems to have issues with timestamp formats so just in case
-	        Calendar cal = instances[i].getCreated();
+	        Calendar cal = inst.getCreated();
 	        if ( null == cal ) {
 	        	 cal = Calendar.getInstance();
 	        	 cal.set( 1970, 1, 1 );
@@ -1411,7 +1411,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        param7.setLaunchTime( cal );
 
 	        PlacementResponseType param11 = new PlacementResponseType();
-	        param11.setAvailabilityZone( instances[i].getZoneName());
+	        param11.setAvailabilityZone( inst.getZoneName());
 	        param7.setPlacement( param11 );
 	        
 	        param7.setKernelId( "" );
@@ -1423,9 +1423,9 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setMonitoring( param12 );
             param7.setSubnetId( "" );
             param7.setVpcId( "" );
-            String ipAddr = instances[i].getPrivateIpAddress();
+            String ipAddr = inst.getPrivateIpAddress();
             param7.setPrivateIpAddress((null != ipAddr ? ipAddr : ""));
-	        param7.setIpAddress( instances[i].getIpAddress());
+	        param7.setIpAddress( inst.getIpAddress());
 
 	        StateReasonType param13 = new StateReasonType();
 	        param13.setCode( "" );
@@ -1461,7 +1461,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param18.addItem( param19 );
             param7.setTagSet( param18 );          
             
-            String hypervisor = instances[i].getHypervisor();
+            String hypervisor = inst.getHypervisor();
             param7.setHypervisor((null != hypervisor ? hypervisor : ""));
 	        param6.addItem( param7 );
 		}
@@ -1479,10 +1479,10 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         AvailabilityZoneSetType param2 = new AvailabilityZoneSetType();
         
 		String[] zones = engineResponse.getZoneSet();
-		for( int i=0; i < zones.length; i++ ) {
+		for (String zone : zones) {
             AvailabilityZoneItemType param3 = new AvailabilityZoneItemType(); 
             AvailabilityZoneMessageSetType param4 = new AvailabilityZoneMessageSetType();
-            param3.setZoneName( zones[i] );
+            param3.setZoneName( zone );
             param3.setZoneState( "available" );
             param3.setRegionName( "" );
             param3.setMessageSet( param4 );
@@ -1580,19 +1580,19 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    DescribeSnapshotsResponseType param1 = new DescribeSnapshotsResponseType();
 	    DescribeSnapshotsSetResponseType param2 = new DescribeSnapshotsSetResponseType();
         
-	    EC2Snapshot[] snapshots = engineResponse.getSnapshotSet();
-	    for( int i=0; i < snapshots.length; i++ ) {
+	    EC2Snapshot[] snaps = engineResponse.getSnapshotSet();
+	    for (EC2Snapshot snap : snaps) {
 	         DescribeSnapshotsSetItemResponseType param3 = new DescribeSnapshotsSetItemResponseType();
-	         param3.setSnapshotId( snapshots[i].getId());
-	         param3.setVolumeId( snapshots[i].getVolumeId());
-	         param3.setStatus( snapshots[i].getState());
+	         param3.setSnapshotId( snap.getId());
+	         param3.setVolumeId( snap.getVolumeId());
+	         param3.setStatus( snap.getState());
 	         
-	         String accountName = snapshots[i].getAccountName();
-	         String domainId = snapshots[i].getDomainId();
+	         String accountName = snap.getAccountName();
+	         String domainId = snap.getDomainId();
 				String ownerId = domainId + ":" + accountName;
 	         
 	         // -> CloudStack seems to have issues with timestamp formats so just in case
-		     Calendar cal = snapshots[i].getCreated();
+		     Calendar cal = snap.getCreated();
 		     if ( null == cal ) {
 		       	  cal = Calendar.getInstance();
 		       	  cal.set( 1970, 1, 1 );
@@ -1601,9 +1601,9 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	         
 	         param3.setProgress( "" );
 	         param3.setOwnerId(ownerId);
-	         Integer volSize = new Integer( snapshots[i].getVolumeSize());
+	         Integer volSize = new Integer( snap.getVolumeSize());
 	         param3.setVolumeSize( volSize.toString());
-	         param3.setDescription( snapshots[i].getName());
+	         param3.setDescription( snap.getName());
 	         param3.setOwnerAlias( "" );
 	         
 	         ResourceTagSetType param18 = new ResourceTagSetType();

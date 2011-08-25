@@ -1295,15 +1295,8 @@ public class EC2Engine {
     	}
     }
     
-    /**
-     * The Amazon API allows one or multiple VMs to be started with a single request.
-     * To do this efficiently we first make all the asynch deployVirtualMachine requests
-     * required before we start waiting for any to complete.   We save all the jobId values
-     * returned from each request in an array.   Once all the deployVirtualMachine requests 
-     * have been made then we enter a polling state waiting for all the asynch requests to
-     * complete.
-     */
     public EC2RunInstancesResponse handleRequest(EC2RunInstances request) {
+    	
     	EC2RunInstancesResponse instances = new EC2RunInstancesResponse();
     	int createInstances    = 0;
     	int canCreateInstances = -1;
@@ -1311,6 +1304,7 @@ public class EC2Engine {
     	
     	// [A] Can the user create the minimum required number of instances?
     	try {
+    		// ugly...
     	    canCreateInstances = calculateAllowedInstances();
  	        if (-1 == canCreateInstances) canCreateInstances = request.getMaxCount();
  	        
@@ -1320,40 +1314,44 @@ public class EC2Engine {
      	    }
 
      	    if ( canCreateInstances < request.getMaxCount()) 
-     		     createInstances = canCreateInstances;
-     	    else createInstances = request.getMaxCount();
+     	    	createInstances = canCreateInstances;
+     	    else 
+     	    	createInstances = request.getMaxCount();
 
-	        EC2Instance[] vms    = new EC2Instance[ createInstances ];
-
-     	    // [B] Create n separate VM instances 
+     	    // the mapping stuff
 	        OfferingBundle offer = instanceTypeToOfferBundle( request.getInstanceType());
 	        
+	        // Let's create the command we are going to use
 	        CloudStackCommand command = new CloudStackCommand("deployVirtualMachine");
        	    if (null != request.getGroupId()) 
        	    	command.setParam(ApiConstants.SECURITY_GROUP_NAMES, request.getGroupId());
-	        
+       	    
+       	    // keypair
+       	    if (null != request.getKeyName())
+       	    	command.setParam("keypair", request.getKeyName());
+       
+       	    // zone stuff
        	    String zoneId = toZoneId(request.getZoneName());
        	    
-       	    if (cloudStackVersion >= CLOUD_STACK_VERSION_2_2) {
-           	    if (null != request.getKeyName())
-           	    	command.setParam("keypair", request.getKeyName());
-           	    
-           	    CloudStackZone[] zones = getZones("id", zoneId);
-           	    if (zones != null) {
-	           	    CloudStackZone zone = zones[0];           	    
-	           	    if (zone.getNetworkType().equalsIgnoreCase("advanced") && zone.isSecurityGroupsEnabled() == false) {
-	           	    	String netId = getNetworkId(zoneId);
-	           	    	if (netId == null) {
-	           	    		// let's try createNetwork now
-	           	    		netId = createNetwork(zoneId);
-	           	    	}
-	           	    	if (netId != null) {
-	           	    		command.setParam("networkids", netId);
-	           	    	}
-	           	    }
-           	    }
+       	    CloudStackZone[] zones = getZones("id", zoneId);
+       	    if (zones == null || zones.length == 0) {
+       	    	logger.info("EC2 RunInstances - zone " + request.getZoneName() + " not found!");
+       	    	throw new EC2ServiceException(ClientError.InvalidZone_NotFound, "ZoneId " + request.getZoneName() + " not found!");
        	    }
-
+       	    CloudStackZone zone = zones[0];
+       	    // if basic or advanced without securitygroupsenabled, we need to pick our network or create a new one
+/*       	    if (zone.getNetworkType().equalsIgnoreCase("advanced") && zone.isSecurityGroupsEnabled() == false) { 
+	   	    	String netId = getNetworkId(zone.getId().toString());
+	   	    	if (netId == null) // let's try createNetwork now
+	   	    		netId = createNetwork(zone.getId().toString());
+	   	    	if (netId != null) 
+	   	    		command.setParam("networkids", netId);
+       	    }
+*/
+       	    
+       	    // Let's just make some assumptions here.
+       	    CloudStackNetwork network = findNetwork(zone);
+       	    if (network != null) command.setParam("networkids", network.getId().toString());
        	    command.setParam("serviceOfferingId", offer.getServiceOfferingId());
        	    command.setParam("size", String.valueOf(request.getSize()));
        	    command.setParam("templateId", request.getTemplateId());
@@ -1364,25 +1362,25 @@ public class EC2Engine {
        	    command.setParam("zoneId", zoneId);
        	    
      		for( int i=0; i < createInstances; i++ ) {
-     			CloudStackUserVm vm = cloudStackCall(command, true, "deployvirtualmachineresponse", "virtualmachine", CloudStackUserVm.class);
-     			vms[i] = new EC2Instance();
-     			vms[i].setId(String.valueOf(vm.getId()));
-     			vms[i].setName(vm.getName());
-     			vms[i].setZoneName(vm.getZoneName());
-     			vms[i].setTemplateId(String.valueOf(vm.getTemplateId()));
-     			if(vm.getSecurityGroupList() != null && vm.getSecurityGroupList().size() > 0) {
+     			CloudStackUserVm resp = cloudStackCall(command, true, "deployvirtualmachineresponse", "virtualmachine", CloudStackUserVm.class);
+     			EC2Instance vm = new EC2Instance();
+     			vm.setId(String.valueOf(resp.getId()));
+     			vm.setName(resp.getName());
+     			vm.setZoneName(resp.getZoneName());
+     			vm.setTemplateId(resp.getTemplateId().toString());
+     			if (resp.getSecurityGroupList() != null && resp.getSecurityGroupList().size() > 0) {
      				// TODO, we have a list of security groups, just return the first one?
-     				CloudStackSecurityGroup securityGroup = vm.getSecurityGroupList().get(0);
-     				vms[i].setGroup(securityGroup.getName());
+     				CloudStackSecurityGroup securityGroup = resp.getSecurityGroupList().get(0);
+     				vm.setGroup(securityGroup.getName());
      			}
-     			vms[i].setState(vm.getState());
-     			vms[i].setCreated(vm.getCreated());
-     			vms[i].setIpAddress(vm.getIpAddress());
-     			vms[i].setAccountName(vm.getAccountName());
-     			vms[i].setDomainId(String.valueOf(vm.getDomainId()));
-     			vms[i].setHypervisor(vm.getHypervisor());
-    			vms[i].setServiceOffering( serviceOfferingIdToInstanceType( offer.getServiceOfferingId()));
-    			instances.addInstance( vms[i] );
+     			vm.setState(resp.getState());
+     			vm.setCreated(resp.getCreated());
+     			vm.setIpAddress(resp.getIpAddress());
+     			vm.setAccountName(resp.getAccountName());
+     			vm.setDomainId(resp.getDomainId().toString());
+     			vm.setHypervisor(resp.getHypervisor());
+    			vm.setServiceOffering( serviceOfferingIdToInstanceType( offer.getServiceOfferingId()));
+    			instances.addInstance(vm);
     			countCreated++;
      	    }    		
 	   		
@@ -1950,78 +1948,50 @@ public class EC2Engine {
     	return getAccounts(UserContext.current().getAccessKey(), UserContext.current().getSecretKey());
     }
 
-    /**
-     * Check for three network types in succession until one is found.
-     * 
-     * @return A network id suitable for use.
-     * @throws Exception 
-     */
-    private String getNetworkId(String zoneId) throws Exception {
-    	String networkId = null;
+    private CloudStackNetwork findNetwork(CloudStackZone zone) throws Exception {
+    	// for basic networking, we don't specify a networkid for deployvm
+    	if (zone.getNetworkType().equalsIgnoreCase("Basic")) return null;
+    	// for Advanced (and whatever else comes along) we need to find a network & specify it in deployvm
+    	CloudStackCommand command = new CloudStackCommand("listNetworks");
+    	if (command != null) {
+    		command.setParam("isdefault", "true");
+    		command.setParam("zoneid", zone.getId().toString());
+    	}
+    	List<CloudStackNetwork> networks = cloudStackListCall(command, "listnetworksresponse", "network", 
+    			new TypeToken<List<CloudStackNetwork>>() {}.getType());
+    	if (networks == null) return null;
+   	    
+    	for (CloudStackNetwork net : networks) {
+    		if (net.getNetworkOfferingAvailability().equalsIgnoreCase("uavailable"))
+    			// we don't want any network with an unavailable network offering.
+    			continue;
+    		if (zone.isSecurityGroupsEnabled()) {
+    			// find system SecurityGroupEnabled default Guest Direct network
+    			if (net.getSecurityGroupEnabled() && net.getTrafficType().equalsIgnoreCase("Guest")) 
+    				return net;
+    			// default securityGroupEnabled system network is specified
+    			if (net.getSecurityGroupEnabled() && net.getIsSystem()) 
+    				return net;
+    			// multiple Guest Direct non-securityGroupEnabled, non-shared, non-system networks are specified
+    			if (!net.getIsSystem() && !net.getIsShared() && !net.getSecurityGroupEnabled() && 
+    					net.getType().equalsIgnoreCase("Direct") && 
+    					net.getTrafficType().equalsIgnoreCase("Guest"))
+    				return net;
+    			// Direct Guest non-system non-securityGroup enabled network is specified
+    			if (!net.getIsSystem() && !net.getSecurityGroupEnabled() &&  
+    					net.getType().equalsIgnoreCase("Direct") && 
+    					net.getTrafficType().equalsIgnoreCase("Guest")) 
+    				return net;    	
+    		} else {
+    			if (net.getType().equalsIgnoreCase("Virtual")) 
+    				return net;
+    		}
+    	}
+    	// if we don't find one, let's just bail
+    	logger.info("findNetwork failed to find a suitable network.");
+    	throw new EC2ServiceException(ServerError.InternalError, "Failed to find a suitable network!");
+    }
 
-    	if (networkId==null) networkId = getNetworkId("Direct", false, zoneId);
-    	if (networkId==null) networkId = getNetworkId("Direct", true, zoneId);
-    	if (networkId==null) networkId = getNetworkId("Virtual", false, zoneId);
-    	
-    	return networkId;
-    }
-    
-    private String getNetworkId(String networkType, boolean shared, String zoneId) {
-    	try {
-        	CloudStackCommand command = new CloudStackCommand("listNetworks");
-	    	if (command != null) {
-	    		command.setParam("isdefault", "true");
-	    		if (shared) command.setParam("isshared", "true");
-	    		command.setParam("type", networkType);
-	    		command.setParam("zoneid", zoneId);
-	    	}
-	    	List<CloudStackNetwork> networks = cloudStackListCall(command, "listnetworksresponse", "network", 
-	    			new TypeToken<List<CloudStackNetwork>>() {}.getType());
-	    	if (networks == null) return null;
-	    	for (CloudStackNetwork network : networks) {
-	    		if (network.getNetworkOfferingAvailability().equalsIgnoreCase("unavailable") != true) return network.getId().toString();
-	    	}
-    	} catch (Exception e) {
-			logger.error( "Get Network ID - type? [" + networkType + "] shared? [" + shared + "] error: " + e.toString());
-    	}
-    	return null;
-    }
-    private String createNetwork(String zoneId) throws Exception {
-    	try {
-	    	CloudStackNetworkOffering offering = null;
-	    	CloudStackNetworkOffering[] offerings = getNetworkOfferings("guestiptype", "Virtual");
-	    	for (CloudStackNetworkOffering offer:offerings) {
-	    		if (offer.getAvailability().equalsIgnoreCase("unavailable") == false && 
-	    				offer.getIsDefault()) {
-	    			offering = offer;
-	    			// find first that meets our criteria, and let's break out of the loop!
-	    			break;
-	    		}
-	    	}
-	    	if (offering == null) {
-	    		logger.error("Unable to find a suitable virtual network offering!");
-	    		return null;
-	    	}
-	    	
-	    	CloudStackCommand command = new CloudStackCommand("createNetwork");
-	    	if (command != null) {
-	    		command.setParam("displaytext", "createNetwork - " + offering.getDisplayText());
-	    		command.setParam("name", "createNetwork - " + offering.getName());
-	    		command.setParam("networkofferingid", offering.getId().toString());
-	    		command.setParam("zoneid", zoneId);
-	    	}
-	    	CloudStackInfoResponse resp = cloudStackCall(command, false, "createnetworkresponse", "network", CloudStackInfoResponse.class);
-	    	if (resp == null || resp.getJobId() == null || resp.getId() == null) {
-	    		logger.error("createNetwork failed!");
-	    		throw new Exception("Invalid CloudStack API response");
-	    	}
-	    	return resp.getId().toString();
-    	} catch (Exception e) {
-			logger.error("createNetwork - " + e);
-    		throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
-    	}
-    }
-    
     private CloudStackNetworkOffering[] getNetworkOfferings(String key, String val) throws Exception {
     	try {
 	    	CloudStackCommand command = new CloudStackCommand("listNetworkOfferings");
