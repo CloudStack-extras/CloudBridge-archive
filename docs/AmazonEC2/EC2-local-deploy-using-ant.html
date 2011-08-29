@@ -5,6 +5,7 @@
 <BODY>
 <H1>Cloud.com's EC2 local deployment Guide</H1>
 8/30/2010
+8/25/2011 (updated)
 <H2>Table of Contents</H2>
 <UL>
 <LI><A href="#prereq">1. Required 3rd Party Software</A></LI>
@@ -15,7 +16,7 @@
 <H2 id="prereq">1. Required 3rd Party Software</H2>
 1) Following software has to be installed in order to deploy and run cloud-bridge tool:
 <pre>
-apache-tomcat-6.0.18
+apache-tomcat-6.0.32
 axis2 1.5.1 (http://apache.imghat.com//ws/axis2/1_5/axis2-1.5-bin.zip)
 ant
 java
@@ -25,7 +26,7 @@ mysql
 <pre>
 ANT_HOME
 CATALINA_HOME
-export AXIS2_HOME
+export ANT_HOME
 export JAVA_HOME
 </pre>
 3) Go to CATALINA_HOME directory and excute “mkdir temp” (this directory is used for storing temporary axis files)
@@ -41,8 +42,8 @@ Deployment procedure using ant (build.xml and build-cloud-bridge.xml are config 
 <pre>
  
 * ant clean - removes dist directory
-* ant clean-tomcat - cleanes up $CATALINA_HOME/webapps/bridge directory
-* ant build-cloud-bridge composes following jars and places them to cloud-bridge/dist:
+* ant clean-tomcat - cleans up $CATALINA_HOME/webapps/bridge directory
+* ant build-cloud-bridge compiles and places the resulting jars into cloud-bridge/dist:
 
 ls dist/
 cloud-auth-ec2.mar  cloud-auth-s3.mar  cloud-bridge.jar  cloud-ec2.aar  cloud-s3.aar
@@ -50,7 +51,7 @@ cloud-auth-ec2.mar  cloud-auth-s3.mar  cloud-bridge.jar  cloud-ec2.aar  cloud-s3
 
 * deploy-axis - copies and unwars cloud-bridge/lib/axis2.war to $CATALINA_HOME/webapps/bridge directory
 
-ant deploy-cloud-bridge copies files to $CATALINA_HOME/webapps/bridge tomcat directory:
+<b>ant deploy-cloud-bridge</b> copies files to $CATALINA_HOME/webapps/bridge tomcat directory:
 
 
 - copy cloud-bridge/dist/cloud-ec2.aar and  cloud-s3.aar to $CATALINA_HOME/webapps/bridge/WEB-INF/services
@@ -59,7 +60,7 @@ ant deploy-cloud-bridge copies files to $CATALINA_HOME/webapps/bridge tomcat dir
 - copy cloud-bridge/dist/cloud-bridge.jar to $CATALINA_HOME/webapps/bridge/WEB-INF/lib
 - copy all .jar files from cloud-bridge/lib directory to $CATALINA_HOME/webapps/bridge/WEB-INF/lib
 - copy all .jar files from cloud-bridge/rampartlib directory to $CATALINA_HOME/webapps/bridge/WEB-INF/lib 
-- copy all files from cloud-bridge/conf directory to $CATALINA_HOME/webapps/bridge/WEB-INF/conf
+<del>- copy all files from cloud-bridge/conf directory to $CATALINA_HOME/webapps/bridge/WEB-INF/conf</del>
 - copy cloud-bridge/resource/Axis2/axis2.xml to $CATALINA_HOME/webapps/bridge/WEB-INF/conf
 - copy cloud-bridge/web/web.xml to $CATALINA_HOME/webapps/bridge/WEB-INF
 - copy cloud-bridge/resource/AmazonEC2/crypto.properties and xes.keystore to $CATALINA_HOME/webapps/bridge/WEB-INF/classes/
