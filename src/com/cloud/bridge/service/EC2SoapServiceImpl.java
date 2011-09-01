@@ -15,13 +15,13 @@
  */
 package com.cloud.bridge.service;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.Logger;
-
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.log4j.Logger;
 
 import com.amazon.ec2.*;
 import com.cloud.bridge.service.core.ec2.EC2Address;
@@ -511,6 +511,14 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		return toRebootInstancesResponse( engine.handleRequest( request ));
 	}
 
+	
+	/**
+	 * Processes ec2-register
+	 * 
+	 * @param
+	 * 
+	 * @see <a href="http://docs.amazonwebservices.com/AWSEC2/2010-11-15/APIReference/index.html?ApiReference-query-RegisterImage.html">RegisterImage</a>
+	 */
 	public RegisterImageResponse registerImage(RegisterImage registerImage) {
 		EC2RegisterImage request = new EC2RegisterImage();
 		RegisterImageType rit = registerImage.getRegisterImage();
@@ -523,6 +531,14 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setArchitecture( rit.getArchitecture());  
 		return toRegisterImageResponse( engine.handleRequest( request ));
 	}
+	
+	/**
+	 * Processes ec2-reset-image-attribute
+	 * 
+	 * @param resetImageAttribute
+	 * 
+	 * @see <a href="http://docs.amazonwebservices.com/AWSEC2/2010-11-15/APIReference/index.html?ApiReference-query-ResetInstanceAttribute.html">ResetInstanceAttribute</a>
+	 */
 
 	public ResetImageAttributeResponse resetImageAttribute(ResetImageAttribute resetImageAttribute) {
 		EC2Image request = new EC2Image();
@@ -532,23 +548,31 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setDescription( "" );
 		return toResetImageAttributeResponse( engine.modifyImageAttribute( request ));
 	}
-
+	
+	/**
+	 *  ec2-run-instances
+	 *	
+	 * @param runInstances
+	 * 
+	 * @see <a href="http://docs.amazonwebservices.com/AWSEC2/2010-11-15/APIReference/index.html?ApiReference-query-RunInstances.html">RunInstances</a>
+	 */
 	public RunInstancesResponse runInstances(RunInstances runInstances) {
-		EC2RunInstances request = new EC2RunInstances();
 		RunInstancesType rit = runInstances.getRunInstances();
-		PlacementRequestType prt = rit.getPlacement();
 		GroupSetType gst = rit.getGroupSet();
-		String type = rit.getInstanceType();	
+		PlacementRequestType prt = rit.getPlacement();
 		UserDataType userData = rit.getUserData();
+		String type = rit.getInstanceType();	
 		String keyName = rit.getKeyName();
 		
-		request.setTemplateId( rit.getImageId());
-		request.setMinCount( rit.getMinCount());
-		request.setMaxCount( rit.getMaxCount());
-		if (null != type    ) request.setInstanceType( type );
-		if (null != prt     ) request.setZoneName( prt.getAvailabilityZone());
-		if (null != userData) request.setUserData( userData.getData());
-		if (null != keyName ) request.setKeyName( keyName );
+		EC2RunInstances request = new EC2RunInstances();
+		
+		request.setTemplateId(rit.getImageId());
+		request.setMinCount(rit.getMinCount());
+		request.setMaxCount(rit.getMaxCount());
+		if (null != type) request.setInstanceType(type);
+		if (null != prt) request.setZoneName(prt.getAvailabilityZone());
+		if (null != userData) request.setUserData(userData.getData());
+		if (null != keyName) request.setKeyName(rit.getKeyName() );
 		
 		// -> we can only support one group per instance
 		if (null != gst) {
