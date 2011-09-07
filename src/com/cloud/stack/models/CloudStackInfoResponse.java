@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
 public class CloudStackInfoResponse {
-	@SerializedName("success")
+	@SerializedName(ApiConstants.SUCCESS)
 	private Boolean success;
 	 
-	@SerializedName("displaytext")
+	@SerializedName(ApiConstants.DISPLAY_TEXT)
 	private String displayText;
 	
-	@SerializedName("status")
+	@SerializedName(ApiConstants.STATUS)
 	private Boolean status;
 	
     @SerializedName(ApiConstants.JOB_ID)

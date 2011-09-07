@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -22,30 +22,31 @@ import com.google.gson.annotations.SerializedName;
  * @author slriv
  *
  */
-public class CloudStackPasswordData {
+public class CloudStackIdentifier {
+	@SerializedName(ApiConstants.CLOUD_IDENTIFIER)
+	private String cloudIdentifier;
+	@SerializedName(ApiConstants.SIGNATURE)
+	private String signature;
+	@SerializedName(ApiConstants.USER_ID)
+	private String userId;
 	
-	@SerializedName("id")
-	private String encryptedpassword;
-
 	/**
-	 * 
+	 * @return the cloudIdentifier
 	 */
-	public CloudStackPasswordData() {
-		// TODO Auto-generated constructor stub
+	public String getCloudIdentifier() {
+		return cloudIdentifier;
 	}
-
 	/**
-	 * @return the encryptedpassword
+	 * @return the signature
 	 */
-	public String getEncryptedpassword() {
-		return encryptedpassword;
+	public String getSignature() {
+		return signature;
 	}
-
 	/**
-	 * @param encryptedpassword the encryptedpassword to set
+	 * @return the userId
 	 */
-	public void setEncryptedpassword(String encryptedpassword) {
-		this.encryptedpassword = encryptedpassword;
+	public String getUserId() {
+		return userId;
 	}
-
+	
 }

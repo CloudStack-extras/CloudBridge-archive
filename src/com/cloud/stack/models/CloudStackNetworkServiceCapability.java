@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -22,37 +22,17 @@ import com.google.gson.annotations.SerializedName;
  * @author slriv
  *
  */
-public class CloudStackKeyPair {
-	@SerializedName("fingerprint")
-	private String fingerprint;
-	@SerializedName("name")
+public class CloudStackNetworkServiceCapability {
+	@SerializedName(ApiConstants.NAME)
 	private String name;
-	@SerializedName("privatekey")
-	private String privatekey;
-
-
+	@SerializedName(ApiConstants.VALUE)
+	private String value;
+	
 	/**
-	 *  Empty Constructor...
+	 * 
 	 */
-	public CloudStackKeyPair() {
-		
+	public CloudStackNetworkServiceCapability() {
 	}
-
-	/**
-	 * @return the fingerprint
-	 */
-	public String getFingerprint() {
-		return fingerprint;
-	}
-
-
-	/**
-	 * @param fingerprint the fingerprint to set
-	 */
-	public void setFingerprint(String fingerprint) {
-		this.fingerprint = fingerprint;
-	}
-
 
 	/**
 	 * @return the name
@@ -61,28 +41,10 @@ public class CloudStackKeyPair {
 		return name;
 	}
 
-
 	/**
-	 * @param name the name to set
+	 * @return the value
 	 */
-	public void setName(String name) {
-		this.name = name;
+	public String getValue() {
+		return value;
 	}
-
-
-	/**
-	 * @return the privatekey
-	 */
-	public String getPrivatekey() {
-		return privatekey;
-	}
-
-
-	/**
-	 * @param privatekey the privatekey to set
-	 */
-	public void setPrivatekey(String privatekey) {
-		this.privatekey = privatekey;
-	}
-
 }

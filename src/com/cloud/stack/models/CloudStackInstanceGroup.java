@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -22,18 +22,25 @@ import com.google.gson.annotations.SerializedName;
  * @author slriv
  *
  */
-public class CloudStackOsType {
-	@SerializedName("id")
+public class CloudStackInstanceGroup {
+	@SerializedName(ApiConstants.ID)
 	private Long id;
-	@SerializedName("oscategoryid")
-	private Long osCategoryId;
-	@SerializedName("description")
-	private String description;
-
+	@SerializedName(ApiConstants.ACCOUNT)
+	private String account;
+	@SerializedName(ApiConstants.CREATED)
+	private String created;
+	@SerializedName(ApiConstants.DOMAIN)
+	private String domain;
+	@SerializedName(ApiConstants.DOMAIN_ID)
+	private Long domainId;
+	@SerializedName(ApiConstants.NAME)
+	private String name;
+	
 	/**
-	 *  
+	 * 
 	 */
-	public CloudStackOsType() {
+	public CloudStackInstanceGroup() {
+		// TODO Auto-generated constructor stub
 	}
 
 	/**
@@ -44,38 +51,38 @@ public class CloudStackOsType {
 	}
 
 	/**
-	 * @return the osCategoryId
+	 * @return the account
 	 */
-	public Long getOsCategoryId() {
-		return osCategoryId;
+	public String getAccount() {
+		return account;
 	}
 
 	/**
-	 * @return the description
+	 * @return the created
 	 */
-	public String getDescription() {
-		return description;
+	public String getCreated() {
+		return created;
 	}
 
 	/**
-	 * @param id the id to set
+	 * @return the domain
 	 */
-	public void setId(Long id) {
-		this.id = id;
+	public String getDomain() {
+		return domain;
 	}
 
 	/**
-	 * @param osCategoryId the osCategoryId to set
+	 * @return the domainId
 	 */
-	public void setOsCategoryId(Long osCategoryId) {
-		this.osCategoryId = osCategoryId;
+	public Long getDomainId() {
+		return domainId;
 	}
 
 	/**
-	 * @param description the description to set
+	 * @return the name
 	 */
-	public void setDescription(String description) {
-		this.description = description;
+	public String getName() {
+		return name;
 	}
 
 }

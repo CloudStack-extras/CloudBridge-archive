@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
 public class CloudStackResourceLimit {
-    @SerializedName("account")
+    @SerializedName(ApiConstants.ACCOUNT)
     private String accountName;
-
-    @SerializedName("domainid")
+    @SerializedName(ApiConstants.DOMAIN_ID)
     private Long domainId;
-
-    @SerializedName("domain")
+    @SerializedName(ApiConstants.DOMAIN)
     private String domainName;
-
-    @SerializedName("resourcetype")
+    @SerializedName(ApiConstants.RESOURCE_TYPE)
     private String resourceType;
-
-    @SerializedName("max")
+    @SerializedName(ApiConstants.MAX)
     private Long max;
 
+    
     public CloudStackResourceLimit() {
     }
 

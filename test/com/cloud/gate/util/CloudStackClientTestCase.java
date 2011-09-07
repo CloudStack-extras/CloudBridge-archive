@@ -9,7 +9,7 @@ import org.apache.log4j.Logger;
 import com.cloud.gate.testcase.BaseTestCase;
 import com.cloud.stack.CloudStackClient;
 import com.cloud.stack.CloudStackCommand;
-import com.cloud.stack.CloudStackUserVm;
+import com.cloud.stack.models.CloudStackUserVm;
 import com.google.gson.reflect.TypeToken;
 
 public class CloudStackClientTestCase extends BaseTestCase {

@@ -22,12 +22,12 @@ import com.cloud.bridge.util.EC2RestAuth;
 public class EC2Volume {
 
 	private String   id;
-	private int      size;   // <- in gigs
+	private Long      size;   // <- in gigs
 	private String   zoneName;
 	private String   instanceId;
 	private String   snapshotId;
 	private String   device;
-	private int      deviceId;
+	private Integer      deviceId;
 	private String   state;
 	private String   type;
 	private String   vmstate;
@@ -41,7 +41,7 @@ public class EC2Volume {
 		instanceId = null;
 		snapshotId = null;
 		device     = null;
-		deviceId   = 0;
+		deviceId   =  0;
 		state      = null;
 		type       = null;
 		vmstate    = null;
@@ -62,12 +62,12 @@ public class EC2Volume {
 		if ( null != size ) {
 		     // -> convert from number of bytes to number of gigabytes
 		     long bytes = Long.parseLong( size );
-		     if (0 != bytes) this.size = (int)(bytes / 1073741824);
-		}
-		else this.size = 0;
+		     if (0 != bytes) this.size = (long) (bytes / 1073741824);
+		} else 
+			this.size = (long) 0;
 	}
 	
-	public int getSize() {
+	public Long getSize() {
 		return this.size;
 	}
 	
@@ -103,11 +103,11 @@ public class EC2Volume {
 		return this.device;
 	}
 
-	public void setDeviceId( int deviceId ) {
+	public void setDeviceId( Integer deviceId ) {
 		this.deviceId = deviceId;
 	}
 	
-	public int getDeviceId() {
+	public Integer getDeviceId() {
 		return this.deviceId;
 	}
 

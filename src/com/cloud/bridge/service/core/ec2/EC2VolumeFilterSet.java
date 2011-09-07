@@ -89,18 +89,16 @@ public class EC2VolumeFilterSet {
     	
     	EC2Volume[] volumeSet = sampleList.getVolumeSet();
     	EC2Filter[] filterSet = getFilterSet();
-    	for( int i=0; i < volumeSet.length; i++ )
-    	{
+    	for (EC2Volume vol : volumeSet) {
     		matched = true;
-    		for( int j=0; j < filterSet.length; j++ )
-    		{
-    			if (!filterMatched( volumeSet[i], filterSet[j] )) {
+    		for (EC2Filter filter : filterSet) {
+    			if (!filterMatched( vol, filter )) {
     				matched = false;
     				break;
     			}
     		}
     		
-    		if (matched) resultList.addVolume( volumeSet[i] );
+    		if (matched) resultList.addVolume( vol );
     	}
 
 		return resultList;
@@ -122,7 +120,7 @@ public class EC2VolumeFilterSet {
 	    }
 	    else if (filterName.equalsIgnoreCase( "size" )) 
 	    {
-	         return containsInteger( vol.getSize(), valueSet );	
+	         return containsLong( vol.getSize(), valueSet );	
 	    }
 	    else if (filterName.equalsIgnoreCase( "snapshot-id" )) 
 	    {	
@@ -155,21 +153,18 @@ public class EC2VolumeFilterSet {
 	private boolean containsString( String lookingFor, String[] set )
 	{
 		if (null == lookingFor) return false;
-		
-	    for( int i=0; i < set.length; i++ )
-	    {
-	    	if (lookingFor.matches( set[i] )) return true;
+		for (String s : set) {
+	    	if (lookingFor.matches( s )) return true;
 	    }
 	    return false;
 	}
 	
 	
-	private boolean containsInteger( int lookingFor, String[] set )
+	private boolean containsLong( long lookingFor, String[] set )
 	{
-        for( int i=0; i < set.length; i++ )
-        {
+		for (String s : set) {
 	    	//System.out.println( "contsinsInteger: " + lookingFor + " " + set[i] );
-        	int temp = Integer.parseInt( set[i] );
+        	int temp = Integer.parseInt( s );
         	if (lookingFor == temp) return true;
         }
 		return false;
@@ -178,11 +173,10 @@ public class EC2VolumeFilterSet {
 	
 	private boolean containsTime( Calendar lookingFor, String[] set ) throws ParseException
 	{
-        for( int i=0; i < set.length; i++ )
-        {
+		for (String s : set) {
 	    	//System.out.println( "contsinsCalendar: " + lookingFor + " " + set[i] );
         	Calendar toMatch = Calendar.getInstance();
-        	toMatch.setTime( DateHelper.parseISO8601DateString( set[i] ));
+        	toMatch.setTime( DateHelper.parseISO8601DateString( s ));
         	if (0 == lookingFor.compareTo( toMatch )) return true;
         }
 		return false;
@@ -191,48 +185,47 @@ public class EC2VolumeFilterSet {
 	
 	private boolean containsDevice( int deviceId, String[] set )
 	{
-        for( int i=0; i < set.length; i++ )
-        {
+		for (String s : set) {
 	    	//System.out.println( "contsinsDevice: " + deviceId + " " + set[i] );
         	switch( deviceId ) {
         	case 1:
-       		     if (( "/dev/sdb" ).matches( set[i] )) return true;
-    		     if (( "/dev/xvdb").matches( set[i] )) return true;
+       		     if (( "/dev/sdb" ).matches( s )) return true;
+    		     if (( "/dev/xvdb").matches( s )) return true;
         		 break;
         		 
         	case 2:
-       		     if (( "/dev/sdc"  ).matches( set[i] )) return true;
-    		     if (( "/dev/xvdc" ).matches( set[i] )) return true;
+       		     if (( "/dev/sdc"  ).matches( s )) return true;
+    		     if (( "/dev/xvdc" ).matches( s )) return true;
         		 break;
         		 
         	case 4:
-       		     if (( "/dev/sde"  ).matches( set[i] )) return true;
-    		     if (( "/dev/xvde" ).matches( set[i] )) return true;
+       		     if (( "/dev/sde"  ).matches( s )) return true;
+    		     if (( "/dev/xvde" ).matches( s )) return true;
         		 break;
         		 
         	case 5:
-      		     if (( "/dev/sdf"  ).matches( set[i] )) return true;
-   		         if (( "/dev/xvdf" ).matches( set[i] )) return true;
+      		     if (( "/dev/sdf"  ).matches( s )) return true;
+   		         if (( "/dev/xvdf" ).matches( s )) return true;
        		     break;
 
         	case 6:
-     		     if (( "/dev/sdg"  ).matches( set[i] )) return true;
-  		         if (( "/dev/xvdg" ).matches( set[i] )) return true;
+     		     if (( "/dev/sdg"  ).matches( s )) return true;
+  		         if (( "/dev/xvdg" ).matches( s )) return true;
       		     break;
 
         	case 7:
-    		     if (( "/dev/sdh"  ).matches( set[i] )) return true;
- 		         if (( "/dev/xvdh" ).matches( set[i] )) return true;
+    		     if (( "/dev/sdh"  ).matches( s )) return true;
+ 		         if (( "/dev/xvdh" ).matches( s )) return true;
      		     break;
 
         	case 8:
-    		     if (( "/dev/sdi"  ).matches( set[i] )) return true;
- 		         if (( "/dev/xvdi" ).matches( set[i] )) return true;
+    		     if (( "/dev/sdi"  ).matches( s )) return true;
+ 		         if (( "/dev/xvdi" ).matches( s )) return true;
      		     break;
 
         	case 9:
-    		     if (( "/dev/sdj"  ).matches( set[i] )) return true;
- 		         if (( "/dev/xvdj" ).matches( set[i] )) return true;
+    		     if (( "/dev/sdj"  ).matches( s )) return true;
+ 		         if (( "/dev/xvdj" ).matches( s )) return true;
      		     break;
         	}
         }

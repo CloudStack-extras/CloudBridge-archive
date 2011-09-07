@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import java.util.List;
 
@@ -26,7 +26,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackNetworkService {
 	
-	@SerializedName("name")
+	@SerializedName(ApiConstants.NAME)
 	private String name;
 
 	// this is annoying, why is this stored as a list of objects with a name/value  
@@ -34,7 +34,7 @@ public class CloudStackNetworkService {
 	// "capability" : [ { "name" : "val"},{ "name" : "val" }, ],
 	// would be better if it were presented as:
 	// "capability" : { "name" : "val", "name" : "val", "name" : "val" },
-	@SerializedName("capability")
+	@SerializedName(ApiConstants.CAPABILITY)
 	private List<CloudStackNetworkServiceCapability> capabilities;
 
 	/**
@@ -57,20 +57,4 @@ public class CloudStackNetworkService {
 	public List<CloudStackNetworkServiceCapability> getCapabilities() {
 		return capabilities;
 	}
-
-	/**
-	 * @param name the name to set
-	 */
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	/**
-	 * @param capabilities the capabilities to set
-	 */
-	public void setCapabilities(
-			List<CloudStackNetworkServiceCapability> capabilities) {
-		this.capabilities = capabilities;
-	}
-
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -23,12 +23,13 @@ import com.google.gson.annotations.SerializedName;
  *
  */
 public class CloudStackCapabilities {
-	@SerializedName("cloudstackversion")
+	@SerializedName(ApiConstants.CLOUD_STACK_VERSION)
 	private String cloudStackVersion;
-	@SerializedName("securitygroupsenabled")
-	private Boolean securityGroupsEnabled;
-	@SerializedName("userpublictemplateenabled")
+	@SerializedName(ApiConstants.SECURITY_GROUPS_ENABLED)
+	private Boolean securityGroupsEnabled;	
+	@SerializedName(ApiConstants.USER_PUBLIC_TEMPLATE_ENABLED)
 	private Boolean userPublicTemplateEnabled;
+	
 	/**
 	 * 
 	 */
@@ -53,23 +54,4 @@ public class CloudStackCapabilities {
 	public Boolean getUserPublicTemplateEnabled() {
 		return userPublicTemplateEnabled;
 	}
-	/**
-	 * @param cloudStackVersion the cloudStackVersion to set
-	 */
-	public void setCloudStackVersion(String cloudStackVersion) {
-		this.cloudStackVersion = cloudStackVersion;
-	}
-	/**
-	 * @param securityGroupsEnabled the securityGroupsEnabled to set
-	 */
-	public void setSecurityGroupsEnabled(Boolean securityGroupsEnabled) {
-		this.securityGroupsEnabled = securityGroupsEnabled;
-	}
-	/**
-	 * @param userPublicTemplateEnabled the userPublicTemplateEnabled to set
-	 */
-	public void setUserPublicTemplateEnabled(Boolean userPublicTemplateEnabled) {
-		this.userPublicTemplateEnabled = userPublicTemplateEnabled;
-	}
-
 }

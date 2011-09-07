@@ -454,9 +454,15 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 
 	public ModifyImageAttributeResponse modifyImageAttribute(ModifyImageAttribute modifyImageAttribute) {
 		EC2Image request = new EC2Image();
+		
 		ModifyImageAttributeType miat = modifyImageAttribute.getModifyImageAttribute();
 		ModifyImageAttributeTypeChoice_type0 item = miat.getModifyImageAttributeTypeChoice_type0();
+
 		AttributeValueType description = item.getDescription();
+		/*
+		LaunchPermissionOperationType launchPermOp = item.getLaunchPermission();
+		ProductCodeListType prodCodeList =item.getProductCodes();
+		*/
 		
 		if (null != description) {
 		    request.setId( miat.getImageId());
@@ -985,20 +991,19 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    DescribeVolumesSetResponseType param2 = new DescribeVolumesSetResponseType();
         
 		EC2Volume[] volumes = engineResponse.getVolumeSet();
-		for( int i=0; i < volumes.length; i++ ) 
-		{
+		for (EC2Volume vol : volumes) {
 			DescribeVolumesSetItemResponseType param3 = new DescribeVolumesSetItemResponseType();
-	        param3.setVolumeId( volumes[i].getId());
+	        param3.setVolumeId( vol.getId());
 	        
-	        Integer volSize = new Integer( volumes[i].getSize());
+	        Long volSize = new Long( vol.getSize());
 	        param3.setSize( volSize.toString());  
-	        String snapId = volumes[i].getSnapShotId();
+	        String snapId = vol.getSnapShotId();
 	        param3.setSnapshotId((null == snapId ? "" : snapId));
-	        param3.setAvailabilityZone( volumes[i].getZoneName());
-	        param3.setStatus( volumes[i].getState());
+	        param3.setAvailabilityZone( vol.getZoneName());
+	        param3.setStatus( vol.getState());
 	        
         	// -> CloudStack seems to have issues with timestamp formats so just in case
-	        Calendar cal = volumes[i].getCreated();
+	        Calendar cal = vol.getCreated();
 	        if ( null == cal ) 
 	        {
 	        	 cal = Calendar.getInstance();
@@ -1007,14 +1012,14 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        param3.setCreateTime( cal );
 	        
 	        AttachmentSetResponseType param4 = new AttachmentSetResponseType();
-	        if (null != volumes[i].getInstanceId()) 
+	        if (null != vol.getInstanceId()) 
 	        {
 	        	AttachmentSetItemResponseType param5 = new AttachmentSetItemResponseType();
-	        	param5.setVolumeId( volumes[i].getId());
-	        	param5.setInstanceId( volumes[i].getInstanceId());
-	        	String devicePath = engine.cloudDeviceIdToDevicePath( volumes[i].getHypervisor(), volumes[i].getDeviceId());
+	        	param5.setVolumeId( vol.getId());
+	        	param5.setInstanceId( vol.getInstanceId());
+	        	String devicePath = engine.cloudDeviceIdToDevicePath( vol.getHypervisor(), vol.getDeviceId());
 	        	param5.setDevice( devicePath );
-	        	param5.setStatus( toVolumeAttachmentState( volumes[i].getInstanceId(), volumes[i].getVMState()));
+	        	param5.setStatus( toVolumeAttachmentState( vol.getInstanceId(), vol.getVMState()));
 	        	param5.setAttachTime( cal );  
 	        	param5.setDeleteOnTermination( false );
                 param4.addItem( param5 );
@@ -1565,7 +1570,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		CreateVolumeResponseType param1 = new CreateVolumeResponseType();
 		
 		param1.setVolumeId( engineResponse.getId());
-        Integer volSize = new Integer( engineResponse.getSize());
+        Long volSize = new Long( engineResponse.getSize());
         param1.setSize( volSize.toString());  
         param1.setSnapshotId( "" );
         param1.setAvailabilityZone( engineResponse.getZoneName());
@@ -1625,7 +1630,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	         
 	         param3.setProgress( "" );
 	         param3.setOwnerId(ownerId);
-	         Integer volSize = new Integer( snap.getVolumeSize());
+	         Long volSize = new Long( snap.getVolumeSize());
 	         param3.setVolumeSize( volSize.toString());
 	         param3.setDescription( snap.getName());
 	         param3.setOwnerAlias( "" );
@@ -1677,7 +1682,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		
 		param1.setProgress( "100" );
 		param1.setOwnerId(ownerId);
-        Integer volSize = new Integer( engineResponse.getVolumeSize());
+        Long volSize = new Long( engineResponse.getVolumeSize());
         param1.setVolumeSize( volSize.toString());
         param1.setDescription( engineResponse.getName());
 	    param1.setRequestId( UUID.randomUUID().toString());

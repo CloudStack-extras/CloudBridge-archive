@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -23,29 +23,29 @@ import com.google.gson.annotations.SerializedName;
  *
  */
 public class CloudStackNetworkOffering {
-	@SerializedName("id")	
+	@SerializedName(ApiConstants.ID)	
 	private Long id;
-	@SerializedName("availability")	
+	@SerializedName(ApiConstants.AVAILABILITY)	
 	private String availability;
-	@SerializedName("created")	
+	@SerializedName(ApiConstants.CREATED)	
 	private String created;
-	@SerializedName("displaytext")	
+	@SerializedName(ApiConstants.DISPLAY_TEXT)	
 	private String displayText;
-	@SerializedName("guestiptype")	
+	@SerializedName(ApiConstants.GUEST_IP_TYPE)	
 	private String guestIpType;
-	@SerializedName("isdefault")	
+	@SerializedName(ApiConstants.IS_DEFAULT)	
 	private Boolean isDefault;
-	@SerializedName("maxconnections")	
+	@SerializedName(ApiConstants.MAX_CONNECTIONS)	
 	private Long maxconnections;
-	@SerializedName("name")	
+	@SerializedName(ApiConstants.NAME)	
 	private String name;
-	@SerializedName("networkrate")	
+	@SerializedName(ApiConstants.NETWORKRATE)	
 	private Long networkRate;
-	@SerializedName("specifyvlan")	
+	@SerializedName(ApiConstants.SPECIFY_VLAN)	
 	private Boolean specifyVlan;
-	@SerializedName("tags")	
+	@SerializedName(ApiConstants.TAGS)	
 	private String tags;
-	@SerializedName("traffictype")	
+	@SerializedName(ApiConstants.TRAFFIC_TYPE)	
 	private String traffictype;
 	
 	/**
@@ -137,90 +137,6 @@ public class CloudStackNetworkOffering {
 	 */
 	public String getTraffictype() {
 		return traffictype;
-	}
-
-	/**
-	 * @param id the id to set
-	 */
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	/**
-	 * @param availability the availability to set
-	 */
-	public void setAvailability(String availability) {
-		this.availability = availability;
-	}
-
-	/**
-	 * @param created the created to set
-	 */
-	public void setCreated(String created) {
-		this.created = created;
-	}
-
-	/**
-	 * @param displayText the displayText to set
-	 */
-	public void setDisplayText(String displayText) {
-		this.displayText = displayText;
-	}
-
-	/**
-	 * @param guestIpType the guestIpType to set
-	 */
-	public void setGuestIpType(String guestIpType) {
-		this.guestIpType = guestIpType;
-	}
-
-	/**
-	 * @param isDefault the isDefault to set
-	 */
-	public void setIsDefault(Boolean isDefault) {
-		this.isDefault = isDefault;
-	}
-
-	/**
-	 * @param maxconnections the maxconnections to set
-	 */
-	public void setMaxconnections(Long maxconnections) {
-		this.maxconnections = maxconnections;
-	}
-
-	/**
-	 * @param name the name to set
-	 */
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	/**
-	 * @param networkRate the networkRate to set
-	 */
-	public void setNetworkRate(Long networkRate) {
-		this.networkRate = networkRate;
-	}
-
-	/**
-	 * @param specifyVlan the specifyVlan to set
-	 */
-	public void setSpecifyVlan(Boolean specifyVlan) {
-		this.specifyVlan = specifyVlan;
-	}
-
-	/**
-	 * @param tags the tags to set
-	 */
-	public void setTags(String tags) {
-		this.tags = tags;
-	}
-
-	/**
-	 * @param traffictype the traffictype to set
-	 */
-	public void setTraffictype(String traffictype) {
-		this.traffictype = traffictype;
 	}
 
 }

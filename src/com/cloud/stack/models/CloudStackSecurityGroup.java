@@ -13,40 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
 public class CloudStackSecurityGroup {
-    @SerializedName("id")
+    @SerializedName(ApiConstants.ID)
     private Long id;
-
-    @SerializedName("name")
-    private String name;
-
-    @SerializedName("description")
-    private String description;
-
-    @SerializedName("account")
+    @SerializedName(ApiConstants.ACCOUNT)
     private String accountName;
-
-    @SerializedName("domainid")
-    private Long domainId;
-
-    @SerializedName("domain")
+    @SerializedName(ApiConstants.DESCRIPTION)
+    private String description;
+    @SerializedName(ApiConstants.DOMAIN)
     private String domainName;
-    
+    @SerializedName(ApiConstants.DOMAIN_ID)
+    private Long domainId;
     @SerializedName(ApiConstants.JOB_ID)
     private Long jobId;
-
-    @SerializedName("jobstatus")
+    @SerializedName(ApiConstants.JOB_STATUS)
     private Integer jobStatus;
-
-    @SerializedName("ingressrule")
+    @SerializedName(ApiConstants.NAME)
+    private String name;
+    @SerializedName(ApiConstants.INGRESS_RULE)
     private List<CloudStackIngressRule> ingressRules;
 
+    
     public CloudStackSecurityGroup() {
     }
     

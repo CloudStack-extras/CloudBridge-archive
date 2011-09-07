@@ -81,18 +81,16 @@ public class EC2SnapshotFilterSet {
     	
     	EC2Snapshot[] snapshotSet = sampleList.getSnapshotSet();
     	EC2Filter[]   filterSet   = getFilterSet();
-    	for( int i=0; i < snapshotSet.length; i++ )
-    	{
+    	for (EC2Snapshot snap : snapshotSet) {
     		matched = true;
-    		for( int j=0; j < filterSet.length; j++ )
-    		{
-    			if (!filterMatched( snapshotSet[i], filterSet[j] )) {
+    		for (EC2Filter filter : filterSet) {
+    			if (!filterMatched( snap, filter )) {
     				matched = false;
     				break;
     			}
     		}
     		
-    		if (matched) resultList.addSnapshot( snapshotSet[i] );
+    		if (matched) resultList.addSnapshot( snap );
     	}
 
 		return resultList;
@@ -131,7 +129,7 @@ public class EC2SnapshotFilterSet {
 	    }
 	    else if (filterName.equalsIgnoreCase( "volume-size" )) 
 	    {
-	    	 return containsInteger( snap.getVolumeSize(), valueSet );		
+	    	 return containsLong( snap.getVolumeSize(), valueSet );		
 	    }
 	    else return false;
 	}
@@ -141,21 +139,19 @@ public class EC2SnapshotFilterSet {
 	{
 		if (null == lookingFor) return false;
 		
-	    for( int i=0; i < set.length; i++ )
-	    {
+		for (String s : set) {
 	    	//System.out.println( "contsinsString: " + lookingFor + " " + set[i] );
-	    	if (lookingFor.matches( set[i] )) return true;
+	    	if (lookingFor.matches( s )) return true;
 	    }
 	    return false;
 	}
 
 	
-	private boolean containsInteger( int lookingFor, String[] set )
+	private boolean containsLong( long lookingFor, String[] set )
 	{
-        for( int i=0; i < set.length; i++ )
-        {
+		for (String s : set) {
 	    	//System.out.println( "contsinsInteger: " + lookingFor + " " + set[i] );
-        	int temp = Integer.parseInt( set[i] );
+        	int temp = Integer.parseInt( s );
         	if (lookingFor == temp) return true;
         }
 		return false;
@@ -164,11 +160,10 @@ public class EC2SnapshotFilterSet {
 	
 	private boolean containsTime( Calendar lookingFor, String[] set ) throws ParseException
 	{
-        for( int i=0; i < set.length; i++ )
-        {
+		for (String s : set) {
 	    	//System.out.println( "contsinsCalendar: " + lookingFor + " " + set[i] );
         	Calendar toMatch = Calendar.getInstance();
-        	toMatch.setTime( DateHelper.parseISO8601DateString( set[i] ));
+        	toMatch.setTime( DateHelper.parseISO8601DateString( s ));
         	if (0 == lookingFor.compareTo( toMatch )) return true;
         }
 		return false;

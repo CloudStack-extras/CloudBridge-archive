@@ -13,41 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
 public class CloudStackNic {
 	
-    @SerializedName("id")
+    @SerializedName(ApiConstants.ID)
     private Long id;
 
-    @SerializedName("networkid")
-    private Long networkid;
-    
-    @SerializedName("netmask")
-    private String netmask;
-    
-    @SerializedName("gateway")
-    private String gateway;
-    
-    @SerializedName("ipaddress")
-    private String ipaddress;
-    
-    @SerializedName("isolationuri")
-    private String isolationUri;
-    
-    @SerializedName("broadcasturi")
+    @SerializedName(ApiConstants.BROADCAST_URI)
     private String broadcastUri;
     
-    @SerializedName("traffictype")
+    @SerializedName(ApiConstants.GATEWAY)
+    private String gateway;
+    
+    @SerializedName(ApiConstants.IP_ADDRESS)
+    private String ipaddress;
+    
+    @SerializedName(ApiConstants.IS_DEFAULT)
+    private Boolean isDefault;
+
+    @SerializedName(ApiConstants.ISOLATION_URI)
+    private String isolationUri;
+    
+    @SerializedName(ApiConstants.MAC_ADDRESS)
+    private String macAddress;
+    
+    @SerializedName(ApiConstants.NETMASK)
+    private String netmask;
+    
+    @SerializedName(ApiConstants.NETWORK_ID)
+    private Long networkid;
+    
+    @SerializedName(ApiConstants.TRAFFIC_TYPE)
     private String trafficType;
     
-    @SerializedName("type") 
+    @SerializedName(ApiConstants.TYPE) 
     private String type;
-    
-    @SerializedName("isdefault")
-    private Boolean isDefault;
     
     public CloudStackNic() {
     }
@@ -90,5 +93,12 @@ public class CloudStackNic {
 
 	public Boolean getIsDefault() {
 		return isDefault;
+	}
+
+	/**
+	 * @return the macAddress
+	 */
+	public String getMacAddress() {
+		return macAddress;
 	}
 }

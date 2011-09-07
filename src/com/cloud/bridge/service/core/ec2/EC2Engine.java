@@ -42,30 +42,31 @@ import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.JsonAccessor;
-import com.cloud.stack.ApiConstants;
-import com.cloud.stack.CloudStackAccount;
-import com.cloud.stack.CloudStackCapabilities;
-import com.cloud.stack.CloudStackClient;
-import com.cloud.stack.CloudStackCommand;
-import com.cloud.stack.CloudStackDiskOfferings;
-import com.cloud.stack.CloudStackInfoResponse;
-import com.cloud.stack.CloudStackIngressRule;
-import com.cloud.stack.CloudStackIpAddress;
-import com.cloud.stack.CloudStackKeyPair;
-import com.cloud.stack.CloudStackNetwork;
-import com.cloud.stack.CloudStackNetworkOffering;
-import com.cloud.stack.CloudStackNic;
-import com.cloud.stack.CloudStackOsType;
-import com.cloud.stack.CloudStackPasswordData;
-import com.cloud.stack.CloudStackResourceLimit;
-import com.cloud.stack.CloudStackSecurityGroup;
-import com.cloud.stack.CloudStackSecurityGroupIngress;
-import com.cloud.stack.CloudStackSnapshot;
-import com.cloud.stack.CloudStackTemplate;
-import com.cloud.stack.CloudStackUser;
-import com.cloud.stack.CloudStackUserVm;
-import com.cloud.stack.CloudStackVolume;
-import com.cloud.stack.CloudStackZone;
+//import com.cloud.stack.CloudStackClient;
+//import com.cloud.stack.CloudStackCommand;
+import com.cloud.stack.CloudStackApi;
+import com.cloud.stack.models.ApiConstants;
+import com.cloud.stack.models.CloudStackAccount;
+import com.cloud.stack.models.CloudStackCapabilities;
+import com.cloud.stack.models.CloudStackDiskOffering;
+import com.cloud.stack.models.CloudStackInfoResponse;
+import com.cloud.stack.models.CloudStackIngressRule;
+import com.cloud.stack.models.CloudStackIpAddress;
+import com.cloud.stack.models.CloudStackKeyPair;
+import com.cloud.stack.models.CloudStackNetwork;
+import com.cloud.stack.models.CloudStackNetworkOffering;
+import com.cloud.stack.models.CloudStackNic;
+import com.cloud.stack.models.CloudStackOsType;
+import com.cloud.stack.models.CloudStackPasswordData;
+import com.cloud.stack.models.CloudStackResourceLimit;
+import com.cloud.stack.models.CloudStackSecurityGroup;
+import com.cloud.stack.models.CloudStackSecurityGroupIngress;
+import com.cloud.stack.models.CloudStackSnapshot;
+import com.cloud.stack.models.CloudStackTemplate;
+import com.cloud.stack.models.CloudStackUser;
+import com.cloud.stack.models.CloudStackUserVm;
+import com.cloud.stack.models.CloudStackVolume;
+import com.cloud.stack.models.CloudStackZone;
 import com.google.gson.reflect.TypeToken;
 
 /**
@@ -80,13 +81,12 @@ public class EC2Engine {
 
 	private CloudStackAccount currentAccount = null;
 
-	// -> in milliseconds, time interval to wait before asynch check on a jobId's status
 	private int CLOUD_STACK_VERSION_2_0 = 200;
 	private int CLOUD_STACK_VERSION_2_1 = 210;
 	private int CLOUD_STACK_VERSION_2_2 = 220;
 	private int cloudStackVersion;
 
-	private CloudStackClient _client;
+	private CloudStackApi _api;
 
 	public EC2Engine() throws IOException {
 		dbf = DocumentBuilderFactory.newInstance();
@@ -105,8 +105,7 @@ public class EC2Engine {
 	private void loadConfigValues() throws IOException 
 	{
 		File propertiesFile = ConfigurationHelper.findConfigurationFile("ec2-service.properties");
-		if (null != propertiesFile) 
-		{
+		if (null != propertiesFile) {
 			logger.info("Use EC2 properties file: " + propertiesFile.getAbsolutePath());
 			Properties EC2Prop = new Properties();
 			try {
@@ -118,9 +117,9 @@ public class EC2Engine {
 			}
 			managementServer = EC2Prop.getProperty( "managementServer" );
 			cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
-
-			_client = new CloudStackClient(managementServer, 
-					cloudAPIPort != null ? Integer.parseInt(cloudAPIPort) : 80, false);
+			int port = Integer.parseInt(cloudAPIPort);
+			
+			_api = new CloudStackApi(managementServer, port, false);
 
 			try {
 				cloudStackVersion = getCloudStackVersion(EC2Prop);
@@ -130,8 +129,7 @@ public class EC2Engine {
 
 			OfferingDao ofDao = new OfferingDao();
 			try {
-				if(ofDao.getOfferingCount() == 0) 
-				{
+				if(ofDao.getOfferingCount() == 0) {
 					String strValue = EC2Prop.getProperty("m1.small.serviceId");
 					if(strValue != null) {
 						ofDao.setOfferMapping("m1.small", strValue);
@@ -220,10 +218,9 @@ public class EC2Engine {
 	 * @throws Exception
 	 */
 	private int getCloudStackVersionBasedOnCapabilitiesCmd() throws Exception {
-		CloudStackCommand command = new CloudStackCommand("listCapabilities");
-		CloudStackCapabilities resp = cloudStackCall(command, true, "listcapabilitiesresponse", "capability", CloudStackCapabilities.class);
-		if (resp != null) {
-			if (resp.getCloudStackVersion().startsWith("2.2.")) {
+		CloudStackCapabilities caps = _api.listCapabilities();
+		if (caps != null) {
+			if (caps.getCloudStackVersion().startsWith("2.2.")) {
 				return CLOUD_STACK_VERSION_2_2;
 			}
 		} else {
@@ -244,8 +241,14 @@ public class EC2Engine {
 	 */
 	public boolean validateAccount( String accessKey, String secretKey ) throws EC2ServiceException {
 		try {
-			CloudStackAccount[] accts = getAccounts(accessKey, secretKey);
-			if (accts == null || accts.length == 0) {
+			String oldApiKey = _api.getApiKey(); 
+			_api.setApiKey(accessKey);
+			String oldSecretKey = _api.getSecretKey();
+			_api.setSecretKey(secretKey);
+			List<CloudStackAccount> accts = _api.listAccounts(null, null, null, null, null, null, null, null);
+			_api.setApiKey(oldApiKey);
+			_api.setSecretKey(oldSecretKey);
+			if (accts == null) {
 				return false;
 			}
 			return true;
@@ -266,14 +269,8 @@ public class EC2Engine {
 			throw new EC2ServiceException(ServerError.InternalError, "Both name & description are required");
 
 		try {
-			CloudStackCommand cmd = new CloudStackCommand("createSecurityGroup");
-			if (cmd != null) {
-				cmd.setParam("description", request.getDescription());
-				cmd.setParam("name", request.getName());
-			}
-
-			CloudStackSecurityGroup resp = cloudStackCall(cmd, true, "createsecuritygroupresponse", null, CloudStackSecurityGroup.class);
-			if (resp != null && resp.getId() != null) {
+			CloudStackSecurityGroup grp = _api.createSecurityGroup(request.getName(), null, request.getDescription(), null);
+			if (grp != null && grp.getId() != null) {
 				return true;
 			}
 			return false;
@@ -293,12 +290,8 @@ public class EC2Engine {
 		if (null == request.getName()) throw new EC2ServiceException(ServerError.InternalError, "Name is a required parameter");
 
 		try {
-			CloudStackCommand cmd = new CloudStackCommand("deleteSecurityGroup");
-			if (cmd != null) {
-				cmd.setParam("name", request.getName());
-			}
-			CloudStackInfoResponse resp = cloudStackCall(cmd, true, "deletesecuritygroupresponse", null, CloudStackInfoResponse.class);
-			if (resp != null && resp.getId() != null) {
+			CloudStackInfoResponse resp = _api.deleteSecurityGroup(null, null, null, request.getName());
+			if (resp != null) {
 				return resp.getSuccess();
 			}
 			return false;
@@ -364,7 +357,7 @@ public class EC2Engine {
 
 			CloudStackCommand cmd = new CloudStackCommand("revokeSecurityGroupIngress");
 			if (cmd != null) {
-				cmd.setParam("id", ruleId);
+				cmd.setParam(ApiConstants.ID, ruleId);
 			}
 
 			CloudStackInfoResponse resp = cloudStackCall(cmd, true, "revokesecuritygroupingress", null, CloudStackInfoResponse.class);
@@ -392,23 +385,35 @@ public class EC2Engine {
 
 		try {
 			for (EC2IpPermission ipPerm : items) {
+				if (ipPerm.getProtocol().equalsIgnoreCase("icmp")) {
+					_api.authorizeSecurityGroupIngress(null, constructCIDRList(ipPerm.getIpRangeSet()), null, null, 
+							ipPerm.getToPort().toString(), ipPerm.getFromPort().toString(), ipPerm.getProtocol(), null, 
+							request.getName(), null, null);
+				} else {
+					_api.authorizeSecurityGroupIngress(null, constructCIDRList(ipPerm.getIpRangeSet()), null, 
+							ipPerm.getToPort().longValue(), null, null, ipPerm.getProtocol(), null, request.getName(), 
+							ipPerm.getFromPort().longValue(), null);
+				}
+					
+				
+				
 				CloudStackCommand cmd = new CloudStackCommand("authorizeSecurityGroupIngress");
-				cmd.setParam("cidrlist", constructCIDRList( ipPerm.getIpRangeSet()));
+				cmd.setParam(ApiConstants.CIDR_LIST, constructCIDRList( ipPerm.getIpRangeSet()));
 
 				if (ipPerm.getProtocol().equalsIgnoreCase("icmp")) {
-					cmd.setParam("icmpCode", ipPerm.getToPort().toString());
-					cmd.setParam("icmpType", ipPerm.getFromPort().toString());
+					cmd.setParam(ApiConstants.ICMP_CODE, ipPerm.getToPort().toString());
+					cmd.setParam(ApiConstants.ICMP_TYPE, ipPerm.getFromPort().toString());
 				} else {
-					cmd.setParam("endPort", ipPerm.getToPort().toString());
-					cmd.setParam("startPort", ipPerm.getFromPort().toString());
+					cmd.setParam(ApiConstants.END_PORT, ipPerm.getToPort().toString());
+					cmd.setParam(ApiConstants.START_PORT, ipPerm.getFromPort().toString());
 				}
-				cmd.setParam("protocol", ipPerm.getProtocol());
-				cmd.setParam("securityGroupName", request.getName());
+				cmd.setParam(ApiConstants.PROTOCOL, ipPerm.getProtocol());
+				cmd.setParam(ApiConstants.SECURITY_GROUP_NAME, request.getName());
 				EC2SecurityGroup[] groups = ipPerm.getUserSet();
 				int i = 0;
 				for (EC2SecurityGroup group : groups) {
-					cmd.setParam("userSecurityGroupList["+i+"].account", group.getAccount());
-					cmd.setParam("userSecurityGroupList["+i+"].group", group.getName());
+					cmd.setParam(ApiConstants.USER_SECURITY_GROUP_LIST + "["+i+"].account", group.getAccount());
+					cmd.setParam(ApiConstants.USER_SECURITY_GROUP_LIST + "["+i+"].group", group.getName());
 					i++;
 				}
 				CloudStackSecurityGroupIngress resp = cloudStackCall(cmd, true, "authorizesecuritygroupingress", "securitygroup", CloudStackSecurityGroupIngress.class);
@@ -429,7 +434,7 @@ public class EC2Engine {
 	 * @param permRight
 	 * @return ruleId of the cloudstack rule
 	 */
-	private String doesRuleMatch( EC2IpPermission permLeft, EC2IpPermission permRight )
+	private String doesRuleMatch(EC2IpPermission permLeft, EC2IpPermission permRight)
 	{
 		int matches = 0;
 
@@ -509,30 +514,28 @@ public class EC2Engine {
 		EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
 		EC2SnapshotFilterSet sfs = request.getFilterSet();
 
-		try 
-		{   // -> query to get the volume size for each snapshot
+		try { 
+			// -> query to get the volume size for each snapshot
 			EC2DescribeSnapshotsResponse response = listSnapshots( request.getSnapshotSet());
 			if (response == null) {
 				return new EC2DescribeSnapshotsResponse();
 			}
 			EC2Snapshot[] snapshots = response.getSnapshotSet();
 			for (EC2Snapshot snap : snapshots) {
-				volumes = listVolumes( snap.getVolumeId(), null, volumes );
+				volumes = listVolumes(snap.getVolumeId(), null, volumes);
 				EC2Volume[] volSet = volumes.getVolumeSet();
-				if (0 < volSet.length) snap.setVolumeSize( volSet[0].getSize());
+				if (0 < volSet.length) snap.setVolumeSize(volSet[0].getSize());
 				volumes.reset();
 			}
 
 			if ( null == sfs )
 				return response;
 			else return sfs.evaluate( response );
-		} 
-		catch( EC2ServiceException error ) {
+		} catch( EC2ServiceException error ) {
 			logger.error( "EC2 DescribeSnapshots - ", error);
 			throw error;
 
-		} 
-		catch( Exception e ) {
+		} catch( Exception e ) {
 			logger.error( "EC2 DescribeSnapshots - ", e);
 			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
 		}
@@ -547,7 +550,7 @@ public class EC2Engine {
 	public EC2Snapshot createSnapshot( String volumeId ) {
 		try {
 			CloudStackCommand command = new CloudStackCommand("createSnapshot");
-			command.setParam("volumeId", volumeId);
+			command.setParam(ApiConstants.VOLUME_ID, volumeId);
 
 			CloudStackInfoResponse response = cloudStackCall(command, false, "createsnapshotresponse", null, CloudStackInfoResponse.class);
 			if(response.getJobId() == null || response.getId() == null) {
@@ -555,7 +558,7 @@ public class EC2Engine {
 			}
 
 			CloudStackCommand listSnapshotCmd = new CloudStackCommand("listSnapshots");
-			listSnapshotCmd.setParam("id", String.valueOf(response.getId()));
+			listSnapshotCmd.setParam(ApiConstants.ID, response.getId().toString());
 
 			List<CloudStackSnapshot> tmpList = cloudStackListCall(listSnapshotCmd, "listsnapshotsresponse", "snapshot", 
 					new TypeToken<List<CloudStackSnapshot>> () {}.getType());
@@ -565,22 +568,22 @@ public class EC2Engine {
 			CloudStackSnapshot cloudSnapshot = tmpList.get(0);
 			EC2Snapshot ec2Snapshot = new EC2Snapshot();
 
-			ec2Snapshot.setId(String.valueOf(cloudSnapshot.getId()));
+			ec2Snapshot.setId(cloudSnapshot.getId().toString());
 			ec2Snapshot.setName(cloudSnapshot.getName());
 			ec2Snapshot.setType(cloudSnapshot.getSnapshotType());
 			ec2Snapshot.setAccountName(cloudSnapshot.getAccountName());
-			ec2Snapshot.setDomainId(String.valueOf(cloudSnapshot.getDomainId()));
+			ec2Snapshot.setDomainId(cloudSnapshot.getDomainId().toString());
 			ec2Snapshot.setCreated(cloudSnapshot.getCreated());
 			ec2Snapshot.setVolumeId(volumeId);
 
 			CloudStackCommand listVolsCmd = new CloudStackCommand("listVolumes");
-			listVolsCmd.setParam("id", volumeId);
+			listVolsCmd.setParam(ApiConstants.ID, volumeId);
 			List<CloudStackVolume> vols = cloudStackListCall(listVolsCmd, "listvolumesresponse", "volume", 
 					new TypeToken<List<CloudStackVolume>>() {}.getType());
 
 			if(vols.size() > 0) {
 				assert(vols.get(0).getSize() != null);
-				int sizeInGB =(int)(vols.get(0).getSize().longValue()/1073741824);
+				Long sizeInGB = vols.get(0).getSize().longValue()/1073741824;
 				ec2Snapshot.setVolumeSize(sizeInGB);
 			}
 
@@ -600,7 +603,7 @@ public class EC2Engine {
 	public boolean deleteSnapshot(String snapshotId) {
 		try {
 			CloudStackCommand command = new CloudStackCommand("deleteSnapshot");
-			command.setParam("id", snapshotId);
+			command.setParam(ApiConstants.ID, snapshotId);
 			CloudStackInfoResponse response = cloudStackCall(command, true, "deletesnapshotresponse", null, CloudStackInfoResponse.class);
 			if(response.getJobId() != null)
 				return true;
@@ -628,9 +631,9 @@ public class EC2Engine {
 
 			CloudStackCommand command = new CloudStackCommand("updateTemplate");
 			if (command != null) {
-				command.setParam("displayText", request.getDescription());
-				command.setParam("id", request.getId());
-				command.setParam("name", imageSet[0].getName());
+				command.setParam(ApiConstants.DISPLAY_TEXT, request.getDescription());
+				command.setParam(ApiConstants.ID, request.getId());
+				command.setParam(ApiConstants.NAME, imageSet[0].getName());
 			}
 
 			CloudStackInfoResponse response = cloudStackCall(command, true, "updatetemplateresponse", "template", CloudStackInfoResponse.class);
@@ -706,7 +709,7 @@ public class EC2Engine {
 
 			for(String id : interestedShots) {
 				CloudStackCommand cmd = new CloudStackCommand("listSnapshots");
-				cmd.setParam("id", id);
+				cmd.setParam(ApiConstants.ID, id);
 
 				List<CloudStackSnapshot> tmpList = this.cloudStackListCall(cmd, "listsnapshotsresponse", "snapshot", 
 						new TypeToken<List<CloudStackSnapshot>> () {}.getType());
@@ -720,14 +723,14 @@ public class EC2Engine {
 
 		for(CloudStackSnapshot cloudSnapshot : cloudSnapshots) {
 			EC2Snapshot shot  = new EC2Snapshot();
-			shot.setId(String.valueOf(cloudSnapshot.getId()));
+			shot.setId(cloudSnapshot.getId().toString());
 			shot.setName(cloudSnapshot.getName());
-			shot.setVolumeId(String.valueOf(cloudSnapshot.getVolumeId()));
+			shot.setVolumeId(cloudSnapshot.getVolumeId().toString());
 			shot.setType(cloudSnapshot.getSnapshotType());
 			shot.setState(cloudSnapshot.getState());
 			shot.setCreated(cloudSnapshot.getCreated());
 			shot.setAccountName(cloudSnapshot.getAccountName());
-			shot.setDomainId(String.valueOf(cloudSnapshot.getDomainId()));
+			shot.setDomainId(cloudSnapshot.getDomainId().toString());
 
 			snapshots.addSnapshot(shot);
 		}
@@ -746,7 +749,7 @@ public class EC2Engine {
 		try {
 			CloudStackCommand command = new CloudStackCommand("getVMPassword");
 			if (command != null) {
-				command.setParam("id", instanceId);
+				command.setParam(ApiConstants.ID, instanceId);
 			}
 			CloudStackPasswordData callResponse = cloudStackCall(command, true, "getvmpasswordresponse", "encryptedPassword", CloudStackPasswordData.class);
 			EC2PasswordData passwdData = new EC2PasswordData();
@@ -821,7 +824,7 @@ public class EC2Engine {
 		try {
 			CloudStackCommand command = new CloudStackCommand("deleteSSHKeyPair");
 			if (command != null) {
-				command.setParam("name", request.getKeyName());
+				command.setParam(ApiConstants.NAME, request.getKeyName());
 			}
 			CloudStackInfoResponse callResponse = cloudStackCall(command, true, "deletekeypairresponse", null, CloudStackInfoResponse.class);
 			if (callResponse == null) { 
@@ -845,7 +848,7 @@ public class EC2Engine {
 		try {
 			CloudStackCommand command = new CloudStackCommand("createSSHKeyPair");
 			if (command != null) {
-				command.setParam("name", request.getKeyName());
+				command.setParam(ApiConstants.NAME, request.getKeyName());
 			}
 			CloudStackKeyPair callResponse = cloudStackCall(command, true, "createkeypairresponse", "keypair", CloudStackKeyPair.class);
 			if (callResponse == null) {
@@ -875,8 +878,8 @@ public class EC2Engine {
 		try {
 			CloudStackCommand command = new CloudStackCommand("registerSSHKeyPair");
 			if (command != null) {
-				command.setParam("name", request.getKeyName());
-				command.setParam("publickey", request.getPublicKeyMaterial());
+				command.setParam(ApiConstants.NAME, request.getKeyName());
+				command.setParam(ApiConstants.PUBLIC_KEY, request.getPublicKeyMaterial());
 			}
 			CloudStackKeyPair callResponse = cloudStackCall(command, true, "registerkeypairresponse", "keypair", CloudStackKeyPair.class);
 			if (callResponse == null) {
@@ -938,7 +941,7 @@ public class EC2Engine {
 
 			CloudStackCommand command = new CloudStackCommand("disassociateIpAddress");
 			if (command != null) {
-				command.setParam("id", cloudIp.getId().toString());
+				command.setParam(ApiConstants.ID, cloudIp.getId().toString());
 			}
 			CloudStackInfoResponse response = cloudStackCall(command, true, "disassociateipaddressresponse", null, CloudStackInfoResponse.class);
 			if (response != null) {
@@ -960,12 +963,12 @@ public class EC2Engine {
 	public boolean handleRequest( EC2AssociateAddress request ) {
 		try {
 			CloudStackIpAddress cloudIp = getCloudStackIpAddressFromKeyValue("ipaddress", request.getPublicIp());
-			CloudStackUserVm cloudVm = getCloudStackUserVmFromKeyValue("id", request.getInstanceId());
+			CloudStackUserVm cloudVm = getCloudStackUserVmFromKeyValue(ApiConstants.ID, request.getInstanceId());
 
 			CloudStackCommand command = new CloudStackCommand("enableStaticNat");
 			if (command != null) {
-				command.setParam("ipAddressId", cloudIp.getId().toString());
-				command.setParam("virtualMachineId", cloudVm.getId().toString());
+				command.setParam(ApiConstants.IP_ADDRESS_ID, cloudIp.getId().toString());
+				command.setParam(ApiConstants.VIRTUAL_MACHINE_ID, cloudVm.getId().toString());
 			}
 			CloudStackInfoResponse response = cloudStackCall(command, true, "enablestaticnatresponse", null, CloudStackInfoResponse.class);
 			if (response != null) {
@@ -991,7 +994,7 @@ public class EC2Engine {
 
 			CloudStackCommand command = new CloudStackCommand("disableStaticNat");
 			if (command != null) {
-				command.setParam("ipAddressId", cloudIp.getId().toString());
+				command.setParam(ApiConstants.IP_ADDRESS_ID, cloudIp.getId().toString());
 			}
 
 			CloudStackInfoResponse response = cloudStackCall(command, true, "disablestaticnatresponse", null, CloudStackInfoResponse.class);
@@ -1016,17 +1019,17 @@ public class EC2Engine {
 		try {
 			CloudStackCommand command = new CloudStackCommand("associateIpAddress");
 			if (command != null) {
-				command.setParam("zoneId", toZoneId(null));
+				command.setParam(ApiConstants.ZONE_ID, toZoneId(null));
 			}
 			CloudStackInfoResponse response = cloudStackCall(command, false, "associateipaddressresponse", null, CloudStackInfoResponse.class);
 			if (response.getJobId() == null || response.getId() == null) {
 				throw new Exception("Invalid CloudStack API response");			
 			}
 
-			CloudStackIpAddress cloudIp = getCloudStackIpAddressFromKeyValue("id", String.valueOf(response.getId()));
+			CloudStackIpAddress cloudIp = getCloudStackIpAddressFromKeyValue(ApiConstants.ID, response.getId().toString());
 
 			EC2Address ec2Address = new EC2Address();
-			ec2Address.setAssociatedInstanceId(String.valueOf(cloudIp.getId()));
+			ec2Address.setAssociatedInstanceId(cloudIp.getId().toString());
 			ec2Address.setIpAddress(cloudIp.getIpAddress());
 
 			return ec2Address;
@@ -1122,10 +1125,10 @@ public class EC2Engine {
 
 			CloudStackCommand cmd = new CloudStackCommand("createTemplate");
 			if (cmd != null) {
-				cmd.setParam("displayText", (request.getDescription() == null ? "" : request.getDescription()));
-				cmd.setParam("name", request.getName());
-				cmd.setParam("osTypeId", osTypeId);
-				cmd.setParam("volumeId", volumeId);
+				cmd.setParam(ApiConstants.DISPLAY_TEXT, (request.getDescription() == null ? "" : request.getDescription()));
+				cmd.setParam(ApiConstants.NAME, request.getName());
+				cmd.setParam(ApiConstants.OS_TYPE_ID, osTypeId);
+				cmd.setParam(ApiConstants.VOLUME_ID, volumeId);
 			}
 			CloudStackTemplate resp = cloudStackCall(cmd, true, "createtemplateresponse", "template", CloudStackTemplate.class);
 			if (resp == null || resp.getId() == null) {
@@ -1161,12 +1164,12 @@ public class EC2Engine {
 
 			CloudStackCommand cmd = new CloudStackCommand("registerTemplate");
 			if (cmd != null) {
-				cmd.setParam("displayText", (request.getDescription() == null ? request.getName() : request.getDescription()));
-				cmd.setParam("format", request.getFormat());
-				cmd.setParam("name", request.getName());
-				cmd.setParam("osTypeId", toOSTypeId( request.getOsTypeName()));
-				cmd.setParam("url", request.getLocation());
-				cmd.setParam("zoneId", request.getZoneName());
+				cmd.setParam(ApiConstants.DISPLAY_TEXT, (request.getDescription() == null ? request.getName() : request.getDescription()));
+				cmd.setParam(ApiConstants.FORMAT, request.getFormat());
+				cmd.setParam(ApiConstants.NAME, request.getName());
+				cmd.setParam(ApiConstants.OS_TYPE_ID, toOSTypeId( request.getOsTypeName()));
+				cmd.setParam(ApiConstants.URL, request.getLocation());
+				cmd.setParam(ApiConstants.ZONE_ID, request.getZoneName());
 			}
 
 			CloudStackTemplate resp = cloudStackCall(cmd, true, "registertemplateresponse", "template", CloudStackTemplate.class);
@@ -1195,7 +1198,7 @@ public class EC2Engine {
 		try {
 			CloudStackCommand cmd = new CloudStackCommand("deleteTemplate");
 			if (cmd != null) {
-				cmd.setParam("id", image.getId());
+				cmd.setParam(ApiConstants.ID, image.getId());
 			}
 			CloudStackInfoResponse resp = cloudStackCall(cmd, true, "deletetemplateresponse", null, CloudStackInfoResponse.class);
 			return resp.getSuccess();
@@ -1290,9 +1293,9 @@ public class EC2Engine {
 			request.setDeviceId( mapDeviceToCloudDeviceId( request.getDevice()));
 
 			CloudStackCommand command = new CloudStackCommand("attachVolume");
-			command.setParam("deviceId", String.valueOf(request.getDeviceId()));
-			command.setParam("id", request.getId());
-			command.setParam("virtualMachineId", request.getInstanceId());
+			command.setParam(ApiConstants.DEVICE_ID, request.getDeviceId().toString());
+			command.setParam(ApiConstants.ID, request.getId());
+			command.setParam(ApiConstants.VIRTUAL_MACHINE_ID, request.getInstanceId());
 
 			CloudStackVolume vol = cloudStackCall(command, true, "attachvolumeresponse", "volume", CloudStackVolume.class);
 			if(vol != null) {
@@ -1315,7 +1318,7 @@ public class EC2Engine {
 	public EC2Volume detachVolume(EC2Volume request) {
 		try {
 			CloudStackCommand command = new CloudStackCommand("detachVolume");
-			command.setParam("id", request.getId());
+			command.setParam(ApiConstants.ID, request.getId());
 
 			// -> do first cause afterwards the volume has not volume associated with it
 			// -> if instanceId is not given on the request then we need to look it up for the response
@@ -1360,7 +1363,7 @@ public class EC2Engine {
 				DiskOffer[] offerSet   = findDisk.getOfferSet();
 				for (DiskOffer offer : offerSet) {
 					if (offer.getIsCustomized()) {
-						command.setParam("diskofferingid", offer.getId());
+						command.setParam(ApiConstants.DISK_OFFERING_ID, offer.getId());
 						foundDisk = true;
 						break;
 					} 	   		    		  
@@ -1369,21 +1372,21 @@ public class EC2Engine {
 			}
 
 			// -> no volume name is given in the Amazon request but is required in the cloud API
-			command.setParam("name", UUID.randomUUID().toString());
+			command.setParam(ApiConstants.NAME, UUID.randomUUID().toString());
 
 			if (null != size)
-				command.setParam("size", size.toString());
+				command.setParam(ApiConstants.SIZE, size.toString());
 
 			if (null != snapshotId) 
-				command.setParam("snapshotId", snapshotId);
+				command.setParam(ApiConstants.SNAPSHOT_ID, snapshotId);
 
-			command.setParam("zoneId", toZoneId( request.getZoneName()));
+			command.setParam(ApiConstants.ZONE_ID, toZoneId( request.getZoneName()));
 
 			CloudStackVolume vol = cloudStackCall(command, true, "createvolumeresponse", "volume", CloudStackVolume.class);
 			EC2Volume ec2Vol = new EC2Volume();
-			ec2Vol.setId(String.valueOf(vol.getId()));
+			ec2Vol.setId(vol.getId().toString());
 			ec2Vol.setZoneName(vol.getZoneName());
-			ec2Vol.setSize(String.valueOf(vol.getSize()));
+			ec2Vol.setSize(vol.getSize().toString());
 			ec2Vol.setCreated(vol.getCreated());
 
 			ec2Vol.setState( "available" );
@@ -1403,7 +1406,7 @@ public class EC2Engine {
 	public EC2Volume deleteVolume( EC2Volume request ) {
 		try {   
 			CloudStackCommand command = new CloudStackCommand("deleteVolume");
-			command.setParam("id", request.getId());
+			command.setParam(ApiConstants.ID, request.getId());
 
 			CloudStackInfoResponse response = cloudStackCall(command, true, "deletevolumeresponse", null, CloudStackInfoResponse.class);
 			if(response.getSuccess() != null && response.getSuccess().booleanValue()) {
@@ -1439,7 +1442,7 @@ public class EC2Engine {
 				if (vm.getState().equalsIgnoreCase( "Destroyed" )) continue;
 
 				CloudStackCommand command = new CloudStackCommand("rebootVirtualMachine");
-				command.setParam("id", vm.getId());
+				command.setParam(ApiConstants.ID, vm.getId());
 
 				CloudStackInfoResponse resp = cloudStackCall(command, true, "rebootvirtualmachineresponse", null, CloudStackInfoResponse.class);
 				if (logger.isDebugEnabled())
@@ -1494,35 +1497,35 @@ public class EC2Engine {
 
 			// keypair
 			if (null != request.getKeyName())
-				command.setParam("keypair", request.getKeyName());
+				command.setParam(ApiConstants.SSH_KEYPAIR, request.getKeyName());
 
 			// zone stuff
 			String zoneId = toZoneId(request.getZoneName());
 
-			CloudStackZone[] zones = getZones("id", zoneId);
+			CloudStackZone[] zones = getZones(ApiConstants.ID, zoneId);
 			if (zones == null || zones.length == 0) {
 				logger.info("EC2 RunInstances - zone " + request.getZoneName() + " not found!");
 				throw new EC2ServiceException(ClientError.InvalidZone_NotFound, "ZoneId " + request.getZoneName() + " not found!");
 			}
 			CloudStackZone zone = zones[0];
-			command.setParam("zoneId", zoneId);
+			command.setParam(ApiConstants.ZONE_ID, zoneId);
 
 			// network
 			CloudStackNetwork network = findNetwork(zone);
-			if (network != null) command.setParam("networkids", network.getId().toString());
-			command.setParam("serviceOfferingId", offer.getServiceOfferingId());
-			command.setParam("size", String.valueOf(request.getSize()));
-			command.setParam("templateId", request.getTemplateId());
+			if (network != null) command.setParam(ApiConstants.NETWORK_IDS, network.getId().toString());
+			command.setParam(ApiConstants.SERVICE_OFFERING_ID, offer.getServiceOfferingId());
+			command.setParam(ApiConstants.SIZE, request.getSize().toString());
+			command.setParam(ApiConstants.TEMPLATE_ID, request.getTemplateId());
 
 			// userdata
 			if (null != request.getUserData()) 
-				command.setParam( "userData", request.getUserData());       	        	           	    
+				command.setParam(ApiConstants.USER_DATA, request.getUserData());       	        	           	    
 
 			// now actually deploy the vms
 			for( int i=0; i < createInstances; i++ ) {
 				CloudStackUserVm resp = cloudStackCall(command, true, "deployvirtualmachineresponse", "virtualmachine", CloudStackUserVm.class);
 				EC2Instance vm = new EC2Instance();
-				vm.setId(String.valueOf(resp.getId()));
+				vm.setId(resp.getId().toString());
 				vm.setName(resp.getName());
 				vm.setZoneName(resp.getZoneName());
 				vm.setTemplateId(resp.getTemplateId().toString());
@@ -1577,12 +1580,12 @@ public class EC2Engine {
 				if (vms[i].getState().equalsIgnoreCase( "Running" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
 
 				CloudStackCommand command = new CloudStackCommand("startVirtualMachine");
-				command.setParam("id", vms[i].getId());
+				command.setParam(ApiConstants.ID, vms[i].getId());
 				CloudStackInfoResponse commandResponse = cloudStackCall(command, false, "startvirtualmachineresponse", null, CloudStackInfoResponse.class);
 				if(logger.isDebugEnabled())
 					logger.debug("Starting VM " + vms[i].getId() + " job " + commandResponse.getJobId());
 
-				CloudStackUserVm vmForNewState = getCloudStackUserVmFromKeyValue("id", vms[i].getId());
+				CloudStackUserVm vmForNewState = getCloudStackUserVmFromKeyValue(ApiConstants.ID, vms[i].getId());
 				if(vmForNewState != null) {
 					if(!vms[i].getState().equals(vmForNewState.getState())) { 
 						vms[i].setState(vmForNewState.getState());  
@@ -1611,58 +1614,56 @@ public class EC2Engine {
 	 */
 	public EC2StopInstancesResponse handleRequest(EC2StopInstances request) {
 		EC2StopInstancesResponse instances = new EC2StopInstancesResponse();
-		EC2Instance[] vms = null;
+		EC2Instance[] virtualMachines = null;
 
 		// -> first determine the current state of each VM (becomes it previous state)
-		try 
-		{   
+		try {   
 			String[] instanceSet = request.getInstancesSet();
 
 			EC2DescribeInstancesResponse previousState = listVirtualMachines( instanceSet, null );
-			vms = previousState.getInstanceSet();
+			virtualMachines = previousState.getInstanceSet();
 
 			// -> send stop requests for each item 
-			for( int i=0; i < vms.length; i++ ) {
-				vms[i].setPreviousState( vms[i].getState());
+			for (EC2Instance vm : virtualMachines) {
+				vm.setPreviousState( vm.getState());
 
 				CloudStackCommand command; 
 				CloudStackInfoResponse commandResponse;
 				if ( request.getDestroyInstances()) {
-					if (vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
+					if (vm.getState().equalsIgnoreCase( "Destroyed" )) continue;
 
 					command = new CloudStackCommand("destroyVirtualMachine");
-					command.setParam("id", vms[i].getId());
-					commandResponse = cloudStackCall(command, false, "destroyvirtualmachineresponse", null, CloudStackInfoResponse.class);
+					command.setParam(ApiConstants.ID, vm.getId());
+					commandResponse = cloudStackCall(command, true, "destroyvirtualmachineresponse", null, CloudStackInfoResponse.class);
 					if(logger.isDebugEnabled())
-						logger.debug("Destroying VM " + vms[i].getId() + " job " + commandResponse.getJobId());
+						logger.debug("Destroying VM " + vm.getId() + " job " + commandResponse.getJobId());
 				} else {
-					if (vms[i].getState().equalsIgnoreCase( "Stopped" ) || vms[i].getState().equalsIgnoreCase( "Destroyed" )) continue;
+					if (vm.getState().equalsIgnoreCase("Stopped") || vm.getState().equalsIgnoreCase("Destroyed")) continue;
 
 					command = new CloudStackCommand("stopVirtualMachine");
-					command.setParam("id", vms[i].getId());
+					command.setParam(ApiConstants.ID, vm.getId());
 
 					commandResponse = cloudStackCall(command, false, "stopvirtualmachineresponse", null, CloudStackInfoResponse.class);
 					if(logger.isDebugEnabled())
-						logger.debug("Stopping VM " + vms[i].getId() + " job " + commandResponse.getJobId());
+						logger.debug("Stopping VM " + vm.getId() + " job " + commandResponse.getJobId());
 				}
 
-				CloudStackUserVm vmForNewState = getCloudStackUserVmFromKeyValue("id", vms[i].getId());
+				CloudStackUserVm vmForNewState = getCloudStackUserVmFromKeyValue(ApiConstants.ID, vm.getId());
 				if(vmForNewState != null) {
-					if(!vms[i].getState().equals(vmForNewState.getState())) { 
-						vms[i].setState(vmForNewState.getState());  
+					if(!vm.getState().equals(vmForNewState.getState())) { 
+						vm.setState(vmForNewState.getState());  
 					} else {
 						if(commandResponse.getJobId() != null) {
 							// TODO : we are querying too soon, we already have a job pending, assume it is taking action
-							vms[i].setState("Stoping");
+							vm.setState("Stopping");
 						}
 					}
 				} else {
-					logger.error("VM " + vms[i].getId() + " no longer exists");
-					vms[i].setState("Error");
+					logger.error("VM " + vm.getId() + " no longer exists");
+					vm.setState("Error");
 				}
 			}
-
-			for( int k=0; k < vms.length; k++ )	instances.addInstance( vms[k] );
+			for (EC2Instance vm : virtualMachines) instances.addInstance(vm);
 			return instances;
 		} catch( Exception e ) {
 			logger.error( "EC2 StopInstances - ", e);
@@ -1685,7 +1686,7 @@ public class EC2Engine {
 
 			// -> get the user limits on instances
 			CloudStackCommand command = new CloudStackCommand("listResourceLimits");
-			command.setParam("resourceType", "0");
+			command.setParam(ApiConstants.RESOURCE_TYPE, "0");
 
 			List<CloudStackResourceLimit> limits = cloudStackListCall(command, "listresourcelimitsresponse", "resourcelimit",
 					new TypeToken<List<CloudStackResourceLimit>>() {}.getType());  
@@ -1738,9 +1739,9 @@ public class EC2Engine {
 
 		CloudStackCommand command = new CloudStackCommand("listVolumes");
 		if(null != volumeId)
-			command.setParam("id", volumeId);
+			command.setParam(ApiConstants.ID, volumeId);
 		if(null != instanceId)
-			command.setParam("virtualMachineId", instanceId);
+			command.setParam(ApiConstants.VIRTUAL_MACHINE_ID, instanceId);
 
 		List<CloudStackVolume> vols = cloudStackListCall(command, "listvolumesresponse", "volume",
 				new TypeToken<List<CloudStackVolume>>() {}.getType());
@@ -1748,7 +1749,7 @@ public class EC2Engine {
 		if(vols != null && vols.size() > 0) {
 			for(CloudStackVolume vol : vols) {
 				EC2Volume ec2Vol = new EC2Volume();
-				ec2Vol.setId(String.valueOf(vol.getId()));
+				ec2Vol.setId(vol.getId().toString());
 				if(vol.getAttached() != null)
 					ec2Vol.setAttached(vol.getAttached());
 				ec2Vol.setCreated(vol.getCreated());
@@ -1758,13 +1759,13 @@ public class EC2Engine {
 				ec2Vol.setHypervisor(vol.getHypervisor());
 
 				if(vol.getSnapshotId() != null)
-					ec2Vol.setSnapShotId(String.valueOf(vol.getSnapshotId()));
+					ec2Vol.setSnapShotId(vol.getSnapshotId().toString());
 				ec2Vol.setState(mapToAmazonVolState(vol.getState()));
-				ec2Vol.setSize(String.valueOf(vol.getSize()));
+				ec2Vol.setSize(vol.getSize().toString());
 				ec2Vol.setType(vol.getVolumeType());
 
 				if(vol.getVirtualMachineId() != null)
-					ec2Vol.setInstanceId(String.valueOf(vol.getVirtualMachineId()));
+					ec2Vol.setInstanceId(vol.getVirtualMachineId().toString());
 
 				if(vol.getVirtualMachineState() != null)
 					ec2Vol.setVMState(vol.getVirtualMachineState());
@@ -1813,8 +1814,7 @@ public class EC2Engine {
 	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
 	 */
 	private OfferingBundle instanceTypeToOfferBundle( String instanceType ) 
-			throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
-			{
+			throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
 		OfferingBundle found = null;
 		OfferingDao ofDao = new OfferingDao();
 
@@ -1840,8 +1840,7 @@ public class EC2Engine {
 	 * @throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException 
 	 */
 	private String serviceOfferingIdToInstanceType( String serviceOfferingId ) 
-			throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException 
-			{	
+			throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException	{	
 		OfferingDao ofDao = new OfferingDao();
 		String amazonOffering = ofDao.getAmazonOffering( serviceOfferingId.trim());
 
@@ -1850,7 +1849,7 @@ public class EC2Engine {
 			return "m1.small";
 		}
 		else return amazonOffering;
-			}
+	}
 
 	/**
 	 * Match the value in the 'description' field of the listOsTypes response to get 
@@ -1895,12 +1894,12 @@ public class EC2Engine {
 				if ( null != interestedZones && 0 < interestedZones.length ) {
 					for( int j=0; j < interestedZones.length; j++ ) {
 						if (interestedZones[j].equalsIgnoreCase( cloudZone.getName())) {
-							zones.addZone(String.valueOf(cloudZone.getId()), cloudZone.getName());
+							zones.addZone(cloudZone.getId().toString(), cloudZone.getName());
 							break;
 						}
 					}
 				} else { 
-					zones.addZone(String.valueOf(cloudZone.getId()), cloudZone.getName());
+					zones.addZone(cloudZone.getId().toString(), cloudZone.getName());
 				}
 			}
 		}
@@ -1921,25 +1920,25 @@ public class EC2Engine {
 	private EC2DescribeInstancesResponse lookupInstances( String instanceId, EC2DescribeInstancesResponse instances ) 
 			throws Exception {
 
-		List<CloudStackUserVm> vms = getCloudStackUserVmsFromKeyValue("id", instanceId);
+		List<CloudStackUserVm> vms = getCloudStackUserVmsFromKeyValue(ApiConstants.ID, instanceId);
 
 		for(CloudStackUserVm cloudVm : vms) {
 			EC2Instance ec2Vm = new EC2Instance();
 
-			ec2Vm.setId(String.valueOf(cloudVm.getId()));
+			ec2Vm.setId(cloudVm.getId().toString());
 			ec2Vm.setName(cloudVm.getName());
 			ec2Vm.setZoneName(cloudVm.getZoneName());
-			ec2Vm.setTemplateId(String.valueOf(cloudVm.getTemplateId()));
+			ec2Vm.setTemplateId(cloudVm.getTemplateId().toString());
 			ec2Vm.setGroup(cloudVm.getGroup());
 			ec2Vm.setState(cloudVm.getState());
 			ec2Vm.setCreated(cloudVm.getCreated());
 			ec2Vm.setIpAddress(cloudVm.getIpAddress());
 			ec2Vm.setAccountName(cloudVm.getAccountName());
-			ec2Vm.setDomainId(String.valueOf(cloudVm.getDomainId()));
+			ec2Vm.setDomainId(cloudVm.getDomainId().toString());
 			ec2Vm.setHypervisor(cloudVm.getHypervisor());
 			ec2Vm.setRootDeviceType(cloudVm.getRootDeviceType());
 			ec2Vm.setRootDeviceId((int)cloudVm.getRootDeviceId().longValue());
-			ec2Vm.setServiceOffering(serviceOfferingIdToInstanceType(String.valueOf(cloudVm.getServiceOfferingId())));
+			ec2Vm.setServiceOffering(serviceOfferingIdToInstanceType(cloudVm.getServiceOfferingId().toString()));
 
 			List<CloudStackNic> nics = cloudVm.getNics();
 			for(CloudStackNic nic : nics) {
@@ -1968,8 +1967,8 @@ public class EC2Engine {
 		try {
 			CloudStackCommand command = new CloudStackCommand("listTemplates");
 			if (command != null) {
-				if (templateId != null) command.setParam("id", templateId);
-				command.setParam("templateFilter", "executable");
+				if (templateId != null) command.setParam(ApiConstants.ID, templateId);
+				command.setParam(ApiConstants.TEMPLATE_FILTER, "executable");
 			}
 			List<CloudStackTemplate> resp = cloudStackListCall(command, "listtemplatesresponse", "template", 
 					new TypeToken<List<CloudStackTemplate>>() {}.getType());
@@ -1980,8 +1979,8 @@ public class EC2Engine {
 				ec2Image.setName(temp.getName());
 				ec2Image.setDescription(temp.getDisplayText());
 				ec2Image.setOsTypeId(temp.getOsTypeId().toString());
-				ec2Image.setIsPublic(temp.isPublic());
-				ec2Image.setIsReady(temp.isReady());
+				ec2Image.setIsPublic(temp.getIsPublic());
+				ec2Image.setIsReady(temp.getIsReady());
 				ec2Image.setDomainId(temp.getDomainId().toString());
 				images.addImage(ec2Image);
 			}
@@ -2001,11 +2000,11 @@ public class EC2Engine {
 	private DiskOfferings listDiskOfferings() throws EC2ServiceException {
 		try {
 			CloudStackCommand command = new CloudStackCommand("listDiskOfferings");
-			List<CloudStackDiskOfferings> disks = cloudStackListCall(command, "listdiskofferingsresponse", "diskoffering", 
-					new TypeToken<List<CloudStackDiskOfferings>>() {}.getType());
+			List<CloudStackDiskOffering> disks = cloudStackListCall(command, "listdiskofferingsresponse", "diskoffering", 
+					new TypeToken<List<CloudStackDiskOffering>>() {}.getType());
 
 			DiskOfferings offerings = new DiskOfferings();
-			for (CloudStackDiskOfferings disk : disks) {
+			for (CloudStackDiskOffering disk : disks) {
 				DiskOffer df = new DiskOffer();
 				df.setId(disk.getId().toString());
 				df.setCreated(disk.getCreated());
@@ -2076,7 +2075,7 @@ public class EC2Engine {
 			}
 
 	/**
-	 * Convert ingress rules to EC2IpPermission records
+	 * Convert ingress rule to EC2IpPermission records
 	 * 
 	 * @param response
 	 * @param group
@@ -2163,7 +2162,7 @@ public class EC2Engine {
 	private List<CloudStackNetwork> getNetworks(Long zoneId) throws Exception {
 		CloudStackCommand command = new CloudStackCommand("listNetworks");
 		if (command != null && zoneId != null) {
-			command.setParam("zoneid", zoneId.toString());
+			command.setParam(ApiConstants.ZONE_ID, zoneId.toString());
 		}
 		List<CloudStackNetwork> networks = cloudStackListCall(command, "listnetworksresponse", "network", 
 				new TypeToken<List<CloudStackNetwork>>() {}.getType());
@@ -2201,11 +2200,11 @@ public class EC2Engine {
 	private CloudStackNetwork createNetwork(Long zoneId, CloudStackNetworkOffering offering, CloudStackAccount owner) throws Exception {
 		CloudStackCommand cmd = new CloudStackCommand("createNetwork");
 		if (cmd != null) {
-			cmd.setParam("displaytext", owner.getName() + "-network");
-			cmd.setParam("name", owner.getName() + "-network");
-			cmd.setParam("networkofferingid", offering.getId().toString());
-			cmd.setParam("zoneId", zoneId.toString());
-			cmd.setParam("account", owner.getName());
+			cmd.setParam(ApiConstants.DISPLAY_TEXT, owner.getName() + "-network");
+			cmd.setParam(ApiConstants.NAME, owner.getName() + "-network");
+			cmd.setParam(ApiConstants.NETWORK_OFFERING_ID, offering.getId().toString());
+			cmd.setParam(ApiConstants.ZONE_ID, zoneId.toString());
+			cmd.setParam(ApiConstants.ACCOUNT, owner.getName());
 		}
 		// not async
 		return cloudStackCall(cmd, false, "createnetworkresponse", null, CloudStackNetwork.class);
@@ -2223,14 +2222,19 @@ public class EC2Engine {
 		CloudStackAccount caller = currentAccount();
 
 		List<CloudStackNetwork> networks = getNetworks(zoneId);
-		List<CloudStackNetworkOffering> offerings = getNetworkOfferings("availability", "Required", "isdefault", "true", "guestiptype", "virtual", "zoneid", zoneId.toString());
+		List<CloudStackNetworkOffering> offerings = getNetworkOfferings(ApiConstants.AVAILABILITY, "Required", 
+				ApiConstants.IS_DEFAULT, "true", 
+				ApiConstants.GUEST_IP_TYPE, "virtual", 
+				ApiConstants.ZONE_ID, zoneId.toString());
 		if (offerings != null && !offerings.isEmpty()) {
 			for (CloudStackNetwork network : networks) 
 				for (CloudStackNetworkOffering offering : offerings) 
 					if (network.getNetworkOfferingId().equals(offering.getId())) 
 						return network;
 		}
-		offerings = getNetworkOfferings("availability", "Optional", "isdefault", "true", "zoneid", zoneId.toString());
+		offerings = getNetworkOfferings(ApiConstants.AVAILABILITY, "Optional", 
+				ApiConstants.IS_DEFAULT, "true", 
+				ApiConstants.ZONE_ID, zoneId.toString());
 						if (offerings != null && !offerings.isEmpty()) {
 							for (CloudStackNetwork network : networks) 
 								for (CloudStackNetworkOffering offering : offerings) 
@@ -2256,7 +2260,7 @@ public class EC2Engine {
 		// for basic networking, we don't specify a networkid for deployvm
 		if (zone.getNetworkType().equalsIgnoreCase("basic")) return null;
 
-		if (zone.isSecurityGroupsEnabled()) {
+		if (zone.getSecurityGroupsEnabled()) {
 			// find system security group enabled network
 			return getNetworksWithSecurityGroupEnabled(zone.getId());
 
@@ -2453,7 +2457,7 @@ public class EC2Engine {
 		try {
 			CloudStackCommand cmd = new CloudStackCommand("stopVirtualMachine");
 			if (cmd != null) {
-				cmd.setParam("id", instanceId);
+				cmd.setParam(ApiConstants.ID, instanceId);
 			}
 			CloudStackInfoResponse resp =  cloudStackCall(cmd, true, "stopvirtualmachineresponse", null, CloudStackInfoResponse.class);
 			if (logger.isDebugEnabled())
@@ -2476,7 +2480,7 @@ public class EC2Engine {
 		try {
 			CloudStackCommand cmd = new CloudStackCommand("startVirtualMachine");
 			if (cmd != null) {
-				cmd.setParam("id", instanceId);
+				cmd.setParam(ApiConstants.ID, instanceId);
 			}
 			CloudStackInfoResponse resp = cloudStackCall(cmd, true, "startvirtualmachineresponse", null, CloudStackInfoResponse.class);
 			if (logger.isDebugEnabled())

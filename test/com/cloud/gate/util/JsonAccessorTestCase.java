@@ -6,7 +6,7 @@ import org.apache.log4j.Logger;
 
 import com.cloud.bridge.util.JsonAccessor;
 import com.cloud.gate.testcase.BaseTestCase;
-import com.cloud.stack.CloudStackSnapshot;
+import com.cloud.stack.models.CloudStackSnapshot;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;

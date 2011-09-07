@@ -24,7 +24,7 @@ public class EC2Snapshot {
 	private String   id;
 	private String   name;
 	private String   volumeId;
-	private int      volumeSize;   // in gigs
+	private Long      volumeSize;   // in gigs
     private String   type;
     private String   state;
     private Calendar created;
@@ -35,7 +35,7 @@ public class EC2Snapshot {
 		id         	= null;
 		name       	= null;
 		volumeId   	= null;
-		volumeSize 	= 0;
+		volumeSize 	= null;
 		type       	= null;
 		state       = null;
 		created    	= null;
@@ -67,11 +67,11 @@ public class EC2Snapshot {
 		return this.volumeId;
 	}
 	
-	public void setVolumeSize( int volumeSize ) {
+	public void setVolumeSize( Long volumeSize ) {
 		this.volumeSize = volumeSize;
 	}
 	
-	public int getVolumeSize() {
+	public Long getVolumeSize() {
 		return this.volumeSize;
 	}
 

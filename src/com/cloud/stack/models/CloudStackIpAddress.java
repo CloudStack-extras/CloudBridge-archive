@@ -13,75 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
 public class CloudStackIpAddress {
 	
-    @SerializedName("id")
+    @SerializedName(ApiConstants.ID)
     private Long id;
-    
-    @SerializedName("ipaddress")
-    private String ipAddress;
-
-    @SerializedName("allocated")
-    private String allocated;
-
-    @SerializedName("zoneid")
-    private Long zoneId;
-
-    @SerializedName("zonename")
-    private String zoneName;
-
-    @SerializedName("issourcenat")
-    private Boolean sourceNat;
-
-    @SerializedName("account")
+    @SerializedName(ApiConstants.ACCOUNT)
     private String accountName;
-
-    @SerializedName("domainid")
-    private Long domainId;
-
-    @SerializedName("domain")
-    private String domainName;
-
-    @SerializedName("forvirtualnetwork")
-    private Boolean forVirtualNetwork;
-
-    @SerializedName("vlanid")
-    private Long vlanId;
-
-    @SerializedName("vlanname")
-    private String vlanName;
-
-    @SerializedName("isstaticnat")
-    private Boolean staticNat;
-    
-    @SerializedName("virtualmachineid")
-    private Long virtualMachineId;
-    
-    @SerializedName("virtualmachinename")
-    private String virtualMachineName;
-    
-    @SerializedName("virtualmachinedisplayname")
-    private String virtualMachineDisplayName;
-    
-    @SerializedName("associatednetworkid")
+    @SerializedName(ApiConstants.ALLOCATED)
+    private String allocated;
+    @SerializedName(ApiConstants.ASSOCIATED_NETWORK_ID)
     private Long associatedNetworkId;
-    
-    @SerializedName("networkid")
-    private Long networkId;
-    
-    @SerializedName(ApiConstants.STATE)
-    private String state;
-    
+    @SerializedName(ApiConstants.DOMAIN)
+    private String domainName;
+    @SerializedName(ApiConstants.DOMAIN_ID)
+    private Long domainId;
+    @SerializedName(ApiConstants.FOR_VIRTUAL_NETWORK)
+    private Boolean forVirtualNetwork;
+    @SerializedName(ApiConstants.IP_ADDRESS)
+    private String ipAddress;
+    @SerializedName(ApiConstants.IS_SOURCE_NAT)
+    private Boolean sourceNat;
+    @SerializedName(ApiConstants.IS_STATIC_NAT)
+    private Boolean staticNat;
     @SerializedName(ApiConstants.JOB_ID)
     private Long jobId;
-
-    @SerializedName("jobstatus")
+    @SerializedName(ApiConstants.JOB_STATUS)
     private Integer jobStatus;
-	
+    @SerializedName(ApiConstants.NETWORK_ID)
+    private Long networkId;
+    @SerializedName(ApiConstants.STATE)
+    private String state;
+    @SerializedName(ApiConstants.VIRTUAL_MACHINE_DISPLAY_NAME)
+    private String virtualMachineDisplayName;
+    @SerializedName(ApiConstants.VIRTUAL_MACHINE_ID)
+    private Long virtualMachineId;
+    @SerializedName(ApiConstants.VIRTUAL_MACHINE_NAME)
+    private String virtualMachineName;
+    @SerializedName(ApiConstants.VLAN_ID)
+    private Long vlanId;
+    @SerializedName(ApiConstants.VLAN_NAME)
+    private String vlanName;
+    @SerializedName(ApiConstants.ZONE_ID)
+    private Long zoneId;
+    @SerializedName(ApiConstants.ZONE_NAME)
+    private String zoneName;
+
     public CloudStackIpAddress() {
     }
 

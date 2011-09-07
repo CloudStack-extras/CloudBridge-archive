@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -23,23 +23,23 @@ import com.google.gson.annotations.SerializedName;
  *
  */
 public class CloudStackSecurityGroupIngress {
-	@SerializedName("account")
+	@SerializedName(ApiConstants.ACCOUNT)
 	private String account;
-	@SerializedName("cidr")
+	@SerializedName(ApiConstants.CIDR)
 	private String cidr;
-	@SerializedName("endport")
+	@SerializedName(ApiConstants.END_PORT)
 	private Integer endPort;
-	@SerializedName("icmpcode")
+	@SerializedName(ApiConstants.ICMP_CODE)
 	private Integer icmpcode;
-	@SerializedName("icmptype")
+	@SerializedName(ApiConstants.ICMP_TYPE)
 	private Integer icmptype;
-	@SerializedName("protocol")
+	@SerializedName(ApiConstants.PROTOCOL)
 	private String protocol;
-	@SerializedName("ruleid")
+	@SerializedName(ApiConstants.RULE_ID)
 	private Long ruleId;
-	@SerializedName("securitygroupname")
+	@SerializedName(ApiConstants.SECURITY_GROUP_NAME)
 	private String securityGroupName;
-	@SerializedName("startport")
+	@SerializedName(ApiConstants.START_PORT)
 	private Integer startPort;
 	
 
@@ -121,77 +121,4 @@ public class CloudStackSecurityGroupIngress {
 	public Integer getStartPort() {
 		return startPort;
 	}
-
-
-	/**
-	 * @param account the account to set
-	 */
-	public void setAccount(String account) {
-		this.account = account;
-	}
-
-
-	/**
-	 * @param cidr the cidr to set
-	 */
-	public void setCidr(String cidr) {
-		this.cidr = cidr;
-	}
-
-
-	/**
-	 * @param endPort the endPort to set
-	 */
-	public void setEndPort(Integer endPort) {
-		this.endPort = endPort;
-	}
-
-
-	/**
-	 * @param icmpcode the icmpcode to set
-	 */
-	public void setIcmpcode(Integer icmpcode) {
-		this.icmpcode = icmpcode;
-	}
-
-
-	/**
-	 * @param icmptype the icmptype to set
-	 */
-	public void setIcmptype(Integer icmptype) {
-		this.icmptype = icmptype;
-	}
-
-
-	/**
-	 * @param protocol the protocol to set
-	 */
-	public void setProtocol(String protocol) {
-		this.protocol = protocol;
-	}
-
-
-	/**
-	 * @param ruleId the ruleId to set
-	 */
-	public void setRuleId(Long ruleId) {
-		this.ruleId = ruleId;
-	}
-
-
-	/**
-	 * @param securityGroupName the securityGroupName to set
-	 */
-	public void setSecurityGroupName(String securityGroupName) {
-		this.securityGroupName = securityGroupName;
-	}
-
-
-	/**
-	 * @param startPort the startPort to set
-	 */
-	public void setStartPort(Integer startPort) {
-		this.startPort = startPort;
-	}
-
 }

@@ -13,53 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
 public class CloudStackSnapshot {
-	
-    @SerializedName("id")
+    @SerializedName(ApiConstants.ID)
     private Long id;
-
-    @SerializedName("account")
+    @SerializedName(ApiConstants.ACCOUNT)
     private String accountName;
-
-    @SerializedName("domainid")
-    private Long domainId;
-
-    @SerializedName("domain")
-    private String domainName;
-
-    @SerializedName("snapshottype")
-    private String snapshotType;
-
-    @SerializedName("volumeid")
-    private Long volumeId;
-
-    @SerializedName("volumename")
-    private String volumeName;
-
-    @SerializedName("volumetype")
-    private String volumeType;
-
-    @SerializedName("created")
+    @SerializedName(ApiConstants.CREATED)
     private String created;
-
-    @SerializedName("name")
-    private String name;
-
-    @SerializedName("jobid")
-    private Long jobId;
-
-    @SerializedName("jobstatus")
-    private Integer jobStatus;
-
-    @SerializedName("intervaltype")
+    @SerializedName(ApiConstants.DOMAIN)
+    private String domainName;
+    @SerializedName(ApiConstants.DOMAIN_ID)
+    private Long domainId;
+    @SerializedName(ApiConstants.INTERVAL_TYPE)
     private String intervalType;
-
+    @SerializedName(ApiConstants.JOB_ID)
+    private Long jobId;
+    @SerializedName(ApiConstants.JOB_STATUS)
+    private Integer jobStatus;
+    @SerializedName(ApiConstants.NAME)
+    private String name;
+    @SerializedName(ApiConstants.SNAPSHOT_TYPE)
+    private String snapshotType;
     @SerializedName(ApiConstants.STATE)
     private String state;
+    @SerializedName(ApiConstants.VOLUME_ID)
+    private Long volumeId;
+    @SerializedName(ApiConstants.VOLUME_NAME)
+    private String volumeName;
+    @SerializedName(ApiConstants.VOLUME_TYPE)
+    private String volumeType;
 
     public CloudStackSnapshot() {
     }

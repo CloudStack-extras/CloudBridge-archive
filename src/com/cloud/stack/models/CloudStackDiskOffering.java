@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -22,24 +22,24 @@ import com.google.gson.annotations.SerializedName;
  * @author slriv
  *
  */
-public class CloudStackDiskOfferings {
-	@SerializedName("id")
+public class CloudStackDiskOffering {
+	@SerializedName(ApiConstants.ID)
 	private Long id;
-	@SerializedName("name")
+	@SerializedName(ApiConstants.NAME)
 	private String name;
-	@SerializedName("displaytext")
+	@SerializedName(ApiConstants.DISPLAY_TEXT)
 	private String displayText;
-	@SerializedName("disksize")
+	@SerializedName(ApiConstants.DISK_SIZE)
 	private Long diskSize;
-	@SerializedName("created")
+	@SerializedName(ApiConstants.CREATED)
 	private String created;
-	@SerializedName("iscustomized")
+	@SerializedName(ApiConstants.IS_CUSTOMIZED)
 	private boolean isCustomized;
 
 	/**
 	 * 
 	 */
-	public CloudStackDiskOfferings() {
+	public CloudStackDiskOffering() {
 	}
 
 	/**
@@ -83,47 +83,4 @@ public class CloudStackDiskOfferings {
 	public boolean isCustomized() {
 		return isCustomized;
 	}
-
-	/**
-	 * @param id the id to set
-	 */
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	/**
-	 * @param name the name to set
-	 */
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	/**
-	 * @param displayText the displayText to set
-	 */
-	public void setDisplayText(String displayText) {
-		this.displayText = displayText;
-	}
-
-	/**
-	 * @param diskSize the diskSize to set
-	 */
-	public void setDiskSize(Long diskSize) {
-		this.diskSize = diskSize;
-	}
-
-	/**
-	 * @param created the created to set
-	 */
-	public void setCreated(String created) {
-		this.created = created;
-	}
-
-	/**
-	 * @param isCustomized the isCustomized to set
-	 */
-	public void setCustomized(boolean isCustomized) {
-		this.isCustomized = isCustomized;
-	}
-
 }

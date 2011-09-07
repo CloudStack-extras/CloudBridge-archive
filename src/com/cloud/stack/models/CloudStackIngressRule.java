@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.cloud.stack;
+package com.cloud.stack.models;
 
 import com.google.gson.annotations.SerializedName;
 
 public class CloudStackIngressRule {
 	
-    @SerializedName("ruleid")
+    @SerializedName(ApiConstants.RULE_ID)
     private Long ruleId;
 
-    @SerializedName("protocol")
+    @SerializedName(ApiConstants.PROTOCOL)
     private String protocol;
 
     @SerializedName(ApiConstants.ICMP_TYPE)
