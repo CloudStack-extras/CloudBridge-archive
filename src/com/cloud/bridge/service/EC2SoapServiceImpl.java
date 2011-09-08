@@ -26,7 +26,6 @@ import org.apache.log4j.Logger;
 import com.amazon.ec2.*;
 import com.cloud.bridge.service.core.ec2.EC2Address;
 import com.cloud.bridge.service.core.ec2.EC2AddressFilterSet;
-import com.cloud.bridge.service.core.ec2.EC2AllocateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AssociateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
@@ -78,6 +77,7 @@ import com.cloud.bridge.service.core.ec2.EC2Volume;
 import com.cloud.bridge.service.core.ec2.EC2VolumeFilterSet;
 import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
+import com.cloud.bridge.util.EC2RestAuth;
 
 
 public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
@@ -93,9 +93,9 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	public AttachVolumeResponse attachVolume(AttachVolume attachVolume) {
 		EC2Volume request = new EC2Volume();
 		AttachVolumeType avt = attachVolume.getAttachVolume();
-		
-		request.setId( avt.getVolumeId());
-		request.setInstanceId( avt.getInstanceId());
+
+		request.setId( new Long(avt.getVolumeId()));
+		request.setInstanceId( new Long(avt.getInstanceId()));
 		request.setDevice( avt.getDevice());
 		return toAttachVolumeResponse( engine.attachVolume( request ));
 	}
@@ -163,16 +163,13 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setInstanceId( cit.getInstanceId());
 		request.setName( cit.getName());
 		request.setDescription( cit.getDescription());
-		return toCreateImageResponse( engine.handleRequest( request ));
+		return toCreateImageResponse( engine.createImage(request));
 	}
 
 	public CreateSecurityGroupResponse createSecurityGroup(CreateSecurityGroup createSecurityGroup) {
         CreateSecurityGroupType sgt = createSecurityGroup.getCreateSecurityGroup();
-        EC2SecurityGroup request = new EC2SecurityGroup();
-        	
-        request.setName( sgt.getGroupName());
-        request.setDescription( sgt.getGroupDescription());
-		return toCreateSecurityGroupResponse( engine.createSecurityGroup( request ));
+        
+		return toCreateSecurityGroupResponse( engine.createSecurityGroup(sgt.getGroupName(), sgt.getGroupDescription()));
 	}
 
 	public CreateSnapshotResponse createSnapshot(CreateSnapshot createSnapshot) {
@@ -185,17 +182,14 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		CreateVolumeType cvt = createVolume.getCreateVolume();
 		
 		request.setSize( cvt.getSize());
-		request.setSnapshotId( cvt.getSnapshotId());
+		request.setSnapshotId( Long.parseLong(cvt.getSnapshotId()));
 		request.setZoneName( cvt.getAvailabilityZone());
-		return toCreateVolumeResponse( engine.handleRequest( request ));
+		return toCreateVolumeResponse( engine.createVolume( request ));
 	}
 
 	public DeleteSecurityGroupResponse deleteSecurityGroup(DeleteSecurityGroup deleteSecurityGroup) {
         DeleteSecurityGroupType sgt = deleteSecurityGroup.getDeleteSecurityGroup();
-        EC2SecurityGroup request = new EC2SecurityGroup();
-        
-        request.setName( sgt.getGroupName());
-		return toDeleteSecurityGroupResponse( engine.deleteSecurityGroup( request ));
+		return toDeleteSecurityGroupResponse( engine.deleteSecurityGroup( sgt.getGroupName()));
 	}
 
 	public DeleteSnapshotResponse deleteSnapshot(DeleteSnapshot deleteSnapshot) {
@@ -207,7 +201,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		EC2Volume request = new EC2Volume();
 		DeleteVolumeType avt = deleteVolume.getDeleteVolume();
 		
-		request.setId( avt.getVolumeId());
+		request.setId( new Long(avt.getVolumeId()));
 		return toDeleteVolumeResponse( engine.deleteVolume( request ));
 	}
 
@@ -241,8 +235,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		EmptyElementType description = diag.getDescription();
 
 		if ( null != description ) {
-			 request.addImageSet( diat.getImageId());
-		     return toDescribeImageAttributeResponse( engine.handleRequest( request ));
+			 request.addImageSet(diat.getImageId());
+		     return toDescribeImageAttributeResponse( engine.describeImages( request ));
 		}
 		else throw new EC2ServiceException( "Unsupported - only description supported", 501 );
 	}
@@ -274,7 +268,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		    }
 		}    
 
-		return toDescribeImagesResponse( engine.handleRequest( request ));
+		return toDescribeImagesResponse( engine.describeImages( request ));
 	}
 
 	public DescribeInstanceAttributeResponse describeInstanceAttribute(DescribeInstanceAttribute describeInstanceAttribute) {
@@ -286,7 +280,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    // -> toEC2DescribeInstances
 	    if (null != instanceType) {
 		    request.addInstanceId( diat.getInstanceId());
-		    return toDescribeInstanceAttributeResponse( engine.handleRequest( request ));
+		    return toDescribeInstanceAttributeResponse( engine.describeInstances( request ));
 	    }
 	    throw new EC2ServiceException( "Unsupported - only instanceType supported", 501 );
 	}
@@ -309,7 +303,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			request.setFilterSet( toInstanceFilterSet( fst ));
 		}
 		
-		return toDescribeInstancesResponse( engine.handleRequest( request ), engine );
+		return toDescribeInstancesResponse( engine.describeInstances( request ), engine );
 	}
 
 	
@@ -330,14 +324,12 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         	ec2Request.setFilterSet(toAddressFilterSet(fset));
         }
         
-        return toDescribeAddressesResponse( engine.handleRequest( ec2Request ));
+        return toDescribeAddressesResponse( engine.describeAddresses( ec2Request ));
     }
 
     @Override
     public AllocateAddressResponse allocateAddress(AllocateAddress allocateAddress) {
-    	EC2AllocateAddress request = new EC2AllocateAddress();
-
-    	return toAllocateAddressResponse( engine.handleRequest( request ));
+    	return toAllocateAddressResponse( engine.allocateAddress());
     }
 
     @Override
@@ -346,7 +338,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	
     	request.setPublicIp(releaseAddress.getReleaseAddress().getPublicIp());
     	
-        return toReleaseAddressResponse( engine.handleRequest( request ) );
+        return toReleaseAddressResponse( engine.releaseAddress( request ) );
     }
 
     @Override
@@ -356,7 +348,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	request.setPublicIp(associateAddress.getAssociateAddress().getPublicIp());
     	request.setInstanceId(associateAddress.getAssociateAddress().getInstanceId());
     	
-        return toAssociateAddressResponse( engine.handleRequest( request ) );
+        return toAssociateAddressResponse( engine.associateAddress( request ) );
     }
 
     @Override
@@ -365,27 +357,30 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     	
     	request.setPublicIp(disassociateAddress.getDisassociateAddress().getPublicIp());
     	
-        return toDisassociateAddressResponse( engine.handleRequest( request ) );
+        return toDisassociateAddressResponse( engine.disassociateAddress( request ) );
     }
     
 	public DescribeSecurityGroupsResponse describeSecurityGroups(DescribeSecurityGroups describeSecurityGroups) 
 	{
 	    EC2DescribeSecurityGroups request = new EC2DescribeSecurityGroups();
-        DescribeSecurityGroupsType sgt = describeSecurityGroups.getDescribeSecurityGroups();
+	    
+	    DescribeSecurityGroupsType sgt = describeSecurityGroups.getDescribeSecurityGroups();
+        
 		FilterSetType fst = sgt.getFilterSet();
 
 		// -> toEC2DescribeSecurityGroups
         DescribeSecurityGroupsSetType sgst = sgt.getSecurityGroupSet();
         DescribeSecurityGroupsSetItemType[] items = sgst.getItem();
 		if (null != items) {  // -> can be empty
-			for (DescribeSecurityGroupsSetItemType item:items) request.addGroupName(item.getGroupName());
+			for (DescribeSecurityGroupsSetItemType item :items) request.addGroupName(item.getGroupName());
 		}
 		
 		if (null != fst) {
 			request.setFilterSet( toGroupFilterSet( fst ));
 		}
+		
 
-		return toDescribeSecurityGroupsResponse( engine.handleRequest( request ));
+		return toDescribeSecurityGroupsResponse( engine.describeSecurityGroups( request ));
 	}
 
 	public DescribeSnapshotsResponse describeSnapshots(DescribeSnapshots describeSnapshots) 
@@ -446,13 +441,14 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		EC2Volume request = new EC2Volume();
 		DetachVolumeType avt = detachVolume.getDetachVolume();
 		
-		request.setId( avt.getVolumeId());
-		request.setInstanceId( avt.getInstanceId());
+		request.setId( new Long(avt.getVolumeId()));
+		request.setInstanceId( new Long(avt.getInstanceId()));
 		request.setDevice( avt.getDevice());
 		return toDetachVolumeResponse( engine.detachVolume( request ));
 	}
 
 	public ModifyImageAttributeResponse modifyImageAttribute(ModifyImageAttribute modifyImageAttribute) {
+		// TODO: This is broken
 		EC2Image request = new EC2Image();
 		
 		ModifyImageAttributeType miat = modifyImageAttribute.getModifyImageAttribute();
@@ -514,7 +510,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		if (null != items) {  // -> should not be empty
 			for( int i=0; i < items.length; i++ ) request.addInstanceId( items[i].getInstanceId());
 		}
-		return toRebootInstancesResponse( engine.handleRequest( request ));
+		return toRebootInstancesResponse( engine.rebootInstances( request ));
 	}
 
 	
@@ -535,7 +531,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		request.setName( rit.getName());
 		request.setDescription( rit.getDescription());
 		request.setArchitecture( rit.getArchitecture());  
-		return toRegisterImageResponse( engine.handleRequest( request ));
+		return toRegisterImageResponse( engine.registerImage( request ));
 	}
 	
 	/**
@@ -585,7 +581,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			GroupItemType[] items = gst.getItem();
 			if (null != items && 0 < items.length) request.setGroupId( items[0].getGroupId());
 		}
-		return toRunInstancesResponse( engine.handleRequest( request ), engine);
+		return toRunInstancesResponse( engine.runInstances( request ), engine);
 	}
 	
 	public StartInstancesResponse startInstances(StartInstances startInstances) {
@@ -598,7 +594,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		if (null != items) {  // -> should not be empty
 			for( int i=0; i < items.length; i++ ) request.addInstanceId( items[i].getInstanceId());
 		}
-		return toStartInstancesResponse( engine.handleRequest( request ));
+		return toStartInstancesResponse( engine.startInstances( request ));
 	}
 	
 	public StopInstancesResponse stopInstances(StopInstances stopInstances) {
@@ -611,7 +607,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		if (null != items) {  // -> should not be empty
 			for( int i=0; i < items.length; i++ ) request.addInstanceId( items[i].getInstanceId());
 		}
-		return toStopInstancesResponse( engine.handleRequest( request ));
+		return toStopInstancesResponse( engine.stopInstances( request ));
 	}
 	
 	/**
@@ -631,7 +627,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		}
 
 		request.setDestroyInstances( true );
-		return toTermInstancesResponse( engine.handleRequest( request ));
+		return toTermInstancesResponse( engine.stopInstances( request ));
 	}
 	
 	/**
@@ -993,19 +989,18 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		EC2Volume[] volumes = engineResponse.getVolumeSet();
 		for (EC2Volume vol : volumes) {
 			DescribeVolumesSetItemResponseType param3 = new DescribeVolumesSetItemResponseType();
-	        param3.setVolumeId( vol.getId());
+	        param3.setVolumeId( vol.getId().toString());
 	        
 	        Long volSize = new Long( vol.getSize());
 	        param3.setSize( volSize.toString());  
-	        String snapId = vol.getSnapShotId();
+	        String snapId = vol.getSnapshotId().toString();
 	        param3.setSnapshotId((null == snapId ? "" : snapId));
 	        param3.setAvailabilityZone( vol.getZoneName());
 	        param3.setStatus( vol.getState());
 	        
         	// -> CloudStack seems to have issues with timestamp formats so just in case
-	        Calendar cal = vol.getCreated();
-	        if ( null == cal ) 
-	        {
+	        Calendar cal = EC2RestAuth.parseDateString(vol.getCreated());
+	        if (cal == null) {
 	        	 cal = Calendar.getInstance();
 	        	 cal.set( 1970, 1, 1 );
 	        }
@@ -1015,9 +1010,9 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        if (null != vol.getInstanceId()) 
 	        {
 	        	AttachmentSetItemResponseType param5 = new AttachmentSetItemResponseType();
-	        	param5.setVolumeId( vol.getId());
-	        	param5.setInstanceId( vol.getInstanceId());
-	        	String devicePath = engine.cloudDeviceIdToDevicePath( vol.getHypervisor(), vol.getDeviceId());
+	        	param5.setVolumeId(vol.getId().toString());
+	        	param5.setInstanceId(vol.getInstanceId().toString());
+	        	String devicePath = engine.cloudDeviceIdToDevicePath( vol.getHypervisor(), vol.getDeviceId().intValue());
 	        	param5.setDevice( devicePath );
 	        	param5.setStatus( toVolumeAttachmentState( vol.getInstanceId(), vol.getVMState()));
 	        	param5.setAttachTime( cal );  
@@ -1278,8 +1273,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	 * @param vmState
 	 * @return
 	 */
-	public static String toVolumeAttachmentState( String instanceId, String vmState )
-	{
+	public static String toVolumeAttachmentState(Long instanceId, String vmState ) {
 		if (null == instanceId || null == vmState) return "detached";
 		
 		     if (vmState.equalsIgnoreCase( "Destroyed" )) return "detached";
@@ -1531,8 +1525,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    cal.set( 1970, 1, 1 );   // return one value, Unix Epoch, what else can we return? 
 		
 	    // -> if the instanceId was not given in the request then we have no way to get it
-		param1.setVolumeId( engineResponse.getId());
-		param1.setInstanceId( engineResponse.getInstanceId());
+		param1.setVolumeId( engineResponse.getId().toString());
+		param1.setInstanceId( engineResponse.getInstanceId().toString());
 		param1.setDevice( engineResponse.getDevice());
 		if ( null != engineResponse.getState())
 		     param1.setStatus( engineResponse.getState());
@@ -1551,8 +1545,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    Calendar cal = Calendar.getInstance();
 	    cal.set( 1970, 1, 1 );   // return one value, Unix Epoch, what else can we return? 
 		
-		param1.setVolumeId( engineResponse.getId());
-		param1.setInstanceId( (null == engineResponse.getInstanceId() ? "" : engineResponse.getInstanceId()));
+		param1.setVolumeId( engineResponse.getId().toString());
+		param1.setInstanceId( (null == engineResponse.getInstanceId() ? "" : engineResponse.getInstanceId().toString()));
 		param1.setDevice( (null == engineResponse.getDevice() ? "" : engineResponse.getDevice()));
 		if ( null != engineResponse.getState())
 		     param1.setStatus( engineResponse.getState());
@@ -1569,7 +1563,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		CreateVolumeResponse response = new CreateVolumeResponse();
 		CreateVolumeResponseType param1 = new CreateVolumeResponseType();
 		
-		param1.setVolumeId( engineResponse.getId());
+		param1.setVolumeId( engineResponse.getId().toString());
         Long volSize = new Long( engineResponse.getSize());
         param1.setSize( volSize.toString());  
         param1.setSnapshotId( "" );
@@ -1579,7 +1573,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		else param1.setStatus( "" );  // ToDo - throw an Soap Fault 
 		
        	// -> CloudStack seems to have issues with timestamp formats so just in case
-        Calendar cal = engineResponse.getCreated();
+        Calendar cal = EC2RestAuth.parseDateString(engineResponse.getCreated());
         if ( null == cal ) {
         	 cal = Calendar.getInstance();
         	 cal.set( 1970, 1, 1 );
@@ -1612,12 +1606,12 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    EC2Snapshot[] snaps = engineResponse.getSnapshotSet();
 	    for (EC2Snapshot snap : snaps) {
 	         DescribeSnapshotsSetItemResponseType param3 = new DescribeSnapshotsSetItemResponseType();
-	         param3.setSnapshotId( snap.getId());
-	         param3.setVolumeId( snap.getVolumeId());
+	         param3.setSnapshotId( snap.getId().toString());
+	         param3.setVolumeId( snap.getVolumeId().toString());
 	         param3.setStatus( snap.getState());
 	         
 	         String accountName = snap.getAccountName();
-	         String domainId = snap.getDomainId();
+	         String domainId = snap.getDomainId().toString();
 				String ownerId = domainId + ":" + accountName;
 	         
 	         // -> CloudStack seems to have issues with timestamp formats so just in case
@@ -1665,11 +1659,11 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		CreateSnapshotResponseType param1 = new CreateSnapshotResponseType();
 		
 		String accountName = engineResponse.getAccountName();
-		String domainId = engineResponse.getDomainId();
+		String domainId = engineResponse.getDomainId().toString();
 		String ownerId = domainId + ":" + accountName;
 
-		param1.setSnapshotId( engineResponse.getId());
-		param1.setVolumeId( engineResponse.getVolumeId());
+		param1.setSnapshotId( engineResponse.getId().toString());
+		param1.setVolumeId( engineResponse.getVolumeId().toString());
 		param1.setStatus( "completed" );
 		
        	// -> CloudStack seems to have issues with timestamp formats so just in case
@@ -1857,7 +1851,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     		ec2Request.setPublicKeyMaterial(publicKey);
     	}
 
-		return toImportKeyPair(engine.handleRequest(ec2Request));
+		return toImportKeyPair(engine.importKeyPair(ec2Request));
 	}
 	
 	public static ImportKeyPairResponse toImportKeyPair(final EC2SSHKeyPair key) {
@@ -1878,7 +1872,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     		ec2Request.setKeyName(createKeyPair.getCreateKeyPair().getKeyName());
     	}
 
-		return toCreateKeyPair(engine.handleRequest( ec2Request ));
+		return toCreateKeyPair(engine.createKeyPair( ec2Request ));
 	}
 	
 	public static CreateKeyPairResponse toCreateKeyPair(final EC2SSHKeyPair key) {
@@ -1898,7 +1892,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		EC2DeleteKeyPair ec2Request = new EC2DeleteKeyPair();
 		ec2Request.setKeyName(deleteKeyPair.getDeleteKeyPair().getKeyName());
 		
-		return toDeleteKeyPair(engine.handleRequest(ec2Request));
+		return toDeleteKeyPair(engine.deleteKeyPair(ec2Request));
 	}
 	
 	public static DeleteKeyPairResponse toDeleteKeyPair(final boolean success) {

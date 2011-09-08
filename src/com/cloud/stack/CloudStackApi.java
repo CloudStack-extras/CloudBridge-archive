@@ -18,7 +18,6 @@ package com.cloud.stack;
 
 import java.util.List;
 
-import com.cloud.bridge.service.core.ec2.CloudStackApi;
 import com.cloud.stack.models.ApiConstants;
 import com.cloud.stack.models.CloudStackAccount;
 import com.cloud.stack.models.CloudStackCapabilities;
@@ -31,6 +30,7 @@ import com.cloud.stack.models.CloudStackInfoResponse;
 import com.cloud.stack.models.CloudStackInstanceGroup;
 import com.cloud.stack.models.CloudStackIpAddress;
 import com.cloud.stack.models.CloudStackKeyPair;
+import com.cloud.stack.models.CloudStackKeyValue;
 import com.cloud.stack.models.CloudStackLoadBalancerRule;
 import com.cloud.stack.models.CloudStackNetwork;
 import com.cloud.stack.models.CloudStackNetworkOffering;
@@ -67,7 +67,7 @@ public class CloudStackApi {
 	 * 
 	 */
 	public CloudStackApi(String cloudStackServiceHost, int port, boolean bSslEnabled) {
-		_client = new CloudStackClient(cloudStackServiceHost, port != null ? port : 80, false);
+		_client = new CloudStackClient(cloudStackServiceHost, port, false);
 	}
 	
 	/**
@@ -1016,13 +1016,13 @@ public class CloudStackApi {
 	 * @param securityGroupId
 	 * @param securityGroupName
 	 * @param startPort
-	 * @param userSecurityGroupList
+	 * @param userSecurityGroupList List<CloudStackKeyValue>
 	 * @return
 	 * @throws Exception
 	 */
 	public CloudStackSecurityGroupIngress authorizeSecurityGroupIngress(String account, String cidrList, Long domainId, Long endPort, 
 			String icmpCode, String icmpType, String protocol, Long securityGroupId, String securityGroupName, Long startPort, 
-			String userSecurityGroupList) throws Exception {
+			List<CloudStackKeyValue> userSecurityGroupList) throws Exception {
 		CloudStackCommand cmd = new CloudStackCommand(ApiConstants.AUTHORIZE_SECURITY_GROUP_INGRESS);
 		if (cmd != null) {
 			if (account != null) cmd.setParam(ApiConstants.ACCOUNT, account);
@@ -1035,7 +1035,14 @@ public class CloudStackApi {
 			if (securityGroupId != null) cmd.setParam(ApiConstants.SECURITY_GROUP_ID, securityGroupId.toString());
 			if (securityGroupName != null) cmd.setParam(ApiConstants.SECURITY_GROUP_NAME, securityGroupName);
 			if (startPort != null) cmd.setParam(ApiConstants.START_PORT, startPort.toString());
-			if (userSecurityGroupList != null) cmd.setParam(ApiConstants.USER_SECURITY_GROUP_LIST, userSecurityGroupList);
+			if (userSecurityGroupList != null && userSecurityGroupList.size() > 0) {
+				int i = 0;
+				for (CloudStackKeyValue pair :userSecurityGroupList) {
+					cmd.setParam(ApiConstants.USER_SECURITY_GROUP_LIST + "["+i+"].account", pair.getKey());
+					cmd.setParam(ApiConstants.USER_SECURITY_GROUP_LIST + "["+i+"].group", pair.getValue());
+					i++;
+				}				
+			}
 		}
 		return _client.call(cmd, apiKey, secretKey, true, ApiConstants.AUTHORIZE_SECURITY_GROUP_INGRESS_RESPONSE, ApiConstants.SECURITY_GROUP, CloudStackSecurityGroupIngress.class);
 	}

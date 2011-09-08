@@ -15,25 +15,22 @@
  */
 package com.cloud.bridge.service.core.ec2;
 
-import java.util.Calendar;
-
-import com.cloud.bridge.util.EC2RestAuth;
 
 public class EC2Volume {
 
-	private String   id;
-	private Long      size;   // <- in gigs
-	private String   zoneName;
-	private String   instanceId;
-	private String   snapshotId;
+	private Long id;
+	private Long size;   // <- in gigs
+	private String zoneName;
+	private Long   instanceId;
+	private Long   snapshotId;
 	private String   device;
-	private Integer      deviceId;
+	private Long      deviceId;
 	private String   state;
 	private String   type;
-	private String   vmstate;
+	private String   VMState;
 	private String   hypervisor;
-    private Calendar created;
-	private Calendar attached;
+    private String created;
+	private String attached;
     
 	public EC2Volume() {
 		id         = null;
@@ -41,121 +38,196 @@ public class EC2Volume {
 		instanceId = null;
 		snapshotId = null;
 		device     = null;
-		deviceId   =  0;
+		deviceId   = null;
 		state      = null;
 		type       = null;
-		vmstate    = null;
+		VMState    = null;
 		hypervisor = null;
 		created    = null;
 		attached   = null;
 	}
 	
-	public void setId( String id ) {
-		this.id = id;
-	}
-	
-	public String getId() {
-		return this.id;
-	}
-
-	public void setSize( String size ) {
-		if ( null != size ) {
-		     // -> convert from number of bytes to number of gigabytes
-		     long bytes = Long.parseLong( size );
-		     if (0 != bytes) this.size = (long) (bytes / 1073741824);
-		} else 
+	public void setSize(Long size) {
+		if (size != null) {
+			this.size = (size / 1073741824);
+		} else
 			this.size = (long) 0;
 	}
-	
+
+	/**
+	 * @return the id
+	 */
+	public Long getId() {
+		return id;
+	}
+
+	/**
+	 * @return the size
+	 */
 	public Long getSize() {
-		return this.size;
+		return size;
 	}
-	
-	public void setZoneName( String zoneName ) {
-		this.zoneName = zoneName;
-	}
-	
+
+	/**
+	 * @return the zoneName
+	 */
 	public String getZoneName() {
-		return this.zoneName;
+		return zoneName;
 	}
 
-	public void setInstanceId( String instanceId ) {
-		this.instanceId = instanceId;
-	}
-	
-	public String getInstanceId() {
-		return this.instanceId;
+	/**
+	 * @return the instanceId
+	 */
+	public Long getInstanceId() {
+		return instanceId;
 	}
 
-	public void setSnapShotId( String id ) {
-		snapshotId = id;
-	}
-	
-	public String getSnapShotId() {
+	/**
+	 * @return the snapshotId
+	 */
+	public Long getSnapshotId() {
 		return snapshotId;
 	}
-	
-	public void setDevice( String device ) {
-		this.device = device;
-	}
-	
+
+	/**
+	 * @return the device
+	 */
 	public String getDevice() {
-		return this.device;
+		return device;
 	}
 
-	public void setDeviceId( Integer deviceId ) {
-		this.deviceId = deviceId;
-	}
-	
-	public Integer getDeviceId() {
-		return this.deviceId;
+	/**
+	 * @return the deviceId
+	 */
+	public Long getDeviceId() {
+		return deviceId;
 	}
 
-	public void setState( String state ) {
-		this.state = state;
-	}
-	
+	/**
+	 * @return the state
+	 */
 	public String getState() {
 		return state;
 	}
 
-	public void setType( String type ) {
+	/**
+	 * @return the type
+	 */
+	public String getType() {
+		return type;
+	}
+
+	/**
+	 * @return the VMState
+	 */
+	public String getVMState() {
+		return VMState;
+	}
+
+	/**
+	 * @return the hypervisor
+	 */
+	public String getHypervisor() {
+		return hypervisor;
+	}
+
+
+	/**
+	 * @param id the id to set
+	 */
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	/**
+	 * @param zoneName the zoneName to set
+	 */
+	public void setZoneName(String zoneName) {
+		this.zoneName = zoneName;
+	}
+
+	/**
+	 * @param instanceId the instanceId to set
+	 */
+	public void setInstanceId(Long instanceId) {
+		this.instanceId = instanceId;
+	}
+
+	/**
+	 * @param snapshotId the snapshotId to set
+	 */
+	public void setSnapshotId(Long snapshotId) {
+		this.snapshotId = snapshotId;
+	}
+
+	/**
+	 * @param device the device to set
+	 */
+	public void setDevice(String device) {
+		this.device = device;
+	}
+
+	/**
+	 * @param deviceId the deviceId to set
+	 */
+	public void setDeviceId(Long deviceId) {
+		this.deviceId = deviceId;
+	}
+
+	/**
+	 * @param state the state to set
+	 */
+	public void setState(String state) {
+		this.state = state;
+	}
+
+	/**
+	 * @param type the type to set
+	 */
+	public void setType(String type) {
 		this.type = type;
 	}
-	
-	public String getType() {
-		return this.type;
+
+	/**
+	 * @param VMState the VMState to set
+	 */
+	public void setVMState(String VMState) {
+		this.VMState = VMState;
 	}
 
-	public void setVMState( String vmstate ) {
-		this.vmstate = vmstate;
-	}
-	
-	public String getVMState() {
-		return this.vmstate;
-	}
-
-	public void setHypervisor( String hypervisor ) {
+	/**
+	 * @param hypervisor the hypervisor to set
+	 */
+	public void setHypervisor(String hypervisor) {
 		this.hypervisor = hypervisor;
 	}
-	
-	public String getHypervisor() {
-		return this.hypervisor;
+
+	/**
+	 * @return the created
+	 */
+	public String getCreated() {
+		return created;
 	}
 
-	public void setCreated( String created ) {
-		this.created = EC2RestAuth.parseDateString( created );
-	}
-	
-	public Calendar getCreated() {
-		return this.created;
+	/**
+	 * @return the attached
+	 */
+	public String getAttached() {
+		return attached;
 	}
 
-	public void setAttached( String attached ) {
-		this.attached = EC2RestAuth.parseDateString( attached );
+	/**
+	 * @param created the created to set
+	 */
+	public void setCreated(String created) {
+		this.created = created;
+	}
+
+	/**
+	 * @param attached the attached to set
+	 */
+	public void setAttached(String attached) {
+		this.attached = attached;
 	}
 	
-	public Calendar getAttached() {
-		return this.attached;
-	}
 }

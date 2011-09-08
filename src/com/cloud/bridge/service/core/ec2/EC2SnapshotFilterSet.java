@@ -113,7 +113,7 @@ public class EC2SnapshotFilterSet {
 	    }
 	    else if (filterName.equalsIgnoreCase( "snapshot-id" )) 
 	    {	
-	    	 return containsString( snap.getId(), valueSet );	
+	    	 return containsString( snap.getId().toString(), valueSet );	
 	    }
 	    else if (filterName.equalsIgnoreCase( "start-time" )) 
 	    {	
@@ -125,7 +125,7 @@ public class EC2SnapshotFilterSet {
 	    }
 	    else if (filterName.equalsIgnoreCase( "volume-id" )) 
 	    {
-	    	 return containsString( snap.getVolumeId(), valueSet );		
+	    	 return containsString( snap.getVolumeId().toString(), valueSet );		
 	    }
 	    else if (filterName.equalsIgnoreCase( "volume-size" )) 
 	    {

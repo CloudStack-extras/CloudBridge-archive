@@ -95,7 +95,6 @@ import com.amazon.ec2.TerminateInstancesResponse;
 import com.cloud.bridge.model.UserCredentials;
 import com.cloud.bridge.persist.dao.OfferingDao;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
-import com.cloud.bridge.service.core.ec2.EC2AllocateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AssociateAddress;
 import com.cloud.bridge.service.core.ec2.EC2AuthorizeRevokeSecurityGroup;
 import com.cloud.bridge.service.core.ec2.EC2CreateImage;
@@ -578,12 +577,12 @@ public class EC2RestServlet extends HttpServlet {
 		// -> all these parameters are required
         String[] volumeId = request.getParameterValues( "VolumeId" );
 		if ( null != volumeId && 0 < volumeId.length ) 
-			 EC2request.setId( volumeId[0] );
+			 EC2request.setId( new Long(volumeId[0]) );
 		else { response.sendError(530, "Missing VolumeId parameter" ); return; }
 
         String[] instanceId = request.getParameterValues( "InstanceId" );
         if ( null != instanceId && 0 < instanceId.length ) 
-        	 EC2request.setInstanceId( instanceId[0] );
+        	 EC2request.setInstanceId( new Long(instanceId[0]) );
 		else { response.sendError(530, "Missing InstanceId parameter" ); return; }
 
         String[] device = request.getParameterValues( "Device" );
@@ -730,12 +729,12 @@ public class EC2RestServlet extends HttpServlet {
 		
         String[] volumeId = request.getParameterValues( "VolumeId" );
 		if ( null != volumeId && 0 < volumeId.length ) 
-			 EC2request.setId( volumeId[0] );
+			 EC2request.setId( new Long(volumeId[0]) );
 		else { response.sendError(530, "Missing VolumeId parameter" ); return; }
 
         String[] instanceId = request.getParameterValues( "InstanceId" );
         if ( null != instanceId && 0 < instanceId.length ) 
-        	 EC2request.setInstanceId( instanceId[0] );
+        	 EC2request.setInstanceId( new Long(instanceId[0]) );
 
         String[] device = request.getParameterValues( "Device" );
         if ( null != device && 0 < device.length ) 
@@ -752,7 +751,7 @@ public class EC2RestServlet extends HttpServlet {
 		
         String[] volumeId = request.getParameterValues( "VolumeId" );
 		if ( null != volumeId && 0 < volumeId.length ) 
-			 EC2request.setId( volumeId[0] );
+			 EC2request.setId( new Long(volumeId[0]) );
 		else { response.sendError(530, "Missing VolumeId parameter" ); return; }
 
 		// -> execute the request
@@ -783,7 +782,7 @@ public class EC2RestServlet extends HttpServlet {
 		if (useSize && !useSnapshot) {
 			EC2request.setSize( size[0] );
 		} else if (useSnapshot && !useSize) {
-        	EC2request.setSnapshotId(snapshotId[0]);
+        	EC2request.setSnapshotId(Long.parseLong(snapshotId[0]));
         } else if (useSize && useSnapshot) {
         	response.sendError(530, "Size and SnapshotId parameters are mutually exclusive" ); return;
         } else {
@@ -792,40 +791,41 @@ public class EC2RestServlet extends HttpServlet {
         
 
 		// -> execute the request
-		CreateVolumeResponse EC2response = EC2SoapServiceImpl.toCreateVolumeResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
+		CreateVolumeResponse EC2response = EC2SoapServiceImpl.toCreateVolumeResponse( ServiceProvider.getInstance().getEC2Engine().createVolume( EC2request ));
 		serializeResponse(response, EC2response);
     }
 
     private void createSecurityGroup( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {
-	    EC2SecurityGroup EC2request = new EC2SecurityGroup();
-	
+    	
+    	String groupName, groupDescription = null;
+    	
         String[] name = request.getParameterValues( "GroupName" );
 	    if ( null != name && 0 < name.length ) 
-		     EC2request.setName( name[0] );
+		     groupName = name[0];
 	    else { response.sendError(530, "Missing GroupName parameter" ); return; }
 	
         String[] desc = request.getParameterValues( "GroupDescription" );
         if ( null != desc && 0 < desc.length ) 
-    	     EC2request.setDescription( desc[0] );
+    	     groupDescription = desc[0];
 	    else { response.sendError(530, "Missing GroupDescription parameter" ); return; }
 
 	    // -> execute the request
-        CreateSecurityGroupResponse EC2response = EC2SoapServiceImpl.toCreateSecurityGroupResponse( ServiceProvider.getInstance().getEC2Engine().createSecurityGroup( EC2request ));
+        CreateSecurityGroupResponse EC2response = EC2SoapServiceImpl.toCreateSecurityGroupResponse( ServiceProvider.getInstance().getEC2Engine().createSecurityGroup( groupName, groupDescription ));
         serializeResponse(response, EC2response);
     }
 
     private void deleteSecurityGroup( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {
-        EC2SecurityGroup EC2request = new EC2SecurityGroup();
-
+    	String groupName = null;
+    	
         String[] name = request.getParameterValues( "GroupName" );
         if ( null != name && 0 < name.length ) 
-	         EC2request.setName( name[0] );
+	         groupName = name[0];
         else { response.sendError(530, "Missing GroupName parameter" ); return; }
 
         // -> execute the request
-        DeleteSecurityGroupResponse EC2response = EC2SoapServiceImpl.toDeleteSecurityGroupResponse( ServiceProvider.getInstance().getEC2Engine().deleteSecurityGroup( EC2request ));
+        DeleteSecurityGroupResponse EC2response = EC2SoapServiceImpl.toDeleteSecurityGroupResponse( ServiceProvider.getInstance().getEC2Engine().deleteSecurityGroup( groupName ));
         serializeResponse(response, EC2response);
     }
 
@@ -891,7 +891,7 @@ public class EC2RestServlet extends HttpServlet {
         	 EC2request.setDescription( description[0] );
 
 		// -> execute the request
-        CreateImageResponse EC2response = EC2SoapServiceImpl.toCreateImageResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
+        CreateImageResponse EC2response = EC2SoapServiceImpl.toCreateImageResponse( ServiceProvider.getInstance().getEC2Engine().createImage( EC2request ));
         serializeResponse(response, EC2response);
     }
 
@@ -918,7 +918,7 @@ public class EC2RestServlet extends HttpServlet {
         	 EC2request.setDescription( description[0] );
 
 		// -> execute the request
-        RegisterImageResponse EC2response = EC2SoapServiceImpl.toRegisterImageResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
+        RegisterImageResponse EC2response = EC2SoapServiceImpl.toRegisterImageResponse( ServiceProvider.getInstance().getEC2Engine().registerImage( EC2request ));
         serializeResponse(response, EC2response);
     }
 
@@ -997,7 +997,7 @@ public class EC2RestServlet extends HttpServlet {
 		
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-		RunInstancesResponse EC2response = EC2SoapServiceImpl.toRunInstancesResponse( engine.handleRequest( EC2request ), engine);
+		RunInstancesResponse EC2response = EC2SoapServiceImpl.toRunInstancesResponse( engine.runInstances( EC2request ), engine);
 		serializeResponse(response, EC2response);
     }
 
@@ -1021,7 +1021,7 @@ public class EC2RestServlet extends HttpServlet {
         if (0 == count) { response.sendError(530, "Missing InstanceId parameter" ); return; }
     
         // -> execute the request
-        RebootInstancesResponse EC2response = EC2SoapServiceImpl.toRebootInstancesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
+        RebootInstancesResponse EC2response = EC2SoapServiceImpl.toRebootInstancesResponse( ServiceProvider.getInstance().getEC2Engine().rebootInstances(EC2request));
         serializeResponse(response, EC2response);
     }
 
@@ -1045,7 +1045,7 @@ public class EC2RestServlet extends HttpServlet {
         if (0 == count) { response.sendError(530, "Missing InstanceId parameter" ); return; }
 
         // -> execute the request
-        StartInstancesResponse EC2response = EC2SoapServiceImpl.toStartInstancesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
+        StartInstancesResponse EC2response = EC2SoapServiceImpl.toStartInstancesResponse( ServiceProvider.getInstance().getEC2Engine().startInstances(EC2request));
         serializeResponse(response, EC2response);
     }
 
@@ -1069,7 +1069,7 @@ public class EC2RestServlet extends HttpServlet {
         if (0 == count) { response.sendError(530, "Missing InstanceId parameter" ); return; }
 
 	    // -> execute the request
-	    StopInstancesResponse EC2response = EC2SoapServiceImpl.toStopInstancesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
+	    StopInstancesResponse EC2response = EC2SoapServiceImpl.toStopInstancesResponse( ServiceProvider.getInstance().getEC2Engine().stopInstances( EC2request ));
 	    serializeResponse(response, EC2response);
     }
 
@@ -1094,7 +1094,7 @@ public class EC2RestServlet extends HttpServlet {
 
         // -> execute the request
 		EC2request.setDestroyInstances( true );
-        TerminateInstancesResponse EC2response = EC2SoapServiceImpl.toTermInstancesResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
+        TerminateInstancesResponse EC2response = EC2SoapServiceImpl.toTermInstancesResponse( ServiceProvider.getInstance().getEC2Engine().stopInstances( EC2request ));
         serializeResponse(response, EC2response);
     }
 
@@ -1135,7 +1135,7 @@ public class EC2RestServlet extends HttpServlet {
 		}		
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-		DescribeImagesResponse EC2response = EC2SoapServiceImpl.toDescribeImagesResponse( engine.handleRequest( EC2request ));
+		DescribeImagesResponse EC2response = EC2SoapServiceImpl.toDescribeImagesResponse( engine.describeImages( EC2request ));
 		serializeResponse(response, EC2response);
     }
     
@@ -1155,7 +1155,7 @@ public class EC2RestServlet extends HttpServlet {
 		}
 
 		// -> execute the request
-		DescribeImageAttributeResponse EC2response = EC2SoapServiceImpl.toDescribeImageAttributeResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
+		DescribeImageAttributeResponse EC2response = EC2SoapServiceImpl.toDescribeImageAttributeResponse( ServiceProvider.getInstance().getEC2Engine().describeImages( EC2request ));
 		serializeResponse(response, EC2response);
     }
 
@@ -1187,7 +1187,7 @@ public class EC2RestServlet extends HttpServlet {
 
 		// -> execute the request
 		EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-		DescribeInstancesResponse EC2response = EC2SoapServiceImpl.toDescribeInstancesResponse( engine.handleRequest( EC2request ), engine);
+		DescribeInstancesResponse EC2response = EC2SoapServiceImpl.toDescribeInstancesResponse( engine.describeInstances( EC2request ), engine);
 		serializeResponse(response, EC2response);
     }
     
@@ -1206,7 +1206,7 @@ public class EC2RestServlet extends HttpServlet {
         }
         // -> execute the request
         EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-        serializeResponse(response, EC2SoapServiceImpl.toDescribeAddressesResponse( engine.handleRequest( ec2Request)));
+        serializeResponse(response, EC2SoapServiceImpl.toDescribeAddressesResponse( engine.describeAddresses( ec2Request)));
     }
 
     private void allocateAddress( HttpServletRequest request, HttpServletResponse response )
@@ -1214,9 +1214,7 @@ public class EC2RestServlet extends HttpServlet {
     	
     	EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
     	
-    	EC2AllocateAddress ec2Request = new EC2AllocateAddress();
-    	
-    	AllocateAddressResponse ec2Response = EC2SoapServiceImpl.toAllocateAddressResponse( engine.handleRequest ( ec2Request ));
+    	AllocateAddressResponse ec2Response = EC2SoapServiceImpl.toAllocateAddressResponse( engine.allocateAddress());
     	
     	serializeResponse(response, ec2Response);
     }
@@ -1237,7 +1235,7 @@ public class EC2RestServlet extends HttpServlet {
     		ec2Request.setPublicIp(publicIp);
     	}
     	
-    	ReleaseAddressResponse EC2Response = EC2SoapServiceImpl.toReleaseAddressResponse( engine.handleRequest( ec2Request ));
+    	ReleaseAddressResponse EC2Response = EC2SoapServiceImpl.toReleaseAddressResponse( engine.releaseAddress( ec2Request ));
 
     	serializeResponse(response, EC2Response);
     }
@@ -1263,7 +1261,7 @@ public class EC2RestServlet extends HttpServlet {
         	ec2Request.setPublicIp(publicIp);
         }
 
-        AssociateAddressResponse ec2Response = EC2SoapServiceImpl.toAssociateAddressResponse( engine.handleRequest( ec2Request ));
+        AssociateAddressResponse ec2Response = EC2SoapServiceImpl.toAssociateAddressResponse( engine.associateAddress( ec2Request ));
         
         serializeResponse(response, ec2Response);
     }
@@ -1283,7 +1281,7 @@ public class EC2RestServlet extends HttpServlet {
         	ec2Request.setPublicIp(publicIp);
         }
         
-        DisassociateAddressResponse ec2Response = EC2SoapServiceImpl.toDisassociateAddressResponse( engine.handleRequest( ec2Request ) ); 
+        DisassociateAddressResponse ec2Response = EC2SoapServiceImpl.toDisassociateAddressResponse( engine.disassociateAddress( ec2Request ) ); 
         
         serializeResponse(response, ec2Response);
     }
@@ -1296,8 +1294,7 @@ public class EC2RestServlet extends HttpServlet {
 	
 	    // -> load in all the "GroupName.n" parameters if any
 		Enumeration<?> names = request.getParameterNames();
-	    while( names.hasMoreElements()) 
-	    {
+	    while( names.hasMoreElements()) {
 		   String key = (String)names.nextElement();
 		   if (key.startsWith("GroupName")) {
 		       String[] value = request.getParameterValues( key );
@@ -1307,16 +1304,16 @@ public class EC2RestServlet extends HttpServlet {
 	    
         // -> are there any filters with this request?
         EC2Filter[] filterSet = extractFilters( request );
-        if (null != filterSet)
-        {
+        if (null != filterSet) {
         	EC2GroupFilterSet gfs = new EC2GroupFilterSet();
-        	for( int i=0; i < filterSet.length; i++ ) gfs.addFilter( filterSet[i] );
+        	for (EC2Filter filter : filterSet) gfs.addFilter( filter );
         	EC2request.setFilterSet( gfs );
         }
 	    
 	    // -> execute the request
 	    EC2Engine engine = ServiceProvider.getInstance().getEC2Engine();
-	    DescribeSecurityGroupsResponse EC2response = EC2SoapServiceImpl.toDescribeSecurityGroupsResponse( engine.handleRequest( EC2request ));
+	    
+	    DescribeSecurityGroupsResponse EC2response = EC2SoapServiceImpl.toDescribeSecurityGroupsResponse( engine.describeSecurityGroups( EC2request ));
 	    serializeResponse(response, EC2response);
     }
     
@@ -1348,7 +1345,7 @@ public class EC2RestServlet extends HttpServlet {
 		}
      
 	    // -> execute the request
-	    DescribeInstanceAttributeResponse EC2response = EC2SoapServiceImpl.toDescribeInstanceAttributeResponse( ServiceProvider.getInstance().getEC2Engine().handleRequest( EC2request ));
+	    DescribeInstanceAttributeResponse EC2response = EC2SoapServiceImpl.toDescribeInstanceAttributeResponse( ServiceProvider.getInstance().getEC2Engine().describeInstances(EC2request));
 	    serializeResponse(response, EC2response);
     }
 
@@ -1521,7 +1518,7 @@ public class EC2RestServlet extends HttpServlet {
     	}
     	
     	ImportKeyPairResponse EC2Response = EC2SoapServiceImpl.toImportKeyPair(
-    			ServiceProvider.getInstance().getEC2Engine().handleRequest( ec2Request ));
+    			ServiceProvider.getInstance().getEC2Engine().importKeyPair( ec2Request ));
     	serializeResponse(response, EC2Response);
     }
 
@@ -1539,7 +1536,7 @@ public class EC2RestServlet extends HttpServlet {
     	}
     	
     	CreateKeyPairResponse EC2Response = EC2SoapServiceImpl.toCreateKeyPair(
-    			ServiceProvider.getInstance().getEC2Engine().handleRequest( ec2Request ));
+    			ServiceProvider.getInstance().getEC2Engine().createKeyPair(ec2Request));
     	serializeResponse(response, EC2Response);	
     }
 
@@ -1555,7 +1552,7 @@ public class EC2RestServlet extends HttpServlet {
     	ec2Request.setKeyName(keyName);
     	    	
     	DeleteKeyPairResponse EC2Response = EC2SoapServiceImpl.toDeleteKeyPair(
-    			ServiceProvider.getInstance().getEC2Engine().handleRequest(ec2Request));
+    			ServiceProvider.getInstance().getEC2Engine().deleteKeyPair(ec2Request));
     	serializeResponse(response, EC2Response);
     }
     

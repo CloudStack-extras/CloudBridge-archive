@@ -27,7 +27,7 @@ import com.cloud.bridge.service.exception.EC2ServiceException;
 public class EC2GroupFilterSet {
 
 	protected List<EC2Filter> filterSet = new ArrayList<EC2Filter>();    
-	
+
 	private Map<String,String> filterTypes = new HashMap<String,String>();
 
 	public EC2GroupFilterSet() 
@@ -42,29 +42,29 @@ public class EC2GroupFilterSet {
 		filterTypes.put( "ip-permission.protocol",  "string" ); 
 		filterTypes.put( "owner-id",                "string" );
 	}
-	
-	
+
+
 	public void addFilter( EC2Filter param ) 
 	{	
 		String filterName = param.getName();
 		String value = (String) filterTypes.get( filterName );
-		
+
 		if (null == value)
 			throw new EC2ServiceException( "Unsupported filter [" + filterName + "] - 1", 501 );
-		
+
 		if (null != value && value.equalsIgnoreCase( "null" ))
 			throw new EC2ServiceException( "Unsupported filter [" + filterName + "] - 2", 501 );
 
 		// ToDo we could add checks to make sure the type of a filters value is correct (e.g., an integer)
 		filterSet.add( param );
 	}
-	
-	
+
+
 	public EC2Filter[] getFilterSet() {
 		return filterSet.toArray(new EC2Filter[0]);
 	}
-	
-	
+
+
 	/**
 	 * For a filter to match a snapshot just one of its values has to match the volume.
 	 * For a snapshot to be included in the instance response it must pass all the defined filters.
@@ -76,114 +76,90 @@ public class EC2GroupFilterSet {
 	public EC2DescribeSecurityGroupsResponse evaluate( EC2DescribeSecurityGroupsResponse sampleList ) throws ParseException 
 	{
 		EC2DescribeSecurityGroupsResponse resultList = new EC2DescribeSecurityGroupsResponse();
-    	boolean matched;
-    	
-    	EC2SecurityGroup[] groupSet = sampleList.getGroupSet();
-    	EC2Filter[]     filterSet   = getFilterSet();
-    	for( int i=0; i < groupSet.length; i++ )
-    	{
-    		matched = true;
-    		for( int j=0; j < filterSet.length; j++ )
-    		{
-    			if (!filterMatched( groupSet[i], filterSet[j] )) {
-    				matched = false;
-    				break;
-    			}
-    		}
-    		
-    		if (matched) resultList.addGroup( groupSet[i] );
-    	}
+		boolean matched;
+
+		EC2SecurityGroup[] groupSet = sampleList.getGroupSet();
+		EC2Filter[]     filterSet   = getFilterSet();
+		for (EC2SecurityGroup group : groupSet) {
+			matched = true;
+			for (EC2Filter filter : filterSet) {
+				if (!filterMatched( group, filter)) {
+					matched = false;
+					break;
+				}
+			}
+
+			if (matched) resultList.addGroup( group );
+		}
 
 		return resultList;
 	}
-	
-	
+
+
 	private boolean filterMatched( EC2SecurityGroup sg, EC2Filter filter ) throws ParseException
 	{
 		String filterName = filter.getName();
 		String[] valueSet = filter.getValueSet();
 		EC2IpPermission[] permissionSet = sg.getIpPermissionSet();
 		boolean result = false;
-		int i;
-		
-	    if ( filterName.equalsIgnoreCase( "description" )) 
-	    {
-	    	 return containsString( sg.getDescription(), valueSet );	
-	    }
-	    else if (filterName.equalsIgnoreCase( "group-id" )) 
-	    {	
-	    	 return containsString( sg.getId(), valueSet );	
-	    }
-	    else if (filterName.equalsIgnoreCase( "group-name" )) 
-	    {	
-	    	 return containsString( sg.getName(), valueSet );	
-	    }
-	    else if (filterName.equalsIgnoreCase( "ip-permission.cidr" )) 
-	    {	
-	    	 for( i=0; i < permissionSet.length; i++ )
-	    	 {
-	    		 result = containsString( permissionSet[i].getCIDR(), valueSet );
-	    		 if (result) return true;
-	    	 }
-	    	 return false;			
-	    }
-	    else if (filterName.equalsIgnoreCase( "ip-permission.from-port" ))
-	    {
-	    	 for( i=0; i < permissionSet.length; i++ )
-	    	 {
-	    		 result = containsInteger( permissionSet[i].getFromPort(), valueSet );
-	    		 if (result) return true;
-	    	 }
-	    	 return false;		
-	    }
-	    else if (filterName.equalsIgnoreCase( "ip-permission.to-port" )) 
-	    {
-	    	 for( i=0; i < permissionSet.length; i++ )
-	    	 {
-	    		 result = containsInteger( permissionSet[i].getToPort(), valueSet );
-	    		 if (result) return true;
-	    	 }
-	    	 return false;		
-	    }
-	    else if (filterName.equalsIgnoreCase( "ip-permission.protocol" )) 
-	    {
-	    	 for( i=0; i < permissionSet.length; i++ ) 
-	    	 {
-	    		 result = containsString( permissionSet[i].getProtocol(), valueSet );
-	    		 if (result) return true;
-	    	 }
-	    	 return false;	
-	    }
-	    else if (filterName.equalsIgnoreCase( "owner-id" )) 
-	    {	
-	    	 String owner = new String( sg.getDomainId() + ":" + sg.getAccountName()); 
-	    	 return containsString( owner, valueSet );	
-	    }
-	    else return false;
+
+		if ( filterName.equalsIgnoreCase( "description" )) 
+			return containsString( sg.getDescription(), valueSet );	
+		else if (filterName.equalsIgnoreCase( "group-id" )) 
+			return containsString( sg.getId(), valueSet );	
+		else if (filterName.equalsIgnoreCase( "group-name" )) 
+			return containsString( sg.getName(), valueSet );	
+		else if (filterName.equalsIgnoreCase( "ip-permission.cidr" )) {
+			for (EC2IpPermission perm : permissionSet) {
+				result = containsString(perm.getCIDR(), valueSet);
+				if (result) return true;
+			}
+			return false;			
+		} else if (filterName.equalsIgnoreCase( "ip-permission.from-port" )) {
+			for (EC2IpPermission perm : permissionSet) {
+				result = containsInteger(perm.getFromPort(), valueSet);
+				if (result) return true;
+			}
+			return false;		
+		} else if (filterName.equalsIgnoreCase( "ip-permission.to-port" )) {
+			for (EC2IpPermission perm : permissionSet) {
+				result = containsInteger( perm.getToPort(), valueSet );
+				if (result) return true;
+			}
+			return false;		
+		} else if (filterName.equalsIgnoreCase( "ip-permission.protocol" )) {
+			for (EC2IpPermission perm : permissionSet) {
+				result = containsString( perm.getProtocol(), valueSet );
+				if (result) return true;
+			}
+			return false;	
+		} else if (filterName.equalsIgnoreCase( "owner-id" )) {	
+			String owner = new String( sg.getDomainId() + ":" + sg.getAccountName()); 
+			return containsString( owner, valueSet );	
+		}
+		else return false;
 	}
-	
-	
+
+
 	private boolean containsString( String lookingFor, String[] set )
 	{
 		if (null == lookingFor) return false;
-		
-	    for( int i=0; i < set.length; i++ )
-	    {
-	    	//System.out.println( "contsinsString: " + lookingFor + " " + set[i] );
-	    	if (lookingFor.matches( set[i] )) return true;
-	    }
-	    return false;
+
+		for (String s : set) {
+			//System.out.println( "contsinsString: " + lookingFor + " " + set[i] );
+			if (lookingFor.matches( s )) return true;
+		}
+		return false;
 	}
-	
-	
+
+
 	private boolean containsInteger( int lookingFor, String[] set )
 	{
-        for( int i=0; i < set.length; i++ )
-        {
-	    	//System.out.println( "contsinsInteger: " + lookingFor + " " + set[i] );
-        	int temp = Integer.parseInt( set[i] );
-        	if (lookingFor == temp) return true;
-        }
+		for (String s : set) {
+			//System.out.println( "contsinsInteger: " + lookingFor + " " + set[i] );
+			int temp = Integer.parseInt( s );
+			if (lookingFor == temp) return true;
+		}
 		return false;
 	}
 }
