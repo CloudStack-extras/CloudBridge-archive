@@ -18,6 +18,8 @@ package com.cloud.stack;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.cloud.stack.models.ApiConstants;
 import com.cloud.stack.models.CloudStackAccount;
 import com.cloud.stack.models.CloudStackCapabilities;
@@ -58,6 +60,8 @@ import com.google.gson.reflect.TypeToken;
  *
  */
 public class CloudStackApi {
+	protected final static Logger logger = Logger.getLogger(CloudStackApi.class);
+	
 	private CloudStackClient _client;
 	
 	private String apiKey;
@@ -67,7 +71,9 @@ public class CloudStackApi {
 	 * 
 	 */
 	public CloudStackApi(String cloudStackServiceHost, int port, boolean bSslEnabled) {
-		_client = new CloudStackClient(cloudStackServiceHost, port, false);
+		_client = new CloudStackClient(cloudStackServiceHost, port, bSslEnabled);
+		apiKey = null;
+		secretKey = null;
 	}
 	
 	/**
@@ -560,7 +566,7 @@ public class CloudStackApi {
 			if (domainId != null) cmd.setParam(ApiConstants.DOMAIN_ID, domainId.toString());
 		}
 		return _client.listCall(cmd, apiKey, secretKey, ApiConstants.LIST_TEMPLATE_PERMISSIONS_RESPONSE, ApiConstants.TEMPLATE_PERMISSION, 
-				new TypeToken<List<CloudStackTemplate>>() {}.getType());
+				new TypeToken<List<CloudStackTemplatePermission>>() {}.getType());
 	}
 
 	/**
@@ -1243,7 +1249,7 @@ public class CloudStackApi {
 			if (keyWord != null) cmd.setParam(ApiConstants.KEYWORD, keyWord);
 		}
 		return _client.listCall(cmd, apiKey, secretKey, ApiConstants.LIST_SNAPSHOT_POLICIES_RESPONSE, ApiConstants.SNAPSHOT, 
-				new TypeToken<List<CloudStackSnapshot>>() {}.getType());
+				new TypeToken<List<CloudStackSnapshotPolicy>>() {}.getType());
 	}
 
 	// Events
@@ -1361,7 +1367,7 @@ public class CloudStackApi {
 			if (virtualMachineId != null) cmd.setParam(ApiConstants.VIRTUAL_MACHINE_ID, virtualMachineId.toString());
 		}
 		return _client.listCall(cmd, apiKey, secretKey, ApiConstants.LIST_SERVICE_OFFERINGS_RESPONSE, ApiConstants.SERVICE_OFFERING, 
-				new TypeToken<List<CloudStackOsCategory>>() {}.getType());
+				new TypeToken<List<CloudStackServiceOffering>>() {}.getType());
 	}
 	
 	// Disk Offerings
@@ -1460,7 +1466,7 @@ public class CloudStackApi {
 			if (name != null) cmd.setParam(ApiConstants.NAME, name);
 		}
 		return _client.listCall(cmd, apiKey, secretKey, ApiConstants.LIST_SSH_KEY_PAIRS_RESPONSE, ApiConstants.KEY_PAIR, 
-				new TypeToken<List<CloudStackDiskOffering>>() {}.getType());
+				new TypeToken<List<CloudStackKeyPair>>() {}.getType());
 	}
 
 	// IpAddresses
@@ -1818,7 +1824,7 @@ public class CloudStackApi {
 			if (keyWord != null) cmd.setParam(ApiConstants.KEYWORD, keyWord);
 		}
 		return _client.listCall(cmd, apiKey, secretKey, ApiConstants.LIST_LOAD_BALANCER_RULE_INSTANCES_RESPONSE, ApiConstants.VIRTUAL_MACHINE, 
-				new TypeToken<List<CloudStackLoadBalancerRule>>() {}.getType());
+				new TypeToken<List<CloudStackUserVm>>() {}.getType());
 	}
 		
 	/**

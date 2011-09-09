@@ -182,7 +182,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		CreateVolumeType cvt = createVolume.getCreateVolume();
 		
 		request.setSize( cvt.getSize());
-		request.setSnapshotId( Long.parseLong(cvt.getSnapshotId()));
+		request.setSnapshotId( new Long(cvt.getSnapshotId()));
 		request.setZoneName( cvt.getAvailabilityZone());
 		return toCreateVolumeResponse( engine.createVolume( request ));
 	}
@@ -1815,7 +1815,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			ec2Request.setKeyFilterSet(toKeyPairFilterSet(fset));
 		}
 		
-		return toDescribeKeyPairs(engine.handleRequest(ec2Request));
+		return toDescribeKeyPairs(engine.describeKeyPairs(ec2Request));
 	}
 	
 	public static DescribeKeyPairsResponse toDescribeKeyPairs(final EC2DescribeKeyPairsResponse response) {

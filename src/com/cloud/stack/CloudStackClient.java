@@ -129,7 +129,7 @@ public class CloudStackClient {
 	        
             throw new Exception("Operation failed - async-job query timed out");
 		} else {
-			if(responseObjName != null)
+			if (responseObjName != null)
 				return (T)(new Gson()).fromJson(json.eval(responseName + "." + responseObjName), responseClz);
 			else
 				return (T)(new Gson()).fromJson(json.eval(responseName), responseClz);

@@ -116,7 +116,7 @@ public class ApiConstants {
     public static final String DELETE_VOLUME = "deleteVolume";
     public static final String DELETE_VOLUME_RESPONSE = "deletevolumeresponse";
     public static final String DEPLOY_VIRTUAL_MACHINE = "deployVirtualMachine";
-    public static final String DEPLOY_VIRTUAL_MACHINE_RESPONSE = "desployvirtualmachineresponse";
+    public static final String DEPLOY_VIRTUAL_MACHINE_RESPONSE = "deployvirtualmachineresponse";
     public static final String DESCRIPTION = "description";
     public static final String DESTINATION_ZONE_ID = "destzoneid";
     public static final String DESTROY_VIRTUAL_MACHINE = "destroyVirtualMachine";

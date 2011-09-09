@@ -782,7 +782,7 @@ public class EC2RestServlet extends HttpServlet {
 		if (useSize && !useSnapshot) {
 			EC2request.setSize( size[0] );
 		} else if (useSnapshot && !useSize) {
-        	EC2request.setSnapshotId(Long.parseLong(snapshotId[0]));
+        	EC2request.setSnapshotId(new Long(snapshotId[0]));
         } else if (useSize && useSnapshot) {
         	response.sendError(530, "Size and SnapshotId parameters are mutually exclusive" ); return;
         } else {
@@ -1492,7 +1492,7 @@ public class EC2RestServlet extends HttpServlet {
         }
 
     	DescribeKeyPairsResponse EC2Response = EC2SoapServiceImpl.toDescribeKeyPairs(
-    			ServiceProvider.getInstance().getEC2Engine().handleRequest( ec2Request ));
+    			ServiceProvider.getInstance().getEC2Engine().describeKeyPairs( ec2Request ));
     	serializeResponse(response, EC2Response);
     }
 

@@ -20,14 +20,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Type;
 import java.security.SignatureException;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -43,13 +40,8 @@ import com.cloud.bridge.service.exception.EC2ServiceException;
 import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 import com.cloud.bridge.service.exception.EC2ServiceException.ServerError;
 import com.cloud.bridge.util.ConfigurationHelper;
-import com.cloud.bridge.util.JsonAccessor;
-//import com.cloud.stack.CloudStackClient;
-//import com.cloud.stack.CloudStackCommand;
 import com.cloud.stack.CloudStackApi;
-import com.cloud.stack.models.ApiConstants;
 import com.cloud.stack.models.CloudStackAccount;
-import com.cloud.stack.models.CloudStackCapabilities;
 import com.cloud.stack.models.CloudStackDiskOffering;
 import com.cloud.stack.models.CloudStackInfoResponse;
 import com.cloud.stack.models.CloudStackIngressRule;
@@ -70,7 +62,6 @@ import com.cloud.stack.models.CloudStackUser;
 import com.cloud.stack.models.CloudStackUserVm;
 import com.cloud.stack.models.CloudStackVolume;
 import com.cloud.stack.models.CloudStackZone;
-import com.google.gson.reflect.TypeToken;
 
 /**
  * EC2Engine processes the ec2 commands and calls their cloudstack analogs
@@ -79,17 +70,12 @@ import com.google.gson.reflect.TypeToken;
 public class EC2Engine {
 	protected final static Logger logger = Logger.getLogger(EC2Engine.class);
 	private DocumentBuilderFactory dbf = null;
-	private String managementServer    = null;
-	private String cloudAPIPort        = null;
+	String managementServer = null;
+	String cloudAPIPort = null;
 
 	private CloudStackAccount currentAccount = null;
 
-	private int CLOUD_STACK_VERSION_2_0 = 200;
-	private int CLOUD_STACK_VERSION_2_1 = 210;
-	private int CLOUD_STACK_VERSION_2_2 = 220;
-	private int cloudStackVersion;
-
-	private CloudStackApi _api;
+	private CloudStackApi _eng = null;
 
 	public EC2Engine() throws IOException {
 		dbf = DocumentBuilderFactory.newInstance();
@@ -105,8 +91,7 @@ public class EC2Engine {
 	 * 
 	 * @throws IOException
 	 */
-	private void loadConfigValues() throws IOException 
-	{
+	private void loadConfigValues() throws IOException {
 		File propertiesFile = ConfigurationHelper.findConfigurationFile("ec2-service.properties");
 		if (null != propertiesFile) {
 			logger.info("Use EC2 properties file: " + propertiesFile.getAbsolutePath());
@@ -119,120 +104,62 @@ public class EC2Engine {
 				logger.warn("Unable to read properties file: " + propertiesFile.getAbsolutePath(), e);
 			}
 			managementServer = EC2Prop.getProperty( "managementServer" );
-			cloudAPIPort     = EC2Prop.getProperty( "cloudAPIPort", null );
-			int port = Integer.parseInt(cloudAPIPort);
+			cloudAPIPort = EC2Prop.getProperty( "cloudAPIPort", null );
+
 			
-			_api = new CloudStackApi(managementServer, port, false);
-
-			try {
-				cloudStackVersion = getCloudStackVersion(EC2Prop);
-			} catch(Exception e) {
-				logger.error( "EC2 Loading Configuration file - ", e);
-			}
-
+//			logger.info("Access Key: " + UserContext.current().getAccessKey());
+//			logger.info("Secret Key: " + UserContext.current().getSecretKey());
+			
+//			if (getApi() != null) {
+//				getApi().setApiKey(UserContext.current().getAccessKey());
+//				getApi().setSecretKey(UserContext.current().getSecretKey());
+//			}
+			
 			OfferingDao ofDao = new OfferingDao();
 			try {
 				if(ofDao.getOfferingCount() == 0) {
 					String strValue = EC2Prop.getProperty("m1.small.serviceId");
-					if(strValue != null) {
-						ofDao.setOfferMapping("m1.small", strValue);
-					}
+					if(strValue != null) ofDao.setOfferMapping("m1.small", strValue);
 
 					strValue = EC2Prop.getProperty("m1.large.serviceId");
-					if(strValue != null) {
-						ofDao.setOfferMapping("m1.large", strValue);
-					}
+					if(strValue != null) ofDao.setOfferMapping("m1.large", strValue);
 
 					strValue = EC2Prop.getProperty("m1.xlarge.serviceId");
-					if(strValue != null) {
-						ofDao.setOfferMapping("m1.xlarge", strValue);
-					}
+					if(strValue != null) ofDao.setOfferMapping("m1.xlarge", strValue);
 
 					strValue = EC2Prop.getProperty("c1.medium.serviceId");
-					if(strValue != null) {
-						ofDao.setOfferMapping("c1.medium", strValue);
-					}
+					if(strValue != null) ofDao.setOfferMapping("c1.medium", strValue);
 
 					strValue = EC2Prop.getProperty("c1.xlarge.serviceId");
-					if(strValue != null) {
-						ofDao.setOfferMapping("c1.xlarge", strValue);
-					}
+					if(strValue != null) ofDao.setOfferMapping("c1.xlarge", strValue);
 
 					strValue = EC2Prop.getProperty("m2.xlarge.serviceId");
-					if(strValue != null) {
-						ofDao.setOfferMapping("m2.xlarge", strValue);
-					}
+					if(strValue != null) ofDao.setOfferMapping("m2.xlarge", strValue);
 
 					strValue = EC2Prop.getProperty("m2.2xlarge.serviceId");
-					if(strValue != null) {
-						ofDao.setOfferMapping("m2.2xlarge", strValue);
-					}
+					if(strValue != null) ofDao.setOfferMapping("m2.2xlarge", strValue);
 
 					strValue = EC2Prop.getProperty("m2.4xlarge.serviceId");
-					if(strValue != null) {
-						ofDao.setOfferMapping("m2.4xlarge", strValue);
-					}
+					if(strValue != null) ofDao.setOfferMapping("m2.4xlarge", strValue);
 
 					strValue = EC2Prop.getProperty("cc1.4xlarge.serviceId");
-					if(strValue != null) {
-						ofDao.setOfferMapping("cc1.4xlarge", strValue);
-					}
+					if(strValue != null) ofDao.setOfferMapping("cc1.4xlarge", strValue);
 				}
 			} catch(Exception e) {
 				logger.error("Unexpected exception ", e);
 			}
 		} else logger.error( "ec2-service.properties not found" );
 	}
-
-	/**
-	 * Returns the CloudStack version
-	 * 
-	 * @param prop
-	 * @return
-	 * @throws Exception
-	 */
-	private int getCloudStackVersion(Properties prop) throws Exception {	
-		String versionProp = prop.getProperty( "cloudstackVersion", null );
-		if(versionProp!=null){
-			if(versionProp.equals("2.0")){
-				return CLOUD_STACK_VERSION_2_0;
-			}
-			else if(versionProp.equals("2.0.0")){
-				return CLOUD_STACK_VERSION_2_0;
-			}
-			else if(versionProp.equals("2.1.0")){
-				return CLOUD_STACK_VERSION_2_1;
-			}
-			else if(versionProp.equals("2.2.0")){
-				return CLOUD_STACK_VERSION_2_2;
-			}
+	
+	private CloudStackApi getApi() {
+		if (_eng == null) {
+			_eng = new CloudStackApi(managementServer, cloudAPIPort != null ? Integer.parseInt(cloudAPIPort) : 80, false);
+			_eng.setApiKey(UserContext.current().getAccessKey());
+			_eng.setSecretKey(UserContext.current().getSecretKey());
 		}
-
-		// Let the version specified in the properties file have a higher precedence 
-		// than the CloudStack's listCapabilities command. Only check with the CloudStack
-		// if no version is specified in the properties file.
-		return getCloudStackVersionBasedOnCapabilitiesCmd();
+		return _eng;
 	}
 
-	/**
-	 * Returns the CloudStackVersion based on a call to CloudStack API
-	 * 
-	 * @return
-	 * @throws Exception
-	 */
-	private int getCloudStackVersionBasedOnCapabilitiesCmd() throws Exception {
-		CloudStackCapabilities caps = _api.listCapabilities();
-		if (caps != null) {
-			if (caps.getCloudStackVersion().startsWith("2.2.")) {
-				return CLOUD_STACK_VERSION_2_2;
-			}
-		} else {
-			// 2.1 and before don't have a listCapabilities command
-			return CLOUD_STACK_VERSION_2_1;
-		}
-		// This should only fall through after we move out of 2.2.x timeframe
-		return CLOUD_STACK_VERSION_2_2; // default
-	}
 
 	/**
 	 * Verifies account can access CloudStack
@@ -244,13 +171,13 @@ public class EC2Engine {
 	 */
 	public boolean validateAccount( String accessKey, String secretKey ) throws EC2ServiceException {
 		try {
-			String oldApiKey = _api.getApiKey(); 
-			_api.setApiKey(accessKey);
-			String oldSecretKey = _api.getSecretKey();
-			_api.setSecretKey(secretKey);
-			List<CloudStackAccount> accts = _api.listAccounts(null, null, null, null, null, null, null, null);
-			_api.setApiKey(oldApiKey);
-			_api.setSecretKey(oldSecretKey);
+			String oldApiKey = getApi().getApiKey(); 
+			getApi().setApiKey(accessKey);
+			String oldSecretKey = getApi().getSecretKey();
+			getApi().setSecretKey(secretKey);
+			List<CloudStackAccount> accts = getApi().listAccounts(null, null, null, null, null, null, null, null);
+			getApi().setApiKey(oldApiKey);
+			getApi().setSecretKey(oldSecretKey);
 			if (accts == null) {
 				return false;
 			}
@@ -270,7 +197,7 @@ public class EC2Engine {
 	 */
 	public Boolean createSecurityGroup(String groupName, String groupDesc) {
 		try {
-			CloudStackSecurityGroup grp = _api.createSecurityGroup(groupName, null, groupDesc, null);
+			CloudStackSecurityGroup grp = getApi().createSecurityGroup(groupName, null, groupDesc, null);
 			if (grp != null && grp.getId() != null) {
 				return true;
 			}
@@ -289,7 +216,7 @@ public class EC2Engine {
 	 */
 	public boolean deleteSecurityGroup(String groupName) {
 		try {
-			CloudStackInfoResponse resp = _api.deleteSecurityGroup(null, null, null, groupName);
+			CloudStackInfoResponse resp = getApi().deleteSecurityGroup(null, null, null, groupName);
 			if (resp != null) {
 				return resp.getSuccess();
 			}
@@ -351,7 +278,7 @@ public class EC2Engine {
 			if (null == ruleId)
 				throw new EC2ServiceException(ClientError.InvalidGroup_NotFound, "Cannot find matching ruleid.");
 
-			CloudStackInfoResponse resp = _api.revokeSecurityGroupIngress(new Long(ruleId));
+			CloudStackInfoResponse resp = getApi().revokeSecurityGroupIngress(new Long(ruleId));
 			if (resp != null && resp.getId() != null) {
 				return resp.getSuccess();
 			}
@@ -385,11 +312,11 @@ public class EC2Engine {
 				}
 				CloudStackSecurityGroupIngress resp = null;
 				if (ipPerm.getProtocol().equalsIgnoreCase("icmp")) {
-					resp = _api.authorizeSecurityGroupIngress(null, constructCIDRList(ipPerm.getIpRangeSet()), null, null, 
+					resp = getApi().authorizeSecurityGroupIngress(null, constructCIDRList(ipPerm.getIpRangeSet()), null, null, 
 							ipPerm.getToPort().toString(), ipPerm.getFromPort().toString(), ipPerm.getProtocol(), null, 
 							request.getName(), null, secGroupList);
 				} else {
-					resp = _api.authorizeSecurityGroupIngress(null, constructCIDRList(ipPerm.getIpRangeSet()), null, 
+					resp = getApi().authorizeSecurityGroupIngress(null, constructCIDRList(ipPerm.getIpRangeSet()), null, 
 							ipPerm.getToPort().longValue(), null, null, ipPerm.getProtocol(), null, request.getName(), 
 							ipPerm.getFromPort().longValue(), secGroupList);
 				}
@@ -529,7 +456,7 @@ public class EC2Engine {
 	public EC2Snapshot createSnapshot( String volumeId ) {
 		try {
 			
-			CloudStackSnapshot snap = _api.createSnapshot(new Long(volumeId), null, null, null);
+			CloudStackSnapshot snap = getApi().createSnapshot(new Long(volumeId), null, null, null);
 			if (snap == null) {
 				throw new EC2ServiceException(ServerError.InternalError, "Unable to create snapshot!");
 			}
@@ -543,7 +470,7 @@ public class EC2Engine {
 			ec2Snapshot.setCreated(snap.getCreated());
 			ec2Snapshot.setVolumeId(snap.getVolumeId());
 			
-			List<CloudStackVolume> vols = _api.listVolumes(null, null, null, snap.getVolumeId(), null, null, null, null, null, null, null);
+			List<CloudStackVolume> vols = getApi().listVolumes(null, null, null, snap.getVolumeId(), null, null, null, null, null, null, null);
 
 			if(vols.size() > 0) {
 				assert(vols.get(0).getSize() != null);
@@ -567,7 +494,7 @@ public class EC2Engine {
 	public boolean deleteSnapshot(String snapshotId) {
 		try {
 			
-			CloudStackInfoResponse resp = _api.deleteSnapshot(new Long(snapshotId));
+			CloudStackInfoResponse resp = getApi().deleteSnapshot(new Long(snapshotId));
 			if(resp.getJobId() != null)
 				return true;
 
@@ -593,7 +520,7 @@ public class EC2Engine {
 			images = listTemplates( request.getId(), images );
 			EC2Image[] imageSet = images.getImageSet();
 			
-			CloudStackTemplate resp = _api.updateTemplate(new Long(request.getId()), null, request.getDescription(), null, imageSet[0].getName(), null, null);
+			CloudStackTemplate resp = getApi().updateTemplate(new Long(request.getId()), null, request.getDescription(), null, imageSet[0].getName(), null, null);
 			if (resp != null) {
 				return true;
 			}
@@ -614,12 +541,12 @@ public class EC2Engine {
 
 		List<CloudStackSnapshot> cloudSnaps;
 		if (interestedShots == null || interestedShots.length == 0) {
-			cloudSnaps = _api.listSnapshots(null, null, null, null, null, null, null, null, null);
+			cloudSnaps = getApi().listSnapshots(null, null, null, null, null, null, null, null, null);
 		} else {
 			cloudSnaps = new ArrayList<CloudStackSnapshot>();
 
 			for(String id : interestedShots) {
-				List<CloudStackSnapshot> tmpList = _api.listSnapshots(null, null, new Long(id), null, null, null, null, null, null);
+				List<CloudStackSnapshot> tmpList = getApi().listSnapshots(null, null, new Long(id), null, null, null, null, null, null);
 				cloudSnaps.addAll(tmpList);
 			}
 		}
@@ -654,7 +581,7 @@ public class EC2Engine {
 	 */
 	public EC2PasswordData getPasswordData(String instanceId) {
 		try {
-			CloudStackPasswordData resp = _api.getVMPassword(new Long(instanceId));
+			CloudStackPasswordData resp = getApi().getVMPassword(new Long(instanceId));
 			EC2PasswordData passwdData = new EC2PasswordData();
 			if (resp != null) {
 				passwdData.setInstanceId(instanceId);
@@ -672,12 +599,12 @@ public class EC2Engine {
 	 * @param request
 	 * @return
 	 */
-	public EC2DescribeKeyPairsResponse handleRequest( EC2DescribeKeyPairs request ) {
+	public EC2DescribeKeyPairsResponse describeKeyPairs( EC2DescribeKeyPairs request ) {
 		try {
 			EC2KeyPairFilterSet filterSet = request.getKeyFilterSet();
 			String[] keyNames = request.getKeyNames();
 
-			List<CloudStackKeyPair> keyPairs = _api.listSSHKeyPairs(null, null, null);
+			List<CloudStackKeyPair> keyPairs = getApi().listSSHKeyPairs(null, null, null);
 
 			// Let's trim the list of keypairs to only the ones listed in keyNames
 			if (keyPairs != null && keyNames != null && keyNames.length > 0) {
@@ -725,7 +652,7 @@ public class EC2Engine {
 	 */
 	public boolean deleteKeyPair( EC2DeleteKeyPair request ) {
 		try {
-			CloudStackInfoResponse resp = _api.deleteSSHKeyPair(request.getKeyName(), null, null);
+			CloudStackInfoResponse resp = getApi().deleteSSHKeyPair(request.getKeyName(), null, null);
 			if (resp == null) { 
 				throw new Exception("Ivalid CloudStack API response");
 			}
@@ -745,7 +672,7 @@ public class EC2Engine {
 	 */
 	public EC2SSHKeyPair createKeyPair(EC2CreateKeyPair request) {
 		try {
-			CloudStackKeyPair resp = _api.createSSHKeyPair(request.getKeyName(), null, null);
+			CloudStackKeyPair resp = getApi().createSSHKeyPair(request.getKeyName(), null, null);
 			if (resp == null) {
 				throw new Exception("Ivalid CloudStack API response");
 			}
@@ -770,7 +697,7 @@ public class EC2Engine {
 	 */
 	public EC2SSHKeyPair importKeyPair( EC2ImportKeyPair request ) {
 		try {
-			CloudStackKeyPair resp = _api.registerSSHKeyPair(request.getKeyName(), request.getPublicKeyMaterial());
+			CloudStackKeyPair resp = getApi().registerSSHKeyPair(request.getKeyName(), request.getPublicKeyMaterial());
 			if (resp == null) {
 				throw new Exception("Ivalid CloudStack API response");
 			}
@@ -795,7 +722,7 @@ public class EC2Engine {
 	 */
 	public EC2DescribeAddressesResponse describeAddresses( EC2DescribeAddresses request ) {
 		try {
-			List<CloudStackIpAddress> addrList = _api.listPublicIpAddresses(null, null, null, null, null, null, null, null, null);
+			List<CloudStackIpAddress> addrList = getApi().listPublicIpAddresses(null, null, null, null, null, null, null, null, null);
 			EC2AddressFilterSet filterSet = request.getFilterSet();
 			List<EC2Address> addressList = new ArrayList<EC2Address>();
 
@@ -825,8 +752,8 @@ public class EC2Engine {
 	 */
 	public boolean releaseAddress(EC2ReleaseAddress request) {
 		try {
-			CloudStackIpAddress cloudIp = _api.listPublicIpAddresses(null, null, null, null, null, request.getPublicIp(), null, null, null).get(0);
-			CloudStackInfoResponse resp = _api.disassociateIpAddress(cloudIp.getId());
+			CloudStackIpAddress cloudIp = getApi().listPublicIpAddresses(null, null, null, null, null, request.getPublicIp(), null, null, null).get(0);
+			CloudStackInfoResponse resp = getApi().disassociateIpAddress(cloudIp.getId());
 			if (resp != null) {
 				return resp.getSuccess();
 			}
@@ -845,16 +772,16 @@ public class EC2Engine {
 	 */
 	public boolean associateAddress( EC2AssociateAddress request ) {
 		try {
-			CloudStackIpAddress cloudIp = _api.listPublicIpAddresses(null, null, null, null, null, request.getPublicIp(), null, null, null).get(0);
-			CloudStackUserVm cloudVm = _api.listVirtualMachines(null, null, null, null, null, null, new Long(request.getInstanceId()), null, null, null, null, null, null, null, null).get(0);
+			CloudStackIpAddress cloudIp = getApi().listPublicIpAddresses(null, null, null, null, null, request.getPublicIp(), null, null, null).get(0);
+			CloudStackUserVm cloudVm = getApi().listVirtualMachines(null, null, null, null, null, null, new Long(request.getInstanceId()), null, null, null, null, null, null, null, null).get(0);
 
-			CloudStackInfoResponse resp = _api.enableStaticNat(cloudIp.getId(), cloudVm.getId());
+			CloudStackInfoResponse resp = getApi().enableStaticNat(cloudIp.getId(), cloudVm.getId());
 			if (resp != null) {
 				return resp.getSuccess();
 			}
 		} catch(Exception e) {
 			logger.error( "EC2 AssociateAddress - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
 		}
 		return false;
 	}
@@ -867,14 +794,14 @@ public class EC2Engine {
 	 */
 	public boolean disassociateAddress( EC2DisassociateAddress request ) {
 		try {
-			CloudStackIpAddress cloudIp = _api.listPublicIpAddresses(null, null, null, null, null, request.getPublicIp(), null, null, null).get(0);
-			CloudStackInfoResponse resp = _api.disassociateIpAddress(cloudIp.getId());
+			CloudStackIpAddress cloudIp = getApi().listPublicIpAddresses(null, null, null, null, null, request.getPublicIp(), null, null, null).get(0);
+			CloudStackInfoResponse resp = getApi().disassociateIpAddress(cloudIp.getId());
 			if (resp != null) {
 				return resp.getSuccess();
 			}
 		} catch(Exception e) {
 			logger.error( "EC2 DisassociateAddress - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
 		}
 		return false;
 	}
@@ -888,7 +815,7 @@ public class EC2Engine {
 	public EC2Address allocateAddress()
 	{
 		try {
-			CloudStackIpAddress resp = _api.associateIpAddress(new Long(toZoneId(null)), null, null, null);
+			CloudStackIpAddress resp = getApi().associateIpAddress(toZoneId(null), null, null, null);
 			EC2Address ec2Address = new EC2Address();
 			ec2Address.setAssociatedInstanceId(resp.getId().toString());
 			ec2Address.setIpAddress(resp.getIpAddress());
@@ -896,7 +823,7 @@ public class EC2Engine {
 			return ec2Address;
 		} catch(Exception e) { 
 			logger.error( "EC2 AllocateAddress - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
 		}
 	}
 
@@ -922,13 +849,9 @@ public class EC2Engine {
 			}
 			return images;
 
-		} catch( EC2ServiceException error ) {
-			logger.error( "EC2 DescribeImages - ", error);
-			throw error;
-
 		} catch( Exception e ) {
 			logger.error( "EC2 DescribeImages - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, "An unexpected error occurred.");
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
 		}
 	}
 
@@ -957,7 +880,7 @@ public class EC2Engine {
 			// [A] Creating a template from a VM volume should be from the ROOT volume
 			//     Also for this to work the VM must be in a Stopped state so we 'reboot' it if its not
 			EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
-			volumes = listVolumes( null, Long.parseLong(request.getInstanceId()), volumes );
+			volumes = listVolumes( null, new Long(request.getInstanceId()), volumes );
 			EC2Volume[] volSet = volumes.getVolumeSet();
 			for (EC2Volume vol : volSet) {
 				if (vol.getType().equalsIgnoreCase( "ROOT" )) {
@@ -983,7 +906,7 @@ public class EC2Engine {
 			EC2Image[] imageSet = images.getImageSet();
 			String osTypeId = imageSet[0].getOsTypeId();
 			
-			CloudStackTemplate resp = _api.createTemplate((request.getDescription() == null ? "" : request.getDescription()), request.getName(), 
+			CloudStackTemplate resp = getApi().createTemplate((request.getDescription() == null ? "" : request.getDescription()), request.getName(), 
 					new Long(osTypeId), null, null, null, null, null, null, volumeId);
 			if (resp == null || resp.getId() == null) {
 				throw new EC2ServiceException(ServerError.InternalError, "An upexpected error occurred.");
@@ -999,7 +922,7 @@ public class EC2Engine {
 
 		} catch( Exception e ) {
 			logger.error( "EC2 CreateImage - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
 		}
 	}
 
@@ -1016,7 +939,7 @@ public class EC2Engine {
 					null == request.getLocation() || null == request.getZoneName())
 				throw new EC2ServiceException(ServerError.InternalError, "Missing parameter - location/architecture/name");
 
-			CloudStackTemplate resp = _api.registerTemplate((request.getDescription() == null ? request.getName() : request.getDescription()), 
+			CloudStackTemplate resp = getApi().registerTemplate((request.getDescription() == null ? request.getName() : request.getDescription()), 
 					request.getFormat(), null, request.getName(), toOSTypeId(request.getOsTypeName()), request.getLocation(), 
 					toZoneId(request.getZoneName()), null, null, null, null, null, null, null, null, null);
 			if (resp != null && resp.getId() != null) {
@@ -1027,7 +950,7 @@ public class EC2Engine {
 			return null;
 		} catch( Exception e ) {
 			logger.error( "EC2 RegisterImage - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
 		}
 	}
 
@@ -1042,11 +965,11 @@ public class EC2Engine {
 	public boolean deregisterImage( EC2Image image ) 
 	{
 		try {
-			CloudStackInfoResponse resp = _api.deleteTemplate(new Long(image.getId()), null);
+			CloudStackInfoResponse resp = getApi().deleteTemplate(new Long(image.getId()), null);
 			return resp.getSuccess();
 		} catch( Exception e ) {
 			logger.error( "EC2 DeregisterImage - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+			throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
 		}
 	}
 
@@ -1058,6 +981,8 @@ public class EC2Engine {
 	 */
 	public EC2DescribeInstancesResponse describeInstances(EC2DescribeInstances request ) {
 		try {
+			logger.info("Access Key: " + UserContext.current().getAccessKey());
+			logger.info("Secret Key: " + UserContext.current().getSecretKey());
 			return listVirtualMachines( request.getInstancesSet(), request.getFilterSet()); 
 		} catch( EC2ServiceException error ) {
 			logger.error( "EC2 DescribeInstances - ", error);
@@ -1105,7 +1030,7 @@ public class EC2Engine {
 				volumes = listVolumes( null, null, volumes );
 			} else {     
 				for (String s : volumeIds) 
-					volumes = listVolumes(Long.parseLong(s), null, volumes );
+					volumes = listVolumes(new Long(s), null, volumes );
 			}
 
 			if ( null == vfs )
@@ -1128,7 +1053,7 @@ public class EC2Engine {
 			request.setDeviceId( mapDeviceToCloudDeviceId(request.getDevice()));
 			EC2Volume resp = new EC2Volume();
 			
-			CloudStackVolume vol = _api.attachVolume(new Long(request.getId()), new Long(request.getInstanceId()), request.getDeviceId().longValue());
+			CloudStackVolume vol = getApi().attachVolume(new Long(request.getId()), new Long(request.getInstanceId()), request.getDeviceId().longValue());
 			if(vol != null) {
 				resp.setAttached(vol.getAttached());
 				resp.setCreated(vol.getCreated());
@@ -1160,7 +1085,7 @@ public class EC2Engine {
 	 */
 	public EC2Volume detachVolume(EC2Volume request) {
 		try {
-			CloudStackVolume vol = _api.detachVolume(null, request.getId(), null);
+			CloudStackVolume vol = getApi().detachVolume(null, request.getId(), null);
 			EC2Volume resp = new EC2Volume();
 						
 			if(vol != null) {
@@ -1201,19 +1126,17 @@ public class EC2Engine {
 			Long diskOfferingId = null;
 
 			if (snapshotId == null) {
-				DiskOfferings findDisk = listDiskOfferings(); 
-				DiskOffer[] offerSet   = findDisk.getOfferSet();
-				for (DiskOffer offer : offerSet) {
-					if (offer.getIsCustomized()) {
-						diskOfferingId = Long.parseLong(offer.getId());
-						break;
-					} 	   		    		  
+				List<CloudStackDiskOffering> disks = getApi().listDiskOfferings(null, null, null, null);
+				for (CloudStackDiskOffering offer : disks) {
+					if (offer.isCustomized()) {
+						diskOfferingId = offer.getId();
+					}
 				}
 				if (diskOfferingId == null) throw new EC2ServiceException(ServerError.InternalError, "No Customize Disk Offering Found");
 			}
 
 //			// -> no volume name is given in the Amazon request but is required in the cloud API
-			CloudStackVolume vol = _api.createVolume(UUID.randomUUID().toString(), null, new Long(diskOfferingId), null, size, snapshotId, toZoneId(request.getZoneName()));
+			CloudStackVolume vol = getApi().createVolume(UUID.randomUUID().toString(), null, new Long(diskOfferingId), null, size, snapshotId, toZoneId(request.getZoneName()));
 			if (vol != null) {
 				EC2Volume resp = new EC2Volume();
 				resp.setAttached(vol.getAttached());
@@ -1246,7 +1169,7 @@ public class EC2Engine {
 	 */
 	public EC2Volume deleteVolume( EC2Volume request ) {
 		try {
-			CloudStackInfoResponse resp = _api.deleteVolume(request.getId());
+			CloudStackInfoResponse resp = getApi().deleteVolume(request.getId());
 			if(resp != null) {
 				request.setState("deleted");
 				return request;
@@ -1279,7 +1202,7 @@ public class EC2Engine {
 			for (EC2Instance vm : vms) {
 				if (vm.getState().equalsIgnoreCase( "Destroyed" )) continue;
 				
-				CloudStackUserVm resp = _api.rebootVirtualMachine(Long.parseLong(vm.getId()));
+				CloudStackUserVm resp = getApi().rebootVirtualMachine(new Long(vm.getId()));
 				if (logger.isDebugEnabled())
 					logger.debug("Rebooting VM " + resp.getId() + " job " + resp.getJobId());
 			}
@@ -1329,10 +1252,10 @@ public class EC2Engine {
 			Long zoneId = toZoneId(request.getZoneName());
 
 			
-			List<CloudStackZone> zones = _api.listZones(null, null, zoneId, null);
-			if (zones == null || zones.size() > 0) {
-				logger.info("EC2 RunInstances - zone " + request.getZoneName() + " not found!");
-				throw new EC2ServiceException(ClientError.InvalidZone_NotFound, "ZoneId " + request.getZoneName() + " not found!");
+			List<CloudStackZone> zones = getApi().listZones(null, null, zoneId, null);
+			if (zones == null || zones.size() == 0) {
+				logger.info("EC2 RunInstances - zone [" + request.getZoneName() + "] not found!");
+				throw new EC2ServiceException(ClientError.InvalidZone_NotFound, "ZoneId [" + request.getZoneName() + "] not found!");
 			}
 			CloudStackZone zone = zones.get(0);
 
@@ -1341,8 +1264,8 @@ public class EC2Engine {
 
 			// now actually deploy the vms
 			for( int i=0; i < createInstances; i++ ) {
-				CloudStackUserVm resp = _api.deployVirtualMachine(Long.parseLong(offer.getServiceOfferingId()), 
-						Long.parseLong(request.getTemplateId()), zoneId, null, null, null, null, 
+				CloudStackUserVm resp = getApi().deployVirtualMachine(new Long(offer.getServiceOfferingId()), 
+						new Long(request.getTemplateId()), zoneId, null, null, null, null, 
 						null, null, null, request.getKeyName(), null, (network != null ? network.getId() : null), 
 						null, null, request.getSize().longValue(), request.getUserData());
 				EC2Instance vm = new EC2Instance();
@@ -1400,7 +1323,7 @@ public class EC2Engine {
 				// -> if its already running then we don't care
 				if (vm.getState().equalsIgnoreCase( "Running" ) || vm.getState().equalsIgnoreCase( "Destroyed" )) continue;
 
-				CloudStackUserVm resp = _api.startVirtualMachine(Long.parseLong(vm.getId()));
+				CloudStackUserVm resp = getApi().startVirtualMachine(new Long(vm.getId()));
 				
 				if(logger.isDebugEnabled())
 					logger.debug("Starting VM " + vm.getId() + " job " + resp.getJobId());
@@ -1436,12 +1359,12 @@ public class EC2Engine {
 				CloudStackUserVm resp = null;
 				if (request.getDestroyInstances()) {
 					if (vm.getState().equalsIgnoreCase( "Destroyed" )) continue;
-					resp = _api.destroyVirtualMachine(Long.parseLong(vm.getId()));
+					resp = getApi().destroyVirtualMachine(new Long(vm.getId()));
 					if(logger.isDebugEnabled())
 						logger.debug("Destroying VM " + vm.getId() + " job " + resp.getJobId());
 				} else {
 					if (vm.getState().equalsIgnoreCase("Stopped") || vm.getState().equalsIgnoreCase("Destroyed")) continue;
-					resp = _api.stopVirtualMachine(Long.parseLong(vm.getId()), false);
+					resp = getApi().stopVirtualMachine(new Long(vm.getId()), false);
 					if(logger.isDebugEnabled())
 						logger.debug("Stopping VM " + vm.getId() + " job " + resp.getJobId());
 				}
@@ -1467,7 +1390,7 @@ public class EC2Engine {
 
 		// -> get the user limits on instances
 		
-		List<CloudStackResourceLimit> limits = _api.listResourceLimits(null, null, null, null, "0");
+		List<CloudStackResourceLimit> limits = getApi().listResourceLimits(null, null, null, null, "0");
 		if (limits != null && limits.size() > 0) {
 			maxAllowed = (int)limits.get(0).getMax().longValue();
 			if (maxAllowed == -1) 
@@ -1512,7 +1435,7 @@ public class EC2Engine {
 	 */
 	private EC2DescribeVolumesResponse listVolumes(Long volumeId, Long instanceId, EC2DescribeVolumesResponse volumes)throws Exception {
 
-		List<CloudStackVolume> vols = _api.listVolumes(null, null, null, volumeId, null, null, null, null, null, instanceId, null);
+		List<CloudStackVolume> vols = getApi().listVolumes(null, null, null, volumeId, null, null, null, null, null, instanceId, null);
 		if(vols != null && vols.size() > 0) {
 			for(CloudStackVolume vol : vols) {
 				EC2Volume ec2Vol = new EC2Volume();
@@ -1625,7 +1548,7 @@ public class EC2Engine {
 	 */
 	private Long toOSTypeId( String osTypeName ) throws Exception { 
 		try {
-			List<CloudStackOsType> osTypes = _api.listOsTypes(null, null, null);
+			List<CloudStackOsType> osTypes = getApi().listOsTypes(null, null, null);
 			for (CloudStackOsType osType : osTypes) {
 				if (osType.getDescription().indexOf(osTypeName) != -1)
 					return osType.getId();
@@ -1650,7 +1573,7 @@ public class EC2Engine {
 	{    
 		EC2DescribeAvailabilityZonesResponse zones = new EC2DescribeAvailabilityZonesResponse();
 
-		List<CloudStackZone> cloudZones = _api.listZones(true, null, null, null);
+		List<CloudStackZone> cloudZones = getApi().listZones(true, null, null, null);
 
 		if(cloudZones != null) {
 			for(CloudStackZone cloudZone : cloudZones) {
@@ -1683,9 +1606,9 @@ public class EC2Engine {
 	private EC2DescribeInstancesResponse lookupInstances( String instanceId, EC2DescribeInstancesResponse instances ) 
 			throws Exception {
 
-		
-		List<CloudStackUserVm> vms = _api.listVirtualMachines(null, null, null, null, null, null, 
-				Long.parseLong(instanceId), null, null, null, null, null, null, null, null);
+		Long instId = instanceId != null ? new Long(instanceId) : null;
+		List<CloudStackUserVm> vms = getApi().listVirtualMachines(null, null, null, null, null, null, 
+				instId, null, null, null, null, null, null, null, null);
 		for(CloudStackUserVm cloudVm : vms) {
 			EC2Instance ec2Vm = new EC2Instance();
 
@@ -1729,7 +1652,7 @@ public class EC2Engine {
 	 */
 	private EC2DescribeImagesResponse listTemplates( String templateId, EC2DescribeImagesResponse images ) throws EC2ServiceException {
 		try {
-			List<CloudStackTemplate> resp = _api.listTemplates("executable", null, null, null, Long.parseLong(templateId), null, null, null); 
+			List<CloudStackTemplate> resp = getApi().listTemplates("executable", null, null, null, templateId != null ? new Long(templateId) : null, null, null, null); 
 			for (CloudStackTemplate temp : resp) {
 				EC2Image ec2Image = new EC2Image();
 				ec2Image.setId(temp.getId().toString());
@@ -1745,32 +1668,6 @@ public class EC2Engine {
 			return images;
 		} catch(Exception e) {
 			logger.error( "List Templates - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
-		}
-	}
-
-	/**
-	 * list of disk offerings available 
-	 * 
-	 * @return
-	 * @throws EC2ServiceException
-	 */
-	private DiskOfferings listDiskOfferings() throws EC2ServiceException {
-		try {
-			List<CloudStackDiskOffering> disks = _api.listDiskOfferings(null, null, null, null);
-			DiskOfferings offerings = new DiskOfferings();
-			for (CloudStackDiskOffering disk : disks) {
-				DiskOffer df = new DiskOffer();
-				df.setId(disk.getId().toString());
-				df.setCreated(disk.getCreated());
-				df.setIsCustomized(disk.isCustomized());
-				df.setName(disk.getName());
-				df.setSize(disk.getDiskSize().toString());
-				offerings.addOffer(df);
-			}
-			return offerings;
-		} catch(Exception e) {
-			logger.error( "Disk Offerings - ", e);
 			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
 		}
 	}
@@ -1794,7 +1691,7 @@ public class EC2Engine {
 		try {
 			EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
 			
-			List<CloudStackSecurityGroup> groups = _api.listSecurityGroups(null, null, null, null, null, null);
+			List<CloudStackSecurityGroup> groups = getApi().listSecurityGroups(null, null, null, null, null, null);
 			
 			for (CloudStackSecurityGroup group : groups) {
 				boolean matched = false;
@@ -1868,9 +1765,9 @@ public class EC2Engine {
 	 * @return
 	 * @throws Exception
 	 */
-	private CloudStackAccount currentAccount() throws Exception {
+	private CloudStackAccount getCurrentAccount() throws Exception {
 		if (currentAccount != null) {
-			List<CloudStackAccount> accounts = _api.listAccounts(null, null, null, null, null, null, null, null);
+			List<CloudStackAccount> accounts = getApi().listAccounts(null, null, null, null, null, null, null, null);
 			for (CloudStackAccount account : accounts) {
 				CloudStackUser[] users = account.getUser();
 				for (CloudStackUser user : users) {
@@ -1892,7 +1789,7 @@ public class EC2Engine {
 	 * @throws Exception
 	 */
 	private CloudStackNetwork getNetworksWithSecurityGroupEnabled(Long zoneId) throws Exception {
-		List<CloudStackNetwork> networks = _api.listNetworks(null, null, null, null, null, null, null, null, null, zoneId);
+		List<CloudStackNetwork> networks = getApi().listNetworks(null, null, null, null, null, null, null, null, null, zoneId);
 		List<CloudStackNetwork> netWithSecGroup = new ArrayList<CloudStackNetwork>();
 		for (CloudStackNetwork network : networks ) {
 			if (!network.getNetworkOfferingAvailability().equalsIgnoreCase("unavailable") && network.getSecurityGroupEnabled()) 
@@ -1912,7 +1809,7 @@ public class EC2Engine {
 	 * @throws Exception
 	 */
 	private CloudStackNetwork createNetwork(Long zoneId, CloudStackNetworkOffering offering, CloudStackAccount owner) throws Exception {
-		return _api.createNetwork(owner.getName() + "-network", owner.getName() + "-network",  offering.getId(), zoneId, owner.getName(), 
+		return getApi().createNetwork(owner.getName() + "-network", owner.getName() + "-network",  offering.getId(), zoneId, owner.getName(), 
 				null, null, null, null, null, null, null, null, null, null);
 	}
 
@@ -1925,18 +1822,18 @@ public class EC2Engine {
 	 */
 	private CloudStackNetwork getNetworksWithoutSecurityGroupEnabled(Long zoneId) throws Exception {
 		// grab current account
-		CloudStackAccount caller = currentAccount();
+		CloudStackAccount caller = getCurrentAccount();
 
-		List<CloudStackNetwork> networks = _api.listNetworks(null, null, null, null, null, null, null, null, null, zoneId);
+		List<CloudStackNetwork> networks = getApi().listNetworks(null, null, null, null, null, null, null, null, null, zoneId);
 		
-		List<CloudStackNetworkOffering> offerings = _api.listNetworkOfferings("Required", null, "virtual", null, true,  null, null, null, null, null, zoneId); 
+		List<CloudStackNetworkOffering> offerings = getApi().listNetworkOfferings("Required", null, "virtual", null, true,  null, null, null, null, null, zoneId); 
 		if (offerings != null && !offerings.isEmpty()) {
 			for (CloudStackNetwork network : networks) 
 				for (CloudStackNetworkOffering offering : offerings) 
 					if (network.getNetworkOfferingId().equals(offering.getId())) 
 						return network;
 		}
-		offerings = _api.listNetworkOfferings("Optional", null, null, null, true, null, null, null, null, null, zoneId);
+		offerings = getApi().listNetworkOfferings("Optional", null, null, null, true, null, null, null, null, null, zoneId);
 		if (offerings != null && !offerings.isEmpty()) {
 			for (CloudStackNetwork network : networks) 
 				for (CloudStackNetworkOffering offering : offerings) 
@@ -2076,7 +1973,7 @@ public class EC2Engine {
 	 */
 	private boolean stopVirtualMachine( String instanceId) throws Exception {
 		try {
-			CloudStackUserVm resp = _api.stopVirtualMachine(Long.parseLong(instanceId), false);
+			CloudStackUserVm resp = getApi().stopVirtualMachine(new Long(instanceId), false);
 			if (logger.isDebugEnabled())
 				logger.debug("Stopping VM " + instanceId );
 			return resp != null;
@@ -2095,7 +1992,7 @@ public class EC2Engine {
 	 */
 	private boolean startVirtualMachine( String instanceId ) throws Exception {
 		try {
-			CloudStackUserVm resp = _api.startVirtualMachine(Long.parseLong(instanceId));
+			CloudStackUserVm resp = getApi().startVirtualMachine( new Long(instanceId));
 			if (logger.isDebugEnabled())
 				logger.debug("Starting VM " + instanceId );
 			return resp != null;
