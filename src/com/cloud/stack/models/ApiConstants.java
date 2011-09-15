@@ -53,6 +53,7 @@ public class ApiConstants {
     public static final String CIDR = "cidr";
     public static final String CIDR_LIST = "cidrlist";
     public static final String CLEANUP = "cleanup";
+    public static final String CLOUD_IDENTIFIER = "cloudidentifier";
     public static final String CLOUD_STACK_VERSION = "cloudstackversion";
     public static final String CLUSTER_ID = "clusterid";
     public static final String CLUSTER_NAME = "clustername";
@@ -310,7 +311,7 @@ public class ApiConstants {
     public static final String NETWORK_DOMAIN = "networkdomain";
     public static final String NETWORK_ID = "networkid";
     public static final String NETWORK_IDS = "networkids";
-    public static final String NETWORK_KBS_READ = "networkkbsread";
+	public static final String NETWORK_KBS_READ = "networkkbsread";
 	public static final String NETWORK_KBS_WRITE = "networkkbswrite";
 	public static final String NETWORK_OFFERING = "networkoffering";
 	public static final String NETWORK_OFFERING_AVAILABILITY = "networkofferingavailability";
@@ -376,7 +377,10 @@ public class ApiConstants {
 	public static final String REQUIRES_HVM = "requireshvm";
 	public static final String RESET_PASSWORD_FOR_VIRTUAL_MACHINE = "resetPasswordForVirtualMachine";
 	public static final String RESET_PASSWORD_FOR_VIRTUAL_MACHINE_RESPONSE = "resetpasswordforvirtualmachineresponse";
+	public static final String RESOURCE_LIMIT = "resourcelimit";
 	public static final String RESOURCE_TYPE = "resourcetype";
+	public static final String RESTART_NETWORK = "restartNetwork";
+	public static final String RESTART_NETWORK_RESPONSE = "restartnetworkresponse";
 	public static final String REVOKE_SECURITY_GROUP_INGRESS = "revokeSecurityGroupIngress";
 	public static final String REVOKE_SECURITY_GROUP_INGRESS_RESPONSE = "revokesecuritygroupingressresponse";
 	public static final String ROOT_DEVICE_ID = "rootdeviceid";
@@ -399,6 +403,7 @@ public class ApiConstants {
 	public static final String SERVICE_OFFERING_DISPLAY_TEXT = "serviceofferingdisplaytext";
 	public static final String SERVICE_OFFERING_ID = "serviceofferingid";
 	public static final String SERVICE_OFFERING_NAME = "serviceofferingname";
+	public static final String SIGNATURE = "signature";
 	public static final String SIZE = "size";
 	public static final String SNAPSHOT = "snapshot";
 	public static final String SNAPSHOT_AVAILABLE = "snapshotavailable";
@@ -492,14 +497,9 @@ public class ApiConstants {
 	public static final String VOLUME_NAME = "volumename";
 	public static final String VOLUME_TOTAL = "volumetotal";
 	public static final String VOLUME_TYPE = "volumetype";
+	public static final String ZONE = "zone";
 	public static final String ZONE_ID = "zoneid";
 	public static final String ZONE_NAME = "zonename";
 	public static final String ZONE_TOKEN = "zoneToken";
-	public static final String RESTART_NETWORK = "restartNetwork";
-	public static final String RESTART_NETWORK_RESPONSE = "restartnetworkresponse";
-	public static final String ZONE = "zone";
-	public static final String RESOURCE_LIMIT = "resourcelimit";
-	public static final String CLOUD_IDENTIFIER = "cloudidentifier";
-	public static final String SIGNATURE = "signature";
 	
 }

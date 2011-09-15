@@ -83,9 +83,9 @@ public class ServiceProvider {
 
 	protected ServiceProvider() throws IOException {
 		// register service implementation object
-//		engine = new S3Engine();
+		engine = new S3Engine();
 		EC2_engine = new EC2Engine();
-		//    	serviceMap.put(AmazonS3SkeletonInterface.class, new S3SoapServiceImpl(engine));
+		serviceMap.put(AmazonS3SkeletonInterface.class, new S3SoapServiceImpl(engine));
 		serviceMap.put(AmazonEC2SkeletonInterface.class, new EC2SoapServiceImpl(EC2_engine));
 	}
 

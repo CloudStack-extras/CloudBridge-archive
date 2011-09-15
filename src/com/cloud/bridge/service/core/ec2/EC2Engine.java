@@ -28,11 +28,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
 import org.apache.log4j.Logger;
-import org.xml.sax.SAXException;
 
 import com.cloud.bridge.persist.dao.OfferingDao;
 import com.cloud.bridge.service.UserContext;
@@ -69,18 +65,13 @@ import com.cloud.stack.models.CloudStackZone;
  */
 public class EC2Engine {
 	protected final static Logger logger = Logger.getLogger(EC2Engine.class);
-	private DocumentBuilderFactory dbf = null;
 	String managementServer = null;
 	String cloudAPIPort = null;
 
 	private CloudStackAccount currentAccount = null;
-
 	private CloudStackApi _eng = null;
 
 	public EC2Engine() throws IOException {
-		dbf = DocumentBuilderFactory.newInstance();
-		dbf.setNamespaceAware( true );
-
 		loadConfigValues();
 	}
 
@@ -105,15 +96,6 @@ public class EC2Engine {
 			}
 			managementServer = EC2Prop.getProperty( "managementServer" );
 			cloudAPIPort = EC2Prop.getProperty( "cloudAPIPort", null );
-
-			
-//			logger.info("Access Key: " + UserContext.current().getAccessKey());
-//			logger.info("Secret Key: " + UserContext.current().getSecretKey());
-			
-//			if (getApi() != null) {
-//				getApi().setApiKey(UserContext.current().getAccessKey());
-//				getApi().setSecretKey(UserContext.current().getSecretKey());
-//			}
 			
 			OfferingDao ofDao = new OfferingDao();
 			try {
@@ -151,6 +133,11 @@ public class EC2Engine {
 		} else logger.error( "ec2-service.properties not found" );
 	}
 	
+	/**
+	 * Helper function to manage the api connection
+	 * 
+	 * @return
+	 */
 	private CloudStackApi getApi() {
 		if (_eng == null) {
 			_eng = new CloudStackApi(managementServer, cloudAPIPort != null ? Integer.parseInt(cloudAPIPort) : 80, false);
@@ -981,13 +968,7 @@ public class EC2Engine {
 	 */
 	public EC2DescribeInstancesResponse describeInstances(EC2DescribeInstances request ) {
 		try {
-			logger.info("Access Key: " + UserContext.current().getAccessKey());
-			logger.info("Secret Key: " + UserContext.current().getSecretKey());
 			return listVirtualMachines( request.getInstancesSet(), request.getFilterSet()); 
-		} catch( EC2ServiceException error ) {
-			logger.error( "EC2 DescribeInstances - ", error);
-			throw error;
-
 		} catch( Exception e ) {
 			logger.error( "EC2 DescribeInstances - " ,e);
 			throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
@@ -1685,9 +1666,7 @@ public class EC2Engine {
 	 * @throws ParserConfigurationException
 	 * @throws ParseException
 	 */
-	public EC2DescribeSecurityGroupsResponse listSecurityGroups( String[] interestedGroups ) 
-			throws EC2ServiceException, UnsupportedEncodingException, SignatureException, IOException, SAXException, ParserConfigurationException, ParseException 
-			{
+	public EC2DescribeSecurityGroupsResponse listSecurityGroups( String[] interestedGroups ) throws Exception {
 		try {
 			EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
 			

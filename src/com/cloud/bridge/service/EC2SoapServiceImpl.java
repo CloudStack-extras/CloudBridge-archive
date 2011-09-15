@@ -93,7 +93,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	public AttachVolumeResponse attachVolume(AttachVolume attachVolume) {
 		EC2Volume request = new EC2Volume();
 		AttachVolumeType avt = attachVolume.getAttachVolume();
-
+		
 		request.setId( new Long(avt.getVolumeId()));
 		request.setInstanceId( new Long(avt.getInstanceId()));
 		request.setDevice( avt.getDevice());
@@ -182,7 +182,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		CreateVolumeType cvt = createVolume.getCreateVolume();
 		
 		request.setSize( cvt.getSize());
-		request.setSnapshotId( new Long(cvt.getSnapshotId()));
+		request.setSnapshotId(cvt.getSnapshotId() != null ? new Long(cvt.getSnapshotId()) : null);
 		request.setZoneName( cvt.getAvailabilityZone());
 		return toCreateVolumeResponse( engine.createVolume( request ));
 	}
@@ -991,10 +991,10 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 			DescribeVolumesSetItemResponseType param3 = new DescribeVolumesSetItemResponseType();
 	        param3.setVolumeId( vol.getId().toString());
 	        
-	        Long volSize = new Long( vol.getSize());
-	        param3.setSize( volSize.toString());  
-	        String snapId = vol.getSnapshotId().toString();
-	        param3.setSnapshotId((null == snapId ? "" : snapId));
+	        Long volSize = new Long(vol.getSize());
+	        param3.setSize(volSize.toString());  
+	        String snapId = vol.getSnapshotId() != null ? vol.getSnapshotId().toString() : "";
+	        param3.setSnapshotId(snapId);
 	        param3.setAvailabilityZone( vol.getZoneName());
 	        param3.setStatus( vol.getState());
 	        
@@ -1007,8 +1007,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        param3.setCreateTime( cal );
 	        
 	        AttachmentSetResponseType param4 = new AttachmentSetResponseType();
-	        if (null != vol.getInstanceId()) 
-	        {
+	        if (null != vol.getInstanceId()) {
 	        	AttachmentSetItemResponseType param5 = new AttachmentSetItemResponseType();
 	        	param5.setVolumeId(vol.getId().toString());
 	        	param5.setInstanceId(vol.getInstanceId().toString());
@@ -1521,8 +1520,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	public static AttachVolumeResponse toAttachVolumeResponse(EC2Volume engineResponse) {
 		AttachVolumeResponse response = new AttachVolumeResponse();
 		AttachVolumeResponseType param1 = new AttachVolumeResponseType();
+		
 	    Calendar cal = Calendar.getInstance();
-	    cal.set( 1970, 1, 1 );   // return one value, Unix Epoch, what else can we return? 
 		
 	    // -> if the instanceId was not given in the request then we have no way to get it
 		param1.setVolumeId( engineResponse.getId().toString());
@@ -1576,7 +1575,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
         Calendar cal = EC2RestAuth.parseDateString(engineResponse.getCreated());
         if ( null == cal ) {
         	 cal = Calendar.getInstance();
-        	 cal.set( 1970, 1, 1 );
+//        	 cal.set( 1970, 1, 1 );
         }
 		param1.setCreateTime( cal );
 
