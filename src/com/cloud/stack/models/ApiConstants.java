@@ -500,6 +500,6 @@ public class ApiConstants {
 	public static final String ZONE = "zone";
 	public static final String ZONE_ID = "zoneid";
 	public static final String ZONE_NAME = "zonename";
-	public static final String ZONE_TOKEN = "zoneToken";
+	public static final String ZONE_TOKEN = "zonetoken";
 	
 }

@@ -1061,16 +1061,17 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    DescribeInstancesResponse response = new DescribeInstancesResponse();
 	    DescribeInstancesResponseType param1 = new DescribeInstancesResponseType();
 	    ReservationSetType param2 = new ReservationSetType();
-
+	    
 		EC2Instance[] instances = engineResponse.getInstanceSet();
 		
 		for (EC2Instance inst:instances) {
 			String accountName = inst.getAccountName();
 			String domainId = inst.getDomainId();
 			String ownerId = domainId + ":" + accountName;
-		
+			
 			ReservationInfoType param3 = new ReservationInfoType();
-	        param3.setReservationId( inst.getId());   // -> an id we could track down if needed
+			
+			param3.setReservationId( inst.getId());   // -> an id we could track down if needed
 	        param3.setOwnerId(ownerId);
 	        param3.setRequesterId( "" );
 	        
@@ -1082,6 +1083,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        
 	        RunningInstancesSetType  param6 = new RunningInstancesSetType();
 	        RunningInstancesItemType param7 = new RunningInstancesItemType();
+
 	        param7.setInstanceId( inst.getId());
 	        param7.setImageId( inst.getTemplateId());
 	        
@@ -1106,7 +1108,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        Calendar cal = inst.getCreated();
 	        if ( null == cal ) {
 	        	 cal = Calendar.getInstance();
-	        	 cal.set( 1970, 1, 1 );
+//	        	 cal.set( 1970, 1, 1 );
 	        }
 	        param7.setLaunchTime( cal );
 	        
@@ -1123,8 +1125,9 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
             param7.setMonitoring( param12 );
             param7.setSubnetId( "" );
             param7.setVpcId( "" );
-            String ipAddr = inst.getPrivateIpAddress();
-            param7.setPrivateIpAddress((null != ipAddr ? ipAddr : ""));
+//            String ipAddr = inst.getPrivateIpAddress();
+//            param7.setPrivateIpAddress((null != ipAddr ? ipAddr : ""));
+            param7.setPrivateIpAddress(inst.getIpAddress());
 	        param7.setIpAddress( inst.getIpAddress());
 	        
 	        StateReasonType param13 = new StateReasonType();

@@ -29,8 +29,6 @@ import javax.activation.DataSource;
 
 import org.apache.log4j.Logger;
 
-import com.cloud.bridge.model.SObject;
-import com.cloud.bridge.model.SObjectItem;
 import com.cloud.bridge.service.core.s3.S3MultipartPart;
 import com.cloud.bridge.service.exception.FileNotExistException;
 import com.cloud.bridge.service.exception.InternalErrorException;
