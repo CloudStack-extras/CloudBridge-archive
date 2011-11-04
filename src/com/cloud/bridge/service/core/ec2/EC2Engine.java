@@ -158,13 +158,21 @@ public class EC2Engine {
 	 */
 	public boolean validateAccount( String accessKey, String secretKey ) throws EC2ServiceException {
 		try {
-			String oldApiKey = getApi().getApiKey(); 
+			String oldApiKey = null;
+			String oldSecretKey = null;
+			try {
+				oldApiKey = getApi().getApiKey(); 
+				oldSecretKey = getApi().getSecretKey();
+			} catch(Exception e) {
+				// we really don't care, and expect this
+			}
 			getApi().setApiKey(accessKey);
-			String oldSecretKey = getApi().getSecretKey();
 			getApi().setSecretKey(secretKey);
 			List<CloudStackAccount> accts = getApi().listAccounts(null, null, null, null, null, null, null, null);
-			getApi().setApiKey(oldApiKey);
-			getApi().setSecretKey(oldSecretKey);
+			if (oldApiKey == null && oldSecretKey == null) {
+				getApi().setApiKey(oldApiKey);
+				getApi().setSecretKey(oldSecretKey);
+			}
 			if (accts == null) {
 				return false;
 			}

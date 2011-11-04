@@ -136,7 +136,10 @@ public class CloudStackCommand {
    
     private String urlSafe(String value) {
     	try {
-			return URLEncoder.encode(value, "UTF-8").replaceAll("\\+", "%20");
+    		if (value != null)
+    			return URLEncoder.encode(value, "UTF-8").replaceAll("\\+", "%20");
+    		else 
+    			return null;
 		} catch (UnsupportedEncodingException e) {
 			assert(false);
 		}
