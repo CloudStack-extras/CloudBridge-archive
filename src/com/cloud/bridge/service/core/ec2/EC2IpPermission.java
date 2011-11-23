@@ -36,8 +36,8 @@ public class EC2IpPermission {
 		ruleId   = null;
 		icmpCode = null;
 		icmpType = null;
-		fromPort = 0;
-		toPort   = 0;
+		fromPort = null;
+		toPort   = null;
 	}
 	
 	public void setProtocol( String protocol ) {
@@ -85,7 +85,10 @@ public class EC2IpPermission {
 	}
 	
 	public Integer getFromPort() {
-		return this.fromPort;
+		if (this.fromPort == null)
+			return new Integer(0);
+		else 
+			return this.fromPort;
 	}
 	
 	public void setToPort( Integer toPort ) {
@@ -93,7 +96,10 @@ public class EC2IpPermission {
 	}
 
 	public Integer getToPort() {
-		return this.toPort;
+		if (this.toPort == null)
+			return new Integer(0);
+		else
+			return this.toPort;	
 	}
 	
 	public void addUser( EC2SecurityGroup param ) {

@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.Logger;
 
 import com.amazon.ec2.*;
 import com.cloud.bridge.service.core.ec2.EC2Address;
@@ -81,7 +80,6 @@ import com.cloud.bridge.util.EC2RestAuth;
 
 
 public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
-    protected final static Logger logger = Logger.getLogger(EC2SoapServiceImpl.class);
 
     private static EC2Engine engine;
     
@@ -1738,6 +1736,10 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 					param5.setIpRanges(param6);
 				} else {
 					for (String range : rangeSet) {
+						// TODO: This needs further attention...
+						if (range == null) {
+							range = "";
+						}
 						IpRangeSetType param6 = new IpRangeSetType();
 						IpRangeItemType param7 = new IpRangeItemType();
 						param7.setCidrIp(range);

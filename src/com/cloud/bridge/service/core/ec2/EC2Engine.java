@@ -169,7 +169,7 @@ public class EC2Engine {
 			getApi().setApiKey(accessKey);
 			getApi().setSecretKey(secretKey);
 			List<CloudStackAccount> accts = getApi().listAccounts(null, null, null, null, null, null, null, null);
-			if (oldApiKey == null && oldSecretKey == null) {
+			if (oldApiKey != null && oldSecretKey != null) {
 				getApi().setApiKey(oldApiKey);
 				getApi().setSecretKey(oldSecretKey);
 			}
@@ -598,40 +598,39 @@ public class EC2Engine {
 		try {
 			EC2KeyPairFilterSet filterSet = request.getKeyFilterSet();
 			String[] keyNames = request.getKeyNames();
-
 			List<CloudStackKeyPair> keyPairs = getApi().listSSHKeyPairs(null, null, null);
-
-			// Let's trim the list of keypairs to only the ones listed in keyNames
-			if (keyPairs != null && keyNames != null && keyNames.length > 0) {
-				for (CloudStackKeyPair keyPair : keyPairs) {
-					boolean matched = false;
-					for (String keyName : keyNames) {
-						if (keyPair.getName().contains(keyName)) {
-							matched = true;
-							break;
+			List<EC2SSHKeyPair> keyPairsList = new ArrayList<EC2SSHKeyPair>();
+	
+			if (keyPairs != null) {
+				// Let's trim the list of keypairs to only the ones listed in keyNames
+				if (keyNames != null && keyNames.length > 0) {
+					for (CloudStackKeyPair keyPair : keyPairs) {
+						boolean matched = false;
+						for (String keyName : keyNames) {
+							if (keyPair.getName().contains(keyName)) {
+								matched = true;
+								break;
+							}
+						}
+						if (matched == false) {
+							keyPairs.remove(keyPair);
 						}
 					}
-					if (matched == false) {
-						keyPairs.remove(keyPair);
-					}
+				}
+	
+				if (keyPairs.isEmpty() == true) {
+					throw new EC2ServiceException(ServerError.InternalError, "No keypairs left!");
+				}
+	
+				// this should be reworked... converting from CloudStackKeyPairResponse to EC2SSHKeyPair is dumb
+				for (CloudStackKeyPair respKeyPair: keyPairs) {
+					EC2SSHKeyPair ec2KeyPair = new EC2SSHKeyPair();
+					ec2KeyPair.setFingerprint(respKeyPair.getFingerprint());
+					ec2KeyPair.setKeyName(respKeyPair.getName());
+					ec2KeyPair.setPrivateKey(respKeyPair.getPrivatekey());
+					keyPairsList.add(ec2KeyPair);
 				}
 			}
-
-			if (keyPairs.isEmpty() == true) {
-				throw new EC2ServiceException(ServerError.InternalError, "No keypairs left!");
-			}
-
-			// this should be reworked... converting from CloudStackKeyPairResponse to EC2SSHKeyPair is dumb
-			List<EC2SSHKeyPair> keyPairsList = new ArrayList<EC2SSHKeyPair>();
-
-			for (CloudStackKeyPair respKeyPair: keyPairs) {
-				EC2SSHKeyPair ec2KeyPair = new EC2SSHKeyPair();
-				ec2KeyPair.setFingerprint(respKeyPair.getFingerprint());
-				ec2KeyPair.setKeyName(respKeyPair.getName());
-				ec2KeyPair.setPrivateKey(respKeyPair.getPrivatekey());
-				keyPairsList.add(ec2KeyPair);
-			}
-
 			return filterSet.evaluate(keyPairsList);
 		} catch(Exception e) {
 			logger.error("EC2 DescribeKeyPairs - ", e);
@@ -718,17 +717,20 @@ public class EC2Engine {
 	public EC2DescribeAddressesResponse describeAddresses( EC2DescribeAddresses request ) {
 		try {
 			List<CloudStackIpAddress> addrList = getApi().listPublicIpAddresses(null, null, null, null, null, null, null, null, null);
+
 			EC2AddressFilterSet filterSet = request.getFilterSet();
 			List<EC2Address> addressList = new ArrayList<EC2Address>();
-
-			for (CloudStackIpAddress addr: addrList) {
-				// remember, if no filters are set, request.inPublicIpSet always returns true
-				if (request.inPublicIpSet(addr.getIpAddress())) {
-					EC2Address ec2Address = new EC2Address();
-					ec2Address.setIpAddress(addr.getIpAddress());
-					if (addr.getVirtualMachineId() != null) 
-						ec2Address.setAssociatedInstanceId(addr.getVirtualMachineId().toString());
-					addressList.add(ec2Address);
+			
+			if (addrList != null) {
+				for (CloudStackIpAddress addr: addrList) {
+					// remember, if no filters are set, request.inPublicIpSet always returns true
+					if (request.inPublicIpSet(addr.getIpAddress())) {
+						EC2Address ec2Address = new EC2Address();
+						ec2Address.setIpAddress(addr.getIpAddress());
+						if (addr.getVirtualMachineId() != null) 
+							ec2Address.setAssociatedInstanceId(addr.getVirtualMachineId().toString());
+						addressList.add(ec2Address);
+					}
 				}
 			}
 
