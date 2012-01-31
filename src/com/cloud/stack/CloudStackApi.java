@@ -70,12 +70,17 @@ public class CloudStackApi {
 	/**
 	 * 
 	 */
-	public CloudStackApi(String cloudStackServiceHost, int port, boolean bSslEnabled) {
-		_client = new CloudStackClient(cloudStackServiceHost, port, bSslEnabled);
+	public CloudStackApi(String cloudStackServiceHost, String port, Boolean bSslEnabled) {
+		if (port != null) {
+			int ourPort = Integer.parseInt(port);
+			_client = new CloudStackClient(cloudStackServiceHost, ourPort, bSslEnabled);
+		} else {
+			_client = new CloudStackClient(cloudStackServiceHost);
+		}
 		apiKey = null;
 		secretKey = null;
 	}
-	
+
 	/**
 	 * @return the apiKey
 	 */

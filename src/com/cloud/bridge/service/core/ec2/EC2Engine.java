@@ -140,7 +140,9 @@ public class EC2Engine {
 	 */
 	private CloudStackApi getApi() {
 		if (_eng == null) {
-			_eng = new CloudStackApi(managementServer, cloudAPIPort != null ? Integer.parseInt(cloudAPIPort) : 80, false);
+			if (cloudAPIPort != null) {
+				_eng = new CloudStackApi(managementServer, cloudAPIPort, false);
+			}
 			_eng.setApiKey(UserContext.current().getAccessKey());
 			_eng.setSecretKey(UserContext.current().getSecretKey());
 		}
