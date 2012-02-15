@@ -722,8 +722,7 @@ public class EC2Engine {
 
 			EC2AddressFilterSet filterSet = request.getFilterSet();
 			List<EC2Address> addressList = new ArrayList<EC2Address>();
-			
-			if (addrList != null) {
+			if (addrList != null && addrList.size() > 0) {
 				for (CloudStackIpAddress addr: addrList) {
 					// remember, if no filters are set, request.inPublicIpSet always returns true
 					if (request.inPublicIpSet(addr.getIpAddress())) {
@@ -1602,32 +1601,35 @@ public class EC2Engine {
 		Long instId = instanceId != null ? new Long(instanceId) : null;
 		List<CloudStackUserVm> vms = getApi().listVirtualMachines(null, null, null, null, null, null, 
 				instId, null, null, null, null, null, null, null, null);
-		for(CloudStackUserVm cloudVm : vms) {
-			EC2Instance ec2Vm = new EC2Instance();
-
-			ec2Vm.setId(cloudVm.getId().toString());
-			ec2Vm.setName(cloudVm.getName());
-			ec2Vm.setZoneName(cloudVm.getZoneName());
-			ec2Vm.setTemplateId(cloudVm.getTemplateId().toString());
-			ec2Vm.setGroup(cloudVm.getGroup());
-			ec2Vm.setState(cloudVm.getState());
-			ec2Vm.setCreated(cloudVm.getCreated());
-			ec2Vm.setIpAddress(cloudVm.getIpAddress());
-			ec2Vm.setAccountName(cloudVm.getAccountName());
-			ec2Vm.setDomainId(cloudVm.getDomainId().toString());
-			ec2Vm.setHypervisor(cloudVm.getHypervisor());
-			ec2Vm.setRootDeviceType(cloudVm.getRootDeviceType());
-			ec2Vm.setRootDeviceId((int)cloudVm.getRootDeviceId().longValue());
-			ec2Vm.setServiceOffering(serviceOfferingIdToInstanceType(cloudVm.getServiceOfferingId().toString()));
-
-			List<CloudStackNic> nics = cloudVm.getNics();
-			for(CloudStackNic nic : nics) {
-				if(nic.getIsDefault()) {
-					ec2Vm.setPrivateIpAddress(nic.getIpaddress());
-					break;
-				}
-			}
-			instances.addInstance(ec2Vm);
+		
+		if(vms != null && vms.size() > 0) {
+    		for(CloudStackUserVm cloudVm : vms) {
+    			EC2Instance ec2Vm = new EC2Instance();
+    
+    			ec2Vm.setId(cloudVm.getId().toString());
+    			ec2Vm.setName(cloudVm.getName());
+    			ec2Vm.setZoneName(cloudVm.getZoneName());
+    			ec2Vm.setTemplateId(cloudVm.getTemplateId().toString());
+    			ec2Vm.setGroup(cloudVm.getGroup());
+    			ec2Vm.setState(cloudVm.getState());
+    			ec2Vm.setCreated(cloudVm.getCreated());
+    			ec2Vm.setIpAddress(cloudVm.getIpAddress());
+    			ec2Vm.setAccountName(cloudVm.getAccountName());
+    			ec2Vm.setDomainId(cloudVm.getDomainId().toString());
+    			ec2Vm.setHypervisor(cloudVm.getHypervisor());
+    			ec2Vm.setRootDeviceType(cloudVm.getRootDeviceType());
+    			ec2Vm.setRootDeviceId((int)cloudVm.getRootDeviceId().longValue());
+    			ec2Vm.setServiceOffering(serviceOfferingIdToInstanceType(cloudVm.getServiceOfferingId().toString()));
+    
+    			List<CloudStackNic> nics = cloudVm.getNics();
+    			for(CloudStackNic nic : nics) {
+    				if(nic.getIsDefault()) {
+    					ec2Vm.setPrivateIpAddress(nic.getIpaddress());
+    					break;
+    				}
+    			}
+    			instances.addInstance(ec2Vm);
+    		}
 		}
 		return instances;
 	}
