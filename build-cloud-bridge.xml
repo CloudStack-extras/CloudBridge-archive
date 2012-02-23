@@ -169,7 +169,7 @@
 			<arg value="--url=${env.EC2_URL}" />
 		</exec>
 	</target>
-	<target name="build-cloud-bridge" depends="build-cloud-bridge-jar,build-cloud-bridge-s3,build-cloud-bridge-ec2,build-cloud-auth-s3,build-cloud-auth-ec2">
+	<target name="build-cloud-bridge" depends="build-cloud-bridge-jar,build-cloud-bridge-s3,build-cloud-bridge-ec2,build-cloud-auth-s3,build-cloud-auth-ec2" description="Builds all of cloud-bridge">
 	</target>
 	<target name="deploy-cloud-bridge" depends="build-cloud-bridge-jar, build-cloud-bridge">
 		<!--
@@ -210,13 +210,11 @@
 				<include name="mysql-connector-java-5.1.7-bin.jar" />
 			</fileset>
 		</copy>
-<!--
-		<copy overwrite="true" todir="${deploy.dir}/conf">
+		<copy overwrite="false" todir="${deploy.dir}/conf">
 			<fileset dir="${base.dir}/conf/">
 				<include name="**/*" />
 			</fileset>
 		</copy>
--->
 		<copy overwrite="true" todir="${deploy.dir}/webapps/bridge/WEB-INF/conf">
 			<fileset dir="${base.dir}/resource/Axis2/">
 				<include name="axis2.xml" />
