@@ -162,8 +162,12 @@ public class EC2Engine {
 		try {
 			String oldApiKey = null;
 			String oldSecretKey = null;
-			oldApiKey = getApi().getApiKey(); 
-			oldSecretKey = getApi().getSecretKey();
+			try {
+			    oldApiKey = getApi().getApiKey(); 
+			    oldSecretKey = getApi().getSecretKey();
+			} catch(Exception e) {
+			    // we really don't care, and expect this
+			}
 		    if (accessKey == null || secretKey == null) {
 		        return false;
 		    }
