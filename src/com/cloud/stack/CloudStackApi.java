@@ -72,7 +72,10 @@ public class CloudStackApi {
 	 */
 	public CloudStackApi(String cloudStackServiceHost, String port, Boolean bSslEnabled) {
 		if (port != null) {
-			int ourPort = Integer.parseInt(port);
+		    // initialize port to 8080, incase port is NULL
+		    int ourPort = 8080;
+		    if (port != null) 
+		        ourPort = Integer.parseInt(port);
 			_client = new CloudStackClient(cloudStackServiceHost, ourPort, bSslEnabled);
 		} else {
 			_client = new CloudStackClient(cloudStackServiceHost);

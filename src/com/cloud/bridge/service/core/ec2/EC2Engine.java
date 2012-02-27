@@ -140,12 +140,12 @@ public class EC2Engine {
 	 */
 	private CloudStackApi getApi() {
 		if (_eng == null) {
-			if (cloudAPIPort != null) {
-				_eng = new CloudStackApi(managementServer, cloudAPIPort, false);
-			}
-			_eng.setApiKey(UserContext.current().getAccessKey());
-			_eng.setSecretKey(UserContext.current().getSecretKey());
+			_eng = new CloudStackApi(managementServer, cloudAPIPort, false);
 		}
+		// regardless of whether _eng is initialized, we must make sure 
+		// access/secret keys are current with what's in the UserCredentials
+        _eng.setApiKey(UserContext.current().getAccessKey());
+        _eng.setSecretKey(UserContext.current().getSecretKey());
 		return _eng;
 	}
 
@@ -162,12 +162,11 @@ public class EC2Engine {
 		try {
 			String oldApiKey = null;
 			String oldSecretKey = null;
-			try {
-				oldApiKey = getApi().getApiKey(); 
-				oldSecretKey = getApi().getSecretKey();
-			} catch(Exception e) {
-				// we really don't care, and expect this
-			}
+			oldApiKey = getApi().getApiKey(); 
+			oldSecretKey = getApi().getSecretKey();
+		    if (accessKey == null || secretKey == null) {
+		        return false;
+		    }
 			getApi().setApiKey(accessKey);
 			getApi().setSecretKey(secretKey);
 			List<CloudStackAccount> accts = getApi().listAccounts(null, null, null, null, null, null, null, null);
