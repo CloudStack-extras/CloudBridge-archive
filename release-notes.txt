@@ -1,3 +1,8 @@
+1.0.2.RC4
+=========
+
+* Bug 14037 CloudBridge deployment would overwrite files in /usr/share/cloud/bridge/conf, is now fixed
+
 1.0.2.RC3
 =========
 
