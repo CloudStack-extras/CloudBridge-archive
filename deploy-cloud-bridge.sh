@@ -92,7 +92,7 @@ then
    exit 17;
 fi
 
-if ! cp -f conf/*  $deploydir/conf
+if ! cp -n conf/*  $deploydir/conf
 then
    exit 18;
 fi

@@ -320,7 +320,7 @@
 	<target name="deploy-rpm-install" depends="build-cloud-bridge-jar, build-cloud-bridge">
 		<copy todir="${rpm.tomcat.dir}/webapps/bridge/WEB-INF/services">
 			<fileset dir="${dist.dir}">
-				<!--                
+<!--                
                 <include name="cloud-s3.aar"/>
 -->
 				<include name="cloud-ec2.aar" />
@@ -354,7 +354,7 @@
 				<include name="xes.keystore" />
 			</fileset>
 		</copy>
-		<copy overwrite="true" todir="${rpm.tomcat.dir}/conf">
+		<copy overwrite="false" todir="${rpm.tomcat.dir}/conf">
 			<fileset dir="${base.dir}/conf/">
 				<include name="**/*" />
 			</fileset>

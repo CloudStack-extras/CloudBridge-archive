@@ -4,7 +4,7 @@
 %define _rel 1
 
 Name:      cloud-bridge
-Summary:   Cloud.com Bridge 
+Summary:   CloudStack CloudBridge 
 Version:   %{_ver}
 #http://fedoraproject.org/wiki/PackageNamingGuidelines#Pre-Release_packages
 %if "%{?_prerelease}" != ""
@@ -13,8 +13,8 @@ Release:   0.%{_build_number}%{_prerelease}
 Release:   %{_rel}
 %endif
 License:   GPLv3+ with exceptions or CSL 1.1
-Vendor:    Cloud.com, Inc. <sqa@cloud.com>
-Packager:  Cloud.com <cloud@cloud.com>
+Vendor:    Citrix Systems, Inc. <sqa@cloud.com>
+Packager:  Citrix Systems, Inc. <cloud@cloud.com>
 Source0:   cloud-bridge-%{_ver}.tar.bz2
 Group:     System Environment/Libraries
 Requires: java >= 1.6.0
@@ -23,7 +23,7 @@ Obsoletes: cloud-bridge < %{version}-%{release}
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
-This is the Cloud.com Bridge
+This is the CloudStack CloudBridge
 
 %prep
 
@@ -56,7 +56,7 @@ if [ "$1" == "0" ] ; then
 fi
 
 %pre 
-id cloud > /dev/null 2>&1 || /usr/sbin/useradd -M -c "Cloud.com Bridge unprivileged user" \
+id cloud > /dev/null 2>&1 || /usr/sbin/useradd -M -c "CloudStack CloudBridge unprivileged user" \
      -r -s /bin/sh -d %{_sharedstatedir}/cloud cloud|| true
 # user harcoded here
 
