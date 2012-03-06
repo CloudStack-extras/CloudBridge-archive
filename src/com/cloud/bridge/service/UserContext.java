@@ -42,7 +42,8 @@ public class UserContext {
 	
 	public static UserContext current() {
 		UserContext context = threadUserContext.get();
-		if(context == null) {
+		if (context == null) {
+		    logger.debug("initializing a new [anonymous] UserContext!");
 			context = new UserContext();
 			threadUserContext.set(context);
 		}
@@ -67,10 +68,10 @@ public class UserContext {
 	}
 	
 	public String getAccessKey() {
-		if(annonymous)
+		if (annonymous)
 			return StringHelper.EMPTY_STRING;
 		
-		if(accessKey == null) {
+		if (accessKey == null) {
 			logger.error("Fatal - UserContext has not been correctly setup");
 			throw new InternalErrorException("Uninitalized user context");
 		}
@@ -78,10 +79,10 @@ public class UserContext {
 	}
 	
 	public String getSecretKey() {
-		if(annonymous)
+		if (annonymous)
 			return StringHelper.EMPTY_STRING;
 		
-		if(secretKey == null) {
+		if (secretKey == null) {
 			logger.error("Fatal - UserContext has not been correctly setup");
 			throw new InternalErrorException("Uninitalized user context");
 		}
@@ -90,10 +91,10 @@ public class UserContext {
 	}
 	
 	public String getCanonicalUserId() {
-		if(annonymous)
+		if (annonymous)
 			return StringHelper.EMPTY_STRING;
 		
-		if(canonicalUserId == null) {
+		if (canonicalUserId == null) {
 			logger.error("Fatal - UserContext has not been correctly setup");
 			throw new InternalErrorException("Uninitalized user context");
 		}
@@ -102,7 +103,7 @@ public class UserContext {
 	}
 	
 	public String getDescription() {
-		if(description != null)
+		if (description != null)
 			return description;
 		
 		return StringHelper.EMPTY_STRING;

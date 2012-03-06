@@ -140,7 +140,7 @@ public class EC2Engine {
 	 */
 	private CloudStackApi getApi() {
 		if (_eng == null) {
-			_eng = new CloudStackApi(managementServer, cloudAPIPort, false);
+		    _eng = new CloudStackApi(managementServer, cloudAPIPort, false);
 		}
 		// regardless of whether _eng is initialized, we must make sure 
 		// access/secret keys are current with what's in the UserCredentials
@@ -159,24 +159,31 @@ public class EC2Engine {
 	 * @throws EC2ServiceException
 	 */
 	public boolean validateAccount( String accessKey, String secretKey ) throws EC2ServiceException {
+		String oldApiKey = null;
+		String oldSecretKey = null;
+
+		if (accessKey == null || secretKey == null) {
+            return false;
+        }
+		
+		// okay, instead of using the getApi() nonsense for validate, we are going to manage _eng
+		if (_eng == null) {
+            _eng = new CloudStackApi(managementServer, cloudAPIPort, false);
+		}
+		
 		try {
-			String oldApiKey = null;
-			String oldSecretKey = null;
-			try {
-			    oldApiKey = getApi().getApiKey(); 
-			    oldSecretKey = getApi().getSecretKey();
-			} catch(Exception e) {
-			    // we really don't care, and expect this
-			}
-		    if (accessKey == null || secretKey == null) {
-		        return false;
-		    }
-			getApi().setApiKey(accessKey);
-			getApi().setSecretKey(secretKey);
-			List<CloudStackAccount> accts = getApi().listAccounts(null, null, null, null, null, null, null, null);
+		    oldApiKey = _eng.getApiKey(); 
+		    oldSecretKey = _eng.getSecretKey();
+		} catch(Exception e) {
+		    // we really don't care, and expect this
+		}
+        try {
+			_eng.setApiKey(accessKey);
+			_eng.setSecretKey(secretKey);
+			List<CloudStackAccount> accts = _eng.listAccounts(null, null, null, null, null, null, null, null);
 			if (oldApiKey != null && oldSecretKey != null) {
-				getApi().setApiKey(oldApiKey);
-				getApi().setSecretKey(oldSecretKey);
+				_eng.setApiKey(oldApiKey);
+				_eng.setSecretKey(oldSecretKey);
 			}
 			if (accts == null) {
 				return false;

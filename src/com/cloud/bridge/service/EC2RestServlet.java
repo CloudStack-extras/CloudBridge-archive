@@ -352,6 +352,10 @@ public class EC2RestServlet extends HttpServlet {
         	endResponse(response, "SetUserKeys exception " + e.getMessage());
 		    return;
         }
+    	
+    	// prime UserContext here
+//    	logger.debug("initializing context");
+    	UserContext context = UserContext.current();
 
         try {
             // -> use the keys to see if the account actually exists
@@ -394,7 +398,7 @@ public class EC2RestServlet extends HttpServlet {
 	    		response.sendError(530, "Missing cert parameter" );
     		    return;
     	    }
-    	    logger.debug( "SetCertificate cert: [" + certificate[0] + "]" );
+//    	    logger.debug( "SetCertificate cert: [" + certificate[0] + "]" );
     	    
             String [] accessKey = request.getParameterValues( "AWSAccessKeyId" );
 		    if ( null == accessKey || 0 == accessKey.length ) { 
