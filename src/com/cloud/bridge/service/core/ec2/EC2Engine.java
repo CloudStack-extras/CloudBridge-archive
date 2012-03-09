@@ -946,13 +946,18 @@ public class EC2Engine {
 					null == request.getLocation() || null == request.getZoneName())
 				throw new EC2ServiceException(ServerError.InternalError, "Missing parameter - location/architecture/name");
 
-			CloudStackTemplate resp = getApi().registerTemplate((request.getDescription() == null ? request.getName() : request.getDescription()), 
+			List<CloudStackTemplate> templates = getApi().registerTemplate((request.getDescription() == null ? request.getName() : request.getDescription()), 
 					request.getFormat(), null, request.getName(), toOSTypeId(request.getOsTypeName()), request.getLocation(), 
 					toZoneId(request.getZoneName()), null, null, null, null, null, null, null, null, null);
-			if (resp != null && resp.getId() != null) {
-				EC2CreateImageResponse image = new EC2CreateImageResponse();
-				image.setId(resp.getId().toString());
-				return image;
+			if (templates != null) {
+			    // technically we will only ever register a single template...
+			    for (CloudStackTemplate template : templates) {
+        			if (template != null && template.getId() != null) {
+        				EC2CreateImageResponse image = new EC2CreateImageResponse();
+        				image.setId(template.getId().toString());
+        				return image;
+        			}
+			    }
 			}
 			return null;
 		} catch( Exception e ) {
@@ -1563,7 +1568,7 @@ public class EC2Engine {
 		try {
 			List<CloudStackOsType> osTypes = getApi().listOsTypes(null, null, null);
 			for (CloudStackOsType osType : osTypes) {
-				if (osType.getDescription().indexOf(osTypeName) != -1)
+				if (osType.getDescription().toLowerCase().indexOf(osTypeName.toLowerCase()) != -1)
 					return osType.getId();
 			}
 			return null;

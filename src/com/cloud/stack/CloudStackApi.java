@@ -409,7 +409,7 @@ public class CloudStackApi {
 	 * @return
 	 * @throws Exception
 	 */
-	public CloudStackTemplate registerTemplate(String displayText, String format, String hypervisor, String name, Long osTypeId, String url, 
+	public List<CloudStackTemplate> registerTemplate(String displayText, String format, String hypervisor, String name, Long osTypeId, String url, 
 			Long zoneId, String account, String bits, String checksum, Long domainId, Boolean isExtractable, Boolean isFeatured, Boolean isPublic,
 			Boolean passwordEnabled, Boolean requiresHVM) throws Exception {
 		CloudStackCommand cmd = new CloudStackCommand(ApiConstants.REGISTER_TEMPLATE);
@@ -431,7 +431,7 @@ public class CloudStackApi {
 			if (passwordEnabled != null) cmd.setParam(ApiConstants.PASSWORD_ENABLED, passwordEnabled.toString());
 			if (requiresHVM != null) cmd.setParam(ApiConstants.REQUIRES_HVM, requiresHVM.toString());
 		}
-		return _client.call(cmd, apiKey, secretKey, false, ApiConstants.REGISTER_TEMPLATE_RESPONSE, ApiConstants.TEMPLATE, CloudStackTemplate.class);
+		return _client.listCall(cmd, apiKey, secretKey, ApiConstants.REGISTER_TEMPLATE_RESPONSE, ApiConstants.TEMPLATE, new TypeToken<List<CloudStackTemplate>>() {}.getType());
 	}
 	
 	/**
