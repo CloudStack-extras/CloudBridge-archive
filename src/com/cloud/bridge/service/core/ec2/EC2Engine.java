@@ -68,7 +68,6 @@ public class EC2Engine {
 	String managementServer = null;
 	String cloudAPIPort = null;
 
-	private CloudStackAccount currentAccount = null;
 	private CloudStackApi _eng = null;
 
 	public EC2Engine() throws IOException {
@@ -1389,9 +1388,21 @@ public class EC2Engine {
 	 */
 	private int calculateAllowedInstances() throws Exception {    
 		int maxAllowed = -1;
-
-		// -> get the user limits on instances
 		
+		CloudStackAccount ourAccount = getCurrentAccount();
+		
+		if (ourAccount == null) {
+		    // This should never happen, but
+		    // we will return -99999 if this happens...
+		    return -99999;
+		}
+		
+		// if accountType is Admin == 1, then let's return -1 
+		if (ourAccount.getAccountType() == 1) return -1;
+		
+		// -> get the user limits on instances
+		// "0" represents instances:  
+		// http://download.cloud.com/releases/2.2.0/api_2.2.8/user/listResourceLimits.html
 		List<CloudStackResourceLimit> limits = getApi().listResourceLimits(null, null, null, null, "0");
 		if (limits != null && limits.size() > 0) {
 			maxAllowed = (int)limits.get(0).getMax().longValue();
@@ -1769,14 +1780,13 @@ public class EC2Engine {
 	 * @throws Exception
 	 */
 	private CloudStackAccount getCurrentAccount() throws Exception {
-		if (currentAccount != null) {
-			List<CloudStackAccount> accounts = getApi().listAccounts(null, null, null, null, null, null, null, null);
-			for (CloudStackAccount account : accounts) {
-				CloudStackUser[] users = account.getUser();
-				for (CloudStackUser user : users) {
-					if (user.getSecretkey().equalsIgnoreCase(UserContext.current().getSecretKey())) {
-						return account;
-					}
+		List<CloudStackAccount> accounts = getApi().listAccounts(null, null, null, null, null, null, null, null);
+		for (CloudStackAccount account : accounts) {
+			CloudStackUser[] users = account.getUser();
+			for (CloudStackUser user : users) {
+			    String userSecretKey = user.getSecretkey();
+				if (userSecretKey != null && userSecretKey.equalsIgnoreCase(UserContext.current().getSecretKey())) {
+					return account;
 				}
 			}
 		}
