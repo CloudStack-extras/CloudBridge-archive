@@ -42,7 +42,7 @@ public class CloudStackTemplate {
 	@SerializedName(ApiConstants.DOMAIN)
 	private String domain;
 	@SerializedName(ApiConstants.DOMAIN_ID)
-	private Long domainId;
+	private String domainId;
 	@SerializedName(ApiConstants.FORMAT)
 	private String format;
 	@SerializedName(ApiConstants.HOST_ID)
@@ -82,7 +82,7 @@ public class CloudStackTemplate {
 	@SerializedName(ApiConstants.TEMPLATE_TYPE)
 	private String templateType;
 	@SerializedName(ApiConstants.ZONE_ID)
-	private Long zoneId;
+	private String zoneId;
 	@SerializedName(ApiConstants.ZONE_NAME)
 	private String zoneName;
 
@@ -158,7 +158,7 @@ public class CloudStackTemplate {
 	/**
 	 * @return the domainId
 	 */
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 
@@ -298,7 +298,7 @@ public class CloudStackTemplate {
 	/**
 	 * @return the zoneId
 	 */
-	public Long getZoneId() {
+	public String getZoneId() {
 		return zoneId;
 	}
 

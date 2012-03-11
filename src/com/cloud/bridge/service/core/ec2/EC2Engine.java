@@ -1255,7 +1255,7 @@ public class EC2Engine {
 			OfferingBundle offer = instanceTypeToOfferBundle( request.getInstanceType());
 
 			// zone stuff
-			Long zoneId = toZoneId(request.getZoneName());
+			String zoneId = toZoneId(request.getZoneName());
 
 			
 			List<CloudStackZone> zones = getApi().listZones(null, null, zoneId, null);
@@ -1288,7 +1288,7 @@ public class EC2Engine {
 				vm.setCreated(resp.getCreated());
 				vm.setIpAddress(resp.getIpAddress());
 				vm.setAccountName(resp.getAccountName());
-				vm.setDomainId(resp.getDomainId().toString());
+				vm.setDomainId(resp.getDomainId());
 				vm.setHypervisor(resp.getHypervisor());
 				vm.setServiceOffering( serviceOfferingIdToInstanceType( offer.getServiceOfferingId()));
 				instances.addInstance(vm);
@@ -1495,7 +1495,7 @@ public class EC2Engine {
 	 * 
 	 * @return the zoneId that matches the given zone name
 	 */
-	private Long toZoneId( String zoneName ) throws Exception	{
+	private String toZoneId( String zoneName ) throws Exception	{
 		EC2DescribeAvailabilityZonesResponse zones = null;
 		String[] interestedZones = null;
 
@@ -1505,9 +1505,9 @@ public class EC2Engine {
 		}
 		zones = listZones( interestedZones );
 
-		if (null == zones.getZoneIdAt( 0 )) 
+		if (zones == null || zones.getZoneIdAt( 0 ) == null) 
 			throw new EC2ServiceException(ClientError.InvalidParameterValue, "Unknown zoneName value - " + zoneName);
-		return new Long(zones.getZoneIdAt(0));
+		return zones.getZoneIdAt(0);
 	}
 
 	/**
@@ -1641,7 +1641,7 @@ public class EC2Engine {
     			ec2Vm.setCreated(cloudVm.getCreated());
     			ec2Vm.setIpAddress(cloudVm.getIpAddress());
     			ec2Vm.setAccountName(cloudVm.getAccountName());
-    			ec2Vm.setDomainId(cloudVm.getDomainId().toString());
+    			ec2Vm.setDomainId(cloudVm.getDomainId());
     			ec2Vm.setHypervisor(cloudVm.getHypervisor());
     			ec2Vm.setRootDeviceType(cloudVm.getRootDeviceType());
     			ec2Vm.setRootDeviceId((int)cloudVm.getRootDeviceId().longValue());
@@ -1674,18 +1674,20 @@ public class EC2Engine {
 	private EC2DescribeImagesResponse listTemplates( String templateId, EC2DescribeImagesResponse images ) throws EC2ServiceException {
 		try {
 			List<CloudStackTemplate> resp = getApi().listTemplates("executable", null, null, null, templateId != null ? new Long(templateId) : null, null, null, null); 
-			for (CloudStackTemplate temp : resp) {
-				EC2Image ec2Image = new EC2Image();
-				ec2Image.setId(temp.getId().toString());
-				ec2Image.setAccountName(temp.getAccount());
-				ec2Image.setName(temp.getName());
-				ec2Image.setDescription(temp.getDisplayText());
-				ec2Image.setOsTypeId(temp.getOsTypeId().toString());
-				ec2Image.setIsPublic(temp.getIsPublic());
-				ec2Image.setIsReady(temp.getIsReady());
-				ec2Image.setDomainId(temp.getDomainId().toString());
-				images.addImage(ec2Image);
-			}
+			if (resp != null && resp.size() > 0) {
+			    for (CloudStackTemplate temp : resp) {
+    				EC2Image ec2Image = new EC2Image();
+    				ec2Image.setId(temp.getId().toString());
+    				ec2Image.setAccountName(temp.getAccount());
+    				ec2Image.setName(temp.getName());
+    				ec2Image.setDescription(temp.getDisplayText());
+    				ec2Image.setOsTypeId(temp.getOsTypeId().toString());
+    				ec2Image.setIsPublic(temp.getIsPublic());
+    				ec2Image.setIsReady(temp.getIsReady());
+    				ec2Image.setDomainId(temp.getDomainId());
+    				images.addImage(ec2Image);
+    			}
+            }
 			return images;
 		} catch(Exception e) {
 			logger.error( "List Templates - ", e);
@@ -1711,32 +1713,32 @@ public class EC2Engine {
 			EC2DescribeSecurityGroupsResponse groupSet = new EC2DescribeSecurityGroupsResponse();
 			
 			List<CloudStackSecurityGroup> groups = getApi().listSecurityGroups(null, null, null, null, null, null);
-			
-			for (CloudStackSecurityGroup group : groups) {
-				boolean matched = false;
-				if (interestedGroups.length > 0) {
-					for (String groupName :interestedGroups) {
-						if (groupName.equalsIgnoreCase(group.getName())) {
-							matched = true;
-							break;
-						}
-					}
-				} else {
-					matched = true;
-				}
-				if (!matched) continue;
-				EC2SecurityGroup ec2Group = new EC2SecurityGroup();
-				// not sure if we should set both account and account name to accountname
-				ec2Group.setAccount(group.getAccountName());
-				ec2Group.setAccountName(group.getAccountName());
-				ec2Group.setName(group.getName());
-				ec2Group.setDescription(group.getDescription());
-				ec2Group.setDomainId(group.getDomainId().toString());
-				ec2Group.setId(group.getId().toString());
-				toPermission(ec2Group, group);
-
-				groupSet.addGroup(ec2Group);
-			}
+			if (groups != null && groups.size() > 0)
+    			for (CloudStackSecurityGroup group : groups) {
+    				boolean matched = false;
+    				if (interestedGroups.length > 0) {
+    					for (String groupName :interestedGroups) {
+    						if (groupName.equalsIgnoreCase(group.getName())) {
+    							matched = true;
+    							break;
+    						}
+    					}
+    				} else {
+    					matched = true;
+    				}
+    				if (!matched) continue;
+    				EC2SecurityGroup ec2Group = new EC2SecurityGroup();
+    				// not sure if we should set both account and account name to accountname
+    				ec2Group.setAccount(group.getAccountName());
+    				ec2Group.setAccountName(group.getAccountName());
+    				ec2Group.setName(group.getName());
+    				ec2Group.setDescription(group.getDescription());
+    				ec2Group.setDomainId(group.getDomainId());
+    				ec2Group.setId(group.getId().toString());
+    				toPermission(ec2Group, group);
+    
+    				groupSet.addGroup(ec2Group);
+    			}
 			return groupSet;
 		} catch(Exception e) {
 			logger.error( "List Security Groups - ", e);
@@ -1806,7 +1808,7 @@ public class EC2Engine {
 	 * @return
 	 * @throws Exception
 	 */
-	private CloudStackNetwork getNetworksWithSecurityGroupEnabled(Long zoneId) throws Exception {
+	private CloudStackNetwork getNetworksWithSecurityGroupEnabled(String zoneId) throws Exception {
 		List<CloudStackNetwork> networks = getApi().listNetworks(null, null, null, null, null, null, null, null, null, zoneId);
 		List<CloudStackNetwork> netWithSecGroup = new ArrayList<CloudStackNetwork>();
 		for (CloudStackNetwork network : networks ) {
@@ -1826,7 +1828,7 @@ public class EC2Engine {
 	 * @return
 	 * @throws Exception
 	 */
-	private CloudStackNetwork createNetwork(Long zoneId, CloudStackNetworkOffering offering, CloudStackAccount owner) throws Exception {
+	private CloudStackNetwork createNetwork(String zoneId, CloudStackNetworkOffering offering, CloudStackAccount owner) throws Exception {
 		return getApi().createNetwork(owner.getName() + "-network", owner.getName() + "-network",  offering.getId(), zoneId, owner.getName(), 
 				null, null, null, null, null, null, null, null, null, null);
 	}
@@ -1838,7 +1840,7 @@ public class EC2Engine {
 	 * @return
 	 * @throws Exception
 	 */
-	private CloudStackNetwork getNetworksWithoutSecurityGroupEnabled(Long zoneId) throws Exception {
+	private CloudStackNetwork getNetworksWithoutSecurityGroupEnabled(String zoneId) throws Exception {
 		// grab current account
 		CloudStackAccount caller = getCurrentAccount();
 

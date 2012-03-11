@@ -21,7 +21,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class CloudStackSecurityGroup {
     @SerializedName(ApiConstants.ID)
-    private Long id;
+    private String id;
     @SerializedName(ApiConstants.ACCOUNT)
     private String accountName;
     @SerializedName(ApiConstants.DESCRIPTION)
@@ -29,7 +29,7 @@ public class CloudStackSecurityGroup {
     @SerializedName(ApiConstants.DOMAIN)
     private String domainName;
     @SerializedName(ApiConstants.DOMAIN_ID)
-    private Long domainId;
+    private String domainId;
     @SerializedName(ApiConstants.JOB_ID)
     private Long jobId;
     @SerializedName(ApiConstants.JOB_STATUS)
@@ -43,7 +43,7 @@ public class CloudStackSecurityGroup {
     public CloudStackSecurityGroup() {
     }
     
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -59,7 +59,7 @@ public class CloudStackSecurityGroup {
 		return accountName;
 	}
 
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 

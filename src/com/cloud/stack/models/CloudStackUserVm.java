@@ -37,7 +37,7 @@ public class CloudStackUserVm {
     @SerializedName(ApiConstants.DOMAIN)
     private String domainName;
     @SerializedName(ApiConstants.DOMAIN_ID)
-    private Long domainId;
+    private String domainId;
     @SerializedName(ApiConstants.FOR_VIRTUAL_NETWORK)
     private Boolean forVirtualNetwork;
     @SerializedName(ApiConstants.GROUP)
@@ -165,7 +165,7 @@ public class CloudStackUserVm {
 	/**
 	 * @return the domainId
 	 */
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 

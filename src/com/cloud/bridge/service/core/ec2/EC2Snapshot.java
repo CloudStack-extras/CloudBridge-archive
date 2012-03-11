@@ -29,7 +29,7 @@ public class EC2Snapshot {
     private String   state;
     private Calendar created;
     private String 	 accountName;
-    private Long 	 domainId;
+    private String 	 domainId;
     
 	public EC2Snapshot() {
 		id         	= null;
@@ -100,11 +100,11 @@ public class EC2Snapshot {
 		this.accountName = accountName;
 	}
 
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 
-	public void setDomainId(Long domainId) {
+	public void setDomainId(String domainId) {
 		this.domainId = domainId;
 	}
 

@@ -27,7 +27,7 @@ public class CloudStackSnapshot {
     @SerializedName(ApiConstants.DOMAIN)
     private String domainName;
     @SerializedName(ApiConstants.DOMAIN_ID)
-    private Long domainId;
+    private String domainId;
     @SerializedName(ApiConstants.INTERVAL_TYPE)
     private String intervalType;
     @SerializedName(ApiConstants.JOB_ID)
@@ -58,7 +58,7 @@ public class CloudStackSnapshot {
 		return accountName;
 	}
 
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 

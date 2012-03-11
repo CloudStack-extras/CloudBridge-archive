@@ -19,7 +19,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class CloudStackZone {
     @SerializedName(ApiConstants.ID)
-    private Long id;
+    private String id;
     @SerializedName(ApiConstants.ALLOCATION_STATE)
     private String allocationState;
     @SerializedName(ApiConstants.DESCRIPTION)
@@ -59,7 +59,7 @@ public class CloudStackZone {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
