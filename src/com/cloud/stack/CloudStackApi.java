@@ -1491,7 +1491,8 @@ public class CloudStackApi {
 	public CloudStackIpAddress associateIpAddress(String zoneId, String account, String domainId, String networkId) throws Exception {
 		CloudStackCommand cmd = new CloudStackCommand(ApiConstants.ASSOCIATE_IP_ADDRESS);
 		if (cmd != null) {
-			cmd.setParam(ApiConstants.ZONE_ID, zoneId);
+		    // previous zoneId was required according to api docs, but Management Server UI doesn't use it...
+			if (zoneId != null) cmd.setParam(ApiConstants.ZONE_ID, zoneId);
 			if (account != null) cmd.setParam(ApiConstants.ACCOUNT, account);
 			if (domainId != null) cmd.setParam(ApiConstants.DOMAIN_ID, domainId);
 			if (networkId != null) cmd.setParam(ApiConstants.NETWORK_ID, networkId);

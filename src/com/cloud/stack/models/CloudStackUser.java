@@ -24,7 +24,7 @@ import com.google.gson.annotations.SerializedName;
 public class CloudStackUser {
 
 	@SerializedName(ApiConstants.ID)
-	private Long id;
+	private String id;
 	@SerializedName(ApiConstants.ACCOUNT)
 	private String account;
 	@SerializedName(ApiConstants.ACCOUNT_TYPE)
@@ -36,7 +36,7 @@ public class CloudStackUser {
 	@SerializedName(ApiConstants.DOMAIN)
 	private String domain;
 	@SerializedName(ApiConstants.DOMAIN_ID)
-	private Long domainId;
+	private String domainId;
 	@SerializedName(ApiConstants.EMAIL)
 	private String email;
 	@SerializedName(ApiConstants.FIRSTNAME)
@@ -61,7 +61,7 @@ public class CloudStackUser {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -103,7 +103,7 @@ public class CloudStackUser {
 	/**
 	 * @return the domainId
 	 */
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 

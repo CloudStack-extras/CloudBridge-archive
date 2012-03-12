@@ -822,9 +822,12 @@ public class EC2Engine {
 	public EC2Address allocateAddress()
 	{
 		try {
+            EC2Address ec2Address = new EC2Address();
+            // this gets our domainId
+            CloudStackAccount caller = getCurrentAccount();
+            
 			CloudStackIpAddress resp = getApi().associateIpAddress(toZoneId(null), null, null, null);
-			EC2Address ec2Address = new EC2Address();
-			ec2Address.setAssociatedInstanceId(resp.getId().toString());
+			ec2Address.setAssociatedInstanceId(resp.getId());
 			ec2Address.setIpAddress(resp.getIpAddress());
 
 			return ec2Address;

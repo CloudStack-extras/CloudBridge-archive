@@ -68,7 +68,7 @@ public class CloudStackNetwork {
 	@SerializedName(ApiConstants.NETWORK_OFFERING_NAME)
 	private String networkOfferingName;	
     @SerializedName(ApiConstants.RELATED)
-    private Long related;
+    private String related;
     @SerializedName(ApiConstants.SECURITY_GROUP_ENABLED)
     private Boolean securityGroupEnabled;
     @SerializedName(ApiConstants.START_IP)
@@ -289,7 +289,7 @@ public class CloudStackNetwork {
 	/**
 	 * @return the related
 	 */
-	public Long getRelated() {
+	public String getRelated() {
 		return related;
 	}
 
