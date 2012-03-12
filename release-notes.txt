@@ -1,3 +1,15 @@
+1.0.2.RC6
+=========
+
+* ec2-allocate-address and ec2-run-instances should now work with CloudStack advanced network mode.
+* findNetwork improved and now used with ec2-allocate-address.
+* Support for string based id's (UUIDs) for all objects.  Prior to this, CB used Long's to store objectIds returned from CloudStack.
+
+1.0.2.RC5
+=========
+
+* Fixed ec2-register/registerTemplate calls
+
 1.0.2.RC4
 =========
 
