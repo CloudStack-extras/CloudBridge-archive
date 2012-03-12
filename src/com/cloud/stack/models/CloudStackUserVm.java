@@ -21,7 +21,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class CloudStackUserVm {
 	@SerializedName(ApiConstants.ID)
-    private Long id;
+    private String id;
     @SerializedName(ApiConstants.ACCOUNT)
     private String accountName;
     @SerializedName(ApiConstants.CPU_NUMBER)
@@ -43,13 +43,13 @@ public class CloudStackUserVm {
     @SerializedName(ApiConstants.GROUP)
     private String group;
     @SerializedName(ApiConstants.GROUP_ID)
-    private Long groupId;
+    private String groupId;
     @SerializedName(ApiConstants.GUEST_OS_ID)
-    private Long guestOsId;
+    private String guestOsId;
     @SerializedName(ApiConstants.HA_ENABLE)
     private Boolean haEnable;
     @SerializedName(ApiConstants.HOST_ID)
-    private Long hostId;
+    private String hostId;
     @SerializedName(ApiConstants.HOST_NAME) 
     private String hostName;
     @SerializedName(ApiConstants.HYPERVISOR)
@@ -59,11 +59,11 @@ public class CloudStackUserVm {
     @SerializedName(ApiConstants.ISO_DISPLAY_TEXT)
     private String isoDisplayText;
     @SerializedName(ApiConstants.ISO_ID)
-    private Long isoId;
+    private String isoId;
     @SerializedName(ApiConstants.ISO_NAME)
     private String isoName;
     @SerializedName(ApiConstants.JOB_ID)
-    private Long jobId;
+    private String jobId;
     @SerializedName(ApiConstants.JOB_STATUS)
     private Integer jobStatus;
     @SerializedName(ApiConstants.MEMORY)
@@ -79,11 +79,11 @@ public class CloudStackUserVm {
     @SerializedName(ApiConstants.PASSWORD_ENABLED)
     private Boolean passwordEnabled;
     @SerializedName(ApiConstants.ROOT_DEVICE_ID)
-    private Long rootDeviceId;
+    private String rootDeviceId;
     @SerializedName(ApiConstants.ROOT_DEVICE_TYPE)
     private String rootDeviceType;
     @SerializedName(ApiConstants.SERVICE_OFFERING_ID)
-    private Long serviceOfferingId;
+    private String serviceOfferingId;
     @SerializedName(ApiConstants.SERVICE_OFFERING_NAME)
     private String serviceOfferingName;
     @SerializedName(ApiConstants.STATE)
@@ -91,11 +91,11 @@ public class CloudStackUserVm {
     @SerializedName(ApiConstants.TEMPLATE_DISPLAY_TEXT)
     private String templateDisplayText;
     @SerializedName(ApiConstants.TEMPLATE_ID)
-    private Long templateId;
+    private String templateId;
     @SerializedName(ApiConstants.TEMPLATE_NAME)
     private String templateName;
     @SerializedName(ApiConstants.ZONE_ID)
-    private Long zoneId;
+    private String zoneId;
     @SerializedName(ApiConstants.ZONE_NAME)
     private String zoneName;
     @SerializedName(ApiConstants.NIC) 
@@ -109,7 +109,7 @@ public class CloudStackUserVm {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -186,14 +186,14 @@ public class CloudStackUserVm {
 	/**
 	 * @return the groupId
 	 */
-	public Long getGroupId() {
+	public String getGroupId() {
 		return groupId;
 	}
 
 	/**
 	 * @return the guestOsId
 	 */
-	public Long getGuestOsId() {
+	public String getGuestOsId() {
 		return guestOsId;
 	}
 
@@ -207,7 +207,7 @@ public class CloudStackUserVm {
 	/**
 	 * @return the hostId
 	 */
-	public Long getHostId() {
+	public String getHostId() {
 		return hostId;
 	}
 
@@ -242,7 +242,7 @@ public class CloudStackUserVm {
 	/**
 	 * @return the isoId
 	 */
-	public Long getIsoId() {
+	public String getIsoId() {
 		return isoId;
 	}
 
@@ -256,7 +256,7 @@ public class CloudStackUserVm {
 	/**
 	 * @return the jobId
 	 */
-	public Long getJobId() {
+	public String getJobId() {
 		return jobId;
 	}
 
@@ -312,7 +312,7 @@ public class CloudStackUserVm {
 	/**
 	 * @return the rootDeviceId
 	 */
-	public Long getRootDeviceId() {
+	public String getRootDeviceId() {
 		return rootDeviceId;
 	}
 
@@ -326,7 +326,7 @@ public class CloudStackUserVm {
 	/**
 	 * @return the serviceOfferingId
 	 */
-	public Long getServiceOfferingId() {
+	public String getServiceOfferingId() {
 		return serviceOfferingId;
 	}
 
@@ -354,7 +354,7 @@ public class CloudStackUserVm {
 	/**
 	 * @return the templateId
 	 */
-	public Long getTemplateId() {
+	public String getTemplateId() {
 		return templateId;
 	}
 
@@ -368,7 +368,7 @@ public class CloudStackUserVm {
 	/**
 	 * @return the zoneId
 	 */
-	public Long getZoneId() {
+	public String getZoneId() {
 		return zoneId;
 	}
 

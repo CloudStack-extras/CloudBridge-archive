@@ -24,7 +24,7 @@ public class EC2CreateVolume {
     protected final static Logger logger = Logger.getLogger(EC2CreateVolume.class);
 
 	private Long size;   // <- in gigs
-	private Long  snapshotId;
+	private String  snapshotId;
 	private String  zoneName;
     
 	public EC2CreateVolume() {
@@ -58,11 +58,11 @@ public class EC2CreateVolume {
 		return this.size;
 	}
 
-	public void setSnapshotId(Long snapshotId ) {
+	public void setSnapshotId(String snapshotId ) {
 		this.snapshotId = snapshotId;
 	}
 	
-	public Long getSnapshotId() {
+	public String getSnapshotId() {
 		return this.snapshotId;
 	}
 

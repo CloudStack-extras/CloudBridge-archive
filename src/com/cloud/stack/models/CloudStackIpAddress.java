@@ -20,17 +20,17 @@ import com.google.gson.annotations.SerializedName;
 public class CloudStackIpAddress {
 	
     @SerializedName(ApiConstants.ID)
-    private Long id;
+    private String id;
     @SerializedName(ApiConstants.ACCOUNT)
     private String accountName;
     @SerializedName(ApiConstants.ALLOCATED)
     private String allocated;
     @SerializedName(ApiConstants.ASSOCIATED_NETWORK_ID)
-    private Long associatedNetworkId;
+    private String associatedNetworkId;
     @SerializedName(ApiConstants.DOMAIN)
     private String domainName;
     @SerializedName(ApiConstants.DOMAIN_ID)
-    private Long domainId;
+    private String domainId;
     @SerializedName(ApiConstants.FOR_VIRTUAL_NETWORK)
     private Boolean forVirtualNetwork;
     @SerializedName(ApiConstants.IP_ADDRESS)
@@ -40,32 +40,32 @@ public class CloudStackIpAddress {
     @SerializedName(ApiConstants.IS_STATIC_NAT)
     private Boolean staticNat;
     @SerializedName(ApiConstants.JOB_ID)
-    private Long jobId;
+    private String jobId;
     @SerializedName(ApiConstants.JOB_STATUS)
     private Integer jobStatus;
     @SerializedName(ApiConstants.NETWORK_ID)
-    private Long networkId;
+    private String networkId;
     @SerializedName(ApiConstants.STATE)
     private String state;
     @SerializedName(ApiConstants.VIRTUAL_MACHINE_DISPLAY_NAME)
     private String virtualMachineDisplayName;
     @SerializedName(ApiConstants.VIRTUAL_MACHINE_ID)
-    private Long virtualMachineId;
+    private String virtualMachineId;
     @SerializedName(ApiConstants.VIRTUAL_MACHINE_NAME)
     private String virtualMachineName;
     @SerializedName(ApiConstants.VLAN_ID)
-    private Long vlanId;
+    private String vlanId;
     @SerializedName(ApiConstants.VLAN_NAME)
     private String vlanName;
     @SerializedName(ApiConstants.ZONE_ID)
-    private Long zoneId;
+    private String zoneId;
     @SerializedName(ApiConstants.ZONE_NAME)
     private String zoneName;
 
     public CloudStackIpAddress() {
     }
 
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -77,7 +77,7 @@ public class CloudStackIpAddress {
 		return allocated;
 	}
 
-	public Long getZoneId() {
+	public String getZoneId() {
 		return zoneId;
 	}
 
@@ -93,7 +93,7 @@ public class CloudStackIpAddress {
 		return accountName;
 	}
 
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 
@@ -105,7 +105,7 @@ public class CloudStackIpAddress {
 		return forVirtualNetwork;
 	}
 
-	public Long getVlanId() {
+	public String getVlanId() {
 		return vlanId;
 	}
 
@@ -117,7 +117,7 @@ public class CloudStackIpAddress {
 		return staticNat;
 	}
 
-	public Long getVirtualMachineId() {
+	public String getVirtualMachineId() {
 		return virtualMachineId;
 	}
 
@@ -129,11 +129,11 @@ public class CloudStackIpAddress {
 		return virtualMachineDisplayName;
 	}
 
-	public Long getAssociatedNetworkId() {
+	public String getAssociatedNetworkId() {
 		return associatedNetworkId;
 	}
 
-	public Long getNetworkId() {
+	public String getNetworkId() {
 		return networkId;
 	}
 
@@ -141,7 +141,7 @@ public class CloudStackIpAddress {
 		return state;
 	}
 
-	public Long getJobId() {
+	public String getJobId() {
 		return jobId;
 	}
 

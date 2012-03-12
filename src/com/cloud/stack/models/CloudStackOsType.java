@@ -24,9 +24,9 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackOsType {
 	@SerializedName(ApiConstants.ID)
-	private Long id;
+	private String id;
 	@SerializedName(ApiConstants.OS_CATEGORY_ID)
-	private Long osCategoryId;
+	private String osCategoryId;
 	@SerializedName(ApiConstants.DESCRIPTION)
 	private String description;
 
@@ -39,14 +39,14 @@ public class CloudStackOsType {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
 	/**
 	 * @return the osCategoryId
 	 */
-	public Long getOsCategoryId() {
+	public String getOsCategoryId() {
 		return osCategoryId;
 	}
 

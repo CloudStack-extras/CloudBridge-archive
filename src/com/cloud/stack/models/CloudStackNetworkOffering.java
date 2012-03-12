@@ -24,7 +24,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackNetworkOffering {
 	@SerializedName(ApiConstants.ID)	
-	private Long id;
+	private String id;
 	@SerializedName(ApiConstants.AVAILABILITY)	
 	private String availability;
 	@SerializedName(ApiConstants.CREATED)	
@@ -58,7 +58,7 @@ public class CloudStackNetworkOffering {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 

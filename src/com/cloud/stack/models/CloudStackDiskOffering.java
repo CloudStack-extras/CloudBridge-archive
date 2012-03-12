@@ -24,7 +24,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackDiskOffering {
 	@SerializedName(ApiConstants.ID)
-	private Long id;
+	private String id;
 	@SerializedName(ApiConstants.NAME)
 	private String name;
 	@SerializedName(ApiConstants.DISPLAY_TEXT)
@@ -45,7 +45,7 @@ public class CloudStackDiskOffering {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 

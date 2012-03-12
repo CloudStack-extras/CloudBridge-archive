@@ -18,13 +18,13 @@ package com.cloud.bridge.service.core.ec2;
 
 public class EC2Volume {
 
-	private Long id;
+	private String id;
 	private Long size;   // <- in gigs
 	private String zoneName;
-	private Long   instanceId;
-	private Long   snapshotId;
+	private String   instanceId;
+	private String   snapshotId;
 	private String   device;
-	private Long      deviceId;
+	private String      deviceId;
 	private String   state;
 	private String   type;
 	private String   VMState;
@@ -57,7 +57,7 @@ public class EC2Volume {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -78,14 +78,14 @@ public class EC2Volume {
 	/**
 	 * @return the instanceId
 	 */
-	public Long getInstanceId() {
+	public String getInstanceId() {
 		return instanceId;
 	}
 
 	/**
 	 * @return the snapshotId
 	 */
-	public Long getSnapshotId() {
+	public String getSnapshotId() {
 		return snapshotId;
 	}
 
@@ -99,7 +99,7 @@ public class EC2Volume {
 	/**
 	 * @return the deviceId
 	 */
-	public Long getDeviceId() {
+	public String getDeviceId() {
 		return deviceId;
 	}
 
@@ -135,7 +135,7 @@ public class EC2Volume {
 	/**
 	 * @param id the id to set
 	 */
-	public void setId(Long id) {
+	public void setId(String id) {
 		this.id = id;
 	}
 
@@ -149,14 +149,14 @@ public class EC2Volume {
 	/**
 	 * @param instanceId the instanceId to set
 	 */
-	public void setInstanceId(Long instanceId) {
+	public void setInstanceId(String instanceId) {
 		this.instanceId = instanceId;
 	}
 
 	/**
 	 * @param snapshotId the snapshotId to set
 	 */
-	public void setSnapshotId(Long snapshotId) {
+	public void setSnapshotId(String snapshotId) {
 		this.snapshotId = snapshotId;
 	}
 
@@ -170,7 +170,7 @@ public class EC2Volume {
 	/**
 	 * @param deviceId the deviceId to set
 	 */
-	public void setDeviceId(Long deviceId) {
+	public void setDeviceId(String deviceId) {
 		this.deviceId = deviceId;
 	}
 

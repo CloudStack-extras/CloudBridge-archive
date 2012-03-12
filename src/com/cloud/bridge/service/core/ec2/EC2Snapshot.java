@@ -21,9 +21,9 @@ import com.cloud.bridge.util.EC2RestAuth;
 
 public class EC2Snapshot {
 
-	private Long   id;
+	private String   id;
 	private String   name;
-	private Long   volumeId;
+	private String   volumeId;
 	private Long      volumeSize;   // in gigs
     private String   type;
     private String   state;
@@ -43,11 +43,11 @@ public class EC2Snapshot {
 		domainId	= null;
 	}
 	
-	public void setId(Long id ) {
+	public void setId(String id ) {
 		this.id = id;
 	}
 	
-	public Long getId() {
+	public String getId() {
 		return this.id;
 	}
 
@@ -59,11 +59,11 @@ public class EC2Snapshot {
 		return this.name;
 	}
 
-	public void setVolumeId(Long volumeId ) {
+	public void setVolumeId(String volumeId ) {
 		this.volumeId = volumeId;
 	}
 	
-	public Long getVolumeId() {
+	public String getVolumeId() {
 		return this.volumeId;
 	}
 	

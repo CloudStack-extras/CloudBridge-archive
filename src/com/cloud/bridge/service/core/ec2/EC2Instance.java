@@ -36,7 +36,7 @@ public class EC2Instance {
     private String		domainId;
     private String      hypervisor;
     private String      rootDeviceType;
-    private int         rootDeviceId;
+    private String      rootDeviceId;
     
 	public EC2Instance() {
 		id               = null;
@@ -54,7 +54,7 @@ public class EC2Instance {
 		domainId	     = null;
 		hypervisor       = null;
 		rootDeviceType   = null;
-		rootDeviceId     = 0;
+		rootDeviceId     = null;
 	}
 	
 	public void setId( String id ) {
@@ -177,11 +177,11 @@ public class EC2Instance {
 		rootDeviceType = param;		
 	}
 
-	public int getRootDeviceId() {
+	public String getRootDeviceId() {
 	    return rootDeviceId;	
 	}
 	
-	public void setRootDeviceId(int param) {
+	public void setRootDeviceId(String param) {
 		rootDeviceId = param;		
 	}
 }

@@ -92,8 +92,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		EC2Volume request = new EC2Volume();
 		AttachVolumeType avt = attachVolume.getAttachVolume();
 		
-		request.setId( new Long(avt.getVolumeId()));
-		request.setInstanceId( new Long(avt.getInstanceId()));
+		request.setId(avt.getVolumeId());
+		request.setInstanceId(avt.getInstanceId());
 		request.setDevice( avt.getDevice());
 		return toAttachVolumeResponse( engine.attachVolume( request ));
 	}
@@ -180,7 +180,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		CreateVolumeType cvt = createVolume.getCreateVolume();
 		
 		request.setSize( cvt.getSize());
-		request.setSnapshotId(cvt.getSnapshotId() != null ? new Long(cvt.getSnapshotId()) : null);
+		request.setSnapshotId(cvt.getSnapshotId() != null ? cvt.getSnapshotId() : null);
 		request.setZoneName( cvt.getAvailabilityZone());
 		return toCreateVolumeResponse( engine.createVolume( request ));
 	}
@@ -199,7 +199,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		EC2Volume request = new EC2Volume();
 		DeleteVolumeType avt = deleteVolume.getDeleteVolume();
 		
-		request.setId( new Long(avt.getVolumeId()));
+		request.setId(avt.getVolumeId());
 		return toDeleteVolumeResponse( engine.deleteVolume( request ));
 	}
 
@@ -439,8 +439,8 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		EC2Volume request = new EC2Volume();
 		DetachVolumeType avt = detachVolume.getDetachVolume();
 		
-		request.setId( new Long(avt.getVolumeId()));
-		request.setInstanceId( new Long(avt.getInstanceId()));
+		request.setId(avt.getVolumeId());
+		request.setInstanceId(avt.getInstanceId());
 		request.setDevice( avt.getDevice());
 		return toDetachVolumeResponse( engine.detachVolume( request ));
 	}
@@ -1009,7 +1009,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	        	AttachmentSetItemResponseType param5 = new AttachmentSetItemResponseType();
 	        	param5.setVolumeId(vol.getId().toString());
 	        	param5.setInstanceId(vol.getInstanceId().toString());
-	        	String devicePath = engine.cloudDeviceIdToDevicePath( vol.getHypervisor(), vol.getDeviceId().intValue());
+	        	String devicePath = engine.cloudDeviceIdToDevicePath( vol.getHypervisor(), vol.getDeviceId());
 	        	param5.setDevice( devicePath );
 	        	param5.setStatus( toVolumeAttachmentState( vol.getInstanceId(), vol.getVMState()));
 	        	param5.setAttachTime( cal );  
@@ -1273,7 +1273,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	 * @param vmState
 	 * @return
 	 */
-	public static String toVolumeAttachmentState(Long instanceId, String vmState ) {
+	public static String toVolumeAttachmentState(String instanceId, String vmState ) {
 		if (null == instanceId || null == vmState) return "detached";
 		
 		     if (vmState.equalsIgnoreCase( "Destroyed" )) return "detached";

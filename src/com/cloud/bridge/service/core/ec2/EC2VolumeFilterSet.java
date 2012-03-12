@@ -126,7 +126,7 @@ public class EC2VolumeFilterSet {
 		else if (filterName.equalsIgnoreCase( "attachment.attach-time" ))
 			return containsTime(vol.getAttached(), valueSet );	
 		else if (filterName.equalsIgnoreCase( "attachment.device" )) 
-			return containsDevice(vol.getDeviceId().intValue(), valueSet );	
+			return containsDevice(vol.getDeviceId(), valueSet );	
 		else if (filterName.equalsIgnoreCase( "attachment.instance-id" )) 
 			return containsString(vol.getInstanceId().toString(), valueSet );		
 		else return false;
@@ -165,10 +165,11 @@ public class EC2VolumeFilterSet {
 	}
 
 
-	private boolean containsDevice(int deviceId, String[] set )
+	private boolean containsDevice(String deviceId, String[] set )
 	{
+	    Integer devId = new Integer(deviceId);
 		for (String s : set) {
-			switch( deviceId ) {
+			switch( devId ) {
 			case 1:
 				if (( "/dev/sdb" ).matches( s )) return true;
 				if (( "/dev/xvdb").matches( s )) return true;

@@ -26,7 +26,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackNetwork {
 	@SerializedName(ApiConstants.ID)
-	private Long id;
+	private String id;
     @SerializedName(ApiConstants.ACCOUNT)
     private String account;
 	@SerializedName(ApiConstants.BROADCAST_DOMAIN_TYPE)
@@ -42,7 +42,7 @@ public class CloudStackNetwork {
     @SerializedName(ApiConstants.DOMAIN)
     private String domain;
     @SerializedName(ApiConstants.DOMAIN_ID)
-    private Long domainId;
+    private String domainId;
     @SerializedName(ApiConstants.END_IP)
     private String endIp;
     @SerializedName(ApiConstants.GATEWAY)
@@ -64,7 +64,7 @@ public class CloudStackNetwork {
 	@SerializedName(ApiConstants.NETWORK_OFFERING_DISPLAY_TEXT)
 	private String networkOfferingDisplayText;
 	@SerializedName(ApiConstants.NETWORK_OFFERING_ID)
-	private Long networkOfferingId;	
+	private String networkOfferingId;	
 	@SerializedName(ApiConstants.NETWORK_OFFERING_NAME)
 	private String networkOfferingName;	
     @SerializedName(ApiConstants.RELATED)
@@ -84,7 +84,7 @@ public class CloudStackNetwork {
     @SerializedName(ApiConstants.VLAN)
     private String vlan;
 	@SerializedName(ApiConstants.ZONE_ID)
-	private Long zoneId;	
+	private String zoneId;	
     @SerializedName(ApiConstants.SERVICE)
     private List<CloudStackNetworkService> services;
 
@@ -163,7 +163,7 @@ public class CloudStackNetwork {
 	/**
 	 * @return the domainId
 	 */
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 
@@ -190,7 +190,7 @@ public class CloudStackNetwork {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -271,7 +271,7 @@ public class CloudStackNetwork {
 	/**
 	 * @return the networkOfferingId
 	 */
-	public Long getNetworkOfferingId() {
+	public String getNetworkOfferingId() {
 		return networkOfferingId;
 	}
 
@@ -370,7 +370,7 @@ public class CloudStackNetwork {
 	/**
 	 * @return the zoneId
 	 */
-	public Long getZoneId() {
+	public String getZoneId() {
 		return zoneId;
 	}
 }

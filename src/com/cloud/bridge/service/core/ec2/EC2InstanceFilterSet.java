@@ -182,12 +182,13 @@ public class EC2InstanceFilterSet {
 	}
 
 	
-	private boolean containsDevice( int deviceId, String[] set )
+	private boolean containsDevice( String deviceId, String[] set )
 	{
+	    Integer devId = new Integer(deviceId);
         for( int i=0; i < set.length; i++ )
         {
 	    	//System.out.println( "contsinsDevice: " + deviceId + " " + set[i] );
-        	switch( deviceId ) {
+        	switch( devId ) {
         	case 1:
        		     if (( "/dev/sdb" ).matches( set[i] )) return true;
     		     if (( "/dev/xvdb").matches( set[i] )) return true;

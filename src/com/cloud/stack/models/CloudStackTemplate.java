@@ -24,11 +24,11 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackTemplate {
 	@SerializedName(ApiConstants.ID)
-	private Long id;
+	private String id;
 	@SerializedName(ApiConstants.ACCOUNT)
 	private String account;
 	@SerializedName(ApiConstants.ACCOUNT_ID)
-	private Long accountId;
+	private String accountId;
 	@SerializedName(ApiConstants.BOOTABLE)
 	private Boolean bootable;
 	@SerializedName(ApiConstants.CHECKSUM)
@@ -46,7 +46,7 @@ public class CloudStackTemplate {
 	@SerializedName(ApiConstants.FORMAT)
 	private String format;
 	@SerializedName(ApiConstants.HOST_ID)
-	private Long hostId;
+	private String hostId;
 	@SerializedName(ApiConstants.HOST_NAME)
 	private String hostName;
 	@SerializedName(ApiConstants.HYPERVISOR)
@@ -60,13 +60,13 @@ public class CloudStackTemplate {
 	@SerializedName(ApiConstants.IS_READY)
 	private Boolean isReady;
 	@SerializedName(ApiConstants.JOB_ID)
-	private Long jobId;
+	private String jobId;
 	@SerializedName(ApiConstants.JOB_STATUS)
 	private String jobStatus;	
 	@SerializedName(ApiConstants.NAME)
 	private String name;
 	@SerializedName(ApiConstants.OS_TYPE_ID)
-	private Long osTypeId;
+	private String osTypeId;
 	@SerializedName(ApiConstants.OS_TYPE_NAME)
 	private String osTypeName;
 	@SerializedName(ApiConstants.PASSWORD_ENABLED)
@@ -76,7 +76,7 @@ public class CloudStackTemplate {
 	@SerializedName(ApiConstants.SIZE)
 	private Long size;
 	@SerializedName(ApiConstants.SOURCE_TEMPLATE_ID)
-	private Long sourceTemplateId;
+	private String sourceTemplateId;
 	@SerializedName(ApiConstants.STATUS)
 	private String status;
 	@SerializedName(ApiConstants.TEMPLATE_TYPE)
@@ -95,7 +95,7 @@ public class CloudStackTemplate {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -109,7 +109,7 @@ public class CloudStackTemplate {
 	/**
 	 * @return the accountId
 	 */
-	public Long getAccountId() {
+	public String getAccountId() {
 		return accountId;
 	}
 
@@ -172,7 +172,7 @@ public class CloudStackTemplate {
 	/**
 	 * @return the hostId
 	 */
-	public Long getHostId() {
+	public String getHostId() {
 		return hostId;
 	}
 
@@ -221,7 +221,7 @@ public class CloudStackTemplate {
 	/**
 	 * @return the jobId
 	 */
-	public Long getJobId() {
+	public String getJobId() {
 		return jobId;
 	}
 
@@ -242,7 +242,7 @@ public class CloudStackTemplate {
 	/**
 	 * @return the osTypeId
 	 */
-	public Long getOsTypeId() {
+	public String getOsTypeId() {
 		return osTypeId;
 	}
 
@@ -277,7 +277,7 @@ public class CloudStackTemplate {
 	/**
 	 * @return the sourceTemplateId
 	 */
-	public Long getSourceTemplateId() {
+	public String getSourceTemplateId() {
 		return sourceTemplateId;
 	}
 

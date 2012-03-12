@@ -284,7 +284,7 @@ public class EC2Engine {
 			if (null == ruleId)
 				throw new EC2ServiceException(ClientError.InvalidGroup_NotFound, "Cannot find matching ruleid.");
 
-			CloudStackInfoResponse resp = getApi().revokeSecurityGroupIngress(new Long(ruleId));
+			CloudStackInfoResponse resp = getApi().revokeSecurityGroupIngress(ruleId);
 			if (resp != null && resp.getId() != null) {
 				return resp.getSuccess();
 			}
@@ -462,7 +462,7 @@ public class EC2Engine {
 	public EC2Snapshot createSnapshot( String volumeId ) {
 		try {
 			
-			CloudStackSnapshot snap = getApi().createSnapshot(new Long(volumeId), null, null, null);
+			CloudStackSnapshot snap = getApi().createSnapshot(volumeId, null, null, null);
 			if (snap == null) {
 				throw new EC2ServiceException(ServerError.InternalError, "Unable to create snapshot!");
 			}
@@ -500,7 +500,7 @@ public class EC2Engine {
 	public boolean deleteSnapshot(String snapshotId) {
 		try {
 			
-			CloudStackInfoResponse resp = getApi().deleteSnapshot(new Long(snapshotId));
+			CloudStackInfoResponse resp = getApi().deleteSnapshot(snapshotId);
 			if(resp.getJobId() != null)
 				return true;
 
@@ -526,7 +526,7 @@ public class EC2Engine {
 			images = listTemplates( request.getId(), images );
 			EC2Image[] imageSet = images.getImageSet();
 			
-			CloudStackTemplate resp = getApi().updateTemplate(new Long(request.getId()), null, request.getDescription(), null, imageSet[0].getName(), null, null);
+			CloudStackTemplate resp = getApi().updateTemplate(request.getId(), null, request.getDescription(), null, imageSet[0].getName(), null, null);
 			if (resp != null) {
 				return true;
 			}
@@ -552,7 +552,7 @@ public class EC2Engine {
 			cloudSnaps = new ArrayList<CloudStackSnapshot>();
 
 			for(String id : interestedShots) {
-				List<CloudStackSnapshot> tmpList = getApi().listSnapshots(null, null, new Long(id), null, null, null, null, null, null);
+				List<CloudStackSnapshot> tmpList = getApi().listSnapshots(null, null, id, null, null, null, null, null, null);
 				cloudSnaps.addAll(tmpList);
 			}
 		}
@@ -587,7 +587,7 @@ public class EC2Engine {
 	 */
 	public EC2PasswordData getPasswordData(String instanceId) {
 		try {
-			CloudStackPasswordData resp = getApi().getVMPassword(new Long(instanceId));
+			CloudStackPasswordData resp = getApi().getVMPassword(instanceId);
 			EC2PasswordData passwdData = new EC2PasswordData();
 			if (resp != null) {
 				passwdData.setInstanceId(instanceId);
@@ -780,7 +780,7 @@ public class EC2Engine {
 	public boolean associateAddress( EC2AssociateAddress request ) {
 		try {
 			CloudStackIpAddress cloudIp = getApi().listPublicIpAddresses(null, null, null, null, null, request.getPublicIp(), null, null, null).get(0);
-			CloudStackUserVm cloudVm = getApi().listVirtualMachines(null, null, null, null, null, null, new Long(request.getInstanceId()), null, null, null, null, null, null, null, null).get(0);
+			CloudStackUserVm cloudVm = getApi().listVirtualMachines(null, null, null, null, null, null, request.getInstanceId(), null, null, null, null, null, null, null, null).get(0);
 
 			CloudStackInfoResponse resp = getApi().enableStaticNat(cloudIp.getId(), cloudVm.getId());
 			if (resp != null) {
@@ -881,13 +881,13 @@ public class EC2Engine {
 	{
 		EC2CreateImageResponse response = null;
 		boolean needsRestart = false;
-		Long volumeId      = null;
+		String volumeId      = null;
 
 		try {
 			// [A] Creating a template from a VM volume should be from the ROOT volume
 			//     Also for this to work the VM must be in a Stopped state so we 'reboot' it if its not
 			EC2DescribeVolumesResponse volumes = new EC2DescribeVolumesResponse();
-			volumes = listVolumes( null, new Long(request.getInstanceId()), volumes );
+			volumes = listVolumes( null, request.getInstanceId(), volumes );
 			EC2Volume[] volSet = volumes.getVolumeSet();
 			for (EC2Volume vol : volSet) {
 				if (vol.getType().equalsIgnoreCase( "ROOT" )) {
@@ -914,7 +914,7 @@ public class EC2Engine {
 			String osTypeId = imageSet[0].getOsTypeId();
 			
 			CloudStackTemplate resp = getApi().createTemplate((request.getDescription() == null ? "" : request.getDescription()), request.getName(), 
-					new Long(osTypeId), null, null, null, null, null, null, volumeId);
+					osTypeId, null, null, null, null, null, null, volumeId);
 			if (resp == null || resp.getId() == null) {
 				throw new EC2ServiceException(ServerError.InternalError, "An upexpected error occurred.");
 			}
@@ -977,7 +977,7 @@ public class EC2Engine {
 	public boolean deregisterImage( EC2Image image ) 
 	{
 		try {
-			CloudStackInfoResponse resp = getApi().deleteTemplate(new Long(image.getId()), null);
+			CloudStackInfoResponse resp = getApi().deleteTemplate(image.getId(), null);
 			return resp.getSuccess();
 		} catch( Exception e ) {
 			logger.error( "EC2 DeregisterImage - ", e);
@@ -1036,7 +1036,7 @@ public class EC2Engine {
 				volumes = listVolumes( null, null, volumes );
 			} else {     
 				for (String s : volumeIds) 
-					volumes = listVolumes(new Long(s), null, volumes );
+					volumes = listVolumes(s, null, volumes );
 			}
 
 			if ( null == vfs )
@@ -1059,7 +1059,7 @@ public class EC2Engine {
 			request.setDeviceId( mapDeviceToCloudDeviceId(request.getDevice()));
 			EC2Volume resp = new EC2Volume();
 			
-			CloudStackVolume vol = getApi().attachVolume(new Long(request.getId()), new Long(request.getInstanceId()), request.getDeviceId().longValue());
+			CloudStackVolume vol = getApi().attachVolume(request.getId(), request.getInstanceId(), request.getDeviceId());
 			if(vol != null) {
 				resp.setAttached(vol.getAttached());
 				resp.setCreated(vol.getCreated());
@@ -1127,9 +1127,9 @@ public class EC2Engine {
 	public EC2Volume createVolume( EC2CreateVolume request ) {
 		try {
 			// -> put either snapshotid or diskofferingid on the request
-			Long snapshotId = request.getSnapshotId();
+			String snapshotId = request.getSnapshotId();
 			Long size = request.getSize();
-			Long diskOfferingId = null;
+			String diskOfferingId = null;
 
 			if (snapshotId == null) {
 				List<CloudStackDiskOffering> disks = getApi().listDiskOfferings(null, null, null, null);
@@ -1142,7 +1142,7 @@ public class EC2Engine {
 			}
 
 //			// -> no volume name is given in the Amazon request but is required in the cloud API
-			CloudStackVolume vol = getApi().createVolume(UUID.randomUUID().toString(), null, new Long(diskOfferingId), null, size, snapshotId, toZoneId(request.getZoneName()));
+			CloudStackVolume vol = getApi().createVolume(UUID.randomUUID().toString(), null, diskOfferingId, null, size, snapshotId, toZoneId(request.getZoneName()));
 			if (vol != null) {
 				EC2Volume resp = new EC2Volume();
 				resp.setAttached(vol.getAttached());
@@ -1208,7 +1208,7 @@ public class EC2Engine {
 			for (EC2Instance vm : vms) {
 				if (vm.getState().equalsIgnoreCase( "Destroyed" )) continue;
 				
-				CloudStackUserVm resp = getApi().rebootVirtualMachine(new Long(vm.getId()));
+				CloudStackUserVm resp = getApi().rebootVirtualMachine(vm.getId());
 				if (logger.isDebugEnabled())
 					logger.debug("Rebooting VM " + resp.getId() + " job " + resp.getJobId());
 			}
@@ -1270,8 +1270,8 @@ public class EC2Engine {
 
 			// now actually deploy the vms
 			for( int i=0; i < createInstances; i++ ) {
-				CloudStackUserVm resp = getApi().deployVirtualMachine(new Long(offer.getServiceOfferingId()), 
-						new Long(request.getTemplateId()), zoneId, null, null, null, null, 
+				CloudStackUserVm resp = getApi().deployVirtualMachine(offer.getServiceOfferingId(), 
+						request.getTemplateId(), zoneId, null, null, null, null, 
 						null, null, null, request.getKeyName(), null, (network != null ? network.getId() : null), 
 						null, null, request.getSize().longValue(), request.getUserData());
 				EC2Instance vm = new EC2Instance();
@@ -1329,7 +1329,7 @@ public class EC2Engine {
 				// -> if its already running then we don't care
 				if (vm.getState().equalsIgnoreCase( "Running" ) || vm.getState().equalsIgnoreCase( "Destroyed" )) continue;
 
-				CloudStackUserVm resp = getApi().startVirtualMachine(new Long(vm.getId()));
+				CloudStackUserVm resp = getApi().startVirtualMachine(vm.getId());
 				
 				if(logger.isDebugEnabled())
 					logger.debug("Starting VM " + vm.getId() + " job " + resp.getJobId());
@@ -1365,12 +1365,12 @@ public class EC2Engine {
 				CloudStackUserVm resp = null;
 				if (request.getDestroyInstances()) {
 					if (vm.getState().equalsIgnoreCase( "Destroyed" )) continue;
-					resp = getApi().destroyVirtualMachine(new Long(vm.getId()));
+					resp = getApi().destroyVirtualMachine(vm.getId());
 					if(logger.isDebugEnabled())
 						logger.debug("Destroying VM " + vm.getId() + " job " + resp.getJobId());
 				} else {
 					if (vm.getState().equalsIgnoreCase("Stopped") || vm.getState().equalsIgnoreCase("Destroyed")) continue;
-					resp = getApi().stopVirtualMachine(new Long(vm.getId()), false);
+					resp = getApi().stopVirtualMachine(vm.getId(), false);
 					if(logger.isDebugEnabled())
 						logger.debug("Stopping VM " + vm.getId() + " job " + resp.getJobId());
 				}
@@ -1451,7 +1451,7 @@ public class EC2Engine {
 	 * @param volumeId   - if interested in one specific volume, null if want to list all volumes
 	 * @param instanceId - if interested in volumes for a specific instance, null if instance is not important
 	 */
-	private EC2DescribeVolumesResponse listVolumes(Long volumeId, Long instanceId, EC2DescribeVolumesResponse volumes)throws Exception {
+	private EC2DescribeVolumesResponse listVolumes(String volumeId, String instanceId, EC2DescribeVolumesResponse volumes)throws Exception {
 
 		List<CloudStackVolume> vols = getApi().listVolumes(null, null, null, volumeId, null, null, null, null, null, instanceId, null);
 		if(vols != null && vols.size() > 0) {
@@ -1564,7 +1564,7 @@ public class EC2Engine {
 	 * @param osTypeName
 	 * @return the Cloud.com API osTypeId 
 	 */
-	private Long toOSTypeId( String osTypeName ) throws Exception { 
+	private String toOSTypeId( String osTypeName ) throws Exception { 
 		try {
 			List<CloudStackOsType> osTypes = getApi().listOsTypes(null, null, null);
 			for (CloudStackOsType osType : osTypes) {
@@ -1624,7 +1624,7 @@ public class EC2Engine {
 	private EC2DescribeInstancesResponse lookupInstances( String instanceId, EC2DescribeInstancesResponse instances ) 
 			throws Exception {
 
-		Long instId = instanceId != null ? new Long(instanceId) : null;
+		String instId = instanceId != null ? instanceId : null;
 		List<CloudStackUserVm> vms = getApi().listVirtualMachines(null, null, null, null, null, null, 
 				instId, null, null, null, null, null, null, null, null);
 		
@@ -1644,7 +1644,7 @@ public class EC2Engine {
     			ec2Vm.setDomainId(cloudVm.getDomainId());
     			ec2Vm.setHypervisor(cloudVm.getHypervisor());
     			ec2Vm.setRootDeviceType(cloudVm.getRootDeviceType());
-    			ec2Vm.setRootDeviceId((int)cloudVm.getRootDeviceId().longValue());
+    			ec2Vm.setRootDeviceId(cloudVm.getRootDeviceId());
     			ec2Vm.setServiceOffering(serviceOfferingIdToInstanceType(cloudVm.getServiceOfferingId().toString()));
     
     			List<CloudStackNic> nics = cloudVm.getNics();
@@ -1673,7 +1673,7 @@ public class EC2Engine {
 	 */
 	private EC2DescribeImagesResponse listTemplates( String templateId, EC2DescribeImagesResponse images ) throws EC2ServiceException {
 		try {
-			List<CloudStackTemplate> resp = getApi().listTemplates("executable", null, null, null, templateId != null ? new Long(templateId) : null, null, null, null); 
+			List<CloudStackTemplate> resp = getApi().listTemplates("executable", null, null, null, templateId != null ? templateId : null, null, null, null); 
 			if (resp != null && resp.size() > 0) {
 			    for (CloudStackTemplate temp : resp) {
     				EC2Image ec2Image = new EC2Image();
@@ -1895,10 +1895,11 @@ public class EC2Engine {
 	 * @param deviceId
 	 * @return
 	 */
-	public String cloudDeviceIdToDevicePath( String hypervisor, int deviceId )
+	public String cloudDeviceIdToDevicePath( String hypervisor, String deviceId )
 	{
+	    Integer devId = new Integer(deviceId);
 		if (null != hypervisor && hypervisor.toLowerCase().contains( "windows" )) {
-			switch( deviceId ) {
+			switch( devId ) {
 			case 1:  return "xvdb";
 			case 2:  return "xvdc";
 			case 3:  return "xvdd";
@@ -1911,7 +1912,7 @@ public class EC2Engine {
 			default: return new String( "" + deviceId );
 			}
 		} else {    // -> assume its unix
-			switch( deviceId ) {
+			switch( devId ) {
 			case 1:  return "/dev/sdb";
 			case 2:  return "/dev/sdc";
 			case 3:  return "/dev/sdd";
@@ -1934,34 +1935,34 @@ public class EC2Engine {
 	 * @param device string
 	 * @return deviceId value
 	 */
-	private long mapDeviceToCloudDeviceId( String device ) 
+	private String mapDeviceToCloudDeviceId( String device ) 
 	{	
-		if (device.equalsIgnoreCase( "/dev/sdb"  )) return 1;
-		else if (device.equalsIgnoreCase( "/dev/sdc"  )) return 2; 
-		else if (device.equalsIgnoreCase( "/dev/sde"  )) return 4; 
-		else if (device.equalsIgnoreCase( "/dev/sdf"  )) return 5; 
-		else if (device.equalsIgnoreCase( "/dev/sdg"  )) return 6; 
-		else if (device.equalsIgnoreCase( "/dev/sdh"  )) return 7; 
-		else if (device.equalsIgnoreCase( "/dev/sdi"  )) return 8; 
-		else if (device.equalsIgnoreCase( "/dev/sdj"  )) return 9; 
+		if (device.equalsIgnoreCase( "/dev/sdb"  )) return "1";
+		else if (device.equalsIgnoreCase( "/dev/sdc"  )) return "2"; 
+		else if (device.equalsIgnoreCase( "/dev/sde"  )) return "4"; 
+		else if (device.equalsIgnoreCase( "/dev/sdf"  )) return "5"; 
+		else if (device.equalsIgnoreCase( "/dev/sdg"  )) return "6"; 
+		else if (device.equalsIgnoreCase( "/dev/sdh"  )) return "7"; 
+		else if (device.equalsIgnoreCase( "/dev/sdi"  )) return "8"; 
+		else if (device.equalsIgnoreCase( "/dev/sdj"  )) return "9"; 
 
-		else if (device.equalsIgnoreCase( "/dev/xvdb" )) return 1;  
-		else if (device.equalsIgnoreCase( "/dev/xvdc" )) return 2;  
-		else if (device.equalsIgnoreCase( "/dev/xvde" )) return 4;  
-		else if (device.equalsIgnoreCase( "/dev/xvdf" )) return 5;  
-		else if (device.equalsIgnoreCase( "/dev/xvdg" )) return 6;  
-		else if (device.equalsIgnoreCase( "/dev/xvdh" )) return 7;  
-		else if (device.equalsIgnoreCase( "/dev/xvdi" )) return 8;  
-		else if (device.equalsIgnoreCase( "/dev/xvdj" )) return 9;  
+		else if (device.equalsIgnoreCase( "/dev/xvdb" )) return "1";  
+		else if (device.equalsIgnoreCase( "/dev/xvdc" )) return "2";  
+		else if (device.equalsIgnoreCase( "/dev/xvde" )) return "4";  
+		else if (device.equalsIgnoreCase( "/dev/xvdf" )) return "5";  
+		else if (device.equalsIgnoreCase( "/dev/xvdg" )) return "6";  
+		else if (device.equalsIgnoreCase( "/dev/xvdh" )) return "7";  
+		else if (device.equalsIgnoreCase( "/dev/xvdi" )) return "8";  
+		else if (device.equalsIgnoreCase( "/dev/xvdj" )) return "9";  
 
-		else if (device.equalsIgnoreCase( "xvdb"      )) return 1;  
-		else if (device.equalsIgnoreCase( "xvdc"      )) return 2;  
-		else if (device.equalsIgnoreCase( "xvde"      )) return 4;  
-		else if (device.equalsIgnoreCase( "xvdf"      )) return 5;  
-		else if (device.equalsIgnoreCase( "xvdg"      )) return 6;  
-		else if (device.equalsIgnoreCase( "xvdh"      )) return 7;  
-		else if (device.equalsIgnoreCase( "xvdi"      )) return 8;  
-		else if (device.equalsIgnoreCase( "xvdj"      )) return 9;  
+		else if (device.equalsIgnoreCase( "xvdb"      )) return "1";  
+		else if (device.equalsIgnoreCase( "xvdc"      )) return "2";  
+		else if (device.equalsIgnoreCase( "xvde"      )) return "4";  
+		else if (device.equalsIgnoreCase( "xvdf"      )) return "5";  
+		else if (device.equalsIgnoreCase( "xvdg"      )) return "6";  
+		else if (device.equalsIgnoreCase( "xvdh"      )) return "7";  
+		else if (device.equalsIgnoreCase( "xvdi"      )) return "8";  
+		else if (device.equalsIgnoreCase( "xvdj"      )) return "9";  
 
 		else throw new EC2ServiceException( ClientError.Unsupported, device + " is not supported" );
 	}
@@ -1993,7 +1994,7 @@ public class EC2Engine {
 	 */
 	private boolean stopVirtualMachine( String instanceId) throws Exception {
 		try {
-			CloudStackUserVm resp = getApi().stopVirtualMachine(new Long(instanceId), false);
+			CloudStackUserVm resp = getApi().stopVirtualMachine(instanceId, false);
 			if (logger.isDebugEnabled())
 				logger.debug("Stopping VM " + instanceId );
 			return resp != null;
@@ -2012,7 +2013,7 @@ public class EC2Engine {
 	 */
 	private boolean startVirtualMachine( String instanceId ) throws Exception {
 		try {
-			CloudStackUserVm resp = getApi().startVirtualMachine( new Long(instanceId));
+			CloudStackUserVm resp = getApi().startVirtualMachine(instanceId);
 			if (logger.isDebugEnabled())
 				logger.debug("Starting VM " + instanceId );
 			return resp != null;

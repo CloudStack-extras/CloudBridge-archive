@@ -19,7 +19,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class CloudStackVolume {
     @SerializedName(ApiConstants.ID)
-    private Long id;
+    private String id;
     @SerializedName(ApiConstants.ACCOUNT)
     private String accountName;
     @SerializedName(ApiConstants.ATTACHED)
@@ -29,23 +29,23 @@ public class CloudStackVolume {
     @SerializedName(ApiConstants.DESTROYED)
     private Boolean destroyed;
     @SerializedName(ApiConstants.DEVICE_ID)
-    private Long deviceId;
+    private String deviceId;
     @SerializedName(ApiConstants.DISK_OFFERING_DISPLAY_TEXT)
     private String diskOfferingDisplayText;
     @SerializedName(ApiConstants.DISK_OFFERING_ID)
-    private Long diskOfferingId;
+    private String diskOfferingId;
     @SerializedName(ApiConstants.DISK_OFFERING_NAME)
     private String diskOfferingName;
     @SerializedName(ApiConstants.DOMAIN)
     private String domainName;
     @SerializedName(ApiConstants.DOMAIN_ID)
-    private Long domainId;
+    private String domainId;
     @SerializedName(ApiConstants.HYPERVISOR)
     private String hypervisor;
     @SerializedName(ApiConstants.IS_EXTRACTABLE)
     private Boolean extractable;
     @SerializedName(ApiConstants.JOB_ID)
-    private Long jobId;
+    private String jobId;
     @SerializedName(ApiConstants.JOB_STATUS)
     private Integer jobStatus;
     @SerializedName(ApiConstants.NAME)
@@ -53,13 +53,13 @@ public class CloudStackVolume {
     @SerializedName(ApiConstants.SERVICE_OFFERING_DISPLAY_TEXT)
     private String serviceOfferingDisplayText;
     @SerializedName(ApiConstants.SERVICE_OFFERING_ID)
-    private Long serviceOfferingId;
+    private String serviceOfferingId;
     @SerializedName(ApiConstants.SERVICE_OFFERING_NAME)
     private String serviceOfferingName;
     @SerializedName(ApiConstants.SIZE)
     private Long size;
     @SerializedName(ApiConstants.SNAPSHOT_ID)
-    private Long snapshotId;
+    private String snapshotId;
     @SerializedName(ApiConstants.STATE)
     private String state;
     @SerializedName(ApiConstants.STORAGE)
@@ -69,7 +69,7 @@ public class CloudStackVolume {
     @SerializedName(ApiConstants.TYPE)
     private String volumeType;
     @SerializedName(ApiConstants.VIRTUAL_MACHINE_ID)
-    private Long virtualMachineId;
+    private String virtualMachineId;
     @SerializedName(ApiConstants.VM_DISPLAY_NAME)
     private String virtualMachineDisplayName;
     @SerializedName(ApiConstants.VM_NAME)
@@ -77,7 +77,7 @@ public class CloudStackVolume {
     @SerializedName(ApiConstants.VM_STATE)
     private String virtualMachineState;
     @SerializedName(ApiConstants.ZONE_ID)
-    private Long zoneId;
+    private String zoneId;
     @SerializedName(ApiConstants.ZONE_NAME)
     private String zoneName;
 
@@ -89,7 +89,7 @@ public class CloudStackVolume {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -129,7 +129,7 @@ public class CloudStackVolume {
 	/**
 	 * @return the deviceId
 	 */
-	public Long getDeviceId() {
+	public String getDeviceId() {
 		return deviceId;
 	}
 
@@ -145,7 +145,7 @@ public class CloudStackVolume {
 	/**
 	 * @return the diskOfferingId
 	 */
-	public Long getDiskOfferingId() {
+	public String getDiskOfferingId() {
 		return diskOfferingId;
 	}
 
@@ -169,7 +169,7 @@ public class CloudStackVolume {
 	/**
 	 * @return the domainId
 	 */
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 
@@ -193,7 +193,7 @@ public class CloudStackVolume {
 	/**
 	 * @return the jobId
 	 */
-	public Long getJobId() {
+	public String getJobId() {
 		return jobId;
 	}
 
@@ -225,7 +225,7 @@ public class CloudStackVolume {
 	/**
 	 * @return the serviceOfferingId
 	 */
-	public Long getServiceOfferingId() {
+	public String getServiceOfferingId() {
 		return serviceOfferingId;
 	}
 
@@ -249,7 +249,7 @@ public class CloudStackVolume {
 	/**
 	 * @return the snapshotId
 	 */
-	public Long getSnapshotId() {
+	public String getSnapshotId() {
 		return snapshotId;
 	}
 
@@ -289,7 +289,7 @@ public class CloudStackVolume {
 	/**
 	 * @return the virtualMachineId
 	 */
-	public Long getVirtualMachineId() {
+	public String getVirtualMachineId() {
 		return virtualMachineId;
 	}
 
@@ -321,7 +321,7 @@ public class CloudStackVolume {
 	/**
 	 * @return the zoneId
 	 */
-	public Long getZoneId() {
+	public String getZoneId() {
 		return zoneId;
 	}
 

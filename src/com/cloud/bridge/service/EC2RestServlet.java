@@ -581,12 +581,12 @@ public class EC2RestServlet extends HttpServlet {
 		// -> all these parameters are required
         String[] volumeId = request.getParameterValues( "VolumeId" );
 		if ( null != volumeId && 0 < volumeId.length ) 
-			 EC2request.setId( new Long(volumeId[0]) );
+			 EC2request.setId( volumeId[0] );
 		else { response.sendError(530, "Missing VolumeId parameter" ); return; }
 
         String[] instanceId = request.getParameterValues( "InstanceId" );
         if ( null != instanceId && 0 < instanceId.length ) 
-        	 EC2request.setInstanceId( new Long(instanceId[0]) );
+        	 EC2request.setInstanceId( instanceId[0] );
 		else { response.sendError(530, "Missing InstanceId parameter" ); return; }
 
         String[] device = request.getParameterValues( "Device" );
@@ -733,12 +733,12 @@ public class EC2RestServlet extends HttpServlet {
 		
         String[] volumeId = request.getParameterValues( "VolumeId" );
 		if ( null != volumeId && 0 < volumeId.length ) 
-			 EC2request.setId( new Long(volumeId[0]) );
+			 EC2request.setId(volumeId[0]);
 		else { response.sendError(530, "Missing VolumeId parameter" ); return; }
 
         String[] instanceId = request.getParameterValues( "InstanceId" );
         if ( null != instanceId && 0 < instanceId.length ) 
-        	 EC2request.setInstanceId( new Long(instanceId[0]) );
+        	 EC2request.setInstanceId(instanceId[0]);
 
         String[] device = request.getParameterValues( "Device" );
         if ( null != device && 0 < device.length ) 
@@ -755,7 +755,7 @@ public class EC2RestServlet extends HttpServlet {
 		
         String[] volumeId = request.getParameterValues( "VolumeId" );
 		if ( null != volumeId && 0 < volumeId.length ) 
-			 EC2request.setId( new Long(volumeId[0]) );
+			 EC2request.setId(volumeId[0]);
 		else { response.sendError(530, "Missing VolumeId parameter" ); return; }
 
 		// -> execute the request
@@ -786,7 +786,7 @@ public class EC2RestServlet extends HttpServlet {
 		if (useSize && !useSnapshot) {
 			EC2request.setSize( size[0] );
 		} else if (useSnapshot && !useSize) {
-        	EC2request.setSnapshotId(new Long(snapshotId[0]));
+        	EC2request.setSnapshotId(snapshotId[0]);
         } else if (useSize && useSnapshot) {
         	response.sendError(530, "Size and SnapshotId parameters are mutually exclusive" ); return;
         } else {

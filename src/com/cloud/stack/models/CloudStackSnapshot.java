@@ -19,7 +19,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class CloudStackSnapshot {
     @SerializedName(ApiConstants.ID)
-    private Long id;
+    private String id;
     @SerializedName(ApiConstants.ACCOUNT)
     private String accountName;
     @SerializedName(ApiConstants.CREATED)
@@ -41,7 +41,7 @@ public class CloudStackSnapshot {
     @SerializedName(ApiConstants.STATE)
     private String state;
     @SerializedName(ApiConstants.VOLUME_ID)
-    private Long volumeId;
+    private String volumeId;
     @SerializedName(ApiConstants.VOLUME_NAME)
     private String volumeName;
     @SerializedName(ApiConstants.VOLUME_TYPE)
@@ -50,7 +50,7 @@ public class CloudStackSnapshot {
     public CloudStackSnapshot() {
     }
 
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -70,7 +70,7 @@ public class CloudStackSnapshot {
 		return snapshotType;
 	}
 
-	public Long getVolumeId() {
+	public String getVolumeId() {
 		return volumeId;
 	}
 
