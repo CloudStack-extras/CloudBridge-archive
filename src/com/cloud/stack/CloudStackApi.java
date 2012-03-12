@@ -1497,7 +1497,7 @@ public class CloudStackApi {
 			if (domainId != null) cmd.setParam(ApiConstants.DOMAIN_ID, domainId);
 			if (networkId != null) cmd.setParam(ApiConstants.NETWORK_ID, networkId);
 		}
-		return _client.call(cmd, apiKey, secretKey, false, ApiConstants.ASSOCIATE_IP_ADDRESS_RESPONSE, ApiConstants.PUBLIC_IP_ADDRESS, CloudStackIpAddress.class);
+		return _client.call(cmd, apiKey, secretKey, false, ApiConstants.ASSOCIATE_IP_ADDRESS_RESPONSE, null, CloudStackIpAddress.class);
 	}
 	
 	/**

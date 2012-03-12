@@ -69,6 +69,8 @@ public class EC2Engine {
 	String cloudAPIPort = null;
 
 	private CloudStackApi _eng = null;
+	
+	private CloudStackAccount currentAccount = null;
 
 	public EC2Engine() throws IOException {
 		loadConfigValues();
@@ -823,12 +825,26 @@ public class EC2Engine {
 	{
 		try {
             EC2Address ec2Address = new EC2Address();
-            // this gets our domainId
+            // this gets our networkId
             CloudStackAccount caller = getCurrentAccount();
             
-			CloudStackIpAddress resp = getApi().associateIpAddress(toZoneId(null), null, null, null);
+            CloudStackZone zone = findZone();
+            CloudStackNetwork net = findNetwork(zone);
+//			CloudStackIpAddress resp = getApi().associateIpAddress(null, null, null, "0036952d-48df-4422-9fd0-94b0885e18cb");
+            CloudStackIpAddress resp = getApi().associateIpAddress(null, null, null, net.getId());
 			ec2Address.setAssociatedInstanceId(resp.getId());
-			ec2Address.setIpAddress(resp.getIpAddress());
+			if (resp.getIpAddress() == null) {
+			    List<CloudStackIpAddress> addrList = getApi().listPublicIpAddresses(null, null, null, null, null, null, null, null, null);
+			    if (addrList != null && addrList.size() > 0) {
+			        for (CloudStackIpAddress addr: addrList) {
+			            if (addr.getId().equalsIgnoreCase(resp.getId())) {
+			                ec2Address.setIpAddress(addr.getIpAddress());
+			            }
+			        }
+			    }
+			} else {
+			    ec2Address.setIpAddress(resp.getIpAddress());
+			}
 
 			return ec2Address;
 		} catch(Exception e) { 
@@ -945,13 +961,14 @@ public class EC2Engine {
 	public EC2CreateImageResponse registerImage(EC2RegisterImage request) 
 	{
 		try {
+		    CloudStackAccount caller = getCurrentAccount();
 			if (null == request.getFormat()   || null == request.getName() || null == request.getOsTypeName() ||
 					null == request.getLocation() || null == request.getZoneName())
 				throw new EC2ServiceException(ServerError.InternalError, "Missing parameter - location/architecture/name");
 
 			List<CloudStackTemplate> templates = getApi().registerTemplate((request.getDescription() == null ? request.getName() : request.getDescription()), 
 					request.getFormat(), null, request.getName(), toOSTypeId(request.getOsTypeName()), request.getLocation(), 
-					toZoneId(request.getZoneName()), null, null, null, null, null, null, null, null, null);
+					toZoneId(request.getZoneName(), caller.getDomainId()), null, null, null, null, null, null, null, null, null);
 			if (templates != null) {
 			    // technically we will only ever register a single template...
 			    for (CloudStackTemplate template : templates) {
@@ -1011,7 +1028,9 @@ public class EC2Engine {
 	 */
 	public EC2DescribeAvailabilityZonesResponse handleRequest(EC2DescribeAvailabilityZones request) {	
 		try {
-			return listZones( request.getZoneSet());
+		    CloudStackAccount caller = getCurrentAccount();
+		    
+			return listZones(request.getZoneSet(), caller.getDomainId());
 
 		} catch( EC2ServiceException error ) {
 			logger.error( "EC2 DescribeAvailabilityZones - ", error);
@@ -1129,6 +1148,8 @@ public class EC2Engine {
 	 */
 	public EC2Volume createVolume( EC2CreateVolume request ) {
 		try {
+		    
+		    CloudStackAccount caller = getCurrentAccount();
 			// -> put either snapshotid or diskofferingid on the request
 			String snapshotId = request.getSnapshotId();
 			Long size = request.getSize();
@@ -1145,7 +1166,7 @@ public class EC2Engine {
 			}
 
 //			// -> no volume name is given in the Amazon request but is required in the cloud API
-			CloudStackVolume vol = getApi().createVolume(UUID.randomUUID().toString(), null, diskOfferingId, null, size, snapshotId, toZoneId(request.getZoneName()));
+			CloudStackVolume vol = getApi().createVolume(UUID.randomUUID().toString(), null, diskOfferingId, null, size, snapshotId, toZoneId(request.getZoneName(), caller.getDomainId()));
 			if (vol != null) {
 				EC2Volume resp = new EC2Volume();
 				resp.setAttached(vol.getAttached());
@@ -1240,6 +1261,8 @@ public class EC2Engine {
 		int countCreated       = 0;
 
 		try {
+		    CloudStackAccount caller = getCurrentAccount();
+		    
 			// ugly...
 			canCreateInstances = calculateAllowedInstances();
 			if (-1 == canCreateInstances) canCreateInstances = request.getMaxCount();
@@ -1258,14 +1281,14 @@ public class EC2Engine {
 			OfferingBundle offer = instanceTypeToOfferBundle( request.getInstanceType());
 
 			// zone stuff
-			String zoneId = toZoneId(request.getZoneName());
-
+			String zoneId = toZoneId(request.getZoneName(), caller.getDomainId());
 			
 			List<CloudStackZone> zones = getApi().listZones(null, null, zoneId, null);
 			if (zones == null || zones.size() == 0) {
 				logger.info("EC2 RunInstances - zone [" + request.getZoneName() + "] not found!");
 				throw new EC2ServiceException(ClientError.InvalidZone_NotFound, "ZoneId [" + request.getZoneName() + "] not found!");
 			}
+			// we choose first zone?
 			CloudStackZone zone = zones.get(0);
 
 			// network
@@ -1498,7 +1521,7 @@ public class EC2Engine {
 	 * 
 	 * @return the zoneId that matches the given zone name
 	 */
-	private String toZoneId( String zoneName ) throws Exception	{
+	private String toZoneId(String zoneName, String domainId) throws Exception	{
 		EC2DescribeAvailabilityZonesResponse zones = null;
 		String[] interestedZones = null;
 
@@ -1506,7 +1529,7 @@ public class EC2Engine {
 			interestedZones = new String[1];
 			interestedZones[0] = zoneName;
 		}
-		zones = listZones( interestedZones );
+		zones = listZones(interestedZones, domainId);
 
 		if (zones == null || zones.getZoneIdAt( 0 ) == null) 
 			throw new EC2ServiceException(ClientError.InvalidParameterValue, "Unknown zoneName value - " + zoneName);
@@ -1590,11 +1613,11 @@ public class EC2Engine {
 	 * 
 	 * @return EC2DescribeAvailabilityZonesResponse
 	 */
-	private EC2DescribeAvailabilityZonesResponse listZones( String[] interestedZones ) throws Exception 
+	private EC2DescribeAvailabilityZonesResponse listZones(String[] interestedZones, String domainId) throws Exception 
 	{    
 		EC2DescribeAvailabilityZonesResponse zones = new EC2DescribeAvailabilityZonesResponse();
 
-		List<CloudStackZone> cloudZones = getApi().listZones(true, null, null, null);
+		List<CloudStackZone> cloudZones = getApi().listZones(true, domainId, null, null);
 
 		if(cloudZones != null) {
 			for(CloudStackZone cloudZone : cloudZones) {
@@ -1790,12 +1813,22 @@ public class EC2Engine {
 	 * @throws Exception
 	 */
 	private CloudStackAccount getCurrentAccount() throws Exception {
+	    if (currentAccount != null) {
+	        // verify this is the same account!!!
+	        for (CloudStackUser user : currentAccount.getUser()) { 
+	            if (user.getSecretkey() != null && user.getSecretkey().equalsIgnoreCase(UserContext.current().getSecretKey())) {
+	                return currentAccount;
+	            }
+	        }
+	    }
+	    // otherwise let's find this user/account
 		List<CloudStackAccount> accounts = getApi().listAccounts(null, null, null, null, null, null, null, null);
 		for (CloudStackAccount account : accounts) {
 			CloudStackUser[] users = account.getUser();
 			for (CloudStackUser user : users) {
 			    String userSecretKey = user.getSecretkey();
 				if (userSecretKey != null && userSecretKey.equalsIgnoreCase(UserContext.current().getSecretKey())) {
+				    currentAccount = account;
 					return account;
 				}
 			}
@@ -1847,28 +1880,30 @@ public class EC2Engine {
 		// grab current account
 		CloudStackAccount caller = getCurrentAccount();
 
-		List<CloudStackNetwork> networks = getApi().listNetworks(null, null, null, null, null, null, null, null, null, zoneId);
+		List<CloudStackNetwork> networks = getApi().listNetworks(null, caller.getDomainId(), null, null, null, null, null, null, null, zoneId);
 		
-		List<CloudStackNetworkOffering> offerings = getApi().listNetworkOfferings("Required", null, "virtual", null, true,  null, null, null, null, null, zoneId); 
+		List<CloudStackNetworkOffering> offerings = getApi().listNetworkOfferings("Required", null, null, null, true,  null, null, null, null, null, zoneId); 
 		if (offerings != null && !offerings.isEmpty()) {
 			for (CloudStackNetwork network : networks) 
-				for (CloudStackNetworkOffering offering : offerings) 
+				for (CloudStackNetworkOffering offering : offerings) { 
+				    logger.debug("[reqd/virtual} offering: " + offering.getId() + " network " + network.getNetworkOfferingId());
 					if (network.getNetworkOfferingId().equals(offering.getId())) 
 						return network;
+				}
+			// if we get this far, we didn't find a network, so create one and return it.
+			return createNetwork(zoneId, offerings.get(0), caller);
 		}
 		offerings = getApi().listNetworkOfferings("Optional", null, null, null, true, null, null, null, null, null, zoneId);
 		if (offerings != null && !offerings.isEmpty()) {
 			for (CloudStackNetwork network : networks) 
-				for (CloudStackNetworkOffering offering : offerings) 
+				for (CloudStackNetworkOffering offering : offerings) { 
+                    logger.debug("[optional] offering: " + offering.getId() + " network " + network.getNetworkOfferingId());
 					if (network.getNetworkOfferingId().equals(offering.getId())) 
 						return network;
+				}
 		}
-		// now we create default virtual network since nothing else exists...
-		if (offerings.size() > 0) {
-			return createNetwork(zoneId, offerings.get(0), caller);
-		} else {
-			throw new EC2ServiceException(ServerError.InternalError, "Unable to find default networks for account " + caller.getName());
-		}
+		// if we get this far and haven't returned already return an error
+		throw new EC2ServiceException(ServerError.InternalError, "Unable to find an appropriate network for account " + caller.getName());
 	}
 
 	/**
@@ -1879,6 +1914,8 @@ public class EC2Engine {
 	 * @throws Exception
 	 */
 	private CloudStackNetwork findNetwork(CloudStackZone zone) throws Exception {
+	    if (zone == null) return null;
+	    
 		// for basic networking, we don't specify a networkid for deployvm
 		if (zone.getNetworkType().equalsIgnoreCase("basic")) return null;
 
@@ -1889,6 +1926,17 @@ public class EC2Engine {
 		} else {
 			return getNetworksWithoutSecurityGroupEnabled(zone.getId()); 
 		}
+	}
+	
+	private CloudStackZone findZone() throws Exception {
+	    CloudStackAccount caller = getCurrentAccount();
+	    // caller.getDomainId doesn't work in user mode
+//	    List<CloudStackZone> cloudZones = getApi().listZones(true, caller.getDomainId(), null, null);
+	    List<CloudStackZone> cloudZones = getApi().listZones(true, null, null, null);
+	    if (cloudZones != null && cloudZones.size() > 0) {
+	        return cloudZones.get(0);
+	    }
+	    return null;
 	}
 
 	/**

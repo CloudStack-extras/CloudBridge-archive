@@ -24,7 +24,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackLoadBalancerRule {
 	@SerializedName(ApiConstants.ID)
-	private Long id;
+	private String id;
 	@SerializedName(ApiConstants.ACCOUNT)
 	private String account;
 	@SerializedName(ApiConstants.ALGORITHM)
@@ -34,21 +34,21 @@ public class CloudStackLoadBalancerRule {
 	@SerializedName(ApiConstants.DOMAIN)
 	private String domain;
 	@SerializedName(ApiConstants.DOMAIN_ID)
-	private Long domainId;
+	private String domainId;
 	@SerializedName(ApiConstants.NAME)
 	private String name;
 	@SerializedName(ApiConstants.PRIVATE_PORT)
-	private Long privatePort;
+	private String privatePort;
 	@SerializedName(ApiConstants.PUBLIC_IP)
 	private String publicIp;
 	@SerializedName(ApiConstants.PUBLIC_IP_ID)
-	private Long publicIpId;
+	private String publicIpId;
 	@SerializedName(ApiConstants.PUBLIC_PORT)
 	private Long publicPort;
 	@SerializedName(ApiConstants.STATE)
 	private String state;
 	@SerializedName(ApiConstants.ZONE_ID)
-	private Long zoneId;
+	private String zoneId;
 	
 	/**
 	 * 
@@ -60,7 +60,7 @@ public class CloudStackLoadBalancerRule {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -95,7 +95,7 @@ public class CloudStackLoadBalancerRule {
 	/**
 	 * @return the domainId
 	 */
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 
@@ -109,7 +109,7 @@ public class CloudStackLoadBalancerRule {
 	/**
 	 * @return the privatePort
 	 */
-	public Long getPrivatePort() {
+	public String getPrivatePort() {
 		return privatePort;
 	}
 
@@ -123,7 +123,7 @@ public class CloudStackLoadBalancerRule {
 	/**
 	 * @return the publicIpId
 	 */
-	public Long getPublicIpId() {
+	public String getPublicIpId() {
 		return publicIpId;
 	}
 
@@ -144,7 +144,7 @@ public class CloudStackLoadBalancerRule {
 	/**
 	 * @return the zoneId
 	 */
-	public Long getZoneId() {
+	public String getZoneId() {
 		return zoneId;
 	}
 
