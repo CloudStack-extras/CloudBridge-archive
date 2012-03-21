@@ -968,7 +968,7 @@ public class EC2Engine {
 
 			List<CloudStackTemplate> templates = getApi().registerTemplate((request.getDescription() == null ? request.getName() : request.getDescription()), 
 					request.getFormat(), null, request.getName(), toOSTypeId(request.getOsTypeName()), request.getLocation(), 
-					toZoneId(request.getZoneName(), caller.getDomainId()), null, null, null, null, null, null, null, null, null);
+					toZoneId(request.getZoneName(), null), null, null, null, null, null, null, null, null, null);
 			if (templates != null) {
 			    // technically we will only ever register a single template...
 			    for (CloudStackTemplate template : templates) {
@@ -1166,7 +1166,7 @@ public class EC2Engine {
 			}
 
 //			// -> no volume name is given in the Amazon request but is required in the cloud API
-			CloudStackVolume vol = getApi().createVolume(UUID.randomUUID().toString(), null, diskOfferingId, null, size, snapshotId, toZoneId(request.getZoneName(), caller.getDomainId()));
+			CloudStackVolume vol = getApi().createVolume(UUID.randomUUID().toString(), null, diskOfferingId, null, size, snapshotId, toZoneId(request.getZoneName(), null));
 			if (vol != null) {
 				EC2Volume resp = new EC2Volume();
 				resp.setAttached(vol.getAttached());
@@ -1281,7 +1281,7 @@ public class EC2Engine {
 			OfferingBundle offer = instanceTypeToOfferBundle( request.getInstanceType());
 
 			// zone stuff
-			String zoneId = toZoneId(request.getZoneName(), caller.getDomainId());
+			String zoneId = toZoneId(request.getZoneName(), null);
 			
 			List<CloudStackZone> zones = getApi().listZones(null, null, zoneId, null);
 			if (zones == null || zones.size() == 0) {
