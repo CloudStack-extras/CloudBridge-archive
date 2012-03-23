@@ -1911,12 +1911,16 @@ public class EC2Engine {
 		    //find all optional network offerings in the system 
 	        List<CloudStackNetworkOffering> optionalOfferings = getApi().listNetworkOfferings("Optional", null, null, null, true, null, null, null, null, null, zoneId);
 	        if (optionalOfferings != null && !optionalOfferings.isEmpty()) {
-	            for (CloudStackNetwork network : networks) 
-	                for (CloudStackNetworkOffering optionalOffering : optionalOfferings) { 
-	                    logger.debug("[optional] offering: " + optionalOffering.getId() + " network " + network.getNetworkOfferingId());
-	                    if (network.getNetworkOfferingId().equals(optionalOffering.getId())) 
-	                        return network;
+	            if (networks != null && !networks.isEmpty()) {
+	                for (CloudStackNetwork network : networks) {
+	                    for (CloudStackNetworkOffering optionalOffering : optionalOfferings) { 
+	                        logger.debug("[optional] offering: " + optionalOffering.getId() + " network " + network.getNetworkOfferingId());
+	                        if (network.getNetworkOfferingId().equals(optionalOffering.getId())) {
+	                            return network;
+	                        }
+	                    }
 	                }
+	            }
 	        }
 		}
 		
