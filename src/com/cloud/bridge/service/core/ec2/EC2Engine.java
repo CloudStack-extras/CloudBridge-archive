@@ -940,6 +940,10 @@ public class EC2Engine {
 			if (resp == null || resp.getId() == null) {
 				throw new EC2ServiceException(ServerError.InternalError, "An upexpected error occurred.");
 			}
+			
+			//if template was created succesfully, create the new image response
+			response = new EC2CreateImageResponse();
+			response.setId(resp.getId());
 
 			// [C] If we stopped the virtual machine now we need to restart it
 			if (needsRestart) {
