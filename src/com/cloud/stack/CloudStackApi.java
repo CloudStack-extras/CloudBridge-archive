@@ -1194,7 +1194,7 @@ public class CloudStackApi {
 		CloudStackCommand cmd = new CloudStackCommand(ApiConstants.DELETE_SNAPSHOT);
 		if (cmd != null) 
 			cmd.setParam(ApiConstants.ID, id);
-		return _client.call(cmd, apiKey, secretKey, true, ApiConstants.DELETE_SNAPSHOT_RESPONSE, ApiConstants.SNAPSHOT, CloudStackInfoResponse.class);
+		return _client.call(cmd, apiKey, secretKey, true, ApiConstants.DELETE_SNAPSHOT_RESPONSE, null, CloudStackInfoResponse.class);
 	}
 	
 	/**
@@ -1235,7 +1235,7 @@ public class CloudStackApi {
 			if (id != null) cmd.setParam(ApiConstants.ID, id);
 			if (ids != null) cmd.setParam(ApiConstants.IDS, ids);
 		}
-		return _client.call(cmd, apiKey, secretKey, false, ApiConstants.DELETE_SNAPSHOT_POLICIES_RESPONSE, ApiConstants.SNAPSHOT, CloudStackInfoResponse.class);
+		return _client.call(cmd, apiKey, secretKey, false, ApiConstants.DELETE_SNAPSHOT_POLICIES_RESPONSE, null, CloudStackInfoResponse.class);
 	}
 
 	/**
