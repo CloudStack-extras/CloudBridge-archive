@@ -283,7 +283,7 @@ public class ApiConstants {
     public static final String LIST_SNAPSHOT_POLICIES = "listSnapshotPolicies";
     public static final String LIST_SNAPSHOT_POLICIES_RESPONSE = "listsnapshotpoliciesresponse";
     public static final String LIST_SNAPSHOTS = "listSnapshots";
-    public static final String LIST_SNAPSHOTS_RESPONSE = "listsnapshotsresponsee";
+    public static final String LIST_SNAPSHOTS_RESPONSE = "listsnapshotsresponse";
     public static final String LIST_SSH_KEY_PAIRS = "listSSHKeyPairs";
     public static final String LIST_SSH_KEY_PAIRS_RESPONSE = "listsshkeypairsresponse";
     public static final String LIST_TEMPLATE_PERMISSIONS = "listTemplatePermissions";
