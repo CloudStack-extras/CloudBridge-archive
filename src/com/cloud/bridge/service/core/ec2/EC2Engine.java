@@ -975,7 +975,7 @@ public class EC2Engine {
 				throw new EC2ServiceException(ServerError.InternalError, "Missing parameter - location/architecture/name");
 
 			List<CloudStackTemplate> templates = getApi().registerTemplate((request.getDescription() == null ? request.getName() : request.getDescription()), 
-					request.getFormat(), null, request.getName(), toOSTypeId(request.getOsTypeName()), request.getLocation(), 
+					request.getFormat(), request.getHypervisor(), request.getName(), toOSTypeId(request.getOsTypeName()), request.getLocation(), 
 					toZoneId(request.getZoneName(), null), null, null, null, null, null, null, null, null, null);
 			if (templates != null) {
 			    // technically we will only ever register a single template...

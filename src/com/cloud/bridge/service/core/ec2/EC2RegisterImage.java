@@ -23,6 +23,7 @@ public class EC2RegisterImage {
 	private String  format;
 	private String  zoneName;
 	private String  osTypeName;
+	private String  hypervisor;
 	
 	public EC2RegisterImage() {
 		location    = null;
@@ -70,6 +71,7 @@ public class EC2RegisterImage {
 				format = parts[0];
 				zoneName = parts[1];
 				osTypeName = parts[2];
+				hypervisor = parts[3];
 			}
 		}
 	}
@@ -85,4 +87,8 @@ public class EC2RegisterImage {
 	public String getOsTypeName() {
 		return this.osTypeName;
 	}
+
+    public String getHypervisor() {
+        return hypervisor;
+    }
 }
