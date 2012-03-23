@@ -506,8 +506,9 @@ public class EC2Engine {
 		try {
 			
 			CloudStackInfoResponse resp = getApi().deleteSnapshot(snapshotId);
-			if(resp.getJobId() != null)
-				return true;
+			if(resp != null) {
+			    return resp.getSuccess();
+			}
 
 			return false;
 		} catch(Exception e) {
