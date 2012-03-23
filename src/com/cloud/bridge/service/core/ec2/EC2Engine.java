@@ -28,7 +28,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.log4j.Logger;
+import org.xml.sax.SAXException;
 
 import com.cloud.bridge.persist.dao.OfferingDao;
 import com.cloud.bridge.service.UserContext;
@@ -1864,9 +1867,9 @@ public class EC2Engine {
 	 * @return
 	 * @throws Exception
 	 */
-	private CloudStackNetwork createNetwork(String zoneId, CloudStackNetworkOffering offering, CloudStackAccount owner) throws Exception {
+	private CloudStackNetwork createDefaultGuestNetwork(String zoneId, CloudStackNetworkOffering offering, CloudStackAccount owner) throws Exception {
 		return getApi().createNetwork(owner.getName() + "-network", owner.getName() + "-network",  offering.getId(), zoneId, owner.getName(), 
-				null, null, null, null, null, null, null, null, null, null);
+				owner.getDomainId(), true, null, null, null, null, null, null, null, null);
 	}
 
 	/**
@@ -1879,29 +1882,40 @@ public class EC2Engine {
 	private CloudStackNetwork getNetworksWithoutSecurityGroupEnabled(String zoneId) throws Exception {
 		// grab current account
 		CloudStackAccount caller = getCurrentAccount();
-
-		List<CloudStackNetwork> networks = getApi().listNetworks(null, caller.getDomainId(), null, null, null, null, null, null, null, zoneId);
 		
-		List<CloudStackNetworkOffering> offerings = getApi().listNetworkOfferings("Required", null, null, null, true,  null, null, null, null, null, zoneId); 
-		if (offerings != null && !offerings.isEmpty()) {
-			for (CloudStackNetwork network : networks) 
-				for (CloudStackNetworkOffering offering : offerings) { 
-				    logger.debug("[reqd/virtual} offering: " + offering.getId() + " network " + network.getNetworkOfferingId());
-					if (network.getNetworkOfferingId().equals(offering.getId())) 
-						return network;
-				}
-			// if we get this far, we didn't find a network, so create one and return it.
-			return createNetwork(zoneId, offerings.get(0), caller);
+		//check if account has any networks in the system
+		List<CloudStackNetwork> networks = getApi().listNetworks(caller.getName(), caller.getDomainId(), null, true, null, null, null, null, null, zoneId);
+       
+		//listRequired offerings in the system - the network created from this offering has to be specified in deployVm command
+		List<CloudStackNetworkOffering> reuquiredOfferings = getApi().listNetworkOfferings("Required", null, null, null, true,  null, null, null, null, null, zoneId);
+		if (reuquiredOfferings != null && !reuquiredOfferings.isEmpty()) {
+		    if (networks != null && !networks.isEmpty()) {
+		        //pick up the first required network from the network list
+		        for (CloudStackNetwork network : networks)  {
+                    for (CloudStackNetworkOffering requiredOffering : reuquiredOfferings) { 
+                        logger.debug("[reqd/virtual} offering: " + requiredOffering.getId() + " network " + network.getNetworkOfferingId());
+                        if (network.getNetworkOfferingId().equals(requiredOffering.getId())) {
+                            return network;
+                        }                
+                    } 
+                } 
+		    } else {
+		        //create new network and return it
+		        return createDefaultGuestNetwork(zoneId, reuquiredOfferings.get(0), caller);
+		    }
+		} else {
+		    //find all optional network offerings in the system 
+	        List<CloudStackNetworkOffering> optionalOfferings = getApi().listNetworkOfferings("Optional", null, null, null, true, null, null, null, null, null, zoneId);
+	        if (optionalOfferings != null && !optionalOfferings.isEmpty()) {
+	            for (CloudStackNetwork network : networks) 
+	                for (CloudStackNetworkOffering optionalOffering : optionalOfferings) { 
+	                    logger.debug("[optional] offering: " + optionalOffering.getId() + " network " + network.getNetworkOfferingId());
+	                    if (network.getNetworkOfferingId().equals(optionalOffering.getId())) 
+	                        return network;
+	                }
+	        }
 		}
-		offerings = getApi().listNetworkOfferings("Optional", null, null, null, true, null, null, null, null, null, zoneId);
-		if (offerings != null && !offerings.isEmpty()) {
-			for (CloudStackNetwork network : networks) 
-				for (CloudStackNetworkOffering offering : offerings) { 
-                    logger.debug("[optional] offering: " + offering.getId() + " network " + network.getNetworkOfferingId());
-					if (network.getNetworkOfferingId().equals(offering.getId())) 
-						return network;
-				}
-		}
+		
 		// if we get this far and haven't returned already return an error
 		throw new EC2ServiceException(ServerError.InternalError, "Unable to find an appropriate network for account " + caller.getName());
 	}

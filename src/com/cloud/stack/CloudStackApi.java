@@ -1947,20 +1947,20 @@ public class CloudStackApi {
 	 * @param zoneId
 	 * @param account
 	 * @param domainId
+	 * @param isDefault
+	 * @param startIp
 	 * @param endIp
 	 * @param gateway
-	 * @param isDefault
-	 * @param isShared
 	 * @param netmask
+	 * @param isShared
 	 * @param networkDomain
-	 * @param startIp
 	 * @param tags
 	 * @param vlan
 	 * @return
 	 * @throws Exception
 	 */
 	public CloudStackNetwork createNetwork(String displayText, String name, String networkOfferingId, String zoneId, String account, String domainId,
-			String endIp, String gateway, Boolean isDefault, Boolean isShared, String netmask, String networkDomain, String startIp, String tags, 
+			Boolean isDefault, String startIp, String endIp, String gateway, String netmask, Boolean isShared, String networkDomain, String tags, 
 			String vlan) throws Exception {
 		CloudStackCommand cmd = new CloudStackCommand(ApiConstants.CREATE_NETWORK);
 		if (cmd != null) {
