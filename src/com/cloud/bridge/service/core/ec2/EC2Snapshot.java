@@ -72,7 +72,7 @@ public class EC2Snapshot {
 	}
 	
 	public Long getVolumeSize() {
-		return this.volumeSize;
+	    return (this.volumeSize != null) ? this.volumeSize : 0;
 	}
 
 	public void setType( String type ) {
