@@ -35,7 +35,7 @@ public class EC2Snapshot {
 		id         	= null;
 		name       	= null;
 		volumeId   	= null;
-		volumeSize 	= null;
+		volumeSize 	= new Long(0);
 		type       	= null;
 		state       = null;
 		created    	= null;
@@ -72,7 +72,7 @@ public class EC2Snapshot {
 	}
 	
 	public Long getVolumeSize() {
-	    return (this.volumeSize != null) ? this.volumeSize : 0;
+	    return this.volumeSize;
 	}
 
 	public void setType( String type ) {

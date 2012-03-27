@@ -1606,13 +1606,27 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    EC2Snapshot[] snaps = engineResponse.getSnapshotSet();
 	    for (EC2Snapshot snap : snaps) {
 	         DescribeSnapshotsSetItemResponseType param3 = new DescribeSnapshotsSetItemResponseType();
-	         param3.setSnapshotId( snap.getId().toString());
-	         param3.setVolumeId( snap.getVolumeId().toString());
-	         param3.setStatus( snap.getState());
+	         param3.setSnapshotId( snap.getId());
+	         param3.setVolumeId( snap.getVolumeId());
+
+	         // our semantics are different than those ec2 uses
+	         if (snap.getState().equalsIgnoreCase("backedup")) {
+                 param3.setStatus("completed");
+                 param3.setProgress("100%");
+             } else if (snap.getState().equalsIgnoreCase("creating")) {
+                 param3.setStatus("pending");
+                 param3.setProgress("25%");
+             } else if (snap.getState().equalsIgnoreCase("backingup")) {
+                 param3.setStatus("pending");
+                 param3.setProgress("75%");
+             } else {
+                 // if we see anything besides: backedup/creating/backingup, we assume error
+                 param3.setStatus("error");
+                 param3.setProgress("0%");
+             }
+//	         param3.setStatus( snap.getState());
 	         
-	         String accountName = snap.getAccountName();
-	         String domainId = snap.getDomainId().toString();
-				String ownerId = domainId + ":" + accountName;
+	         String ownerId = snap.getDomainId() + ":" + snap.getAccountName();
 	         
 	         // -> CloudStack seems to have issues with timestamp formats so just in case
 		     Calendar cal = snap.getCreated();
@@ -1622,12 +1636,10 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		     }
 	         param3.setStartTime( cal );
 	         
-	         param3.setProgress( "" );
 	         param3.setOwnerId(ownerId);
-	         Long volSize = new Long( snap.getVolumeSize());
-	         param3.setVolumeSize( volSize.toString());
+	         param3.setVolumeSize( snap.getVolumeSize().toString());
 	         param3.setDescription( snap.getName());
-	         param3.setOwnerAlias( "" );
+	         param3.setOwnerAlias( snap.getAccountName() );
 	         
 	         ResourceTagSetType param18 = new ResourceTagSetType();
 	         ResourceTagSetItemType param19 = new ResourceTagSetItemType();
