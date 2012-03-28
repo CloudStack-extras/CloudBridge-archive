@@ -1615,10 +1615,10 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
                  param3.setProgress("100%");
              } else if (snap.getState().equalsIgnoreCase("creating")) {
                  param3.setStatus("pending");
-                 param3.setProgress("25%");
+                 param3.setProgress("33%");
              } else if (snap.getState().equalsIgnoreCase("backingup")) {
                  param3.setStatus("pending");
-                 param3.setProgress("75%");
+                 param3.setProgress("66%");
              } else {
                  // if we see anything besides: backedup/creating/backingup, we assume error
                  param3.setStatus("error");
