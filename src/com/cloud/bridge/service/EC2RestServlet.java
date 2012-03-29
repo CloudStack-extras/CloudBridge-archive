@@ -135,6 +135,7 @@ import com.cloud.bridge.service.exception.EC2ServiceException.ClientError;
 import com.cloud.bridge.util.AuthenticationUtils;
 import com.cloud.bridge.util.ConfigurationHelper;
 import com.cloud.bridge.util.EC2RestAuth;
+import com.cloud.stack.models.CloudStackAccount;
 
 
 public class EC2RestServlet extends HttpServlet {
@@ -306,7 +307,7 @@ public class EC2RestServlet extends HttpServlet {
      * This is an unauthenticated REST call.
      */
     private void cloudEC2Version( HttpServletRequest request, HttpServletResponse response ) {
-        String version = new String( "<?xml version=\"1.0\" encoding=\"utf-8\"?><CloudEC2Version>1.03</CloudEC2Version>" );       		
+        String version = new String( "<?xml version=\"1.0\" encoding=\"utf-8\"?><CloudEC2Version>1.0.7</CloudEC2Version>" );       		
         response.setStatus(200);
         endResponse(response, version);
     }
@@ -517,6 +518,23 @@ public class EC2RestServlet extends HttpServlet {
         	endResponse(response, "SetOfferMapping exception " + e.getMessage());
 		    return;
         }
+    	
+    	// validate account is admin level
+    	try {
+        	CloudStackAccount currentAccount = ServiceProvider.getInstance().getEC2Engine().getCurrentAccount();
+        	
+        	if (currentAccount.getAccountType() != 1) {
+        	    logger.debug("SetOfferMapping called by non-admin user!");
+        	    response.setStatus(500);
+        	    endResponse(response, "Permission denied for non-admin user to setOfferMapping!");
+        	    return;
+        	}
+    	} catch (Exception e) {
+    	    logger.error("SetOfferMapping " + e.getMessage(), e);
+    	    response.setStatus(401);
+    	    endResponse(response, e.toString());
+    	    return;
+    	}
 
         try {
     	    OfferingDao ofDao = new OfferingDao();
@@ -548,6 +566,23 @@ public class EC2RestServlet extends HttpServlet {
     		response.setStatus(500);
         	endResponse(response, "DeleteOfferMapping exception " + e.getMessage());
 		    return;
+        }
+    	
+    	// validate account is admin level
+    	try {
+            CloudStackAccount currentAccount = ServiceProvider.getInstance().getEC2Engine().getCurrentAccount();
+            
+            if (currentAccount.getAccountType() != 1) {
+                logger.debug("deleteOfferMapping called by non-admin user!");
+                response.setStatus(500);
+                endResponse(response, "Permission denied for non-admin user to deleteOfferMapping!");
+                return;
+            }
+        } catch (Exception e) {
+            logger.error("deleteOfferMapping " + e.getMessage(), e);
+            response.setStatus(401);
+            endResponse(response, e.toString());
+            return;
         }
 
         try {

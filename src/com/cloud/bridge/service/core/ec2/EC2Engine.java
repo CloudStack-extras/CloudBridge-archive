@@ -1086,7 +1086,7 @@ public class EC2Engine {
 	 */
 	public EC2Volume attachVolume( EC2Volume request ) {
 		try {   
-			request.setDeviceId( mapDeviceToCloudDeviceId(request.getDevice()));
+			request.setDeviceId(mapDeviceToCloudDeviceId(request.getDevice()));
 			EC2Volume resp = new EC2Volume();
 			
 			CloudStackVolume vol = getApi().attachVolume(request.getId(), request.getInstanceId(), request.getDeviceId());
@@ -1820,7 +1820,7 @@ public class EC2Engine {
 	 * @return
 	 * @throws Exception
 	 */
-	private CloudStackAccount getCurrentAccount() throws Exception {
+	public CloudStackAccount getCurrentAccount() throws Exception {
 	    if (currentAccount != null) {
 	        // verify this is the same account!!!
 	        for (CloudStackUser user : currentAccount.getUser()) { 
