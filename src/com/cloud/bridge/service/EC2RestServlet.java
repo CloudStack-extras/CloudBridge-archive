@@ -307,7 +307,7 @@ public class EC2RestServlet extends HttpServlet {
      * This is an unauthenticated REST call.
      */
     private void cloudEC2Version( HttpServletRequest request, HttpServletResponse response ) {
-        String version = new String( "<?xml version=\"1.0\" encoding=\"utf-8\"?><CloudEC2Version>1.0.7</CloudEC2Version>" );       		
+        String version = new String( "<?xml version=\"1.0\" encoding=\"utf-8\"?><CloudEC2Version>1.0.8</CloudEC2Version>" );       		
         response.setStatus(200);
         endResponse(response, version);
     }
