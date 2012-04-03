@@ -72,8 +72,8 @@
 			</and>
 		</condition>
 		<echo message="Build number is ${impl.version}" />
-		<propertyfile file="${base.dir}/conf/cloud-bridge.properties">
-			<entry key="version" value="${impl.version}" />
+		<propertyfile file="${base.dir}/conf/ec2-service.properties">
+			<entry key="cloudbridgeVersion" value="${impl.version}" />
 		</propertyfile>
 		<!-- Create the build directory structure used by compile -->
 		<mkdir dir="${jar.dir}" />

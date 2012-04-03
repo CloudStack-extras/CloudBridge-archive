@@ -177,7 +177,7 @@ public class EC2RestServlet extends HttpServlet {
 	       String keystore  = EC2Prop.getProperty( "keystore" );
 	       keystorePassword = EC2Prop.getProperty( "keystorePass" );
 	   	   wsdlVersion      = EC2Prop.getProperty( "WSDLVersion", "2009-11-30" );
-           version = EC2Prop.getProperty( "version", "UNKNOWN VERSION" );
+           version = EC2Prop.getProperty( "cloudbridgeVersion", "UNKNOWN VERSION" );
 	       
 	       String installedPath = System.getenv("CATALINA_HOME");
 	       if (installedPath == null) installedPath = System.getenv("CATALINA_BASE");
