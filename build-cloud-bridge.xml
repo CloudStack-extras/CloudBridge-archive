@@ -75,6 +75,11 @@
 		<propertyfile file="${base.dir}/conf/ec2-service.properties">
 			<entry key="cloudbridgeVersion" value="${impl.version}" />
 		</propertyfile>
+		<replaceregexp file="wscript"
+		               match="VERSION = '(.*)'"
+		               replace="VERSION = '${impl.version}'"
+		               byline="true"
+		/>
 		<!-- Create the build directory structure used by compile -->
 		<mkdir dir="${jar.dir}" />
 		<mkdir dir="${dep.cache.dir}" />
