@@ -150,6 +150,7 @@ public class EC2RestServlet extends HttpServlet {
 	private String pathToKeystore   = null;
 	private String keystorePassword = null;
 	private String wsdlVersion      = null;
+	private String version          = null;
 	
 	boolean debug=true;
 
@@ -176,6 +177,7 @@ public class EC2RestServlet extends HttpServlet {
 	       String keystore  = EC2Prop.getProperty( "keystore" );
 	       keystorePassword = EC2Prop.getProperty( "keystorePass" );
 	   	   wsdlVersion      = EC2Prop.getProperty( "WSDLVersion", "2009-11-30" );
+           version = EC2Prop.getProperty( "version", "UNKNOWN VERSION" );
 	       
 	       String installedPath = System.getenv("CATALINA_HOME");
 	       if (installedPath == null) installedPath = System.getenv("CATALINA_BASE");
@@ -307,9 +309,9 @@ public class EC2RestServlet extends HttpServlet {
      * This is an unauthenticated REST call.
      */
     private void cloudEC2Version( HttpServletRequest request, HttpServletResponse response ) {
-        String version = new String( "<?xml version=\"1.0\" encoding=\"utf-8\"?><CloudEC2Version>1.0.8</CloudEC2Version>" );       		
+        String version_response = new String( "<?xml version=\"1.0\" encoding=\"utf-8\"?><CloudEC2Version>" + version + "</CloudEC2Version>" );
         response.setStatus(200);
-        endResponse(response, version);
+        endResponse(response, version_response);
     }
     
     /**
