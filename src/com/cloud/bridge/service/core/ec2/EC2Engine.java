@@ -1038,7 +1038,7 @@ public class EC2Engine {
 		try {
 		    CloudStackAccount caller = getCurrentAccount();
 		    
-			return listZones(request.getZoneSet(), caller.getDomainId());
+			return listZones(request.getZoneSet(), null);
 
 		} catch( EC2ServiceException error ) {
 			logger.error( "EC2 DescribeAvailabilityZones - ", error);
