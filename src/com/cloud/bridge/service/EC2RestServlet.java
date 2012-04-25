@@ -103,6 +103,7 @@ import com.cloud.bridge.service.core.ec2.EC2CreateVolume;
 import com.cloud.bridge.service.core.ec2.EC2DeleteKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZones;
+import com.cloud.bridge.service.core.ec2.EC2DescribeImageAttributes;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeInstances;
 import com.cloud.bridge.service.core.ec2.EC2DescribeKeyPairs;
@@ -118,6 +119,7 @@ import com.cloud.bridge.service.core.ec2.EC2ImportKeyPair;
 import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2KeyPairFilterSet;
+import com.cloud.bridge.service.core.ec2.EC2ModifyImageAttribute;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2ReleaseAddress;
@@ -965,36 +967,79 @@ public class EC2RestServlet extends HttpServlet {
 
     private void modifyImageAttribute( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {
-		EC2Image image = new EC2Image();
-		
-		// -> its interesting to note that the SOAP API docs has description but the REST API docs do not
+        
+        EC2ModifyImageAttribute EC2request = new EC2ModifyImageAttribute();
+
         String[] imageId = request.getParameterValues( "ImageId" );
 		if ( null != imageId && 0 < imageId.length ) 
-			 image.setId( imageId[0] );
-		else { response.sendError(530, "Missing ImageId parameter" ); return; }
+			 EC2request.setImageId(imageId[0]);
+		else { 
+		    response.sendError(530, "Missing ImageId parameter" ); 
+		    return; 
+		}
 
+		int nCount = 1;
+        do {
+            // LaunchPermission.Add.n.UserId            
+            String[] addedUserId = request.getParameterValues("LaunchPermission.Add." + nCount + ".UserId");
+            if (addedUserId != null && addedUserId.length > 0) {
+                EC2request.addAddedUser(addedUserId[0]);
+            } else
+                break;
+            String[] addedGroup = request.getParameterValues("LaunchPermission.Add." + nCount + ".Group");
+            if (addedGroup != null && addedGroup.length > 0) {
+                // according to api, all is the only legitimate value
+                if (addedGroup[0].equalsIgnoreCase("all")) {
+                    EC2request.setIsPublic(true);
+                }
+                return;
+            }
+        } while (true);
+        
+        nCount = 1;
+        do {
+            String[] removedUserId = request.getParameterValues("LaunchPermission.Remove." + nCount + ".UserId");
+            if (removedUserId != null && removedUserId.length > 0) {
+                EC2request.addRemovedUser(removedUserId[0]);
+            } else 
+                break;
+            nCount++;
+            String[] removedGroup = request.getParameterValues("LaunchPermission.Remove." + nCount + ".Group");
+            if (removedGroup != null && removedGroup.length > 0) {
+                // according to api, all is the only legitimate value
+                if (removedGroup[0].equalsIgnoreCase("all")) {
+                    EC2request.setIsPublic(false);
+                }
+            }
+         } while(true);
+                        
+		// unsupported description...
         String[] description = request.getParameterValues( "Description" );
 		if ( null != description && 0 < description.length ) 
-			 image.setDescription( description[0] );
-		else { response.sendError(530, "Missing Description parameter" ); return; }
+			 EC2request.setDescription( description[0] );
 
 		// -> execute the request
-		ModifyImageAttributeResponse EC2response = EC2SoapServiceImpl.toModifyImageAttributeResponse( ServiceProvider.getInstance().getEC2Engine().modifyImageAttribute( image ));
+		ModifyImageAttributeResponse EC2response = EC2SoapServiceImpl.toModifyImageAttributeResponse( 
+		        ServiceProvider.getInstance().getEC2Engine().modifyImageAttribute(EC2request));
 		serializeResponse(response, EC2response);
     }
 
     private void resetImageAttribute( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {
-		EC2Image image = new EC2Image();
+        EC2ModifyImageAttribute EC2request = new EC2ModifyImageAttribute();
 		
         String[] imageId = request.getParameterValues( "ImageId" );
 		if ( null != imageId && 0 < imageId.length ) 
-			 image.setId( imageId[0] );
-		else { response.sendError(530, "Missing ImageId parameter" ); return; }
+			 EC2request.setImageId(imageId[0]);
+		else { 
+		    response.sendError(530, "Missing ImageId parameter" ); 
+		    return; 
+		}
 		
-		// -> execute the request
-		image.setDescription( "" );
-		ResetImageAttributeResponse EC2response = EC2SoapServiceImpl.toResetImageAttributeResponse( ServiceProvider.getInstance().getEC2Engine().modifyImageAttribute( image ));
+		EC2request.setReset(true);
+		
+		ResetImageAttributeResponse EC2response = EC2SoapServiceImpl.toResetImageAttributeResponse( 
+		        ServiceProvider.getInstance().getEC2Engine().modifyImageAttribute(EC2request));
 		serializeResponse(response, EC2response);
     }
 
@@ -1181,22 +1226,34 @@ public class EC2RestServlet extends HttpServlet {
     }
     
     private void describeImageAttribute( HttpServletRequest request, HttpServletResponse response ) 
-        throws ADBException, XMLStreamException, IOException {
-		EC2DescribeImages EC2request = new EC2DescribeImages();
+        throws EC2ServiceException, ADBException, XMLStreamException, IOException {
+		EC2DescribeImageAttributes EC2request = new EC2DescribeImageAttributes();
 		
-		// -> only works for queries about descriptions
-        String[] descriptions = request.getParameterValues( "Description" );
-	    if ( null != descriptions && 0 < descriptions.length ) {
-	         String[] value = request.getParameterValues( "ImageId" );
-	    	 EC2request.addImageSet( value[0] );
-		}	
-		else {
-			 response.sendError(501, "Unsupported - only description supported" ); 
-			 return;
+		Enumeration<?> names = request.getParameterNames();
+		
+		// we only support launchpermissions and imageId
+		while (names.hasMoreElements()) {
+		    String key = (String) names.nextElement();
+		    if (key.startsWith("requestId") || key.startsWith("productCodes") || key.startsWith("kernel") || 
+		            key.startsWith("ramdisk") || key.startsWith("blockDeviceMapping")) {
+		        throw new EC2ServiceException(ClientError.Unsupported, "The " + key + " parameter is not supported");
+		    }
+
+		    if (key.startsWith("imageId")) {
+                String[] values = request.getParameterValues(key);
+                // in all fairness, there will only be one element in these lists,
+                EC2request.setImageId(values[0]);
+            }
+		    if (key.startsWith("launchPermission")) {
+		        String[] values = request.getParameterValues(key);
+		        if (values.length > 0) {
+		            EC2request.setLaunchPermission(true);
+		        }
+		    }
 		}
 
 		// -> execute the request
-		DescribeImageAttributeResponse EC2response = EC2SoapServiceImpl.toDescribeImageAttributeResponse( ServiceProvider.getInstance().getEC2Engine().describeImages( EC2request ));
+		DescribeImageAttributeResponse EC2response = EC2SoapServiceImpl.toDescribeImageAttributeResponse( ServiceProvider.getInstance().getEC2Engine().describeImageAttributes( EC2request ));
 		serializeResponse(response, EC2response);
     }
 

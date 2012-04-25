@@ -36,6 +36,8 @@ import com.cloud.bridge.service.core.ec2.EC2DescribeAddresses;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAddressesResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZones;
 import com.cloud.bridge.service.core.ec2.EC2DescribeAvailabilityZonesResponse;
+import com.cloud.bridge.service.core.ec2.EC2DescribeImageAttributes;
+import com.cloud.bridge.service.core.ec2.EC2DescribeImageAttributesResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImages;
 import com.cloud.bridge.service.core.ec2.EC2DescribeImagesResponse;
 import com.cloud.bridge.service.core.ec2.EC2DescribeInstances;
@@ -58,6 +60,7 @@ import com.cloud.bridge.service.core.ec2.EC2Instance;
 import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2KeyPairFilterSet;
+import com.cloud.bridge.service.core.ec2.EC2ModifyImageAttribute;
 import com.cloud.bridge.service.core.ec2.EC2PasswordData;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
@@ -224,19 +227,22 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	/**
-	 * This only supports a query about description.
+	 * This only supports a query about description and launchPermissions.
 	 */
 	public DescribeImageAttributeResponse describeImageAttribute(DescribeImageAttribute describeImageAttribute) {
-		EC2DescribeImages request = new EC2DescribeImages();
+		EC2DescribeImageAttributes request = new EC2DescribeImageAttributes();
 		DescribeImageAttributeType diat = describeImageAttribute.getDescribeImageAttribute();
 		DescribeImageAttributesGroup diag = diat.getDescribeImageAttributesGroup();
-		EmptyElementType description = diag.getDescription();
-
-		if ( null != description ) {
-			 request.addImageSet(diat.getImageId());
-		     return toDescribeImageAttributeResponse( engine.describeImages( request ));
+		if (diag.getBlockDeviceMapping() != null || diag.getKernel() != null || 
+		        diag.getProductCodes() != null || diag.getRamdisk() != null) {
+		    throw new EC2ServiceException(ClientError.Unsupported, "Unsupported parameter - only launch permissions (-l) are supported");
 		}
-		else throw new EC2ServiceException( "Unsupported - only description supported", 501 );
+		// set parameters for request
+		request.setLaunchPermission(diag.getLaunchPermission() != null);
+		// there is no description parameter in listtemplatepermissions
+//		request.setDescription(diag.getDescription() != null);
+		request.setImageId(diat.getImageId());
+		return toDescribeImageAttributeResponse( engine.describeImageAttributes(request));
 	}
 
 	public DescribeImagesResponse describeImages(DescribeImages describeImages) {
@@ -280,7 +286,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		    request.addInstanceId( diat.getInstanceId());
 		    return toDescribeInstanceAttributeResponse( engine.describeInstances( request ));
 	    }
-	    throw new EC2ServiceException( "Unsupported - only instanceType supported", 501 );
+	    throw new EC2ServiceException(ClientError.Unsupported, "Unsupported - only instanceType supported");
 	}
 
 	
@@ -446,24 +452,61 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 
 	public ModifyImageAttributeResponse modifyImageAttribute(ModifyImageAttribute modifyImageAttribute) {
-		// TODO: This is broken
-		EC2Image request = new EC2Image();
+		EC2ModifyImageAttribute EC2request = new EC2ModifyImageAttribute();
 		
 		ModifyImageAttributeType miat = modifyImageAttribute.getModifyImageAttribute();
 		ModifyImageAttributeTypeChoice_type0 item = miat.getModifyImageAttributeTypeChoice_type0();
 
+		// description is unsupported
 		AttributeValueType description = item.getDescription();
-		/*
-		LaunchPermissionOperationType launchPermOp = item.getLaunchPermission();
-		ProductCodeListType prodCodeList =item.getProductCodes();
-		*/
 		
-		if (null != description) {
-		    request.setId( miat.getImageId());
-		    request.setDescription(description.getValue());
-		    return toModifyImageAttributeResponse( engine.modifyImageAttribute( request ));
-		}
-		throw new EC2ServiceException( "Unsupported - can only modify image description", 501 );
+        LaunchPermissionOperationType launchPermission = item.getLaunchPermission();
+        LaunchPermissionListType launchAdd = launchPermission.getAdd();
+        LaunchPermissionItemType[] adds = null;
+        if (launchAdd != null) {
+            adds = launchAdd.getItem();
+        }
+        LaunchPermissionListType launchRemove = launchPermission.getRemove();
+        LaunchPermissionItemType[] removes = null;
+        if (launchRemove != null) {
+            removes = launchRemove.getItem();
+        }
+        
+        // we'll silently ignore productcodes for now
+        // ProductCodeListType productCodes = item.getProductCodes();
+
+        // set imageId
+        EC2request.setImageId(miat.getImageId());
+        // add users/group
+        if (adds != null) {
+            for (LaunchPermissionItemType addItems : adds) {
+                if (addItems.getUserId() != null) { 
+                    EC2request.addAddedUser(addItems.getUserId());
+                }
+                // according to api, all is the only legitimate value
+                if (addItems.getGroup() != null && addItems.getGroup().equalsIgnoreCase("all")) {
+                    EC2request.setIsPublic(true);
+                }
+            }
+        }
+        // add remove users/group
+        if (removes != null) { 
+            for (LaunchPermissionItemType removeItems : removes) {
+                if (removeItems.getUserId() != null) {
+                    EC2request.addRemovedUser(removeItems.getUserId());
+                }
+                // according to api, all is the only legitimate value
+                if (removeItems.getGroup() != null && removeItems.getGroup().equalsIgnoreCase("all")) {
+                    EC2request.setIsPublic(false);
+                }
+            }
+        }
+        // unsupported description
+        if (description != null) {
+            EC2request.setDescription(description.getValue());
+        }
+        
+        return toModifyImageAttributeResponse(engine.modifyImageAttribute(EC2request));
 	}	
 
 	/**
@@ -541,12 +584,12 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	 */
 
 	public ResetImageAttributeResponse resetImageAttribute(ResetImageAttribute resetImageAttribute) {
-		EC2Image request = new EC2Image();
+        EC2ModifyImageAttribute EC2request = new EC2ModifyImageAttribute();
 		ResetImageAttributeType riat = resetImageAttribute.getResetImageAttribute();
 		
-		request.setId( riat.getImageId());
-		request.setDescription( "" );
-		return toResetImageAttributeResponse( engine.modifyImageAttribute( request ));
+		EC2request.setImageId(riat.getImageId());
+		EC2request.setReset(true);
+		return toResetImageAttributeResponse( engine.modifyImageAttribute(EC2request));
 	}
 	
 	/**
@@ -659,20 +702,23 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	}
 	
 	
-	public static DescribeImageAttributeResponse toDescribeImageAttributeResponse(EC2DescribeImagesResponse engineResponse) {
+	public static DescribeImageAttributeResponse toDescribeImageAttributeResponse(EC2DescribeImageAttributesResponse engineResponse) {
 		DescribeImageAttributeResponse response = new DescribeImageAttributeResponse();
 		DescribeImageAttributeResponseType param1 = new DescribeImageAttributeResponseType();
-		
-		EC2Image[] imageSet = engineResponse.getImageSet();
-		if ( 0 < imageSet.length ) {
-		     DescribeImageAttributeResponseTypeChoice_type0 param2 = new DescribeImageAttributeResponseTypeChoice_type0();
-		     NullableAttributeValueType param3 = new NullableAttributeValueType();
-		     param3.setValue( imageSet[0].getDescription());
-		     param2.setDescription( param3 );
-		     param1.setDescribeImageAttributeResponseTypeChoice_type0( param2 );
-		     param1.setImageId( imageSet[0].getId());	
+		DescribeImageAttributeResponseTypeChoice_type0 param2 = new DescribeImageAttributeResponseTypeChoice_type0();
+		LaunchPermissionListType param3 = new LaunchPermissionListType();
+		List<LaunchPermissionItemType> param4 = new ArrayList<LaunchPermissionItemType>();
+		if (engineResponse.getAccounts() != null) {
+    		for (String acct : engineResponse.getAccounts()) {
+    		    LaunchPermissionItemType lpit = new LaunchPermissionItemType();
+    		    lpit.setUserId(acct);
+    		    param4.add(lpit);
+    		}
 		}
-		
+        param3.setItem(param4.toArray(new LaunchPermissionItemType[0]));
+        param2.setLaunchPermission(param3);
+        param1.setDescribeImageAttributeResponseTypeChoice_type0(param2);
+        param1.setImageId(engineResponse.getId());
 		param1.setRequestId( UUID.randomUUID().toString());
         response.setDescribeImageAttributeResponse( param1 );
 		return response;
@@ -1942,7 +1988,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	
 	
 	// Actions not yet implemented:
-	
 	public ActivateLicenseResponse activateLicense(ActivateLicense activateLicense) {
 		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
 	}

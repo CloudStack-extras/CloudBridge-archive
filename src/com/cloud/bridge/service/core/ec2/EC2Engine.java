@@ -57,6 +57,7 @@ import com.cloud.stack.models.CloudStackSecurityGroup;
 import com.cloud.stack.models.CloudStackSecurityGroupIngress;
 import com.cloud.stack.models.CloudStackSnapshot;
 import com.cloud.stack.models.CloudStackTemplate;
+import com.cloud.stack.models.CloudStackTemplatePermission;
 import com.cloud.stack.models.CloudStackUser;
 import com.cloud.stack.models.CloudStackUserVm;
 import com.cloud.stack.models.CloudStackVolume;
@@ -523,24 +524,55 @@ public class EC2Engine {
 	 * @param request
 	 * @return
 	 */
-	public boolean modifyImageAttribute( EC2Image request ) 
-	{
-		// TODO: This is incomplete
-		EC2DescribeImagesResponse images = new EC2DescribeImagesResponse();
+	public boolean modifyImageAttribute(EC2ModifyImageAttribute request) {
+        CloudStackInfoResponse updateTemplatePermissions = null;
+	    try {
+    	    // reset case
+    	    if (request.getReset() != null) {
+    	        updateTemplatePermissions = getApi().updateTemplatePermissions(request.getImageId(), null, null, 
+    	                null, null, "reset");
+    	    }
 
-		try {
-			images = listTemplates( request.getId(), images );
-			EC2Image[] imageSet = images.getImageSet();
-			
-			CloudStackTemplate resp = getApi().updateTemplate(request.getId(), null, request.getDescription(), null, imageSet[0].getName(), null, null);
-			if (resp != null) {
-				return true;
-			}
-			return false;
-		} catch( Exception e ) {
-			logger.error( "EC2 ModifyImage - ", e);
-			throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
-		}
+    	    // add users
+    	    List<String> addedUsers = request.getAddedUsers();
+    	    if (addedUsers != null && ! addedUsers.isEmpty()) {
+    	        String accounts = new String();
+    	        for (String usr : addedUsers) {
+    	            accounts = accounts + "," + usr;
+    	        }
+    	        updateTemplatePermissions = getApi().updateTemplatePermissions(request.getImageId(), accounts, null, 
+    	                null, null, "add");
+    	    }
+    	    
+    	    // remove users
+    	    List<String> removedUsers = request.getRemovedUsers();
+    	    if (removedUsers != null && ! removedUsers.isEmpty()) {
+    	        String accounts = new String();
+    	        for (String usr : removedUsers) {
+    	            accounts = accounts + "," + usr;
+    	        }
+    	        updateTemplatePermissions = getApi().updateTemplatePermissions(request.getImageId(), accounts, null, 
+    	                null, null, "remove");
+    	    }
+    	    
+    	    // Make public
+    	    if (request.getIsPublic() != null) {
+    	        updateTemplatePermissions = getApi().updateTemplatePermissions(request.getImageId(), null, null, 
+    	                null, request.getIsPublic(), null);
+    	    }
+        } catch (Exception e) {
+            logger.error( "EC2 ModifyImage - ", e);
+            throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
+        }
+	    // Unfortunately, the error is thrown before we parse the response text returned from CS, so this error
+	    // handling is unnecessary.
+	    if (updateTemplatePermissions != null) {
+	        if (updateTemplatePermissions.getSuccess() != true) {
+	            throw new EC2ServiceException(ServerError.InternalError, updateTemplatePermissions.getDisplayText());
+	        }
+	        return updateTemplatePermissions.getSuccess();
+	    } else 
+	        return false;
 	}
 
 	/**
@@ -830,12 +862,12 @@ public class EC2Engine {
 		try {
             EC2Address ec2Address = new EC2Address();
             // this gets our networkId
-            CloudStackAccount caller = getCurrentAccount();
+//            CloudStackAccount caller = getCurrentAccount();
             
             CloudStackZone zone = findZone();
             CloudStackNetwork net = findNetwork(zone);
 //			CloudStackIpAddress resp = getApi().associateIpAddress(null, null, null, "0036952d-48df-4422-9fd0-94b0885e18cb");
-            CloudStackIpAddress resp = getApi().associateIpAddress(null, null, null, net.getId());
+            CloudStackIpAddress resp = getApi().associateIpAddress(zone.getId(), null, null, net.getId());
 			ec2Address.setAssociatedInstanceId(resp.getId());
 			if (resp.getIpAddress() == null) {
 			    List<CloudStackIpAddress> addrList = getApi().listPublicIpAddresses(null, null, null, null, null, null, null, null, null);
@@ -2096,4 +2128,27 @@ public class EC2Engine {
 			throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
 		}
 	}
+
+    /**
+     * @param request
+     * @return
+     */
+    public EC2DescribeImageAttributesResponse describeImageAttributes(EC2DescribeImageAttributes request) {
+        EC2DescribeImageAttributesResponse resp = new EC2DescribeImageAttributesResponse();
+        try {
+            CloudStackTemplatePermission csTemplatePerm = getApi().listTemplatePermissions(request.getImageId(), null, null);
+            resp.setDomainId(csTemplatePerm.getDomainId());
+            resp.setId(csTemplatePerm.getId());
+            resp.setIsPublic(csTemplatePerm.getIsPublic());
+            if (csTemplatePerm.getAccounts() != null) {
+                for (CloudStackAccount acct : csTemplatePerm.getAccounts()) {
+                    resp.addAccount(acct.getName());
+                }
+            }
+            return resp;
+        } catch (Exception e) {
+            logger.error("describeImageAttributes - ", e);
+            throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
+        }
+    }
 }

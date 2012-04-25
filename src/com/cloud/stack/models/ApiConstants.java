@@ -226,7 +226,7 @@ public class ApiConstants {
     public static final String ISOLATION_URI = "isolationuri";
     public static final String JOB_ID = "jobid";
     public static final String JOB_STATUS = "jobstatus";
-    public static final String KEY_PAIR = "keypair";
+    public static final String KEY_PAIR = "sshkeypair";
     public static final String KEYWORD = "keyword";
     public static final String LASTNAME = "lastname";
     public static final String LEVEL = "level";

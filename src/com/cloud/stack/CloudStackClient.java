@@ -170,7 +170,7 @@ public class CloudStackClient {
         statusCode = ((HttpURLConnection)connect).getResponseCode();
         if(statusCode >= 400) {
         	logger.error("Cloud API call + [" + url.toString() + "] failed with status code: " + statusCode);
-        	throw new IOException("CloudStack API call HTTP response error, HTTP status code: " + statusCode);
+        	throw new IOException("CloudStack API call response error, HTTP status code: " + statusCode);
         }
         
         InputStream inputStream = connect.getInputStream(); 
