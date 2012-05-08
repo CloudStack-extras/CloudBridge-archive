@@ -226,7 +226,7 @@ public class ApiConstants {
     public static final String ISOLATION_URI = "isolationuri";
     public static final String JOB_ID = "jobid";
     public static final String JOB_STATUS = "jobstatus";
-    public static final String KEY_PAIR = "sshkeypair";
+    public static final String KEY_PAIR = "keypair";
     public static final String KEYWORD = "keyword";
     public static final String LASTNAME = "lastname";
     public static final String LEVEL = "level";
@@ -415,7 +415,7 @@ public class ApiConstants {
 	public static final String SOURCE_TEMPLATE_ID = "sourcetemplateid";
 	public static final String SOURCE_ZONE_ID = "sourcezoneid";
 	public static final String SPECIFY_VLAN = "specifyvlan";
-	public static final String SSH_KEYPAIR = "keypair";
+	public static final String SSH_KEYPAIR = "sshkeypair";
 	public static final String START_DATE = "startdate";
 	public static final String START_IP = "startip";
 	public static final String START_PORT = "startport";

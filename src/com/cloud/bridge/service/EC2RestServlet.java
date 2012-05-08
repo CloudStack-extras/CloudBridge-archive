@@ -253,7 +253,8 @@ public class EC2RestServlet extends HttpServlet {
     	    else if (action.equalsIgnoreCase( "DescribeVolumes"           )) describeVolumes(request, response); 
     	    else if (action.equalsIgnoreCase( "DetachVolume"              )) detachVolume(request, response);  
     	    else if (action.equalsIgnoreCase( "DisassociateAddress"       )) disassociateAddress(request, response);
-    	    else if (action.equalsIgnoreCase( "ModifyImageAttribute"      )) modifyImageAttribute(request, response);  
+    	    else if (action.equalsIgnoreCase( "ModifyImageAttribute"      )) modifyImageAttribute(request, response);
+    	    else if (action.equalsIgnoreCase( "ModifyInstanceAttribute"   )) modifyInstanceAttribute(request, response);
     	    else if (action.equalsIgnoreCase( "RebootInstances"           )) rebootInstances(request, response);  
     	    else if (action.equalsIgnoreCase( "RegisterImage"             )) registerImage(request, response);  
     	    else if (action.equalsIgnoreCase( "ReleaseAddress"            )) releaseAddress(request, response);
@@ -305,6 +306,7 @@ public class EC2RestServlet extends HttpServlet {
         }       
     }
    
+
     /**
      * Provide an easy way to determine the version of the implementation running.
      * 
@@ -1023,6 +1025,18 @@ public class EC2RestServlet extends HttpServlet {
 		        ServiceProvider.getInstance().getEC2Engine().modifyImageAttribute(EC2request));
 		serializeResponse(response, EC2response);
     }
+    
+    /**
+     * @param request
+     * @param response
+     */
+    private void modifyInstanceAttribute(HttpServletRequest request,
+            HttpServletResponse response) {
+        
+        // todo: implement restful version
+    }
+
+    
 
     private void resetImageAttribute( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {

@@ -22,6 +22,7 @@ public class EC2DescribeInstances {
 
 	private List<String> instancesSet = new ArrayList<String>();    // a list of strings identifying instances
 	private EC2InstanceFilterSet ifs = null;
+	private Boolean userData;
 
 	public EC2DescribeInstances() {
 	}
@@ -41,4 +42,18 @@ public class EC2DescribeInstances {
 	public void setFilterSet( EC2InstanceFilterSet param ) {
 		ifs = param;
 	}
+
+    /**
+     * @return the userData
+     */
+    public Boolean getUserData() {
+        return userData;
+    }
+
+    /**
+     * @param userData the userData to set
+     */
+    public void setUserData(Boolean userData) {
+        this.userData = userData;
+    }
 }

@@ -1472,7 +1472,7 @@ public class CloudStackApi {
 			if (keyWord != null) cmd.setParam(ApiConstants.KEYWORD, keyWord);
 			if (name != null) cmd.setParam(ApiConstants.NAME, name);
 		}
-		return _client.listCall(cmd, apiKey, secretKey, ApiConstants.LIST_SSH_KEY_PAIRS_RESPONSE, ApiConstants.KEY_PAIR, 
+		return _client.listCall(cmd, apiKey, secretKey, ApiConstants.LIST_SSH_KEY_PAIRS_RESPONSE, ApiConstants.SSH_KEYPAIR, 
 				new TypeToken<List<CloudStackKeyPair>>() {}.getType());
 	}
 

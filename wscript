@@ -3,7 +3,7 @@
 
 # the following two variables are used by the target "waf dist"
 # if you change 'em here, you need to change it also in cloud.spec, add a %changelog entry there, and add an entry in debian/changelog
-VERSION = '1.0.8'
+VERSION = '1.0.9'
 APPNAME = 'cloud-bridge'
 
 import shutil,os,glob

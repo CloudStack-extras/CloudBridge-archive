@@ -24,7 +24,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackEvent {
 	@SerializedName(ApiConstants.ID)
-	private Long id;
+	private String id;
 	@SerializedName(ApiConstants.ACCOUNT)
 	private String account;
 	@SerializedName(ApiConstants.CREATED)
@@ -56,7 +56,7 @@ public class CloudStackEvent {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 

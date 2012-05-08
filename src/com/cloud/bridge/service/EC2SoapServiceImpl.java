@@ -61,6 +61,7 @@ import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2KeyPairFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2ModifyImageAttribute;
+import com.cloud.bridge.service.core.ec2.EC2ModifyInstanceAttribute;
 import com.cloud.bridge.service.core.ec2.EC2PasswordData;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
@@ -280,17 +281,59 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    DescribeInstanceAttributeType diat = describeInstanceAttribute.getDescribeInstanceAttribute();
 	    DescribeInstanceAttributesGroup diag = diat.getDescribeInstanceAttributesGroup();
 	    EmptyElementType instanceType = diag.getInstanceType();
+	    EmptyElementType userData = diag.getUserData();
 		
 	    // -> toEC2DescribeInstances
-	    if (null != instanceType) {
-		    request.addInstanceId( diat.getInstanceId());
+	    if (instanceType != null || userData != null) {
+		    request.addInstanceId(diat.getInstanceId());
 		    return toDescribeInstanceAttributeResponse( engine.describeInstances( request ));
 	    }
 	    throw new EC2ServiceException(ClientError.Unsupported, "Unsupported - only instanceType supported");
 	}
+	
+    public ModifyInstanceAttributeResponse modifyInstanceAttribute(ModifyInstanceAttribute modifyInstanceAttribute) {
+        EC2ModifyInstanceAttribute request = new EC2ModifyInstanceAttribute();
+        ModifyInstanceAttributeType modifyInstanceAttribute2 = modifyInstanceAttribute.getModifyInstanceAttribute();
+        ModifyInstanceAttributeTypeChoice_type0 miatc_type0 = modifyInstanceAttribute2.getModifyInstanceAttributeTypeChoice_type0();
+
+        // not going to mess with blockDeviceMappingTypes
+        /*
+        InstanceBlockDeviceMappingType blockDeviceMapping = miatc_type0.getBlockDeviceMapping();
+        InstanceBlockDeviceMappingItemType[] mappingItemTypes = blockDeviceMapping.getItem();
+         */
+        // we only support instanceType and userData
+        request.setInstanceId(modifyInstanceAttribute2.getInstanceId());
+//        request.setDisableApiTermination(miatc_type0.getDisableApiTermination().getValue());
+//        request.setInstanceInitiatedShutdownBehavior(miatc_type0.getInstanceInitiatedShutdownBehavior().toString());
+        if (miatc_type0.getInstanceType() != null) {
+            request.setInstanceType(miatc_type0.getInstanceType().getValue());
+        }
+//        request.setKernel(miatc_type0.getKernel().toString());
+//        request.setRamdisk(miatc_type0.getRamdisk().toString());
+        if (miatc_type0.getUserData() != null) {
+            request.setUserData(miatc_type0.getUserData().getValue());
+        }
+        return toModifyInstanceAttributeResponse(engine.modifyInstanceAttribute(request));
+    }
+
 
 	
-	public DescribeInstancesResponse describeInstances( DescribeInstances describeInstances ) 
+	/**
+     * @param modifyInstanceAttribute
+     * @return
+     */
+    private ModifyInstanceAttributeResponse toModifyInstanceAttributeResponse(Boolean status) {
+        ModifyInstanceAttributeResponse miat = new ModifyInstanceAttributeResponse();
+        
+        ModifyInstanceAttributeResponseType param = new ModifyInstanceAttributeResponseType();
+        param.set_return(status);
+        param.setRequestId(UUID.randomUUID().toString());
+        miat.setModifyInstanceAttributeResponse(param);
+        
+        return miat;
+    }
+
+    public DescribeInstancesResponse describeInstances( DescribeInstances describeInstances ) 
 	{
 		EC2DescribeInstances  request = new EC2DescribeInstances();
 		DescribeInstancesType dit     = describeInstances.getDescribeInstances();
@@ -715,6 +758,11 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
     		    param4.add(lpit);
     		}
 		}
+		if (engineResponse.getIsPublic() != null && engineResponse.getIsPublic() == true) {
+		    LaunchPermissionItemType lpit = new LaunchPermissionItemType();
+		    lpit.setGroup("all");
+		    param4.add(lpit);
+		}
         param3.setItem(param4.toArray(new LaunchPermissionItemType[0]));
         param2.setLaunchPermission(param3);
         param1.setDescribeImageAttributeResponseTypeChoice_type0(param2);
@@ -1090,9 +1138,9 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
       		DescribeInstanceAttributeResponseTypeChoice_type0 param2 = new DescribeInstanceAttributeResponseTypeChoice_type0();
       		NullableAttributeValueType param3 = new NullableAttributeValueType();
       		param3.setValue( instanceSet[0].getServiceOffering());
-      		param2.setInstanceType( param3 );
+      		param2.setInstanceType(param3);
             param1.setDescribeInstanceAttributeResponseTypeChoice_type0( param2 );
-      		param1.setInstanceId( instanceSet[0].getId());
+      		param1.setInstanceId(instanceSet[0].getId());
       	}
 	    param1.setRequestId( UUID.randomUUID().toString());
         response.setDescribeInstanceAttributeResponse( param1 );
@@ -2184,9 +2232,6 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
 	}
 	
-	public ModifyInstanceAttributeResponse modifyInstanceAttribute(ModifyInstanceAttribute modifyInstanceAttribute) {
-		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");
-	}
 
 	public ModifySnapshotAttributeResponse modifySnapshotAttribute(ModifySnapshotAttribute modifySnapshotAttribute) {
 		throw new EC2ServiceException(ClientError.Unsupported, "This operation is not available");

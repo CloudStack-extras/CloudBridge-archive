@@ -1587,21 +1587,21 @@ public class EC2Engine {
 	 */
 	private OfferingBundle instanceTypeToOfferBundle( String instanceType ) 
 			throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
+	    
 		OfferingBundle found = null;
 		OfferingDao ofDao = new OfferingDao();
 
 		if (null == instanceType) instanceType = "m1.small";                      
 		String cloudOffering = ofDao.getCloudOffering( instanceType );
 
-		if ( null != cloudOffering )
-		{
+		if ( null != cloudOffering ) {
 			found = new OfferingBundle();
-			found.setServiceOfferingId( cloudOffering );
-		}
-		else throw new EC2ServiceException( ClientError.Unsupported, "Unknown: " + instanceType );   
+			found.setServiceOfferingId(cloudOffering);
+		} else 
+		    throw new EC2ServiceException( ClientError.Unsupported, "Unknown: " + instanceType );   
 
 		return found;
-			}
+	}
 
 	/**
 	 * Convert from the Cloud serviceOfferingId to the Amazon instanceType strings based
@@ -2149,6 +2149,30 @@ public class EC2Engine {
         } catch (Exception e) {
             logger.error("describeImageAttributes - ", e);
             throw new EC2ServiceException(ServerError.InternalError, e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.");
+        }
+    }
+
+    /**
+     * @param request
+     * @return
+     * @throws Exception 
+     */
+    public boolean modifyInstanceAttribute(EC2ModifyInstanceAttribute request) {
+        try { 
+            boolean status = true;
+            if (request.getInstanceType() != null) {
+                String offeringId = instanceTypeToOfferBundle(request.getInstanceType()).getServiceOfferingId();
+                CloudStackUserVm userVm = getApi().changeServiceForVirtualMachine(request.getInstanceId(), offeringId);
+                status = (userVm != null);
+            }
+            if (status != false && request.getUserData() != null) {
+                CloudStackUserVm userVm = getApi().updateVirtualMachine(request.getInstanceId(), null, null, null, null, request.getUserData());
+                status = (userVm != null);
+            }
+            return status;
+        } catch (Exception e) {
+            logger.error("modifyInstanceAttribute - ", e);
+            throw new EC2ServiceException(ServerError.InternalError, e.getMessage());
         }
     }
 }
