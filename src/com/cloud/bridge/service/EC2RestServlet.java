@@ -92,6 +92,7 @@ import com.amazon.ec2.RunInstancesResponse;
 import com.amazon.ec2.StartInstancesResponse;
 import com.amazon.ec2.StopInstancesResponse;
 import com.amazon.ec2.TerminateInstancesResponse;
+import com.amazon.ec2.ModifyInstanceAttributeResponse;
 import com.cloud.bridge.model.UserCredentials;
 import com.cloud.bridge.persist.dao.OfferingDao;
 import com.cloud.bridge.persist.dao.UserCredentialsDao;
@@ -120,6 +121,7 @@ import com.cloud.bridge.service.core.ec2.EC2InstanceFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2IpPermission;
 import com.cloud.bridge.service.core.ec2.EC2KeyPairFilterSet;
 import com.cloud.bridge.service.core.ec2.EC2ModifyImageAttribute;
+import com.cloud.bridge.service.core.ec2.EC2ModifyInstanceAttribute;
 import com.cloud.bridge.service.core.ec2.EC2RebootInstances;
 import com.cloud.bridge.service.core.ec2.EC2RegisterImage;
 import com.cloud.bridge.service.core.ec2.EC2ReleaseAddress;
@@ -1029,14 +1031,37 @@ public class EC2RestServlet extends HttpServlet {
     /**
      * @param request
      * @param response
+     * @throws Exception 
      */
     private void modifyInstanceAttribute(HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response) throws Exception {
         
-        // todo: implement restful version
+        EC2ModifyInstanceAttribute ec2request = new EC2ModifyInstanceAttribute();
+        String[] instanceIds = request.getParameterValues("InstanceId");
+        if (instanceIds != null && instanceIds.length > 0) {
+            ec2request.setInstanceId(instanceIds[0]);
+        } else {
+            response.sendError(530, "Missing InstanceId parameter");
+            return;
+        }
+        boolean supported = false;
+        String[] instanceTypes = request.getParameterValues("InstanceType.Value");
+        if (instanceTypes != null && instanceTypes.length > 0) {
+            ec2request.setInstanceType(instanceTypes[0]);
+            supported = true;
+        }
+        String[] userDatas = request.getParameterValues("UserData.Value");
+        if (userDatas != null && userDatas.length > 0) {
+            ec2request.setUserData(userDatas[0]);
+            supported = true;
+        }
+        if (supported != true) {
+            response.sendError(530, "Unsupported parameter passed to modifyInstanceAttribute!");
+            return;
+        }
+        ModifyInstanceAttributeResponse EC2response = EC2SoapServiceImpl.toModifyInstanceAttributeResponse(ServiceProvider.getInstance().getEC2Engine().modifyInstanceAttribute(ec2request));
+        serializeResponse(response, EC2response);
     }
-
-    
 
     private void resetImageAttribute( HttpServletRequest request, HttpServletResponse response ) 
         throws ADBException, XMLStreamException, IOException {

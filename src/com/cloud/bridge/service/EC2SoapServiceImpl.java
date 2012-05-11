@@ -281,10 +281,11 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
 	    DescribeInstanceAttributeType diat = describeInstanceAttribute.getDescribeInstanceAttribute();
 	    DescribeInstanceAttributesGroup diag = diat.getDescribeInstanceAttributesGroup();
 	    EmptyElementType instanceType = diag.getInstanceType();
-	    EmptyElementType userData = diag.getUserData();
+	    // userData is not available
+//	    EmptyElementType userData = diag.getUserData();
 		
 	    // -> toEC2DescribeInstances
-	    if (instanceType != null || userData != null) {
+	    if (instanceType != null) {
 		    request.addInstanceId(diat.getInstanceId());
 		    return toDescribeInstanceAttributeResponse( engine.describeInstances( request ));
 	    }
@@ -322,7 +323,7 @@ public class EC2SoapServiceImpl implements AmazonEC2SkeletonInterface  {
      * @param modifyInstanceAttribute
      * @return
      */
-    private ModifyInstanceAttributeResponse toModifyInstanceAttributeResponse(Boolean status) {
+    public static ModifyInstanceAttributeResponse toModifyInstanceAttributeResponse(Boolean status) {
         ModifyInstanceAttributeResponse miat = new ModifyInstanceAttributeResponse();
         
         ModifyInstanceAttributeResponseType param = new ModifyInstanceAttributeResponseType();
