@@ -24,13 +24,13 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackExtractTemplate {
 	@SerializedName(ApiConstants.ID)
-	Long id;
+	String id;
 	@SerializedName(ApiConstants.ACCOUNT_ID)
-	Long accountId;
+	String accountId;
 	@SerializedName(ApiConstants.CREATED)
 	String created;
 	@SerializedName(ApiConstants.EXTRACT_ID)
-	Long extractId;
+	String extractId;
 	@SerializedName(ApiConstants.EXTRACT_MODE)
 	String extractMode;
 	@SerializedName(ApiConstants.NAME)
@@ -46,7 +46,7 @@ public class CloudStackExtractTemplate {
 	@SerializedName(ApiConstants.URL)
 	String url;
 	@SerializedName(ApiConstants.ZONE_ID)
-	Long zoneId;
+	String zoneId;
 	@SerializedName(ApiConstants.ZONE_NAME)
 	String zoneName;
 	
@@ -60,14 +60,14 @@ public class CloudStackExtractTemplate {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
 	/**
 	 * @return the accountId
 	 */
-	public Long getAccountId() {
+	public String getAccountId() {
 		return accountId;
 	}
 
@@ -81,7 +81,7 @@ public class CloudStackExtractTemplate {
 	/**
 	 * @return the extractId
 	 */
-	public Long getExtractId() {
+	public String getExtractId() {
 		return extractId;
 	}
 
@@ -137,7 +137,7 @@ public class CloudStackExtractTemplate {
 	/**
 	 * @return the zoneId
 	 */
-	public Long getZoneId() {
+	public String getZoneId() {
 		return zoneId;
 	}
 

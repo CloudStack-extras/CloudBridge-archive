@@ -28,10 +28,10 @@ public class CloudStackInfoResponse {
 	private Boolean status;
 	
     @SerializedName(ApiConstants.JOB_ID)
-    private Long jobId;
+    private String jobId;
     
     @SerializedName(ApiConstants.ID)
-    private Long id;
+    private String id;
 
 	public CloudStackInfoResponse() {
     }
@@ -48,11 +48,11 @@ public class CloudStackInfoResponse {
 		return status;
 	}
 	
-    public Long getJobId() {
+    public String getJobId() {
 		return jobId;
 	}
     
-    public Long getId() {
+    public String getId() {
     	return id;
     }
 }

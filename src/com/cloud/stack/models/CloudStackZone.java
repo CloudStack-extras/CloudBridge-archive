@@ -35,7 +35,7 @@ public class CloudStackZone {
     @SerializedName(ApiConstants.DOMAIN)
     private String domain;
     @SerializedName(ApiConstants.DOMAIN_ID)
-    private Long domainId;
+    private String domainId;
     @SerializedName(ApiConstants.GUEST_CIDR_ADDRESS)
     private String guestCidrAddress;
     @SerializedName(ApiConstants.INTERNAL_DNS1)
@@ -115,7 +115,7 @@ public class CloudStackZone {
 	/**
 	 * @return the domainId
 	 */
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 

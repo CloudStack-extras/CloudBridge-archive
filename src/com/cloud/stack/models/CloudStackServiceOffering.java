@@ -24,7 +24,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CloudStackServiceOffering {
 	@SerializedName(ApiConstants.ID)
-	private Long id;
+	private String id;
 	@SerializedName(ApiConstants.CPU_NUMBER)
 	private Long cpuNumber;
 	@SerializedName(ApiConstants.CPU_SPEED)
@@ -38,7 +38,7 @@ public class CloudStackServiceOffering {
 	@SerializedName(ApiConstants.DOMAIN)
 	private String domain;
 	@SerializedName(ApiConstants.DOMAIN_ID)
-	private Long domainId;
+	private String domainId;
 	@SerializedName(ApiConstants.HOST_TAGS)
 	private String hostTags;
 	@SerializedName(ApiConstants.IS_SYSTEM)
@@ -68,7 +68,7 @@ public class CloudStackServiceOffering {
 	/**
 	 * @return the id
 	 */
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
@@ -117,7 +117,7 @@ public class CloudStackServiceOffering {
 	/**
 	 * @return the domainId
 	 */
-	public Long getDomainId() {
+	public String getDomainId() {
 		return domainId;
 	}
 

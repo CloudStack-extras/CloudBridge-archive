@@ -38,7 +38,7 @@ public class CloudStackEvent {
 	@SerializedName(ApiConstants.LEVEL)
 	private String level;
 	@SerializedName(ApiConstants.PARENT_ID)
-	private Long parentId;
+	private String parentId;
 	@SerializedName(ApiConstants.STATE)
 	private String state;
 	@SerializedName(ApiConstants.TYPE)
@@ -105,7 +105,7 @@ public class CloudStackEvent {
 	/**
 	 * @return the parentId
 	 */
-	public Long getParentId() {
+	public String getParentId() {
 		return parentId;
 	}
 
