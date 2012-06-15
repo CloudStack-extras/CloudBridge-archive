@@ -169,9 +169,19 @@ public class CloudStackClient {
         int statusCode;
         statusCode = ((HttpURLConnection)connect).getResponseCode();
         if(statusCode >= 400) {
-        	logger.error("Cloud API call + [" + url.toString() + "] failed with status code: " + statusCode);
-        	throw new IOException("CloudStack API call response error, HTTP status code: " + statusCode);
+	    logger.error("Cloud API call + [" + url.toString() + "] failed with status code: " + statusCode);
+            String errorMessage = ((HttpURLConnection)connect).getResponseMessage();
+            if(errorMessage == null){
+                errorMessage = connect.getHeaderField("X-Description");
+            }
+            
+            if(errorMessage == null){
+                errorMessage = "CloudStack API call HTTP response error, HTTP status code: " + statusCode;
+            }
+	    
+	    throw new IOException(errorMessage);
         }
+
         
         InputStream inputStream = connect.getInputStream(); 
 		JsonElement jsonElement = parser.parse(new InputStreamReader(inputStream));
