@@ -363,9 +363,9 @@ public class EC2RestServlet extends HttpServlet {
 		    return;
         }
     	
-    	// prime UserContext here
-//    	logger.debug("initializing context");
-    	UserContext context = UserContext.current();
+    	// Due to design, we must prime the UserContext here...
+    	@SuppressWarnings("unused")
+		UserContext context = UserContext.current();
 
         try {
             // -> use the keys to see if the account actually exists
